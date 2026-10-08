@@ -29,6 +29,12 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 
 ## Migrations
 
+- **`alembic revision` fails with `PermissionError`** when run as the container user: it can't
+  write into the host-owned bind mount. Run it with `-u "$(id -u):$(id -g)"` (CONTRIBUTING §4).
+- **Pass `--rev-id NNNN`** so revision files stay numbered (`0003_…`) instead of random hashes.
+- **Review autogenerate's indexes.** It adds a separate index for `index=True` even when a
+  unique constraint already leads with that column.
+
 - **Expand-only within a release.** Rollback swaps the image but not the schema, so the previous
   image must work against the new schema.
 - **Roles are cluster-wide.** `orbit_app` exists once for both `orbit` and `orbit_test`;
