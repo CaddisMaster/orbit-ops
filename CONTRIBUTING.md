@@ -73,7 +73,7 @@ round-trips every migration (`downgrade base` → `upgrade head`), so write real
 
 Lessons are Markdown with YAML front matter under `content/`, validated by Pydantic at startup
 and in CI. AI-drafted modules are reviewed and fact-checked like code — a draft is a starting
-point, not a source. Format and process: `docs/content-authoring.md` (lands with v0.2.0).
+point, not a source. Format and process: `docs/content-authoring.md`.
 
 ## 6. Security expectations
 

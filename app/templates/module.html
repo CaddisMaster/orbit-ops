@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ module.title }} · Orbit Ops{% endblock %}
+{% block content %}
+<nav class="crumbs muted" aria-label="Breadcrumb">
+  <a href="/syllabus">{{ track.deck }}</a> <span aria-hidden="true">›</span> {{ unit.title }}
+  <span aria-hidden="true">›</span> Module {{ module.position }} of {{ unit_size }}
+</nav>
+
+<article class="module">
+  <header class="card briefing">
+    <p class="eyebrow">Mission log · {{ module.minutes }} min · {{ module.xp }} XP</p>
+    <h1>{{ module.title }}</h1>
+    <div class="story">{{ module.story_html | safe }}</div>
+  </header>
+
+  {# body_html is rendered from repo Markdown with raw HTML disabled (app/content/render.py). #}
+  <section class="lesson prose">{{ module.body_html | safe }}</section>
+
+  <section class="card quiz" aria-labelledby="quiz-heading">
+    <p class="eyebrow">Systems check</p>
+    <h2 id="quiz-heading">Quiz</h2>
+    {# Only questions and options are rendered. Answers and explanations never
+       leave the server. #}
+    {% for question in module.quiz %}
+    <fieldset class="question" disabled>
+      <legend><span class="qnum">{{ loop.index }}.</span> {{ question.q }}</legend>
+      {% if question.type == "fill" %}
+        <input type="text" name="q{{ loop.index0 }}" aria-label="Your answer" autocomplete="off">
+      {% else %}
+        {% set input_type = "checkbox" if question.type == "multi" else "radio" %}
+        {% if question.type == "multi" %}<p class="hint muted">Select all that apply.</p>{% endif %}
+        {% set qi = loop.index0 %}
+        {% for option in question.options %}
+        <label class="option"><input type="{{ input_type }}" name="q{{ qi }}" value="{{ loop.index0 }}"> {{ option }}</label>
+        {% endfor %}
+      {% endif %}
+    </fieldset>
+    {% endfor %}
+  </section>
+</article>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Syllabus · Orbit Ops{% endblock %}
+{% block content %}
+<p class="eyebrow">Station schematic</p>
+<h1>Syllabus</h1>
+{% for track in catalog.tracks %}
+<section class="card track">
+  <p class="eyebrow">{{ track.deck }}</p>
+  <h2>{{ track.title }}</h2>
+  {% if track.blurb %}<p class="muted">{{ track.blurb }}</p>{% endif %}
+  {% for unit_slug in track.units %}
+    {% set unit = catalog.units[unit_slug] %}
+    <div class="unit">
+      <h3>{{ unit.title }}</h3>
+      {% if unit.modules %}
+      <ol class="modules">
+        {% for module in catalog.unit_modules(unit_slug) %}
+        <li><a href="/modules/{{ module.slug }}">{{ module.title }}</a> <span class="muted">· {{ module.minutes }} min</span></li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="muted">Coming soon.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+</section>
+{% endfor %}
+{% endblock %}

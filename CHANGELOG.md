@@ -6,6 +6,16 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The curriculum is now content: lessons are Markdown files with YAML front matter under
+  `content/`, organised by `syllabus.yml` into tracks and units. The whole curriculum is
+  validated at startup and in CI, so a lesson with a broken quiz fails the build with the file
+  and field named, rather than breaking a page in production (#4).
+- A module page with the story briefing, the lesson (syntax-highlighted code, tables) and the
+  quiz, plus a syllabus page listing every track, unit and module. Quiz answers and
+  explanations never reach the browser (#4).
+- The first module, "The filesystem tree", and `docs/content-authoring.md` describing the format.
+
 ## [0.1.0] — 2026-10-08
 
 First release: the station's skeleton, live at learn.seandesmet.com.

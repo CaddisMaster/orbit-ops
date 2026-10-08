@@ -1,6 +1,8 @@
 """Application factory: middleware, routers, error handling."""
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
@@ -10,7 +12,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
-from app.routers import auth, main
+from app.content import load_catalog
+from app.routers import auth, learn, main
 from app.security import CSRFError, LoginRequired, SecurityHeadersMiddleware, csrf_protect
 from app.templating import templates
 
@@ -19,9 +22,20 @@ log = logging.getLogger("orbit")
 SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days: a daily-habit app should not nag for a password
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Load and validate the whole curriculum before serving anything. A
+    # ContentError here stops startup — in CI's smoke test, long before
+    # production — rather than surfacing as a 500 on one lesson page.
+    app.state.catalog = load_catalog()
+    log.info("Loaded %d modules in %d units", len(app.state.catalog.modules), len(app.state.catalog.units))
+    yield
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
+        lifespan=lifespan,
         title="Orbit Ops",
         version=settings.app_version,
         # No public OpenAPI/Swagger UI: this is an HTML app for one user, and the
@@ -47,6 +61,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
     app.include_router(main.router)
     app.include_router(auth.router)
+    app.include_router(learn.router)
 
     @app.exception_handler(LoginRequired)
     async def _login_required(request: Request, exc: LoginRequired) -> Response:
