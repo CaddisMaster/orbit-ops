@@ -1,0 +1,23 @@
+{# An answered question: what was picked, whether it was right, and why.
+   `attempt` is the FIRST attempt — the one that counts. #}
+{% set picked = attempt.submitted %}
+<div class="question answered {{ 'right' if attempt.correct else 'wrong' }}" id="q{{ index }}">
+  <p class="legend"><span class="qnum">{{ index + 1 }}.</span> {{ question.q | md }}</p>
+  {% if question.type == "fill" %}
+    <p class="option {{ 'is-right' if attempt.correct else 'is-wrong' }}">{{ picked[0] }}</p>
+    {% if not attempt.correct %}<p class="muted">Accepted: {{ question.answer | join(", ") }}</p>{% endif %}
+  {% else %}
+    {% set right = [question.answer] if question.type == "choice" else question.answer %}
+    {% for option in question.options %}
+      {% set mine = (loop.index0 | string) in picked %}
+      {% set correct_option = loop.index0 in right %}
+      <p class="option{% if correct_option %} is-right{% elif mine %} is-wrong{% endif %}">
+        <span class="mark" aria-hidden="true">{% if correct_option %}✓{% elif mine %}✗{% endif %}</span>
+        {{ option | md }}{% if mine %} <span class="muted">(your answer)</span>{% endif %}
+      </p>
+    {% endfor %}
+  {% endif %}
+  <p class="verdict">{{ "Correct." if attempt.correct else "Not quite." }}</p>
+  <p class="explain">{{ question.explain | md }}</p>
+</div>
+{% if just_completed %}{% include "partials/_completion.html" %}{% endif %}

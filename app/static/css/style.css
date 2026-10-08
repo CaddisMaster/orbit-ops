@@ -157,3 +157,41 @@ h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; }
 @media (max-width: 480px) {
   .topbar nav .who { display: none; }
 }
+
+/* --- Quiz interaction & progress ---------------------------------------- */
+.quiz .question { margin: 0 0 1.5rem; }
+.quiz .question fieldset { margin-bottom: 0.6rem; }
+.quiz .legend { font-weight: 600; margin: 0 0 0.5rem; }
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+}
+a.button {
+  display: inline-block;
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 0.7rem 1.1rem;
+  font-weight: 700;
+}
+a.button.primary { background: var(--accent); color: var(--accent-ink); }
+.answered .option { display: flex; gap: 0.5rem; margin: 0 0 0.4rem; }
+.answered .mark { width: 1rem; flex: none; text-align: center; }
+.option.is-right { border-color: var(--accent); }
+.option.is-wrong { border-color: var(--danger); }
+.answered .verdict { font-weight: 700; margin: 0.6rem 0 0.2rem; }
+.answered.right .verdict { color: var(--accent); }
+.answered.wrong .verdict { color: var(--warn); }
+.answered .explain { color: var(--muted); margin: 0; }
+.completion { border-color: var(--accent); }
+.mission h1 { margin-bottom: 0.25rem; }
+.progress-summary { margin-top: 1.25rem; }
+.alert { margin-top: 0; }
+.modules { list-style: none; padding-left: 0; }
+.modules .status { display: inline-block; width: 1.4rem; text-align: center; }
+.modules .done .status { color: var(--accent); }
+.modules .open .status { color: var(--warn); }
+.quiz code { font-size: 0.9em; color: var(--text); background: var(--bg); border-radius: 4px; padding: 0.05em 0.3em; }

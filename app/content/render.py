@@ -10,6 +10,7 @@ CSS classes (app/static/css/pygments.css), never inline styles, which the CSP
 from html import escape
 
 from markdown_it import MarkdownIt
+from markupsafe import Markup
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
@@ -34,6 +35,13 @@ _md = MarkdownIt("commonmark", {"html": False, "highlight": _highlight}).enable(
 
 def render_markdown(text: str) -> str:
     return _md.render(text)
+
+
+def render_inline(text: str) -> Markup:
+    """Inline Markdown only (`code`, *emphasis*, links), no wrapping <p>. For
+    quiz questions, options and explanations. Raw HTML is still escaped, which
+    is what makes returning Markup safe."""
+    return Markup(_md.renderInline(text))
 
 
 def pygments_css() -> str:

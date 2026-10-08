@@ -13,11 +13,17 @@
     <div class="unit">
       <h3>{{ unit.title }}</h3>
       {% if unit.modules %}
-      <ol class="modules">
+      <ul class="modules">
         {% for module in catalog.unit_modules(unit_slug) %}
-        <li><a href="/modules/{{ module.slug }}">{{ module.title }}</a> <span class="muted">· {{ module.minutes }} min</span></li>
+        {% if module.slug in completed %}
+        <li class="done"><span class="status" aria-label="Complete">✓</span> <a href="/modules/{{ module.slug }}">{{ module.title }}</a> <span class="muted">· {{ module.minutes }} min</span></li>
+        {% elif available(module.slug) %}
+        <li class="open"><span class="status" aria-label="Available">●</span> <a href="/modules/{{ module.slug }}">{{ module.title }}</a> <span class="muted">· {{ module.minutes }} min</span></li>
+        {% else %}
+        <li class="locked muted"><span class="status" aria-label="Locked">🔒</span> {{ module.title }} · {{ module.minutes }} min</li>
+        {% endif %}
         {% endfor %}
-      </ol>
+      </ul>
       {% else %}
       <p class="muted">Coming soon.</p>
       {% endif %}

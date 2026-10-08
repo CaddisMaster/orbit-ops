@@ -200,3 +200,10 @@ def test_code_blocks_are_highlighted_with_classes_not_inline_styles(tmp_path):
     assert "<span class=" in body
     assert "style=" not in body
     assert "&lt;x&gt;" in body  # unknown language: escaped, not dropped
+
+
+def test_inline_markdown_renders_code_and_escapes_html():
+    from app.content.render import render_inline
+
+    assert str(render_inline("Use `ls -l` *now*")) == "Use <code>ls -l</code> <em>now</em>"
+    assert "<script>" not in str(render_inline("<script>x</script>"))

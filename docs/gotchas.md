@@ -18,6 +18,10 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 - **A module's slug is its permanent ID.** Progress is stored against it, so renaming a
   published module's file orphans that progress.
 
+- **htmx does not swap 4xx/5xx responses** by default. A validation message returned with 422
+  never appears; return 200 with the re-rendered fragment. Redirects out of an htmx request use
+  the `HX-Redirect` header (any status), since a 3xx would be followed inside the swap.
+
 ## Containers
 
 - **The host `.env` is mode 600 and the container user is uid 10001.** The app does not read

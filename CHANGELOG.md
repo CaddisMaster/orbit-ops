@@ -18,6 +18,14 @@ and why it matters, not what the diff says.
 - Database tables for learner progress: which modules are started or complete (with a score), and
   every quiz answer submitted. Locked and available are worked out from the syllabus, never
   stored (#5).
+- The daily loop works. Quiz questions are answered one at a time and replaced in place with the
+  verdict, the right answer and the explanation. Answering the last question completes the module
+  with a score (the first answer to each question is the one that counts) and links to the next
+  module (#5).
+- Modules unlock in order, and units unlock when their prerequisite units are finished. Opening a
+  locked module sends you back to the bridge with what to finish first (#5).
+- The dashboard leads with today's mission, the next available module, plus overall progress.
+  The syllabus marks every module complete, available or locked (#5).
 
 ### Fixed
 - `HEAD` requests now get the same status and headers as `GET`, without a body, instead of

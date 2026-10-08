@@ -1,0 +1,18 @@
+{# An unanswered question: its own small form, swapped in place on submit. #}
+<form class="question" id="q{{ index }}" hx-post="/modules/{{ module.slug }}/quiz/{{ index }}"
+      hx-target="this" hx-swap="outerHTML">
+  <fieldset>
+    <legend><span class="qnum">{{ index + 1 }}.</span> {{ question.q | md }}</legend>
+    {% if question.type == "fill" %}
+      <input type="text" name="answer" aria-label="Your answer" autocomplete="off" maxlength="200">
+    {% else %}
+      {% set input_type = "checkbox" if question.type == "multi" else "radio" %}
+      {% if question.type == "multi" %}<p class="hint muted">Select all that apply.</p>{% endif %}
+      {% for option in question.options %}
+      <label class="option"><input type="{{ input_type }}" name="answer" value="{{ loop.index0 }}"> {{ option | md }}</label>
+      {% endfor %}
+    {% endif %}
+  </fieldset>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <button type="submit" class="secondary">Check answer</button>
+</form>
