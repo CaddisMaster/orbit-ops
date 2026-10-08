@@ -1,7 +1,8 @@
 # The curriculum's shape: tracks → units, in teaching order. Module files live
 # at <track>/<unit>/NN-slug.md. Format: docs/content-authoring.md.
 #
-# A unit listed here with no module files yet shows as "Coming soon".
+# A unit listed here with no module files yet shows as "Coming soon", and any
+# unit that requires it stays locked until its content exists.
 tracks:
   - slug: core
     title: Core Systems
@@ -16,3 +17,148 @@ tracks:
           The *Meridian*'s life-support controllers run Linux, and the only
           interface left working is a terminal. Learn to find your way around
           it before the air scrubbers need you.
+      - slug: bash-scripting
+        title: Bash scripting
+        prerequisites: [linux-shell]
+        briefing: >-
+          Typing the same twelve commands every shift is how mistakes happen.
+          Chief Okafor wants the routine checks written down as scripts the
+          station can run by itself.
+      - slug: git
+        title: Git
+        prerequisites: [linux-shell]
+        briefing: >-
+          Every config change on the station used to be made by hand and
+          forgotten. From now on, every change has a history, an author and a
+          reason, or it doesn't ship.
+      - slug: networking
+        title: "Networking: DNS, HTTP, TLS & SSH"
+        prerequisites: [linux-shell]
+        briefing: >-
+          The comms array is up but nothing can find anything. Names don't
+          resolve, connections hang, certificates fail. Time to learn what
+          actually happens between "send" and "received".
+      - slug: systemd
+        title: systemd & services
+        prerequisites: [linux-shell]
+        briefing: >-
+          Half the station's daemons die after every power cycle and someone
+          restarts them by hand. Teach the station to start, watch and restart
+          its own services.
+
+  - slug: containers
+    title: Python & Containers
+    deck: Cargo & Fabrication
+    blurb: >-
+      Python for automation, then Docker and Compose: packaging software so it
+      runs the same in the fabrication bay as it did on your bench.
+    units:
+      - slug: python-ops
+        title: Python for operations
+        prerequisites: [bash-scripting]
+        briefing: >-
+          Some jobs outgrow Bash: parsing JSON from the cargo manifest API,
+          retrying flaky sensors, building a proper CLI. The fabrication bay
+          runs on Python.
+      - slug: docker
+        title: Docker fundamentals
+        prerequisites: [linux-shell, networking]
+        briefing: >-
+          "It worked on my console" is how the last fabricator caught fire.
+          Containers ship the software together with everything it needs.
+      - slug: dockerfile-hardening
+        title: Dockerfile hardening & multi-stage builds
+        prerequisites: [docker]
+        briefing: >-
+          The cargo inspector flagged our images: too big, running as root,
+          full of tools nobody uses. Build images that are small, pinned and
+          locked down.
+      - slug: compose
+        title: Docker Compose
+        prerequisites: [docker]
+        briefing: >-
+          One container is a tool; a station is a system. Describe the app,
+          its database and its network in one file, and bring it all up with
+          one command.
+
+  - slug: kubernetes
+    title: Kubernetes
+    deck: Fleet Command
+    blurb: >-
+      Running containers across many machines: workloads, configuration,
+      networking, Helm, and labs on a real local cluster.
+    units:
+      - slug: k8s-workloads
+        title: Pods, Deployments & Services
+        prerequisites: [compose]
+        briefing: >-
+          The *Meridian* is no longer alone: three supply ships dock next week,
+          each with its own compute. Fleet Command needs one control plane to
+          run software across all of them.
+      - slug: k8s-config
+        title: Config, Secrets & storage
+        prerequisites: [k8s-workloads]
+        briefing: >-
+          Workloads come and go; their settings, credentials and data must not.
+          Separate what a pod is from what it knows and what it keeps.
+      - slug: k8s-ingress
+        title: Ingress & cluster networking
+        prerequisites: [k8s-workloads, networking]
+        briefing: >-
+          The fleet's services can see each other but nothing outside can see
+          them. Open exactly the right doors, and no others.
+      - slug: helm
+        title: Helm
+        prerequisites: [k8s-config]
+        briefing: >-
+          Fleet Command is drowning in nearly identical YAML files. Package
+          each application once and install it anywhere with its own values.
+      - slug: k8s-labs
+        title: "Cluster labs: kind & k3s"
+        prerequisites: [helm, k8s-ingress]
+        briefing: >-
+          Simulation is over. Stand up real clusters, deploy to them, break
+          them on purpose and bring them back.
+
+  - slug: delivery
+    title: Delivery & Reliability
+    deck: Comms, Sensors & Shields
+    blurb: >-
+      CI/CD, infrastructure as code, observability and security: shipping
+      changes safely, seeing what's happening, and keeping intruders out.
+    units:
+      - slug: github-actions
+        title: CI/CD with GitHub Actions
+        prerequisites: [git, docker]
+        briefing: >-
+          Every change to the station is tested and shipped by hand, at 3 a.m.,
+          by whoever is awake. Build the pipeline that does it for you, every
+          time, the same way.
+      - slug: terraform
+        title: Terraform
+        prerequisites: [github-actions]
+        briefing: >-
+          Nobody remembers how the backup relay was configured, and it can't
+          be rebuilt. Describe infrastructure as code so it can be reviewed,
+          repeated and recovered.
+      - slug: ansible
+        title: Ansible
+        prerequisites: [bash-scripting, systemd]
+        briefing: >-
+          Forty consoles, each configured slightly differently by a different
+          engineer. Make them all match a written description, and keep them
+          that way.
+      - slug: observability
+        title: "Observability: metrics, logs & alerts"
+        prerequisites: [compose]
+        briefing: >-
+          The sensors are online but nobody is watching them. Collect metrics
+          and logs, draw the dashboards, and wake someone up only when it
+          matters.
+      - slug: devsecops
+        title: "DevSecOps: scanning, secrets & supply chain"
+        prerequisites: [dockerfile-hardening, github-actions]
+        briefing: >-
+          The shields are only as strong as their weakest dependency. Scan
+          what you ship, keep secrets out of the repo, and prove where every
+          artefact came from.

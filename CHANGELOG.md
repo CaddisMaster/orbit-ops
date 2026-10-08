@@ -24,6 +24,12 @@ and why it matters, not what the diff says.
   module (#5).
 - Modules unlock in order, and units unlock when their prerequisite units are finished. Opening a
   locked module sends you back to the bridge with what to finish first (#5).
+- The full syllabus: four tracks (Life Support, Cargo & Fabrication, Fleet Command, and Comms,
+  Sensors & Shields) and 19 units, with their prerequisites and story briefings (#6).
+- Unit 1.1, **Linux & the shell**, is complete with ten modules: the filesystem, navigating,
+  files and globs, permissions, users and sudo, processes and signals, pipes and redirection,
+  text tools, environment and PATH, and apt. Every "Try it" block was run on Ubuntu 24.04 before
+  merging (#6).
 - The dashboard leads with today's mission, the next available module, plus overall progress.
   The syllabus marks every module complete, available or locked (#5).
 
