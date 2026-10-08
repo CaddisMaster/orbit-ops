@@ -18,6 +18,38 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 ## Sessions
 
+### 2026-10-08 (afternoon) — milestone v0.2.0 built, not yet released
+
+- Every v0.2.0 issue is closed:
+  - #11 (#4): the content format and loader
+  - #12 (#9): HEAD → GET
+  - #13: the `0003` progress tables, in a PR of their own
+  - #14 (#5): quizzes, completion, locking and today's mission
+  - #15 (#6): the full syllabus (4 tracks, 19 units) and Unit 1.1's ten modules
+  - #16 (#3): the `gotcha-auditor` and `release-prep` agents
+- **v0.2.0 is NOT cut.** Sean chose to release it in a later session. Production is still 0.1.0.
+  Start that session with the `release-prep` agent: one expand-only migration (`0003`, the
+  pipeline applies it), no new env vars.
+- Found by driving the browser, not by tests: htmx ignores 4xx (validation fragments are 200),
+  and quiz text needed inline Markdown. Found by **running every "Try it" in `ubuntu:24.04`**:
+  wrong umask claim, a missing `mkdir`, and a misplaced `echo $?`. Both checks are now habits
+  (the PR template and `docs/content-authoring.md`).
+- Filed for v0.3.0 (no milestone yet, because v0.2.0 is still the open one): #17, a simulated
+  terminal exercise (xterm.js plus our own JS shell; **no server-side shell on the shared
+  droplet**), and #18, immersion (starfield, deck colours, typed briefings, emblems; CSP must not
+  change).
+- **Next:**
+  1. Cut v0.2.0.
+  2. Close its milestone, open v0.3.0, and move #17 and #18 into it.
+  3. File the remaining v0.3.0 issues: the XP ledger, levels/ranks, streaks + freezes, badges,
+     the station map.
+- Process notes:
+  - A stacked branch is replayed onto `main` after its base squash-merges (stash → new branch),
+    because `git push --force` is denied.
+  - `gh pr update-branch` brings a PR up to date server-side.
+  - Never write "closes #N" anywhere in a PR body that only partly does the work: GitHub links it,
+    and the criteria check then demands every scenario.
+
 ### 2026-10-08 — project bootstrap
 
 - Planned the app (`docs/roadmap.md`) and built milestone v0.1.0's skeleton: the app, auth,
@@ -43,6 +75,4 @@ A per-session log, standing decisions and a release ledger. Newest first.
 - The ghcr package came out public on its own (public repo), so the droplet needs no
   `docker login`.
 - Found while verifying: `HEAD` returns 405 (#9).
-- **Next:** milestone v0.2.0 (Learn loop): #4 content schema/loader, #5 quizzes + completion,
-  #6 syllabus + Unit 1.1, plus #3 (agents) and #9 (HEAD). Start with #4, because #5 and #6
-  depend on its format.
+- **Next:** milestone v0.2.0 (Learn loop): done the same afternoon, see above.
