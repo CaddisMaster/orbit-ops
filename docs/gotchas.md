@@ -13,6 +13,11 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 - **Exception handlers for bare `Exception`** run outside `SecurityHeadersMiddleware`, so a 500
   page lacks the CSP header. It also renders no scripts, so this is accepted.
 
+- **Bad content stops startup** (by design). In dev, `uvicorn --reload` can catch a half-written
+  set of content files and exit with `ContentError`; it restarts on the next file change.
+- **A module's slug is its permanent ID.** Progress is stored against it, so renaming a
+  published module's file orphans that progress.
+
 ## Containers
 
 - **The host `.env` is mode 600 and the container user is uid 10001.** The app does not read

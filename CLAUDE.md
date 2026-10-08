@@ -17,6 +17,7 @@ learn.seandesmet.com on the DigitalOcean droplet it shares with Budget Buddy.
 > | write or change anything under `tests/` | [`docs/testing.md`](docs/testing.md) |
 > | add an Alembic revision, add an env var, or cut a release | [`docs/deployment.md`](docs/deployment.md) |
 > | need the module map, data model or request flow | [`docs/architecture.md`](docs/architecture.md) |
+> | write or change anything under `content/` | [`docs/content-authoring.md`](docs/content-authoring.md) |
 > | plan the next milestone or a feature's shape | [`docs/roadmap.md`](docs/roadmap.md) |
 > | run anything on the droplet | [`RUNBOOK.md`](RUNBOOK.md) |
 > | want the reasoning behind a workflow rule | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
@@ -39,9 +40,10 @@ app/db.py            engine, SessionLocal, get_db dependency, Base
 app/models.py        ORM models (learner state only; lesson content lives in content/)
 app/security.py      argon2 hashing, session auth (require_user), CSRF, rate limiter, CSP headers
 app/templating.py    the shared Jinja env (csrf_token, app_version globals)
-app/routers/         auth.py (login/logout), main.py (dashboard, /healthz)
+app/content/         schema.py, loader.py (load_catalog → Catalog), render.py (Markdown, Pygments)
+app/routers/         auth.py (login/logout), main.py (dashboard, /healthz), learn.py (syllabus, modules)
 alembic/versions/    migrations (0001 users, 0002 least-privilege orbit_app role)
-content/             the curriculum (Markdown + YAML) — from v0.2.0
+content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 scripts/             create_user.py, install_compose.sh (deploy), check_criteria.py (CI)
 ```
 

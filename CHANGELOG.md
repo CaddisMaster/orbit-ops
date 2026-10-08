@@ -6,6 +6,16 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The curriculum is now content: lessons are Markdown files with YAML front matter under
+  `content/`, organised by `syllabus.yml` into tracks and units. The whole curriculum is
+  validated at startup and in CI, so a lesson with a broken quiz fails the build with the file
+  and field named, rather than breaking a page in production (#4).
+- A module page with the story briefing, the lesson (syntax-highlighted code, tables) and the
+  quiz, plus a syllabus page listing every track, unit and module. Quiz answers and
+  explanations never reach the browser (#4).
+- The first module, "The filesystem tree", and `docs/content-authoring.md` describing the format.
+
 ### Fixed
 - `HEAD` requests now get the same status and headers as `GET`, without a body, instead of
   `405 Method Not Allowed`. Uptime monitors and link checkers that use `HEAD` saw the site as

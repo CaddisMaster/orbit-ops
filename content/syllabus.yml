@@ -1,0 +1,18 @@
+# The curriculum's shape: tracks → units, in teaching order. Module files live
+# at <track>/<unit>/NN-slug.md. Format: docs/content-authoring.md.
+#
+# A unit listed here with no module files yet shows as "Coming soon".
+tracks:
+  - slug: core
+    title: Core Systems
+    deck: Life Support
+    blurb: >-
+      Linux, the shell, Git and networking. Nothing else on the station runs
+      until these are back online.
+    units:
+      - slug: linux-shell
+        title: Linux & the shell
+        briefing: >-
+          The *Meridian*'s life-support controllers run Linux, and the only
+          interface left working is a terminal. Learn to find your way around
+          it before the air scrubbers need you.

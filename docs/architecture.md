@@ -23,7 +23,15 @@ Browser ─HTTPS─▶ host Nginx (TLS, learn.seandesmet.com)
 | `app/models.py` | ORM models |
 | `app/security.py` | argon2 hashing with a dummy-hash for timing parity; session login/validate; CSRF; `RateLimiter`; security headers |
 | `app/templating.py` | Jinja env with `csrf_token()` and `app_version` globals |
-| `app/routers/` | `auth` (login/logout), `main` (dashboard, `/healthz`) |
+| `app/content/` | `schema.py` (Pydantic models for syllabus and module files), `loader.py` (`load_catalog()` → immutable `Catalog`, collecting every problem before raising `ContentError`), `render.py` (Markdown with raw HTML off, plus Pygments classes) |
+| `app/routers/` | `auth` (login/logout), `main` (dashboard, `/healthz`), `learn` (`/syllabus`, `/modules/{slug}`) |
+
+## Content
+
+The curriculum lives in `content/` (see `docs/content-authoring.md`) and is loaded **once** in
+`app.main.lifespan` into `app.state.catalog`, which routes get through the `get_catalog`
+dependency. Lesson HTML is rendered at load time, so pages do no Markdown work per request. The
+database never stores content, only learner state keyed by module slug.
 
 ## Data model
 
