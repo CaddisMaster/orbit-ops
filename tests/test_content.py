@@ -207,3 +207,12 @@ def test_inline_markdown_renders_code_and_escapes_html():
 
     assert str(render_inline("Use `ls -l` *now*")) == "Use <code>ls -l</code> <em>now</em>"
     assert "<script>" not in str(render_inline("<script>x</script>"))
+
+
+# --- the real curriculum follows the authoring guidelines (docs/content-authoring.md) ---
+@pytest.mark.parametrize("module", load_catalog().ordered_modules(), ids=lambda m: m.slug)
+def test_real_modules_follow_the_authoring_guidelines(module):
+    assert 10 <= module.minutes <= 20, "a daily module is 15–20 minutes (10 at the least)"
+    assert 3 <= len(module.quiz) <= 5, "quiz: 3–5 questions"
+    assert len(module.cards) >= 2, "at least two flashcards"
+    assert "<h2>Try it</h2>" in module.body_html, "every module ends with something to run"
