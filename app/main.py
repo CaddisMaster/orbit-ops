@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.routers import auth, main
-from app.security import CSRFError, LoginRequired, SecurityHeadersMiddleware, csrf_protect
+from app.security import CSRFError, HeadAsGetMiddleware, LoginRequired, SecurityHeadersMiddleware, csrf_protect
 from app.templating import templates
 
 log = logging.getLogger("orbit")
@@ -43,6 +43,7 @@ def create_app() -> FastAPI:
         https_only=settings.cookie_secure,
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(HeadAsGetMiddleware)  # outermost: everything inside sees a GET
 
     app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
     app.include_router(main.router)
