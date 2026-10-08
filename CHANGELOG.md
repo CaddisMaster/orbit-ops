@@ -19,6 +19,11 @@ and why it matters, not what the diff says.
   every quiz answer submitted. Locked and available are worked out from the syllabus, never
   stored (#5).
 
+### Fixed
+- `HEAD` requests now get the same status and headers as `GET`, without a body, instead of
+  `405 Method Not Allowed`. Uptime monitors and link checkers that use `HEAD` saw the site as
+  down (#9).
+
 ## [0.1.0] — 2026-10-08
 
 First release: the station's skeleton, live at learn.seandesmet.com.

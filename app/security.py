@@ -145,6 +145,31 @@ def client_ip(request: Request) -> str:
 
 
 # ---------------------------------------------------------------------------
+# HEAD → GET. Starlette's plain routes answer HEAD for every GET route, but
+# FastAPI's APIRoute does not, so HEAD /healthz was a 405 (#9) — and uptime
+# monitors and link checkers use HEAD. Serve it as the GET and drop the body:
+# same status, same headers (Content-Length included), which is what HEAD means.
+# A pure ASGI middleware rather than BaseHTTPMiddleware: it only rewrites the
+# scope and filters messages, so it never buffers a response.
+# ---------------------------------------------------------------------------
+class HeadAsGetMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "HEAD":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_without_body(message):
+            if message["type"] == "http.response.body":
+                message = {**message, "body": b""}
+            await send(message)
+
+        await self.app({**scope, "method": "GET"}, receive, send_without_body)
+
+
+# ---------------------------------------------------------------------------
 # Security headers, with a fresh CSP nonce per request for inline scripts.
 # ---------------------------------------------------------------------------
 def build_csp(nonce: str) -> str:
