@@ -6,6 +6,13 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-10-08
+
+First release: the station's skeleton, live at learn.seandesmet.com.
+
+**Server:** `/opt/orbit-ops/.env` is set up (RUNBOOK §2). After the deploy, set the `orbit_app`
+password and `DB_APP_USER`/`DB_APP_PASSWORD` (RUNBOOK §3).
+
 ### Added
 - The station is built: a FastAPI app with login, a dashboard placeholder and `/healthz`
   (reports the version the image was built as, so a deploy can be verified).
