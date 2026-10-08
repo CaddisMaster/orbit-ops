@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} · Orbit Ops{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <p class="eyebrow">Alert · {{ status }}</p>
+  <h1>{{ message }}</h1>
+  <p><a href="/">Return to the bridge</a></p>
+</section>
+{% endblock %}

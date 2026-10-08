@@ -1,0 +1,20 @@
+# Local development overrides. Compose reads this automatically; it is NOT
+# present on the droplet.
+services:
+  web:
+    build:
+      context: .
+      target: dev
+    image: ""
+    # The production 256m cap is sized for one uvicorn process; ./test.sh runs
+    # pytest-xdist workers inside this same container.
+    mem_limit: 2g
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/.ruff_cache
+      - /app/.pytest_cache
+    environment:
+      TEMPLATES_AUTO_RELOAD: "1"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload",
+              "--reload-dir", "app", "--reload-dir", "content"]

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Log in · Orbit Ops{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <p class="eyebrow">Docking request</p>
+  <h1>Identify yourself, cadet</h1>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/login" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Username <input name="username" autocomplete="username" required maxlength="64" autofocus></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="primary">Request docking clearance</button>
+  </form>
+</section>
+{% endblock %}

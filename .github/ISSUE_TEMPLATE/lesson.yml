@@ -1,0 +1,24 @@
+name: Lesson / unit
+description: Write or fix curriculum content
+labels: ["content"]
+body:
+  - type: input
+    id: unit
+    attributes:
+      label: Unit
+      description: The unit slug from content/syllabus.yml
+      placeholder: core.linux-shell
+    validations:
+      required: true
+  - type: textarea
+    id: modules
+    attributes:
+      label: Modules in scope
+      description: One slug per line, or "all"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Sources to check against, misconceptions to address, labs to include.

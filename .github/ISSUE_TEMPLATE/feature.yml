@@ -1,0 +1,52 @@
+name: Feature
+description: A new capability or an improvement to an existing one
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features are specified with **acceptance criteria in Given/When/Then
+        form** before any code is written, so "done" is agreed up front.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is missing or annoying today? Describe the need, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: >
+        Scenarios in Given/When/Then form. These become the tests (claimed with
+        @pytest.mark.criterion). Cover the unhappy paths too.
+      value: |
+        ```gherkin
+        Scenario: Completing a module awards XP
+          Given I am on an unfinished module
+          When I answer every quiz question correctly
+          Then the module is marked complete
+          And my XP increases by the module's reward
+
+        Scenario: A completed module awards no XP twice
+          Given I have already completed a module
+          When I complete it again
+          Then my XP does not change
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Explicitly out of scope
+  - type: checkboxes
+    id: considerations
+    attributes:
+      label: Does this touch any of these?
+      options:
+        - label: A database schema change (an Alembic revision, in its own PR)
+        - label: New queries (must be scoped to the current user)
+        - label: Lesson content or the content schema
+        - label: A new AI surface (hints/reviews never reveal answers; spend is capped)
+        - label: The CSP (Pyodide, CDN, inline scripts)

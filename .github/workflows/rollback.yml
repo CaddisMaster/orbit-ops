@@ -1,0 +1,96 @@
+# Manual rollback to an already-published version. Does NOT run migrations in
+# either direction: the database stays where it is, which is safe because
+# migrations are expand-only within a release (docs/gotchas.md). If a release
+# must be undone together with its schema, restore the pre-deploy dump instead
+# (RUNBOOK §6).
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to roll back to, e.g. 0.1.0 (no leading v)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPO: caddismaster/orbit-ops
+  APP_DIR: /opt/orbit-ops
+  APP_URL: https://learn.seandesmet.com
+
+jobs:
+  rollback:
+    name: Roll the droplet back
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERSION: ${{ inputs.version }}
+      HOST: ${{ secrets.DROPLET_HOST }}
+      USER_NAME: ${{ vars.DROPLET_USER }}
+    steps:
+      - name: Validate the version and confirm its image exists
+        run: |
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::'$VERSION' is not X.Y.Z"; exit 1; }
+          token=$(curl -s "https://ghcr.io/token?scope=repository:${IMAGE_REPO}:pull" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${token}" \
+                 -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.v2+json" \
+                 "https://ghcr.io/v2/${IMAGE_REPO}/manifests/${VERSION}")
+          [ "$code" = "200" ] || { echo "::error::No image tagged '${VERSION}' in ghcr (HTTP ${code})."; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Read the target version's docker-compose.yml
+        run: git show "v${VERSION}:docker-compose.yml" > "$RUNNER_TEMP/docker-compose.yml"
+      - name: Install the deploy key
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DROPLET_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Ship that version's docker-compose.yml
+        run: |
+          EXPECTED="$(sha256sum "$RUNNER_TEMP/docker-compose.yml" | cut -d' ' -f1)"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "umask 022 && cat > ${APP_DIR}/.docker-compose.yml.new" < "$RUNNER_TEMP/docker-compose.yml"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "cd ${APP_DIR} && sh -s -- '${EXPECTED}' '${VERSION}' rollback" < scripts/install_compose.sh
+      - name: Deploy that version
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "set -e
+               cd ${APP_DIR}
+               touch .env.tmp && chmod 600 .env.tmp
+               grep -v '^TAG=' .env > .env.tmp
+               printf 'TAG=%s\n' '${VERSION}' >> .env.tmp
+               mv .env.tmp .env
+               docker compose pull web
+               docker compose up -d --no-deps --remove-orphans web
+               RUNNING=\"\$(docker compose exec -T web printenv APP_VERSION | tr -d '\r')\"
+               [ \"\$RUNNING\" = '${VERSION}' ] || { echo \"::error::Asked for ${VERSION}, running '\$RUNNING'\"; exit 1; }
+               docker compose ps"
+      - name: Verify the rolled-back app is healthy
+        run: |
+          for i in $(seq 1 20); do
+            body=$(curl -sf --max-time 10 "${APP_URL}/healthz" || true)
+            if echo "$body" | grep -q "\"version\":\"${VERSION}\""; then
+              echo "Rolled back and healthy: $body"; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::${APP_URL}/healthz is not serving ${VERSION}."
+          exit 1
+      - name: Scrub the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

@@ -1,0 +1,202 @@
+# Publishing a GitHub Release builds the image, proves it boots, waits for
+# approval on the `production` environment, then deploys it to the droplet.
+# Ported from Budget Buddy's release.yml; the differences are Alembic instead
+# of migrate.py, no worker/redis services, and /opt/orbit-ops.
+#
+# Required on the `production` environment (RUNBOOK §4):
+#   secrets: DROPLET_SSH_KEY, DROPLET_KNOWN_HOSTS, DROPLET_HOST
+#   vars:    DROPLET_USER
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+# Shared with rollback.yml: a release and a rollback must never interleave.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/caddismaster/orbit-ops
+  APP_DIR: /opt/orbit-ops
+  APP_URL: https://learn.seandesmet.com
+
+jobs:
+  build-push:
+    name: Build and push to ghcr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Derive tags
+        id: meta
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          version="${TAG_NAME#v}"
+          sha_short="$(git rev-parse --short HEAD)"
+          tags="${IMAGE}:${version},${IMAGE}:sha-${sha_short}"
+          if [ "$PRERELEASE" = "false" ]; then
+            tags="${tags},${IMAGE}:latest"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "sha_short=${sha_short}" >> "$GITHUB_OUTPUT"
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            APP_COMMIT=${{ steps.meta.outputs.sha_short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  smoke:
+    name: Pushed image migrates, boots and serves /healthz
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: orbit
+          POSTGRES_PASSWORD: orbit
+          POSTGRES_DB: orbit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orbit"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      VERSION: ${{ needs.build-push.outputs.version }}
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Write the smoke env
+        run: |
+          printf '%s\n' DB_HOST=localhost DB_PORT=5432 DB_NAME=orbit DB_USER=orbit DB_PASSWORD=orbit \
+            SECRET_KEY=smoke-test-key-not-for-production > "$RUNNER_TEMP/smoke.env"
+      - name: Migrations apply from the pushed image
+        run: docker run --rm --network host --env-file "$RUNNER_TEMP/smoke.env" "${IMAGE}:${VERSION}" alembic upgrade head
+      - name: Run the pushed image
+        run: docker run -d --name smoke --network host --env-file "$RUNNER_TEMP/smoke.env" "${IMAGE}:${VERSION}"
+      - name: /healthz returns 200 and the release version
+        run: |
+          for i in $(seq 1 30); do
+            body=$(curl -sf http://localhost:8000/healthz || true)
+            if [ -n "$body" ]; then break; fi
+            sleep 2
+          done
+          echo "GET /healthz -> ${body:-<no response>}"
+          echo "$body" | grep -q "\"version\":\"${VERSION}\"" || { echo "::error::Image did not report ${VERSION}"; exit 1; }
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs smoke || true
+
+  deploy:
+    name: Deploy to the droplet
+    needs: [build-push, smoke]
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERSION: ${{ needs.build-push.outputs.version }}
+      HOST: ${{ secrets.DROPLET_HOST }}
+      USER_NAME: ${{ vars.DROPLET_USER }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the deploy key
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DROPLET_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Ship the release's docker-compose.yml
+        run: |
+          EXPECTED="$(sha256sum docker-compose.yml | cut -d' ' -f1)"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "umask 022 && cat > ${APP_DIR}/.docker-compose.yml.new" < docker-compose.yml
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "cd ${APP_DIR} && sh -s -- '${EXPECTED}' '${VERSION}' release" < scripts/install_compose.sh
+      - name: Deploy over SSH
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "set -e
+               cd ${APP_DIR}
+               # Pin TAG in .env so a bare 'docker compose up -d' reproduces this version.
+               touch .env.tmp && chmod 600 .env.tmp
+               grep -v '^TAG=' .env > .env.tmp
+               printf 'TAG=%s\n' '${VERSION}' >> .env.tmp
+               mv .env.tmp .env
+               set -a; . ./.env; set +a
+               # A no-op when db is already up (install_compose.sh has refused any
+               # compose change that would recreate it); on the very first deploy
+               # it creates the database so there is something to back up.
+               docker compose up -d --wait db
+               # Backup first, verified, before anything changes.
+               mkdir -p backups
+               DUMP=\"backups/pre-deploy-\$(date +%Y%m%d-%H%M%S).sql.gz\"
+               docker compose exec -T db pg_dump -U \"\$DB_USER\" \"\$DB_NAME\" | gzip > \"\$DUMP\"
+               gzip -t \"\$DUMP\"
+               echo \"backup ok: \$DUMP (\$(stat -c%s \"\$DUMP\") bytes)\"
+               # Expand-phase migrations from the NEW image, while the old one still serves.
+               docker compose pull web
+               docker compose run --rm --no-deps -T web alembic upgrade head
+               # 'pull web' and not a bare pull: never touch the db image on a release.
+               docker compose up -d --remove-orphans
+               RUNNING=\"\$(docker compose exec -T web printenv APP_VERSION | tr -d '\r')\"
+               if [ \"\$RUNNING\" != '${VERSION}' ]; then
+                 echo \"::error::Deployed ${VERSION} but the running container reports '\$RUNNING'\"
+                 exit 1
+               fi
+               echo \"running version \$RUNNING\"
+               # Keep the last 14 pre-deploy dumps.
+               ls -1t backups/pre-deploy-*.sql.gz | tail -n +15 | xargs -r rm --
+               docker compose ps"
+      - name: Verify the deployed app is healthy
+        run: |
+          for i in $(seq 1 20); do
+            body=$(curl -sf --max-time 10 "${APP_URL}/healthz" || true)
+            if echo "$body" | grep -q "\"version\":\"${VERSION}\""; then
+              echo "Deployed and healthy: $body"; exit 0
+            fi
+            echo "attempt $i: ${body:-<no response>}"
+            sleep 5
+          done
+          echo "::error::${APP_URL}/healthz is not serving ${VERSION}."
+          exit 1
+      - name: Scrub the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

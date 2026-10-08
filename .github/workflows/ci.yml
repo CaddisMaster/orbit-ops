@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Ruff
+        id: ruff
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
+        with:
+          version-file: requirements-dev.txt
+          args: check --output-format github
+      - name: Ruff ran the pinned version
+        if: ${{ !cancelled() }}
+        env:
+          RUFF_RAN: ${{ steps.ruff.outputs.ruff-version }}
+        run: |
+          pinned=$(sed -n 's/^ruff==\([^[:space:]]*\).*/\1/p' requirements-dev.txt)
+          if [ "$RUFF_RAN" != "$pinned" ]; then
+            echo "::error::CI ran ruff '${RUFF_RAN}', but requirements-dev.txt pins ${pinned}"
+            exit 1
+          fi
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: orbit
+          POSTGRES_PASSWORD: orbit
+          POSTGRES_DB: orbit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orbit"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: orbit
+      DB_USER: orbit
+      DB_PASSWORD: orbit
+      SECRET_KEY: ci-secret-key-not-for-production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Migrate to head
+        run: alembic upgrade head
+      - name: Migrations round-trip (downgrade to base, upgrade again)
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+          alembic check
+      - name: Run tests
+        run: pytest -q -n auto
+
+  docker-build:
+    name: Image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the shipped (final) stage
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

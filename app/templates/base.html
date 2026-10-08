@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  {# htmx injects an inline <style> for indicators unless told not to; the CSP
+     (style-src 'self') would block it and log a violation on every page. #}
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>{% block title %}Orbit Ops{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+  <script src="{{ url_for('static', path='htmx.min.js') }}" defer></script>
+</head>
+<body hx-headers='{"X-CSRF-Token": "{{ csrf_token(request) }}"}'>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> Orbit Ops</a>
+    {% if user %}
+    <nav>
+      <span class="muted">Cadet {{ user.username }}</span>
+      <form method="post" action="/logout" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button type="submit" class="link">Log out</button>
+      </form>
+    </nav>
+    {% endif %}
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer muted">Station <i>Meridian</i> · {% if app_version != 'dev' %}v{% endif %}{{ app_version }}</footer>
+</body>
+</html>

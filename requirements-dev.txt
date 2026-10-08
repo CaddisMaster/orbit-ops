@@ -1,0 +1,12 @@
+# Dev / test dependencies, baked into the Dockerfile's `dev` stage so ./test.sh
+# does not reinstall them on every run. Never shipped.
+#
+# httpx is FastAPI's TestClient transport.
+httpx==0.28.1
+pytest==9.1.1
+# Parallel runs. Safe because tests create uniquely named rows per test
+# (tests/conftest.py `make_user`) rather than sharing fixtures across workers.
+pytest-xdist==3.8.0
+# ⚠️ THE ONLY RUFF PIN. CI's ruff-action reads it via `version-file:`.
+# Keep it a bare `ruff==X.Y.Z` line.
+ruff==0.16.10

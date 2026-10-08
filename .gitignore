@@ -1,0 +1,46 @@
+# Secrets — never commit. .env.example is the tracked template.
+.env
+*.env
+
+# Bitwarden .env rebuild shim + its rollback copy. Both listed EXPLICITLY:
+# `*.env` matches files ENDING in .env, so it catches neither `bw-env.sh` nor
+# `.env.bak`. The .bak holds real secrets — without this line it is committable.
+bw-env.sh
+bw-seed.sh
+.env.bak*
+
+# Local-only Claude Code context: Droplet IP, vault paths, personal cadence.
+# CLAUDE.md itself IS tracked — it is the project's onboarding doc.
+CLAUDE.local.md
+
+# The same line, drawn through .claude/. The harness is COMMITTED on purpose —
+# agents, skills, commands, hooks and the permission allowlist, because a
+# permission grant belongs in a reviewable diff. These two are the machine half:
+#   - settings.local.json: absolute $HOME paths, ssh, the deploy user.
+#   - worktrees/: live git worktrees. Untracked and, until now, UNIGNORED —
+#     one `git add .` from committing a second whole checkout into a public
+#     repo. Relying on a global ~/.config/git/ignore covered this machine only.
+# See .claude/README.md.
+.claude/settings.local.json
+.claude/worktrees/
+
+# pg_dump output. Never commit.
+backups/
+*.dump
+*.sql.gz
+
+# Python. `.venv/` is the editor's interpreter — it exists so the language
+# server can resolve flask/psycopg2/pytest, NOT to run anything. The app and the
+# test suite still run in containers. Both spellings, since only `venv/` was
+# listed and the tooling default is `.venv/`.
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# macOS. Note the capital S — git patterns are case-sensitive and the file
+# Finder actually creates is ".DS_Store".
+.DS_Store
+

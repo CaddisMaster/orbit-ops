@@ -1,0 +1,49 @@
+name: Bug report
+description: Something behaves incorrectly
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A mistyped attribute in a Jinja template renders as an **empty string**
+        rather than raising. If something is blank that should not be, say so.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include the exact wording of any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open today's mission
+        2. Answer question 2 with option B
+        3. The XP bar does not move
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did you see this?
+      options:
+        - Local development
+        - Production (learn.seandesmet.com)
+        - Both
+        - The test suite
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: From `docker compose logs web`. Redact anything sensitive — this repository is public.
+      render: shell

@@ -1,0 +1,50 @@
+# Secrets — NEVER bake these into the image (it is pushed to a public registry).
+# The app reads .env at runtime via docker-compose `env_file:`, so it is not needed in the image.
+.env
+.env.*
+*.pem
+*.key
+
+# Database backups / dumps must never ship in the image.
+backups/
+*.dump
+
+# Version control
+.git
+.gitignore
+
+# Python caches / test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# ⚠️ .ruff_cache/ is not optional tidiness. It is populated by whoever last ran
+# ruff on the host, so leaving it in means the same source can produce different
+# images on different machines — quietly undermining the reproducibility the
+# fully-pinned requirements.txt exists to provide (#333).
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local dev / editor cruft
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+
+# Docs & local-only files not needed in the runtime image.
+# ⚠️ `*.md` matches ONLY top-level — `**/*.md` is what matches nested. That gap
+# shipped every file in docs/ and the whole .claude/ harness for months, and it
+# was invisible because CLAUDE.md is listed separately and so WAS correctly
+# absent: the one file anyone would check for was the one the pattern caught
+# (BB #333). The directories are named explicitly as well, so that .claude/'s
+# non-markdown files (settings.json, hooks/) go too.
+**/*.md
+# ⚠️ EXCEPT the curriculum: lessons ARE Markdown and the app reads them at
+# startup. Without this line the image boots with an empty syllabus.
+!content/**/*.md
+CLAUDE.md
+docs/
+.claude/
+docker-compose*.yml
+test.sh
