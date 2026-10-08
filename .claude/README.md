@@ -6,7 +6,7 @@ fixing. Ported from Budget Buddy.
 
 ```
 .claude/
-  agents/                   # sweeper (mechanical sweeps), test-first (make a failing test pass)
+  agents/                   # sweeper, test-first (edit) · gotcha-auditor, release-prep (report, read-only)
   skills/verify/            # drive the real HTTP surface at :5002 (CSRF cookie jar included)
   commands/wrap.md          # /wrap — the end-of-session sequence
   hooks/changelog-guard.sh  # Stop hook: the CHANGELOG rule, locally (mirrors changelog.yml)
@@ -26,7 +26,7 @@ If the branch changed `app/` and not `CHANGELOG.md`, it says so once, then stays
 open on anything it cannot understand. Silence it locally with `SKIP_CHANGELOG_GUARD=1`; on the PR
 the escape hatch is the `skip-changelog` label.
 
-## Not yet ported
+## Not ported
 
-Budget Buddy's `gotcha-auditor` and `release-prep` report agents, and its `claude-triage`
-workflow. Port them when this repo has enough history for them to audit.
+Budget Buddy's `claude-triage` workflow (issue triage by claude-code-action). Orbit Ops has one
+user and few issues; revisit if that changes.

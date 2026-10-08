@@ -20,6 +20,10 @@ deploy.
 
 ## Cutting a release
 
+Run the `release-prep` agent first: it reports go/no-go, the version, new env vars, Alembic
+revisions and the exact deploy sequence.
+
+
 1. `CHANGELOG.md`: rename `[Unreleased]` to `[X.Y.Z] — YYYY-MM-DD`, start a fresh `[Unreleased]`.
 2. Merge that PR, then publish a GitHub Release `vX.Y.Z` from `main` with the entry as notes.
 3. Approve the `production` deployment when the smoke job is green.
