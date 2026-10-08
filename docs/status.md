@@ -14,7 +14,7 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
-| — | — | nothing released yet |
+| 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
 
@@ -34,6 +34,15 @@ A per-session log, standing decisions and a release ledger. Newest first.
 - Notes are set up like BB's: `CLAUDE.local.md` → `personal-vault`, memory in
   `personal-vault/claude/memory/orbit-ops`, diary and reference notes in
   `obsidian-vault/Orbit Ops/`.
-- **Next:** #1 is Sean's, from the Mac (the VM cannot reach the droplet by design), including the
-  three `production` secrets. Then #2: publish v0.1.0, approve it, set the `orbit_app` password,
-  and create the account on production.
+- **Shipped v0.1.0 the same day.** Droplet setup (#1) was done from the Mac: DNS, Nginx, a
+  single-name Certbot lineage, `/opt/orbit-ops` and `.env`, and a **new dedicated deploy key**
+  (BB's private key exists only in BB's GitHub secrets, so it couldn't be copied, and a
+  per-app key can be revoked on its own). Release run `37826926927`: smoke test passed, deploy
+  approved, backup taken, migrations run, `0.1.0` verified. Then the app was switched to
+  `orbit_app` and the learner account created on production (#2).
+- The ghcr package came out public on its own (public repo), so the droplet needs no
+  `docker login`.
+- Found while verifying: `HEAD` returns 405 (#9).
+- **Next:** milestone v0.2.0 (Learn loop): #4 content schema/loader, #5 quizzes + completion,
+  #6 syllabus + Unit 1.1, plus #3 (agents) and #9 (HEAD). Start with #4, because #5 and #6
+  depend on its format.
