@@ -22,6 +22,10 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   never appears; return 200 with the re-rendered fragment. Redirects out of an htmx request use
   the `HX-Redirect` header (any status), since a 3xx would be followed inside the swap.
 
+- **"closes #N" anywhere in a PR body links the issue**, even mid-sentence ("a later PR that
+  closes #5"). The criteria check then requires all of #N's scenarios. Write "Part of #N" and
+  avoid the closing keywords (close/fix/resolve).
+
 ## Containers
 
 - **The host `.env` is mode 600 and the container user is uid 10001.** The app does not read
