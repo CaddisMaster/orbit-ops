@@ -2,6 +2,8 @@
 
 import pytest
 
+from tests.conftest import csrf
+
 
 @pytest.mark.criterion(4, "A module renders")
 def test_module_page_shows_story_lesson_and_quiz(logged_in):
@@ -19,10 +21,22 @@ def test_module_page_shows_story_lesson_and_quiz(logged_in):
 
 @pytest.mark.criterion(4, "A module renders")
 def test_quiz_answers_and_explanations_never_reach_the_browser(logged_in, client):
+    from app.content.render import render_inline
+
     html = logged_in.get("/modules/the-filesystem").text
-    for question in client.app.state.catalog.modules["the-filesystem"].quiz:
-        # Every explanation starts with distinctive prose that appears nowhere else.
+    quiz = client.app.state.catalog.modules["the-filesystem"].quiz
+    for question in quiz:
+        # Explanations are rendered as inline Markdown once revealed, so check
+        # for the rendered form as well as the raw text.
         assert question.explain[:40] not in html
+        assert str(render_inline(question.explain))[:60] not in html
+    # Sanity: the rendered check really would find a revealed explanation.
+    answered = logged_in.post(
+        "/modules/the-filesystem/quiz/0",
+        data={"answer": ["0"]},
+        headers={"HX-Request": "true", "X-CSRF-Token": csrf(logged_in)},
+    ).text
+    assert str(render_inline(quiz[0].explain))[:60] in answered
 
 
 def test_module_page_requires_login(client):

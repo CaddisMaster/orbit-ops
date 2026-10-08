@@ -5,7 +5,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import progress
 from app.config import get_settings
+from app.content import Catalog, get_catalog
 from app.db import get_db
 from app.models import User
 from app.security import require_user
@@ -27,5 +29,22 @@ def healthz(db: Session = Depends(get_db)) -> JSONResponse:
 
 
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, user: User = Depends(require_user)):
-    return templates.TemplateResponse(request, "dashboard.html", {"user": user})
+def dashboard(
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    completed = progress.completed_slugs(db, user.id)
+    mission = progress.todays_mission(catalog, completed)
+    return templates.TemplateResponse(
+        request,
+        "dashboard.html",
+        {
+            "user": user,
+            "mission": mission,
+            "mission_unit": catalog.units[mission.unit] if mission else None,
+            "done": len(completed & catalog.modules.keys()),
+            "total": len(catalog.modules),
+        },
+    )

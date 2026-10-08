@@ -1,10 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
+{% set message = pop_flash(request) %}
+{% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
+
+{% if mission %}
+<section class="card mission">
+  <p class="eyebrow">Today's mission · {{ mission.minutes }} min · {{ mission.xp }} XP</p>
+  <h1>{{ mission.title }}</h1>
+  <p class="muted">{{ mission_unit.title }} · module {{ mission.position }} of {{ mission_unit.modules | length }}</p>
+  <p><a class="button primary" href="/modules/{{ mission.slug }}">Begin mission</a></p>
+</section>
+{% elif total %}
 <section class="card">
-  <p class="eyebrow">Mission log · Day 0</p>
-  <h1>Welcome aboard the <i>Meridian</i>, {{ user.username }}.</h1>
-  <p>The station is dark. Life Support, Cargo &amp; Fabrication, Fleet Command and Comms are all offline,
-     and you are the newest engineer on the roster. Each day you will bring one more system back online.</p>
+  <p class="eyebrow">All clear</p>
+  <h1>Every available mission is complete.</h1>
+  <p class="muted">New modules are on their way. Review any finished module from the syllabus.</p>
+</section>
+{% endif %}
+
+<section class="card progress-summary">
+  <p class="eyebrow">Station status</p>
+  {% if done == 0 %}
+  <p>Welcome aboard the <i>Meridian</i>, {{ user.username }}. The station is dark. Each mission you
+     finish brings one more system back online.</p>
+  {% endif %}
+  <p><strong>{{ done }}</strong> of {{ total }} module{{ '' if total == 1 else 's' }} complete.</p>
   <p><a href="/syllabus">Open the station schematic (syllabus) →</a></p>
 </section>
 {% endblock %}

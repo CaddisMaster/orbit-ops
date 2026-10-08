@@ -21,7 +21,7 @@ def test_valid_login_reaches_dashboard(client, user):
     response = login(client, user.username, follow_redirects=True)
     assert response.status_code == 200
     assert user.username in response.text
-    assert "Mission log" in response.text
+    assert "Today's mission" in response.text
 
 
 def test_login_page_redirects_when_already_logged_in(logged_in):

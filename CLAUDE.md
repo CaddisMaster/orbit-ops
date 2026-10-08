@@ -41,8 +41,9 @@ app/models.py        ORM models (learner state only; lesson content lives in con
 app/security.py      argon2 hashing, session auth (require_user), CSRF, rate limiter, CSP headers
 app/templating.py    the shared Jinja env (csrf_token, app_version globals)
 app/content/         schema.py, loader.py (load_catalog → Catalog), render.py (Markdown, Pygments)
-app/routers/         auth.py (login/logout), main.py (dashboard, /healthz), learn.py (syllabus, modules)
-alembic/versions/    migrations (0001 users, 0002 least-privilege orbit_app role)
+app/progress.py      lock rules + today's mission (pure), check_answer, record_answer
+app/routers/         auth.py (login/logout), main.py (dashboard, /healthz), learn.py (syllabus, modules, quiz)
+alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 module_progress + exercise_attempts)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 scripts/             create_user.py, install_compose.sh (deploy), check_criteria.py (CI)
 ```

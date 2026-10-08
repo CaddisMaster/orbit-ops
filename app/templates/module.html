@@ -19,23 +19,22 @@
   <section class="card quiz" aria-labelledby="quiz-heading">
     <p class="eyebrow">Systems check</p>
     <h2 id="quiz-heading">Quiz</h2>
-    {# Only questions and options are rendered. Answers and explanations never
-       leave the server. #}
+    {# Unanswered questions render options only: answers and explanations
+       leave the server only after that question has been answered. #}
     {% for question in module.quiz %}
-    <fieldset class="question" disabled>
-      <legend><span class="qnum">{{ loop.index }}.</span> {{ question.q }}</legend>
-      {% if question.type == "fill" %}
-        <input type="text" name="q{{ loop.index0 }}" aria-label="Your answer" autocomplete="off">
+      {% set index = loop.index0 %}
+      {% if index in answers %}
+        {% with attempt = answers[index], just_completed = false %}{% include "partials/_answered.html" %}{% endwith %}
       {% else %}
-        {% set input_type = "checkbox" if question.type == "multi" else "radio" %}
-        {% if question.type == "multi" %}<p class="hint muted">Select all that apply.</p>{% endif %}
-        {% set qi = loop.index0 %}
-        {% for option in question.options %}
-        <label class="option"><input type="{{ input_type }}" name="q{{ qi }}" value="{{ loop.index0 }}"> {{ option }}</label>
-        {% endfor %}
+        {% include "partials/_question.html" %}
       {% endif %}
-    </fieldset>
     {% endfor %}
   </section>
+
+  {% if record.status == "complete" %}
+    {% with just_completed = false %}{% include "partials/_completion.html" %}{% endwith %}
+  {% else %}
+    <div id="completion"></div>
+  {% endif %}
 </article>
 {% endblock %}
