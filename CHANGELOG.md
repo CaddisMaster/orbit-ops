@@ -15,6 +15,9 @@ and why it matters, not what the diff says.
   quiz, plus a syllabus page listing every track, unit and module. Quiz answers and
   explanations never reach the browser (#4).
 - The first module, "The filesystem tree", and `docs/content-authoring.md` describing the format.
+- Database tables for learner progress: which modules are started or complete (with a score), and
+  every quiz answer submitted. Locked and available are worked out from the syllabus, never
+  stored (#5).
 
 ## [0.1.0] — 2026-10-08
 

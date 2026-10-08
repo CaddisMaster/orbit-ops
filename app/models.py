@@ -4,7 +4,8 @@ stores only the learner's state, keyed by stable content slugs."""
 import secrets
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -24,4 +25,42 @@ class User(Base):
     # Rotating it (password change, "log out everywhere") invalidates every
     # existing session at once — the same idea as Budget Buddy's sql/37.
     session_token: Mapped[str] = mapped_column(String(64), default=new_session_token)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ModuleProgress(Base):
+    """One row per module the learner has opened. Whether a module is locked or
+    available is NOT stored: it is derived from the catalog's order and
+    prerequisites plus which modules are complete (app/progress.py)."""
+
+    __tablename__ = "module_progress"
+    __table_args__ = (
+        UniqueConstraint("user_id", "module_slug"),
+        CheckConstraint("status IN ('in_progress', 'complete')", name="module_progress_status"),
+        CheckConstraint("score IS NULL OR score BETWEEN 0 AND 100", name="module_progress_score"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    module_slug: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), default="in_progress")
+    score: Mapped[int | None]  # percent of quiz questions right on the first try
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ExerciseAttempt(Base):
+    """Every answer submitted, kept as history. For quizzes, the FIRST attempt
+    at each question is the one that counts towards the score."""
+
+    __tablename__ = "exercise_attempts"
+    __table_args__ = (Index("ix_exercise_attempts_user_module", "user_id", "module_slug"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    module_slug: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(16))  # "quiz" now; "challenge", "lab" later
+    item: Mapped[int]  # question index within the module's quiz
+    submitted: Mapped[list] = mapped_column(JSONB)
+    correct: Mapped[bool]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

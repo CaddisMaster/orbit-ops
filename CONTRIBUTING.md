@@ -59,7 +59,8 @@ The live list is `docs/gotchas.md`. The ones most likely to bite a first PR:
 ## 4. Database changes
 
 ```bash
-docker compose exec web alembic revision --autogenerate -m "add module_progress"
+# -u: the container user (uid 10001) cannot write into the bind-mounted source tree
+docker compose exec -u "$(id -u):$(id -g)" web alembic revision --autogenerate -m "add module_progress" --rev-id 0004
 # review the generated file — autogenerate misses server defaults and renames
 docker compose exec web alembic upgrade head
 docker compose exec web alembic check       # models and migrations agree
