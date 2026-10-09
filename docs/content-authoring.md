@@ -95,7 +95,7 @@ quiz:                  # 1–8 questions; aim for 3–5
     q: An absolute path starts with which character?
     answer: ["/"]      # every accepted spelling
     explain: …
-cards:                 # optional flashcards for spaced repetition (v0.4.0)
+cards:                 # optional flashcards for spaced repetition (v0.5.0)
   - front: What lives in /etc?
     back: System-wide configuration.
 ---

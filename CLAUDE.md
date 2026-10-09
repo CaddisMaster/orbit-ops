@@ -58,7 +58,7 @@ scripts/             create_user.py, install_compose.sh (deploy), check_criteria
    one user today. It costs nothing and keeps a second account from ever being a rewrite.
 2. **Never show an exception to the user.** The catch-all handler logs and renders `error.html`.
 3. **Inline `<script>` needs `nonce="{{ request.state.csp_nonce }}"`**; never add
-   `'unsafe-inline'` or `'unsafe-eval'` to the CSP. Pyodide (v0.4.0) gets `'wasm-unsafe-eval'`
+   `'unsafe-inline'` or `'unsafe-eval'` to the CSP. Pyodide (v0.5.0) gets `'wasm-unsafe-eval'`
    only.
 4. **Every POST carries the CSRF token** — automatic for htmx (`hx-headers` on `<body>`), a
    hidden `csrf_token` input for plain forms.
@@ -66,7 +66,7 @@ scripts/             create_user.py, install_compose.sh (deploy), check_criteria
    code stopped using it. One Alembic revision per PR, nothing else in it.
 6. **Dependencies are pinned exactly, transitive included**; actions are pinned by SHA; the base
    image by digest. `tests/test_repo_hardening.py` enforces all three.
-7. **AI never reveals quiz answers and never runs without the monthly budget check** (v0.5.0).
+7. **AI never reveals quiz answers and never runs without the monthly budget check** (v0.6.0).
 
 ## Testing
 
@@ -84,7 +84,7 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. Milestone **v0.1.0 — Skeleton and deploy** is in progress.
+See `docs/status.md`. **v0.4.0** is in production; the next milestone is **v0.5.0 — Practice**.
 
 ## Maintainer notes (local only)
 
