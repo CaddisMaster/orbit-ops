@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-08
+
+The learn loop: the full syllabus, Unit 1.1's ten Linux modules, quizzes that complete a
+module and unlock the next, and today's mission on the bridge.
+
 ### Added
 - The curriculum is now content: lessons are Markdown files with YAML front matter under
   `content/`, organised by `syllabus.yml` into tracks and units. The whole curriculum is
