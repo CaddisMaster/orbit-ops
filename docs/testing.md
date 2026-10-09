@@ -22,6 +22,11 @@ time, so tests always see the current schema.
   rendered form, the way a browser does; `login(client, username)` uses it.
 - **Claim acceptance criteria** with `@pytest.mark.criterion(<issue>, "<Scenario title>")`.
   Both arguments must be literals; `scripts/check_criteria.py` parses the source.
+- **Only the PR that finishes an issue closes it.** The check reads the PR's
+  `closingIssuesReferences`, so a `Closes #N` *anywhere* in the body (or a manual link in the
+  sidebar) makes it demand every one of #N's scenarios. A PR doing part of the work, like the
+  migration PR that goes first under CONTRIBUTING §2, says `Part of #N` instead. Getting this
+  wrong costs one failed run, plus a GitHub email, per body edit (#13 got two).
 - **Repository rules are tests too** (`tests/test_repo_hardening.py`): exact pins, digest-pinned
   base image, prod as the final stage, localhost-only ports, required `TAG`, SHA-pinned actions,
   `.env.example` completeness.
