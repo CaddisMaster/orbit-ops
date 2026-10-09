@@ -219,3 +219,18 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .streak.is-lit strong { color: var(--warn); }
 .streak .filed { color: var(--accent); }
 .streak + .standing { margin-top: 0.75rem; }
+
+.badge-grid, .badge-list { list-style: none; padding: 0; margin: 0.75rem 0 0; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+.badge { display: flex; gap: 0.75rem; align-items: flex-start; }
+.badge-list .badge + .badge { margin-top: 0.6rem; }
+.badge-grid .badge { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem; }
+.badge p { margin: 0; }
+.badge .emblem { flex: none; }
+.badge.earned .emblem { color: var(--accent); }
+.badge-name { font-weight: 600; }
+.badge-desc { color: var(--muted); font-size: 0.9rem; }
+.badge-date { color: var(--muted); font-size: 0.8rem; font-family: var(--mono); }
+.badge.locked { opacity: 0.45; }
+.badge.locked .emblem { color: var(--muted); }
+.recent-badges { margin: 0.75rem 0; }

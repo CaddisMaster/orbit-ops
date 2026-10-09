@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "partials/_emblem.html" import emblem %}
 {% block content %}
 {% set message = pop_flash(request) %}
 {% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
@@ -37,7 +38,20 @@
               aria-label="Progress to level {{ standing.level + 1 }}"></progress>
     <p class="muted">{{ standing.to_next }} XP to level {{ standing.level + 1 }}</p>
   </div>
+  {% if recent_badges %}
+  <div class="recent-badges">
+    <p class="muted">Latest badges</p>
+    <ul class="badge-list">
+      {% for item in recent_badges %}
+      <li class="badge earned">{{ emblem(item.badge.emblem) }}
+        <div><p class="badge-name">{{ item.badge.name }}</p>
+          <p class="badge-date"><time datetime="{{ item.earned_on.isoformat() }}">{{ item.earned_on.strftime("%-d %b %Y") }}</time></p></div></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
   <p><strong>{{ done }}</strong> of {{ total }} module{{ '' if total == 1 else 's' }} complete.</p>
   <p><a href="/syllabus">Open the station schematic (syllabus) →</a></p>
+  <p><a href="/badges">See every badge →</a></p>
 </section>
 {% endblock %}

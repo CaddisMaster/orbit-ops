@@ -1,4 +1,4 @@
-"""Dashboard and health check."""
+"""Dashboard, the badges page and the health check."""
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -9,7 +9,7 @@ from app import progress
 from app.config import get_settings
 from app.content import Catalog, get_catalog
 from app.db import get_db
-from app.game import streaks
+from app.game import badges, streaks
 from app.game.levels import standing
 from app.game.xp import total_xp
 from app.models import User
@@ -54,5 +54,21 @@ def dashboard(
             "standing": standing(total_xp(db, user.id), catalog.ranks),
             "streak": streak,
             "max_freezes": streaks.MAX_FREEZES,
+            "recent_badges": badges.recent(catalog, badges.earned(db, user.id), get_settings().tz),
         },
+    )
+
+
+@router.get("/badges", response_class=HTMLResponse)
+def badge_page(
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    shelf = badges.shelf(catalog, badges.earned(db, user.id), get_settings().tz)
+    return templates.TemplateResponse(
+        request,
+        "badges.html",
+        {"user": user, "shelf": shelf, "held": sum(1 for s in shelf if s.earned_on)},
     )

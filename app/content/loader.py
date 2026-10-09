@@ -18,7 +18,7 @@ import yaml
 from pydantic import ValidationError
 
 from app.content.render import render_markdown
-from app.content.schema import Card, ModuleFile, Question, RankSpec, Syllabus
+from app.content.schema import BadgeSpec, Card, ModuleFile, Question, RankSpec, Syllabus, UnitCompleteRule
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 _MODULE_FILENAME = re.compile(r"^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
@@ -71,6 +71,7 @@ class Catalog:
     units: dict[str, Unit] = field(repr=False)
     modules: dict[str, Module] = field(repr=False)
     ranks: tuple[RankSpec, ...] = ()  # ascending by level
+    badges: tuple[BadgeSpec, ...] = ()  # in syllabus order
 
     def unit_modules(self, unit_slug: str) -> list[Module]:
         return [self.modules[s] for s in self.units[unit_slug].modules]
@@ -155,6 +156,16 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
     if cycle := _find_cycle({u: tuple(n for n in needs if n != u) for u, needs in prereqs.items()}):
         problems.append(f"syllabus.yml: prerequisite cycle: {' → '.join(cycle)}")
 
+    seen_badges: set[str] = set()
+    for badge in syllabus.badges:
+        if badge.slug in seen_badges:
+            problems.append(f"syllabus.yml: badge '{badge.slug}' is defined twice")
+        seen_badges.add(badge.slug)
+        if isinstance(badge.rule, UnitCompleteRule) and badge.rule.unit_complete not in unit_track:
+            problems.append(
+                f"syllabus.yml: badge '{badge.slug}' requires unit '{badge.rule.unit_complete}', which is not a unit"
+            )
+
     # --- module files ---------------------------------------------------------
     modules: dict[str, Module] = {}
     unit_module_slugs: dict[str, list[str]] = {slug: [] for slug in unit_track}
@@ -230,4 +241,6 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
         Track(slug=t.slug, title=t.title, deck=t.deck, blurb=t.blurb, units=tuple(u.slug for u in t.units))
         for t in syllabus.tracks
     )
-    return Catalog(tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks))
+    return Catalog(
+        tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks), badges=tuple(syllabus.badges)
+    )

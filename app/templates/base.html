@@ -18,6 +18,7 @@
     {% if user %}
     <nav>
       <a href="/syllabus">Syllabus</a>
+      <a href="/badges">Badges</a>
       <span class="muted who">Cadet {{ user.username }}</span>
       <form method="post" action="/logout" class="inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">

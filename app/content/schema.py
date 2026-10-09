@@ -116,9 +116,38 @@ class RankSpec(_Strict):
     level: Annotated[int, Field(ge=1)]  # the level at which this rank is reached
 
 
+# A badge's rule names one of the fixed evaluators in app/game/badges.py, as a
+# one-key mapping. Content picks the rule and its argument; it cannot run code.
+class UnitCompleteRule(_Strict):
+    unit_complete: Slug  # every module in this unit is complete
+
+
+class StreakRule(_Strict):
+    streak: Annotated[int, Field(ge=2)]  # the daily streak reaches this many days
+
+
+class FirstPerfectQuizRule(_Strict):
+    first_perfect_quiz: Literal[True]  # any module completed with a 100% quiz
+
+
+BadgeRule = UnitCompleteRule | StreakRule | FirstPerfectQuizRule
+
+# The inline-SVG emblems in templates/partials/_emblem.html.
+Emblem = Literal["life-support", "fabrication", "fleet", "shields", "flame", "star"]
+
+
+class BadgeSpec(_Strict):
+    slug: Slug  # the permanent ID: badges_earned stores it, so never rename one
+    name: Text
+    description: Text  # shown even while locked, so there is something to aim at
+    emblem: Emblem
+    rule: BadgeRule
+
+
 class Syllabus(_Strict):
     tracks: Annotated[list[TrackSpec], Field(min_length=1)]
     ranks: list[RankSpec] = []  # rank titles by level band, lowest first
+    badges: list[BadgeSpec] = []  # in the order the badges page shows them
 
     @model_validator(mode="after")
     def _ranks_ascend_from_level_1(self):

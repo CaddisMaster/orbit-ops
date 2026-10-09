@@ -24,6 +24,12 @@ and why it matters, not what the diff says.
   worked out when a page is opened (#22).
 - A database table for badges: one row per badge a learner holds, recorded once. What each badge
   is and how it's earned will live in `syllabus.yml` (#23).
+- Badges. Finishing a unit, reaching a 7-, 30- or 100-day streak, and a first perfect quiz each
+  earn a badge, once. They are defined in `syllabus.yml` (one per unit, 23 in all) and checked
+  in CI, so a badge pointing at a unit that doesn't exist fails the build. The completion message
+  announces new badges, the dashboard shows the three most recent, and a new Badges page lists
+  every badge: earned ones with their date, locked ones dimmed with what it takes to earn them.
+  A unit finished before badges existed earns its badge at the next module completion (#23).
 
 ## [0.2.0] — 2026-10-08
 

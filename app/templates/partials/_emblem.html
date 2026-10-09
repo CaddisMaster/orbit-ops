@@ -1,0 +1,22 @@
+{# Badge emblems: inline SVG, so no image requests and no CSP change. Strokes use
+   currentColor, so .badge.locked dims them with the text. The names are the
+   schema's `Emblem` literal (app/content/schema.py); keep the two in step. #}
+{% macro emblem(name) -%}
+<svg class="emblem" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" focusable="false"
+     fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="24" cy="24" r="21" stroke-width="2" opacity="0.5"/>
+  {%- if name == "life-support" %}
+  <path d="M24 34s-9-5.5-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6.5-9 12-9 12z"/>
+  {%- elif name == "fabrication" %}
+  <path d="M24 13l10 5.5v11L24 35l-10-5.5v-11z"/><path d="M14 18.5l10 5.5 10-5.5M24 24v11"/>
+  {%- elif name == "fleet" %}
+  <path d="M24 12l4 10 8 3-8 3-4 10-4-10-8-3 8-3z"/>
+  {%- elif name == "shields" %}
+  <path d="M24 12l10 4v7c0 6.5-4.5 11-10 13-5.5-2-10-6.5-10-13v-7z"/><path d="M19.5 24l3.5 3.5 6-6.5"/>
+  {%- elif name == "flame" %}
+  <path d="M24 36c-5 0-8-3.5-8-8 0-6 6-8 5-15 4 2 11 7 11 15 0 4.5-3 8-8 8z"/><path d="M24 36c-2 0-3.5-1.5-3.5-3.5 0-2.5 3.5-4.5 3.5-4.5s3.5 2 3.5 4.5c0 2-1.5 3.5-3.5 3.5z"/>
+  {%- elif name == "star" %}
+  <path d="M24 12l3.7 7.6 8.3 1.2-6 5.9 1.4 8.3-7.4-3.9-7.4 3.9 1.4-8.3-6-5.9 8.3-1.2z"/>
+  {%- endif %}
+</svg>
+{%- endmacro %}
