@@ -12,6 +12,7 @@ IMG = Path(__file__).resolve().parents[1] / "app" / "static" / "img"
 
 
 @pytest.mark.criterion(38, "The art is reproducible")
+@pytest.mark.criterion(46, "The art stays reproducible")
 @pytest.mark.parametrize("name", sorted(build.scenes()))
 def test_the_committed_image_is_what_its_script_draws(name):
     drawn = build.scenes()[name]()
