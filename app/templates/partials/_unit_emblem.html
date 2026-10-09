@@ -1,0 +1,35 @@
+{# Unit illustrations: inline line art in the deck's colour (currentColor), so
+   no image requests and no CSP change. The names are the schema's
+   `UnitEmblem` literal (app/content/schema.py); keep the two in step. #}
+{% macro unit_emblem(name, size=56) -%}
+{% if name %}
+<svg class="unit-emblem" data-emblem="{{ name }}" viewBox="0 0 64 64" width="{{ size }}" height="{{ size }}"
+     aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3" y="3" width="58" height="58" rx="12" opacity="0.35"/>
+  {%- if name == "scrubber" %}
+  {# an air scrubber: a fan in a ducted housing #}
+  <rect x="12" y="14" width="40" height="36" rx="4"/>
+  <circle cx="32" cy="32" r="12"/><circle cx="32" cy="32" r="2.5"/>
+  <path d="M32 29.5c0-5 3-8 6-8M34.5 32c5 0 8 3 8 6M32 34.5c0 5-3 8-6 8M29.5 32c-5 0-8-3-8-6"/>
+  <path d="M16 18h4M44 46h4"/>
+  {%- elif name == "script" %}
+  {# a routine written down: a console page with a prompt #}
+  <path d="M18 12h22l8 8v32H18z"/><path d="M40 12v8h8"/>
+  <path d="M23 30l5 4-5 4M31 38h9M23 46h17"/>
+  {%- elif name == "branch" %}
+  {# a history that branches and merges #}
+  <circle cx="22" cy="16" r="4"/><circle cx="22" cy="48" r="4"/><circle cx="42" cy="26" r="4"/>
+  <path d="M22 20v24M42 30c0 10-20 6-20 14"/>
+  {%- elif name == "antenna" %}
+  {# the comms dish #}
+  <path d="M14 30a18 18 0 0 0 26 16z"/><path d="M27 38l12-12"/><circle cx="41" cy="24" r="2.5"/>
+  <path d="M46 16a10 10 0 0 1 4 10M44 10a17 17 0 0 1 8 16"/><path d="M27 46l-4 8h14l-4-8"/>
+  {%- elif name == "reactor" %}
+  {# a service kept alive: a power core with a heartbeat #}
+  <circle cx="32" cy="32" r="18"/><circle cx="32" cy="32" r="10" opacity="0.6"/>
+  <path d="M14 32h8l4-7 6 14 4-7h14"/>
+  {%- endif %}
+</svg>
+{% endif %}
+{%- endmacro %}

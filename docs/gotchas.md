@@ -17,6 +17,9 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   set of content files and exit with `ContentError`; it restarts on the next file change.
 - **A module's slug is its permanent ID.** Progress is stored against it, so renaming a
   published module's file orphans that progress.
+- **Content edits don't reload the dev server.** `--reload-dir content` is set, but uvicorn
+  without `watchfiles` reloads on `*.py` only, so a `syllabus.yml` or lesson change needs
+  `docker compose restart web` (templates and CSS are picked up without it).
 
 - **htmx does not swap 4xx/5xx responses** by default. A validation message returned with 422
   never appears; return 200 with the re-rendered fragment. Redirects out of an htmx request use
@@ -25,6 +28,11 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 - **"closes #N" anywhere in a PR body links the issue**, even mid-sentence ("a later PR that
   closes #5"). The criteria check then requires all of #N's scenarios. Write "Part of #N" and
   avoid the closing keywords (close/fix/resolve).
+
+- **No `style="…"` in templates, even in SVG.** `style-src 'self'` blocks inline style
+  attributes. Use a class, or a presentation attribute (`fill`, `stroke`). Setting
+  `el.style.x` from a served JS file is fine: CSSOM writes aren't inline styles to the CSP.
+  `tests/test_immersion.py` greps the main pages for `style=`.
 
 ## Containers
 

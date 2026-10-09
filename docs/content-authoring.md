@@ -36,6 +36,7 @@ tracks:
         briefing: Story text for the unit (Markdown).
         prerequisites: []      # unit slugs that must be finished first; no cycles
         map: {x: 50, y: 10}    # optional: where it sits on its deck of /map, 0â€“100 each way
+        emblem: scrubber       # optional: scrubber | script | branch | antenna | reactor
 badges:                        # in the order the badges page shows them
   - slug: unit-linux-shell     # permanent ID, stored when earned: never rename an earned badge
     name: Air Scrubbers Online
@@ -49,6 +50,12 @@ deck's drawing area (`x` left to right, `y` top to bottom). Anything outside 0â€
 validation, naming the unit. Leave it out and the unit goes on an automatic three-column grid,
 so a new unit always appears. Labels under the nodes drop any subtitle after a colon and wrap
 at about 16 characters, so place nodes about 25 apart across a row.
+
+`emblem` is a line-art illustration drawn in the deck's colour on the syllabus and on the unit's
+module pages. The set is fixed (`UnitEmblem` in `app/content/schema.py`, drawn in
+`app/templates/partials/_unit_emblem.html`); a new one is an SVG added to both. Each track's
+colour is in `app/static/css/style.css` under "Decks", keyed by the track slug, so a new track
+needs a `.deck--<slug>` line there too.
 
 A badge's `rule` is one of a fixed set, so content picks the rule but cannot run code:
 

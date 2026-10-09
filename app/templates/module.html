@@ -1,5 +1,7 @@
 {% extends "base.html" %}
+{% from "partials/_unit_emblem.html" import unit_emblem %}
 {% block title %}{{ module.title }} · Orbit Ops{% endblock %}
+{% block body_class %}deck--{{ track.slug }}{% endblock %}
 {% block content %}
 <nav class="crumbs muted" aria-label="Breadcrumb">
   <a href="/syllabus">{{ track.deck }}</a> <span aria-hidden="true">›</span> {{ unit.title }}
@@ -8,9 +10,19 @@
 
 <article class="module">
   <header class="card briefing">
-    <p class="eyebrow">Mission log · {{ module.minutes }} min · {{ module.xp }} XP</p>
-    <h1>{{ module.title }}</h1>
-    <div class="story">{{ module.story_html | safe }}</div>
+    <div class="briefing-head">
+      {{ unit_emblem(unit.emblem) }}
+      <div>
+        <p class="eyebrow">Mission log · {{ module.minutes }} min · {{ module.xp }} XP</p>
+        <h1>{{ module.title }}</h1>
+      </div>
+    </div>
+    {# A transmission: static/js/briefing.js types it out and a click or key
+       skips. Without JavaScript, or under reduced motion, it is simply here. #}
+    <div class="story transmission" data-transmission>
+      <p class="comm-from" aria-hidden="true">▸ Incoming transmission · {{ track.deck }}</p>
+      {{ module.story_html | safe }}
+    </div>
   </header>
 
   {# body_html is rendered from repo Markdown with raw HTML disabled (app/content/render.py). #}

@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% from "partials/_unit_emblem.html" import unit_emblem %}
 {% block title %}Syllabus · Orbit Ops{% endblock %}
 {% block content %}
 <p class="eyebrow">Station schematic</p>
 <h1>Syllabus</h1>
 <p><a href="/map">See it as the station map →</a></p>
 {% for track in catalog.tracks %}
-<section class="card track">
+<section class="card track deck--{{ track.slug }}">
   <p class="eyebrow">{{ track.deck }}</p>
   <h2>{{ track.title }}</h2>
   {% if track.blurb %}<p class="muted">{{ track.blurb }}</p>{% endif %}
   {% for unit_slug in track.units %}
     {% set unit = catalog.units[unit_slug] %}
     <div class="unit" id="unit-{{ unit.slug }}">
-      <h3>{{ unit.title }}</h3>
+      <div class="unit-head">{{ unit_emblem(unit.emblem, 40) }}<h3>{{ unit.title }}</h3></div>
       {% if unit.modules %}
       <ul class="modules">
         {% for module in catalog.unit_modules(unit_slug) %}

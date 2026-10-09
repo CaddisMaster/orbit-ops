@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app import progress
 from app.config import get_settings
+from app.console import Readout, console_readout
 from app.content import Catalog, get_catalog
 from app.db import get_db
 from app.game import badges, streaks
@@ -37,6 +38,7 @@ def dashboard(
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
+    console: Readout = Depends(console_readout),
 ):
     completed = progress.completed_slugs(db, user.id)
     mission = progress.todays_mission(catalog, completed)
@@ -46,7 +48,7 @@ def dashboard(
         request,
         "dashboard.html",
         {
-            "user": user,
+            "user": user, "console": console,
             "mission": mission,
             "mission_unit": catalog.units[mission.unit] if mission else None,
             "done": len(completed & catalog.modules.keys()),
@@ -65,10 +67,11 @@ def badge_page(
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
+    console: Readout = Depends(console_readout),
 ):
     shelf = badges.shelf(catalog, badges.earned(db, user.id), get_settings().tz)
     return templates.TemplateResponse(
         request,
         "badges.html",
-        {"user": user, "shelf": shelf, "held": sum(1 for s in shelf if s.earned_on)},
+        {"user": user, "console": console, "shelf": shelf, "held": sum(1 for s in shelf if s.earned_on)},
     )

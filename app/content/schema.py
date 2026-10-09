@@ -105,12 +105,17 @@ class MapPosition(_Strict):
     y: int
 
 
+# The inline-SVG unit illustrations in templates/partials/_unit_emblem.html.
+UnitEmblem = Literal["scrubber", "script", "branch", "antenna", "reactor"]
+
+
 class UnitSpec(_Strict):
     slug: Slug
     title: Text
     briefing: str = ""  # story text shown at the top of the unit (Markdown)
     prerequisites: list[Slug] = []  # unit slugs that must be finished first
     map: MapPosition | None = None  # unset: laid out automatically (app/station_map.py)
+    emblem: UnitEmblem | None = None  # line-art illustration on the syllabus and its modules
 
 
 class TrackSpec(_Strict):

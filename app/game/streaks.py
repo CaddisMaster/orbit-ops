@@ -102,10 +102,15 @@ def mark_active(db: Session, user_id: int, day: date) -> None:
     )
 
 
+def peek(db: Session, user_id: int, day: date) -> Streak:
+    """The learner's streak as of `day`, without recording anything."""
+    rows = db.execute(select(ActivityDay.day, ActivityDay.freeze_used).where(ActivityDay.user_id == user_id))
+    return compute(dict(rows.all()), day)
+
+
 def current_streak(db: Session, user_id: int, day: date) -> Streak:
     """The learner's streak as of `day`, recording any freezes it spends."""
-    rows = db.execute(select(ActivityDay.day, ActivityDay.freeze_used).where(ActivityDay.user_id == user_id))
-    streak = compute(dict(rows.all()), day)
+    streak = peek(db, user_id, day)
     for frozen in streak.new_freezes:
         db.execute(
             insert(ActivityDay)

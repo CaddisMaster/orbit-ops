@@ -5,7 +5,7 @@
 {% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
 
 {% if mission %}
-<section class="card mission">
+<section class="card mission deck--{{ mission.track }}">
   <p class="eyebrow">Today's mission · {{ mission.minutes }} min · {{ mission.xp }} XP</p>
   <h1>{{ mission.title }}</h1>
   <p class="muted">{{ mission_unit.title }} · module {{ mission.position }} of {{ mission_unit.modules | length }}</p>

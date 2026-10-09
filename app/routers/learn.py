@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app import progress, station_map
+from app.console import Readout, console_readout
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
@@ -26,13 +27,14 @@ def syllabus(
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
+    console: Readout = Depends(console_readout),
 ):
     completed = progress.completed_slugs(db, user.id)
     return templates.TemplateResponse(
         request,
         "syllabus.html",
         {
-            "user": user,
+            "user": user, "console": console,
             "catalog": catalog,
             "completed": completed,
             "available": lambda slug: progress.module_available(catalog, slug, completed),
@@ -46,10 +48,11 @@ def station(
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
+    console: Readout = Depends(console_readout),
 ):
     completed = progress.completed_slugs(db, user.id)
     return templates.TemplateResponse(
-        request, "map.html", {"user": user, "station": station_map.layout(catalog, completed)}
+        request, "map.html", {"user": user, "console": console, "station": station_map.layout(catalog, completed)}
     )
 
 
@@ -67,6 +70,7 @@ def module_page(
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
+    console: Readout = Depends(console_readout),
 ):
     module = _module_or_404(catalog, slug)
     completed = progress.completed_slugs(db, user.id)
@@ -81,7 +85,7 @@ def module_page(
         request,
         "module.html",
         {
-            "user": user,
+            "user": user, "console": console,
             "module": module,
             "unit": unit,
             "track": next(t for t in catalog.tracks if t.slug == module.track),

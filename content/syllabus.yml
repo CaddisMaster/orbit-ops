@@ -6,7 +6,8 @@
 #
 # `map: {x, y}` places a unit on its track's deck of the station map (/map), as
 # percentages of the deck's drawing area (0–100). Optional: a unit without it
-# is laid out automatically.
+# is laid out automatically. `emblem` names a line-art illustration in
+# app/templates/partials/_unit_emblem.html (optional).
 # Rank titles by level band, lowest first. The level curve is in app/game/levels.py
 # (level 3 = 283 XP, level 10 = 2700 XP, level 21 = 8944 XP).
 ranks:
@@ -28,6 +29,7 @@ tracks:
       - slug: linux-shell
         title: Linux & the shell
         map: {x: 50, y: 10}
+        emblem: scrubber
         briefing: >-
           The *Meridian*'s life-support controllers run Linux, and the only
           interface left working is a terminal. Learn to find your way around
@@ -35,6 +37,7 @@ tracks:
       - slug: bash-scripting
         title: Bash scripting
         map: {x: 10, y: 85}
+        emblem: script
         prerequisites: [linux-shell]
         briefing: >-
           Typing the same twelve commands every shift is how mistakes happen.
@@ -43,6 +46,7 @@ tracks:
       - slug: git
         title: Git
         map: {x: 37, y: 85}
+        emblem: branch
         prerequisites: [linux-shell]
         briefing: >-
           Every config change on the station used to be made by hand and
@@ -51,6 +55,7 @@ tracks:
       - slug: networking
         title: "Networking: DNS, HTTP, TLS & SSH"
         map: {x: 63, y: 85}
+        emblem: antenna
         prerequisites: [linux-shell]
         briefing: >-
           The comms array is up but nothing can find anything. Names don't
@@ -59,6 +64,7 @@ tracks:
       - slug: systemd
         title: systemd & services
         map: {x: 90, y: 85}
+        emblem: reactor
         prerequisites: [linux-shell]
         briefing: >-
           Half the station's daemons die after every power cycle and someone

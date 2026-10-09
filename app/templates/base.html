@@ -11,8 +11,9 @@
   <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', path='css/pygments.css') }}">
   <script src="{{ url_for('static', path='htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/briefing.js') }}" defer></script>
 </head>
-<body hx-headers='{"X-CSRF-Token": "{{ csrf_token(request) }}"}'>
+<body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRF-Token": "{{ csrf_token(request) }}"}'>
   <header class="topbar">
     <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> <span class="brand-name">Orbit Ops</span></a>
     {% if user %}
@@ -28,6 +29,13 @@
     </nav>
     {% endif %}
   </header>
+  {% if console %}
+  {# The console readout: what's online and the streak, on every signed-in page. #}
+  <div class="readout" role="status" aria-label="Station status">
+    <span>Systems online <strong>{{ console.online }}/{{ console.systems }}</strong></span>
+    <span>Streak <strong>{{ console.streak }}</strong></span>
+  </div>
+  {% endif %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>
