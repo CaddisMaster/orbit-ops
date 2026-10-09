@@ -142,7 +142,60 @@ class CwdCheck(_Strict):
     cwd: AbsPath  # the console ends in this directory (for navigation tasks)
 
 
-TerminalCheck = ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck | CwdCheck
+ProcName = Annotated[str, Field(pattern=r"^[A-Za-z0-9._-]+$", max_length=64)]
+Signal = Literal["HUP", "INT", "KILL", "TERM"]
+
+
+class RunningCheck(_Strict):
+    running: ProcName  # some process with this name is still alive
+
+
+class StoppedCheck(_Strict):
+    stopped: ProcName  # no process with this name is alive
+
+
+class SignalledCheck(_Strict):
+    signalled: ProcName  # some process with this name was sent `with`
+    with_: Signal = Field(alias="with")
+
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+
+TerminalCheck = (
+    ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck | CwdCheck
+    | RunningCheck | StoppedCheck | SignalledCheck
+)
+
+
+def proc_name(command: str) -> str:
+    """What ps and pgrep call a process: the program's file name."""
+    first = command.lstrip("-").split(" ")[0]
+    return first.rsplit("/", 1)[-1].rstrip(":")
+
+
+class AccountSpec(_Strict):
+    """Another account in /etc/passwd, e.g. a service account."""
+
+    name: Account
+    uid: Annotated[int, Field(ge=1, le=60000)]
+    group: Account | None = None  # default: a group of the same name
+    groups: list[Account] = []  # supplementary
+    comment: str = ""
+    home: AbsPath | None = None  # default /var/lib/<name>
+    shell: AbsPath = "/usr/sbin/nologin"
+
+
+class ProcessSpec(_Strict):
+    """A process running when the console starts."""
+
+    command: Annotated[str, Field(min_length=1, max_length=120)]
+    user: Account | None = None  # default: the exercise's user
+    cpu: Annotated[float, Field(ge=0, le=100)] = 0.0
+    mem: Annotated[float, Field(ge=0, le=100)] = 0.1
+    ignores: list[Literal["HUP", "INT", "TERM"]] = []  # signals it handles and survives (never KILL)
+
+
+KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
 
 
 def check_path(check: TerminalCheck) -> str:
@@ -150,6 +203,8 @@ def check_path(check: TerminalCheck) -> str:
         case ModeCheck(mode=p) | OwnerCheck(owner=p) | ExistsCheck(exists=p) | MissingCheck(missing=p):
             return p
         case ContainsCheck(contains=p) | CwdCheck(cwd=p):
+            return p
+        case RunningCheck(running=p) | StoppedCheck(stopped=p) | SignalledCheck(signalled=p):
             return p
     raise TypeError(check)
 
@@ -163,6 +218,13 @@ class TerminalExercise(_Strict):
     task: Text  # what Okafor asks for (Markdown)
     user: Account = "cadet"
     group: Account = "crew"
+    groups: list[Account] = []  # the user's supplementary groups, e.g. [sudo]
+    # The user's password, for sudo's prompt. It's in-story and shown in the
+    # task, not a secret: the console needs it to check what's typed.
+    password: Annotated[str, Field(min_length=1, max_length=64)] | None = None
+    accounts: list[AccountSpec] = []
+    processes: Annotated[list[ProcessSpec], Field(max_length=20)] = []
+    env: dict[Annotated[str, Field(pattern=r"^[A-Z_][A-Z0-9_]*$")], str] = {}  # extra exported variables, e.g. PATH
     cwd: AbsPath = "/station"
     files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
     checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
@@ -175,6 +237,13 @@ class TerminalExercise(_Strict):
         """{path: node} for the whole starting tree. Parent directories that
         aren't listed exist anyway, owned by root, mode 755, as on a real system."""
         fs = {"/": {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}}
+        listed = {e.path for e in self.files}
+        for path, contents in (("/etc/passwd", self.passwd()), ("/etc/group", self.group_file())):
+            if path not in listed:
+                fs.setdefault("/etc", {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
+                fs[path] = {"type": "file", "mode": 0o644, "owner": "root", "group": "root", "contents": contents}
+        if "/root" not in listed:
+            fs["/root"] = {"type": "dir", "mode": 0o700, "owner": "root", "group": "root", "contents": ""}
         for entry in self.files:
             parent = _parent(entry.path)
             while parent not in fs:
@@ -189,6 +258,41 @@ class TerminalExercise(_Strict):
             }
         return dict(sorted(fs.items()))
 
+    def gids(self) -> dict[str, int]:
+        """Every group the exercise mentions, with its GID."""
+        gids = {"root": 0, self.group: 1000}
+        for a in self.accounts:
+            gids.setdefault(a.group or a.name, a.uid)
+        named = set(self.groups) | {g for a in self.accounts for g in a.groups}
+        spare = 1001
+        for g in sorted(named):
+            if g in KNOWN_GIDS:
+                gids.setdefault(g, KNOWN_GIDS[g])
+            elif g not in gids:
+                gids[g] = spare
+                spare += 1
+        gids.setdefault("sudo", 27)
+        return gids
+
+    def passwd(self) -> str:
+        rows = [("root", 0, 0, "root", "/root", "/bin/bash")]
+        gids = self.gids()
+        for a in sorted(self.accounts, key=lambda a: a.uid):
+            rows.append((a.name, a.uid, gids[a.group or a.name], a.comment, a.home or f"/var/lib/{a.name}", a.shell))
+        rows.append((self.user, 1000, 1000, self.user.capitalize(), f"/home/{self.user}", "/bin/bash"))
+        return "".join(f"{n}:x:{u}:{g}:{c}:{h}:{sh}\n" for n, u, g, c, h, sh in rows)
+
+    def group_file(self) -> str:
+        members: dict[str, list[str]] = {}
+        for g in self.groups:
+            members.setdefault(g, []).append(self.user)
+        for a in self.accounts:
+            for g in a.groups:
+                members.setdefault(g, []).append(a.name)
+        return "".join(
+            f"{g}:x:{gid}:{','.join(members.get(g, []))}\n" for g, gid in sorted(self.gids().items(), key=lambda kv: kv[1])
+        )
+
     @model_validator(mode="after")
     def _consistent(self):
         paths = [e.path for e in self.files]
@@ -200,11 +304,21 @@ class TerminalExercise(_Strict):
                 raise ValueError(f"files: {entry.path} is inside {_parent(entry.path)}, which is a file")
         if fs.get(self.cwd, {}).get("type") != "dir":
             raise ValueError(f"cwd: {self.cwd} is not a directory in the starting filesystem")
+        users = {"root", self.user} | {a.name for a in self.accounts}
+        for p in self.processes:
+            if p.user and p.user not in users:
+                raise ValueError(f"processes: {p.command!r} runs as {p.user}, which is not an account")
+        started = {proc_name(p.command) for p in self.processes}
+        for i, check in enumerate(self.checks):
+            if isinstance(check, StoppedCheck | SignalledCheck) and check_path(check) not in started:
+                raise ValueError(f"checks.{i} ({describe(check)}): no starting process is called {check_path(check)}")
         for i, check in enumerate(self.checks):
             # A mode, owner or missing check reads something that must already be
             # there; exists and contains may name what the learner creates.
             if isinstance(check, CwdCheck) and fs.get(check.cwd, {}).get("type") != "dir":
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.cwd} is not a directory in the starting filesystem")
+            if isinstance(check, RunningCheck | StoppedCheck | SignalledCheck):
+                continue
             if not isinstance(check, ExistsCheck | ContainsCheck | CwdCheck) and check_path(check) not in fs:
                 raise ValueError(
                     f"checks.{i} ({describe(check)}): {check_path(check)} is not in the starting filesystem"

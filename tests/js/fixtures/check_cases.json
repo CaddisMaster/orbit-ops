@@ -215,6 +215,90 @@
     "cwd": "/s/d"
    },
    "expect": false
+  },
+  {
+   "name": "running by program name",
+   "check": {
+    "running": "o2-recyclerd"
+   },
+   "expect": true
+  },
+  {
+   "name": "running, but it's dead",
+   "check": {
+    "running": "o2-diagnostics"
+   },
+   "expect": false
+  },
+  {
+   "name": "a login shell is called bash",
+   "check": {
+    "running": "bash"
+   },
+   "expect": true
+  },
+  {
+   "name": "stopped",
+   "check": {
+    "stopped": "o2-diagnostics"
+   },
+   "expect": true
+  },
+  {
+   "name": "not stopped",
+   "check": {
+    "stopped": "o2-recyclerd"
+   },
+   "expect": false
+  },
+  {
+   "name": "stopped: a name nothing has",
+   "check": {
+    "stopped": "warp-core"
+   },
+   "expect": true
+  },
+  {
+   "name": "signalled with TERM",
+   "check": {
+    "signalled": "o2-diagnostics",
+    "with": "TERM"
+   },
+   "expect": true
+  },
+  {
+   "name": "never sent HUP",
+   "check": {
+    "signalled": "o2-diagnostics",
+    "with": "HUP"
+   },
+   "expect": false
+  }
+ ],
+ "processes": [
+  {
+   "pid": 400,
+   "user": "root",
+   "command": "/usr/sbin/o2-recyclerd",
+   "alive": true,
+   "signals": []
+  },
+  {
+   "pid": 417,
+   "user": "cadet",
+   "command": "o2-diagnostics --deep-scan",
+   "alive": false,
+   "signals": [
+    "TERM",
+    "KILL"
+   ]
+  },
+  {
+   "pid": 2001,
+   "user": "cadet",
+   "command": "-bash",
+   "alive": true,
+   "signals": []
   }
  ]
 }

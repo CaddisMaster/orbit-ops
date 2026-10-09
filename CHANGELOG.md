@@ -13,6 +13,19 @@ and why it matters, not what the diff says.
   log (text tools). Six of the ten modules now have one (#36).
 - The console understands `2>&1` and `&>` (applied left to right, as in bash), `tee`, and
   `cd -` (#36).
+- The console now knows users, the environment and processes (#37):
+  - **Users:** `sudo` with a real password prompt (masked, never logged or kept in history),
+    `sudo -l`/`-i`, and `id`, `groups`, `getent` and `usermod` over generated `/etc/passwd` and
+    `/etc/group`. `usermod -G` without `-a` really does take your other groups away, `sudo` included.
+  - **Environment:** shell vs exported variables, `VAR=x cmd`, `bash -c` and scripts in a child
+    shell, `source`, and commands found on `$PATH`, so a different `python3` earlier on the
+    PATH really runs instead.
+  - **Processes:** `ps`, `pgrep`, `pkill`, `kill` with signals, background jobs and `jobs`/`fg`,
+    on a simulated clock. A process can ignore SIGTERM.
+  - **Three new tasks:** join the airlock group without losing sudo (users and sudo), stop a
+    runaway diagnostic politely and then impolitely (processes and signals), and make the
+    navigation `python3` win and stick (environment and PATH). Nine of Unit 1.1's ten modules
+    now have a console task.
 - Every exercise carries a reference solution that CI runs through the console's shell, so a
   task that can't be completed fails the build. Solutions are never sent to the browser (#36).
 

@@ -39,8 +39,13 @@
       log.scrollTop = log.scrollHeight;
     }
 
+    // sudo's password prompt: the input is masked, and what's typed is never
+    // echoed into the log or kept in the history, as on a real terminal.
     function setPrompt() {
       promptEl.textContent = sh.prompt();
+      var secret = !!(sh.pending && sh.pending.secret);
+      input.type = secret ? "password" : "text";
+      input.setAttribute("aria-label", secret ? "Password" : "Command");
     }
 
     function reset() {
@@ -61,7 +66,7 @@
       fetch(reportUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
-        body: JSON.stringify({ state: sh.state(), cwd: sh.cwd, passed: true }),
+        body: JSON.stringify({ state: sh.state(), cwd: sh.cwd, processes: sh.processes(), passed: true }),
         credentials: "same-origin",
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
@@ -78,8 +83,9 @@
     }
 
     function runLine(line) {
-      print(sh.prompt() + line, "term-echo");
-      if (line.trim()) {
+      var secret = !!(sh.pending && sh.pending.secret);
+      print(sh.prompt() + (secret ? "" : line), "term-echo");
+      if (line.trim() && !secret) {
         if (history[history.length - 1] !== line) history.push(line);
         if (history.length > HISTORY_MAX) history.shift();
       }
@@ -92,19 +98,23 @@
     }
 
     function interrupt() {
-      print(sh.prompt() + input.value + "^C", "term-echo");
+      var secret = !!(sh.pending && sh.pending.secret);
+      print(sh.prompt() + (secret ? "" : input.value) + "^C", "term-echo");
+      sh.cancel();
       input.value = "";
       at = history.length;
+      setPrompt();
     }
 
     function recall(step) {
-      if (!history.length) return;
+      if (!history.length || sh.pending) return;
       at = Math.max(0, Math.min(history.length, at + step));
       input.value = at === history.length ? "" : history[at];
       input.setSelectionRange(input.value.length, input.value.length);
     }
 
     function complete() {
+      if (sh.pending) return;
       var c = sh.complete(input.value);
       input.value = c.line;
       if (c.options.length) {

@@ -39,9 +39,17 @@
   }
 
   // --- the shell -------------------------------------------------------------
+  var DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  var SHELL_PID = 2001;
+
   function Shell(spec) {
     this.user = spec.user;
     this.group = spec.group;
+    // The groups this login holds. Like a real login, they're fixed when the
+    // session starts: `usermod` edits /etc/group, and only a new login (or
+    // Reset) picks the change up. sudo checks /etc/group itself.
+    this.groups = [spec.group].concat(spec.groups || []);
+    this.password = spec.password || null;
     this.cwd = spec.cwd;
     this.home = spec.cwd;
     this.lastStatus = 0;
@@ -51,15 +59,47 @@
       var n = spec.fs[path];
       self.fs[path] = { type: n.type, mode: n.mode, owner: n.owner, group: n.group, contents: n.contents || "", mtime: START_TIME };
     });
+    // The environment: shell variables, and which of them are exported.
+    this.vars = {
+      HOME: this.home, USER: this.user, LOGNAME: this.user, SHELL: "/bin/bash", HOSTNAME: "meridian",
+      PATH: DEFAULT_PATH, PWD: this.cwd, TERM: "xterm-256color",
+    };
+    Object.keys(spec.env || {}).forEach(function (k) { self.vars[k] = spec.env[k]; });
+    this.exported = {};
+    Object.keys(this.vars).forEach(function (k) { if (k !== "HOSTNAME") self.exported[k] = true; });
+    // Processes and jobs, on a simulated clock (seconds since login). Time
+    // passes one second per command line, and `sleep N` in the foreground
+    // jumps it N seconds, so `sleep 5 &` is finished a few commands later.
+    this.clock = 0;
+    this.nextPid = SHELL_PID + 40;
+    this.procs = [
+      { pid: 1, ppid: 0, user: "root", command: "/sbin/init", tty: "?", cpu: 0.0, mem: 0.3, start: -86400 },
+      { pid: 812, ppid: 1, user: "root", command: "sshd: /usr/sbin/sshd -D", tty: "?", cpu: 0.0, mem: 0.2, start: -86400 },
+      { pid: SHELL_PID, ppid: 812, user: this.user, command: "-bash", tty: "pts/0", cpu: 0.0, mem: 0.1, start: 0 },
+    ];
+    (spec.processes || []).forEach(function (p, i) {
+      self.procs.push({
+        pid: 400 + i * 17, ppid: 1, user: p.user, command: p.command, tty: "?", cpu: p.cpu || 0, mem: p.mem || 0.1,
+        start: -3600, ignores: p.ignores || [],
+      });
+    });
+    this.procs.forEach(function (p) { p.alive = true; p.signals = p.signals || []; p.ignores = p.ignores || []; });
+    this.jobs = [];
+    this.notices = [];
+    this.lastBg = "";
+    this.sudoUntil = -1; // sudo remembers a correct password for 15 minutes
+    this.pending = null; // a prompt waiting for an answer (sudo's password)
+    this.logins = []; // shells stacked by `sudo -i`, popped by `exit`
   }
 
   // bash's \w: ~ for a real home directory, otherwise the path. An exercise's
   // starting directory doubles as $HOME (so `cd` comes back to it), but it
   // isn't anyone's home, so the prompt shows where you are.
   Shell.prototype.prompt = function () {
-    var realHome = this.home === "/home/" + this.user;
+    if (this.pending) return this.pending.prompt;
+    var realHome = this.home === (this.user === "root" ? "/root" : "/home/" + this.user);
     var where = realHome && this.cwd === this.home ? "~" : this.cwd;
-    return this.user + "@meridian:" + where + "$ ";
+    return this.user + "@meridian:" + where + (this.user === "root" ? "# " : "$ ");
   };
 
   Shell.prototype.resolve = function (path) {
@@ -71,7 +111,7 @@
   Shell.prototype.bits = function (node) {
     if (this.user === "root") return 7;
     if (node.owner === this.user) return (node.mode >> 6) & 7;
-    if (node.group === this.group) return (node.mode >> 3) & 7;
+    if (this.groups.indexOf(node.group) !== -1) return (node.mode >> 3) & 7;
     return node.mode & 7;
   };
   Shell.prototype.can = function (node, bit) {
@@ -167,10 +207,16 @@
     var i = 0;
     function startWord() { if (!word) word = { text: "", quoted: [] }; }
     function add(ch, quoted) { startWord(); word.text += ch; word.quoted.push(quoted); }
-    function end() { if (word) { tokens.push({ type: "word", text: word.text, quoted: word.quoted }); word = null; } }
+    function end() {
+      if (!word) return;
+      var m = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(word.text);
+      var assign = m && word.quoted.slice(0, m[0].length).every(function (q) { return !q; });
+      tokens.push({ type: "word", text: word.text, quoted: word.quoted, assign: assign ? m[1] : null });
+      word = null;
+    }
     function variable(quoted) {
       // at line[i] === "$"
-      var m = /^\$(\?|[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})/.exec(line.slice(i));
+      var m = /^\$(\?|!|#|@|[0-9]|[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})/.exec(line.slice(i));
       if (!m) { add("$", quoted); i++; return; }
       var name = m[1].replace(/[{}]/g, "");
       startWord();
@@ -345,19 +391,31 @@
 
   // One part of a line (no ; && ||) → a pipeline: [{argv, redirects}].
   Shell.prototype.parse = function (text) {
-    var vars = { USER: this.user, LOGNAME: this.user, HOME: this.home, PWD: this.cwd, OLDPWD: this.oldpwd || "", SHELL: "/bin/bash", "?": this.lastStatus };
+    var vars = {};
+    var self = this;
+    Object.keys(this.vars).forEach(function (k) { vars[k] = self.vars[k]; });
+    var args = this.args || [];
+    vars["?"] = this.lastStatus;
+    vars["!"] = this.lastBg;
+    vars["#"] = args.length;
+    vars["@"] = args.join(" ");
+    vars["0"] = this.scriptName || "-bash";
+    for (var n = 1; n <= 9; n++) vars[String(n)] = args[n - 1] !== undefined ? args[n - 1] : "";
     var tokens = tokenize(text, vars);
     var pipeline = [];
-    var cmd = { argv: [], redirects: [] };
+    var cmd = { argv: [], redirects: [], assigns: [] };
     var self = this;
     function endCmd(next) {
-      if (!cmd.argv.length && !cmd.redirects.length) throw new SyntaxError("syntax error near unexpected token `" + next + "'");
+      if (!cmd.argv.length && !cmd.redirects.length && !cmd.assigns.length) throw new SyntaxError("syntax error near unexpected token `" + next + "'");
       pipeline.push(cmd);
-      cmd = { argv: [], redirects: [] };
+      cmd = { argv: [], redirects: [], assigns: [] };
     }
     for (var i = 0; i < tokens.length; i++) {
       var t = tokens[i];
-      if (t.type === "word") {
+      if (t.type === "word" && t.assign && !cmd.argv.length) {
+        // NAME=value before a command (or alone): no globbing, no splitting.
+        cmd.assigns.push([t.assign, t.text.slice(t.assign.length + 1)]);
+      } else if (t.type === "word") {
         Array.prototype.push.apply(cmd.argv, self.expand(t));
       } else if (t.text === "|") {
         endCmd("|");
@@ -389,9 +447,11 @@
       if (c === "\\") { i++; continue; }
       if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) break;
       var two = line.slice(i, i + 2);
-      if (c === ";" || two === "&&" || two === "||") {
-        parts.push({ op: op, text: line.slice(start, i) });
-        op = c === ";" ? ";" : two;
+      // A lone & (not &&, &>, >& or 2>&1) ends a command and runs it in the background.
+      var lone = c === "&" && two !== "&&" && line[i + 1] !== ">" && line[i - 1] !== ">" && line[i - 1] !== "&";
+      if (c === ";" || two === "&&" || two === "||" || lone) {
+        parts.push({ op: op, text: line.slice(start, i), bg: lone });
+        op = lone || c === ";" ? ";" : two;
         i += op.length - 1;
         start = i + 1;
       }
@@ -400,11 +460,12 @@
     return parts;
   }
 
-  // run(line) → {output, clear}: everything the terminal should print.
+  // run(line) → {output, clear}: everything the terminal should print. While
+  // a prompt is pending (sudo's password), the line is its answer instead.
   Shell.prototype.run = function (line) {
-    var printed = [];
-    var clear = false;
-    var self = this;
+    if (this.pending) return this.answer(line);
+    this.clock += 1;
+    this.reap();
     var parts = splitLists(line);
     try {
       // Bash reads the whole line before running any of it, so a quoting or
@@ -420,7 +481,14 @@
       this.lastStatus = 2;
       return { output: "bash: " + e.message + "\n", clear: false };
     }
-    for (var i = 0; i < parts.length; i++) {
+    return this.runParts(parts, 0, "");
+  };
+
+  // Run parts[from…] of a parsed line; `printed` is what's been shown so far.
+  Shell.prototype.runParts = function (parts, from, printed) {
+    var clear = false;
+    var out = "", err = "";
+    for (var i = from; i < parts.length; i++) {
       var part = parts[i];
       if (!part.text.trim()) continue;
       if (part.op === "&&" && this.lastStatus !== 0) continue;
@@ -430,24 +498,66 @@
         pipeline = this.parse(part.text);
       } catch (e) {
         this.lastStatus = 2;
-        printed.push("bash: " + e.message + "\n");
+        printed += "bash: " + e.message + "\n";
         continue;
       }
-      var r = self.runPipeline(pipeline);
-      printed.push(r.output);
-      if (r.clear) { clear = true; printed = []; }
+      var r = part.bg ? this.background(pipeline, part.text.trim()) : this.runPipeline(pipeline);
+      if (r.pending) {
+        // sudo wants a password: park this part and the rest of the line.
+        this.pending.resume = { parts: parts, from: i };
+        return { output: printed + r.output, clear: clear, pending: true };
+      }
+      printed += r.output;
+      out += r.out || "";
+      err += r.err || "";
+      if (r.clear) { clear = true; printed = ""; }
+      if (this.exiting) break;
     }
-    return { output: printed.join(""), clear: clear };
+    this.reap();
+    printed += this.flushNotices();
+    return { output: printed, out: out, err: err, clear: clear };
+  };
+
+  // The answer to a pending prompt. Only sudo asks for one. The console
+  // masks what's typed and never echoes or stores it.
+  Shell.prototype.answer = function (line) {
+    var p = this.pending;
+    if (line === this.password) {
+      this.pending = null;
+      this.sudoUntil = this.clock + 15 * 60;
+      if (p.ok()) return this.runParts(p.resume.parts, p.resume.from, "");
+      // The right password, but no right to use sudo at all.
+      this.lastStatus = 1;
+      return this.runParts(p.resume.parts, p.resume.from + 1, this.user + " is not in the sudoers file.\n");
+    }
+    p.tries += 1;
+    if (p.tries >= 3) {
+      this.pending = null;
+      this.lastStatus = 1;
+      return this.runParts(p.resume.parts, p.resume.from + 1, "sudo: 3 incorrect password attempts\n");
+    }
+    return { output: "Sorry, try again.\n", clear: false, pending: true };
+  };
+
+  // Ctrl-C at a prompt abandons it, and the rest of the line.
+  Shell.prototype.cancel = function () {
+    if (!this.pending) return false;
+    this.pending = null;
+    this.lastStatus = 1;
+    return true;
   };
 
   // Run a pipeline. Redirections are applied left to right, as in bash, so
   // `> f 2>&1` sends both streams to f while `2>&1 > f` leaves errors on the
   // terminal: 2>&1 copies wherever stdout points *at that moment*.
+  // Returns {output, out, err}: `output` is what the terminal shows, in order;
+  // `out` and `err` are the same split by stream, for a script's caller.
   Shell.prototype.runPipeline = function (pipeline) {
     var stdin = "";
-    var shown = "";
+    var shown = "", shownOut = "", shownErr = "";
     var status = 0;
     var clear = false;
+    var self = this;
     for (var i = 0; i < pipeline.length; i++) {
       var cmd = pipeline[i];
       var last = i === pipeline.length - 1;
@@ -456,7 +566,6 @@
       var files = []; // [{path, append}] in the order they were opened
       var opened = {};
       var failed = null;
-      var self = this;
       function open(path, append) {
         if (!opened[path]) { opened[path] = { path: path, append: append, text: "" }; files.push(opened[path]); }
         return { to: "file", file: opened[path] };
@@ -471,42 +580,303 @@
         else if (r.op === "&>" || r.op === "&>>") { fd1 = open(r.path, r.op === "&>>"); fd2 = fd1; }
         else if (r.op === "2>&1") fd2 = fd1;
       });
-      if (failed) { shown += failed + "\n"; status = 1; stdin = ""; continue; }
-      var res = cmd.argv.length ? this.exec(cmd.argv, stdin, { tty: fd1.to === "tty" }) : { out: "", err: "", code: 0 };
+      if (failed) { shown += failed + "\n"; shownErr += failed + "\n"; status = 1; stdin = ""; continue; }
+      var res;
+      if (!cmd.argv.length) {
+        // Assignments alone set shell variables (and update exported ones).
+        cmd.assigns.forEach(function (a) { self.setVar(a[0], a[1]); });
+        res = { out: "", err: "", code: 0 };
+      } else {
+        // NAME=value cmd: set (and export) for this one command only.
+        var saved = cmd.assigns.map(function (a) { return [a[0], self.vars[a[0]], self.exported[a[0]]]; });
+        cmd.assigns.forEach(function (a) { self.vars[a[0]] = a[1]; self.exported[a[0]] = true; });
+        res = this.exec(cmd.argv, stdin, { tty: fd1.to === "tty" });
+        saved.forEach(function (v) {
+          if (v[1] === undefined) delete self.vars[v[0]]; else self.vars[v[0]] = v[1];
+          if (v[2]) self.exported[v[0]] = true; else delete self.exported[v[0]];
+        });
+      }
+      if (res.pending) return { output: shown, pending: true };
       if (res.clear) clear = true;
       var piped = "";
       // A command's errors usually come out before its last output, so err first.
-      [[fd2, res.err], [fd1, res.out]].forEach(function (pair) {
+      [[fd2, res.err, "err"], [fd1, res.out, "out"]].forEach(function (pair) {
         var where = pair[0];
-        if (where.to === "tty") shown += pair[1];
-        else if (where.to === "pipe") piped += pair[1];
+        if (where.to === "tty") {
+          shown += pair[1];
+          if (pair[2] === "err") shownErr += pair[1]; else shownOut += pair[1];
+        } else if (where.to === "pipe") piped += pair[1];
         else where.file.text += pair[1];
       });
       files.forEach(function (f) {
         var why = self.writeFile(f.path, f.text, f.append);
-        if (why) { shown += "bash: " + why + "\n"; res.code = 1; }
+        if (why) { shown += "bash: " + why + "\n"; shownErr += "bash: " + why + "\n"; res.code = 1; }
       });
       stdin = piped;
       status = res.code;
+      if (this.exiting) break;
     }
     this.lastStatus = status;
-    return { output: shown, clear: clear };
+    return { output: shown, out: shownOut, err: shownErr, clear: clear };
+  };
+
+  Shell.prototype.setVar = function (name, value) {
+    this.vars[name] = value;
+    if (name === "HOME") this.home = value;
+  };
+
+  // --- processes and jobs ---------------------------------------------------------------
+  function procName(command) {
+    var first = command.replace(/^-+/, "").split(" ")[0]; // the same rule as app/content/schema.py proc_name()
+    return first.slice(first.lastIndexOf("/") + 1).replace(/:$/, "");
+  }
+
+  // Start a pipeline in the background (`cmd &`). `sleep N` becomes a process
+  // that lives N simulated seconds; anything else runs now and is done.
+  Shell.prototype.background = function (pipeline, text) {
+    var n = (this.jobs.length ? Math.max.apply(null, this.jobs.map(function (j) { return j.n; })) : 0) + 1;
+    var pid = this.nextPid;
+    this.nextPid += 1 + (pid % 3);
+    var job = { n: n, pid: pid, text: text, state: "Running" };
+    var argv = pipeline.length === 1 ? pipeline[0].argv : [];
+    var output = "[" + n + "] " + pid + "\n";
+    if (argv[0] === "sleep" && pipeline.length === 1 && /^\d+$/.test(argv[1] || "")) {
+      this.procs.push({ pid: pid, ppid: SHELL_PID, user: this.user, command: argv.join(" "), tty: "pts/0", cpu: 0, mem: 0.0,
+        start: this.clock, end: this.clock + parseInt(argv[1], 10), alive: true, signals: [], ignores: [], job: job });
+    } else {
+      var r = this.runPipeline(pipeline);
+      output += r.output;
+      job.state = "Done";
+      this.notices.push(job);
+    }
+    this.jobs.push(job);
+    this.lastBg = String(pid);
+    this.lastStatus = 0;
+    return { output: output };
+  };
+
+  // Let simulated time catch up: sleeps that have run their course finish.
+  Shell.prototype.reap = function () {
+    var self = this;
+    this.procs.forEach(function (p) {
+      if (p.alive && p.end !== undefined && p.end <= self.clock) {
+        p.alive = false;
+        if (p.job && p.job.state === "Running") { p.job.state = "Done"; self.notices.push(p.job); }
+      }
+    });
+  };
+
+  function jobLine(job, jobs, withAmp) {
+    var current = jobs.length && jobs[jobs.length - 1] === job ? "+" : jobs.length > 1 && jobs[jobs.length - 2] === job ? "-" : " ";
+    var text = job.text + (withAmp && job.state === "Running" ? " &" : "");
+    return "[" + job.n + "]" + current + "  " + padRight(job.state, 24) + text;
+  }
+
+  // What bash prints before the next prompt when a job finishes. Printing a
+  // finished job forgets it.
+  Shell.prototype.flushNotices = function () {
+    var self = this;
+    var out = "";
+    this.notices.forEach(function (job) {
+      if (self.jobs.indexOf(job) === -1) return;
+      out += jobLine(job, self.jobs, false) + "\n";
+    });
+    this.jobs = this.jobs.filter(function (j) { return self.notices.indexOf(j) === -1; });
+    this.notices = [];
+    return out;
+  };
+
+  var SIGNALS = { HUP: 1, INT: 2, KILL: 9, TERM: 15 };
+  var SIGNAL_NAMES = { 1: "HUP", 2: "INT", 9: "KILL", 15: "TERM" };
+  var SIGNAL_DEATH = { HUP: "Hangup", INT: "Interrupt", KILL: "Killed", TERM: "Terminated" };
+  function signalName(text) {
+    var t = String(text).toUpperCase().replace(/^SIG/, "");
+    if (/^\d+$/.test(t)) return SIGNAL_NAMES[t] || null;
+    return SIGNALS[t] ? t : null;
+  }
+
+  // Deliver `sig` to process `p`: recorded, and fatal unless the program
+  // handles it (only SIGKILL can't be handled).
+  Shell.prototype.signal = function (p, sig) {
+    if (this.user !== "root" && p.user !== this.user) return "Operation not permitted";
+    p.signals.push(sig);
+    if (sig !== "KILL" && p.ignores.indexOf(sig) !== -1) return null;
+    p.alive = false;
+    if (p.job && p.job.state === "Running") { p.job.state = SIGNAL_DEATH[sig]; this.notices.push(p.job); }
+    return null;
+  };
+
+  Shell.prototype.findJob = function (spec) {
+    var jobs = this.jobs;
+    if (!spec || spec === "%" || spec === "%+" || spec === "%%") return jobs[jobs.length - 1] || null;
+    if (spec === "%-") return jobs[jobs.length - 2] || null;
+    var n = parseInt(spec.replace(/^%/, ""), 10);
+    return jobs.filter(function (j) { return j.n === n; })[0] || null;
+  };
+
+  // Processes pgrep/pkill would pick: name (or, with -f, the whole command
+  // line) matching a regex, optionally only one user's. Never the shell itself.
+  Shell.prototype.matching = function (p) {
+    if (!p.args.length) throw new Error("no matching criteria specified");
+    var re = new RegExp(p.args[0]);
+    return this.alive().filter(function (pr) {
+      if (pr.pid === SHELL_PID) return false;
+      if (p.opts.u && pr.user !== p.opts.u) return false;
+      return re.test(p.opts.f ? pr.command : procName(pr.command));
+    });
+  };
+
+  Shell.prototype.alive = function () {
+    return this.procs.filter(function (p) { return p.alive; });
+  };
+
+  // --- running a command: builtins, the PATH, scripts ------------------------------------
+  // Shell builtins run in this shell. Everything else is found on $PATH: an
+  // executable file in the filesystem, or one of the console's own commands,
+  // which live in /usr/bin and /bin (and the admin tools in /usr/sbin).
+  var BUILTINS = ["cd", "echo", "pwd", "export", "unset", "type", "source", ".", "jobs", "kill", "fg", "bg", "exit",
+    "help", "clear", "command", "true", "false"];
+  var SBIN = ["usermod"];
+
+  var NO_BINARY = ["cd", "export", "unset", "type", "source", ".", "jobs", "fg", "bg", "exit", "help", "clear", "command"];
+
+  // Where `name` would be found on $PATH: every match, or the first.
+  Shell.prototype.which = function (name, all) {
+    var found = [];
+    var self = this;
+    var sbin = SBIN.indexOf(name) !== -1;
+    (this.vars.PATH || "").split(":").forEach(function (dir) {
+      if (!dir) return;
+      var path = join(dir, name);
+      var node = self.fs[path];
+      if (node) {
+        if (node.type === "file" && node.mode & 0o111) found.push(path);
+      } else if (COMMANDS[name] && NO_BINARY.indexOf(name) === -1) {
+        var home = sbin ? ["/usr/sbin", "/sbin"] : ["/usr/bin", "/bin"];
+        if (home.indexOf(dir) !== -1) found.push(path);
+      }
+    });
+    return all ? found : found.slice(0, 1);
+  };
+
+  // Run an executable file as a script, in a child shell.
+  Shell.prototype.runFile = function (path, display, args, stdin) {
+    var found = this.lookup(path);
+    if (found.error) return { out: "", err: "bash: " + display + ": " + found.error + "\n", code: 127 };
+    if (found.node.type === "dir") return { out: "", err: "bash: " + display + ": Is a directory\n", code: 126 };
+    if (!this.can(found.node, 1) || !this.can(found.node, 4)) return { out: "", err: "bash: " + display + ": Permission denied\n", code: 126 };
+    return this.child(found.node.contents, display, args, stdin);
+  };
+
+  // A child shell: it inherits only the EXPORTED variables, and nothing it
+  // does to its variables or directory comes back to this shell.
+  Shell.prototype.child = function (script, name, args, stdin) {
+    var self = this;
+    var saved = { vars: this.vars, exported: this.exported, cwd: this.cwd, oldpwd: this.oldpwd, args: this.args,
+      scriptName: this.scriptName, lastStatus: this.lastStatus, stdin: this.stdin };
+    var env = {};
+    Object.keys(this.exported).forEach(function (k) { if (k in self.vars) env[k] = self.vars[k]; });
+    var exported = {};
+    Object.keys(env).forEach(function (k) { exported[k] = true; });
+    this.vars = env;
+    this.exported = exported;
+    this.args = args;
+    this.scriptName = name;
+    var out = "", err = "", code = 0;
+    this.depth = (this.depth || 0) + 1;
+    try {
+      if (this.depth > 20) return { out: "", err: "bash: maximum nesting depth exceeded\n", code: 1 };
+      var lines = script.split("\n");
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (!line.trim() || /^\s*#/.test(line)) continue;
+        var r = this.runParts(splitLists(line), 0, "");
+        out += r.out || "";
+        err += r.err || "";
+        code = this.lastStatus;
+        if (this.exiting) { code = this.exitCode; this.exiting = false; break; }
+      }
+    } finally {
+      this.depth -= 1;
+      Object.keys(saved).forEach(function (k) { self[k] = saved[k]; });
+    }
+    return { out: out, err: err, code: code };
   };
 
   Shell.prototype.exec = function (argv, stdin, io) {
     var name = argv[0];
-    var fn = COMMANDS[name];
-    if (!fn) {
+    if (name.indexOf("/") !== -1) return this.runFile(name, name, argv.slice(1), stdin);
+    if (BUILTINS.indexOf(name) !== -1) return this.call(name, argv, stdin, io);
+    var path = this.which(name)[0];
+    if (!path) {
       return {
         out: "",
         err: name + ": command not found. The Meridian's console only knows the basics; type `help` to see them.\n",
         code: 127,
       };
     }
+    if (this.fs[path]) return this.runFile(path, name, argv.slice(1), stdin);
+    return this.call(name, argv, stdin, io);
+  };
+
+  Shell.prototype.call = function (name, argv, stdin, io) {
     try {
-      return fn.call(this, argv.slice(1), stdin, io);
+      return COMMANDS[name].call(this, argv.slice(1), stdin, io);
     } catch (e) {
       return { out: "", err: name + ": " + e.message + "\n", code: 1 };
+    }
+  };
+
+  // --- users and groups: /etc/passwd and /etc/group, read live --------------------------
+  Shell.prototype.db = function (file) {
+    var node = this.fs[file];
+    if (!node || node.type !== "file") return [];
+    return lines(node.contents).filter(function (l) { return l && l[0] !== "#"; }).map(function (l) { return l.split(":"); });
+  };
+  Shell.prototype.account = function (name) {
+    var row = this.db("/etc/passwd").filter(function (r) { return r[0] === name; })[0];
+    if (row) return { name: row[0], uid: +row[2], gid: +row[3], home: row[5], shell: row[6] };
+    if (name === "root") return { name: "root", uid: 0, gid: 0, home: "/root", shell: "/bin/bash" };
+    var loginUser = this.logins.length ? this.logins[0].user : this.user;
+    if (name === loginUser) {
+      return { name: name, uid: 1000, gid: 1000, home: "/home/" + name, shell: "/bin/bash" };
+    }
+    return null;
+  };
+  Shell.prototype.gid = function (group) {
+    var row = this.db("/etc/group").filter(function (r) { return r[0] === group; })[0];
+    return row ? +row[2] : group === "root" ? 0 : 1000;
+  };
+  // Every group `name` belongs to in /etc/group (the primary first).
+  Shell.prototype.groupsOf = function (name) {
+    var acct = this.account(name);
+    var rows = this.db("/etc/group");
+    var primary = rows.filter(function (r) { return acct && +r[2] === acct.gid; }).map(function (r) { return r[0]; });
+    var others = rows.filter(function (r) { return (r[3] || "").split(",").indexOf(name) !== -1; }).map(function (r) { return r[0]; });
+    var all = primary.concat(others.filter(function (g) { return primary.indexOf(g) === -1; }));
+    return all.length ? all : name === this.user ? this.groups.slice() : [];
+  };
+  Shell.prototype.isSudoer = function () {
+    return this.user === "root" || this.groupsOf(this.user).indexOf("sudo") !== -1;
+  };
+
+  // Run argv as another user, as sudo does: only programs on the PATH, no builtins.
+  Shell.prototype.runAs = function (who, argv, stdin, io) {
+    var name = argv[0];
+    var path = name.indexOf("/") !== -1 ? name : this.which(name)[0];
+    if (!path) return { out: "", err: "sudo: " + name + ": command not found\n", code: 1 };
+    var saved = { user: this.user, group: this.group, groups: this.groups };
+    this.user = who;
+    this.groups = this.groupsOf(who);
+    if (!this.groups.length) this.groups = [who];
+    this.group = this.groups[0];
+    try {
+      if (this.fs[path] || name.indexOf("/") !== -1) return this.runFile(path, name, argv.slice(1), stdin);
+      return this.call(name, argv, stdin, io);
+    } finally {
+      this.user = saved.user;
+      this.group = saved.group;
+      this.groups = saved.groups;
     }
   };
 
@@ -612,8 +982,12 @@
     help: function () {
       return ok(
         "Station console commands:\n" +
-        "  pwd cd ls cat echo touch mkdir rmdir cp mv rm chmod chown whoami id\n" +
-        "  grep wc sort uniq head tail cut tee clear help\n" +
+        "  files:     pwd cd ls cat echo touch mkdir rmdir cp mv rm chmod chown\n" +
+        "  text:      grep wc sort uniq head tail cut tee\n" +
+        "  users:     whoami id groups getent sudo usermod\n" +
+        "  env:       export unset env printenv type which command source bash\n" +
+        "  processes: ps pgrep pkill kill sleep jobs fg bg\n" +
+        "  console:   clear help exit\n" +
         "Pipes (|), redirection (> >> < 2> 2>&1 &>), globs (* ? [...]), {a,b}, ; && || and $VARS work.\n" +
         "Tab completes paths; ↑ and ↓ walk your history; Ctrl-C abandons a line.\n"
       );
@@ -621,10 +995,362 @@
     clear: function () { return { out: "", err: "", code: 0, clear: true }; },
     pwd: function () { return ok(this.cwd + "\n"); },
     whoami: function () { return ok(this.user + "\n"); },
-    id: function () {
-      var uid = this.user === "root" ? 0 : 1000;
-      return ok("uid=" + uid + "(" + this.user + ") gid=" + uid + "(" + this.group + ") groups=" + uid + "(" + this.group + ")\n");
+    id: function (args) {
+      // With no name: this login's credentials, fixed when it started. With a
+      // name: what the account database says now (so a usermod shows here
+      // before it reaches your session).
+      var name = args[0] || this.user;
+      var acct = this.account(name);
+      if (!acct) return { out: "", err: "id: '" + name + "': no such user\n", code: 1 };
+      var groups = args[0] ? this.groupsOf(name) : this.groups;
+      var sh = this;
+      var primary = args[0] ? groups[0] : this.group;
+      var gid = function (g) { return name === "root" && g === "root" ? 0 : sh.gid(g); };
+      return ok("uid=" + acct.uid + "(" + name + ") gid=" + gid(primary) + "(" + primary + ") groups=" +
+        groups.map(function (g) { return gid(g) + "(" + g + ")"; }).join(",") + "\n");
     },
+    groups: function (args) {
+      if (!args.length) return ok(this.groups.join(" ") + "\n");
+      var sh = this;
+      var out = "", err = "";
+      args.forEach(function (n) {
+        if (!sh.account(n)) err += "groups: '" + n + "': no such user\n";
+        else out += n + " : " + sh.groupsOf(n).join(" ") + "\n";
+      });
+      return { out: out, err: err, code: err ? 1 : 0 };
+    },
+    getent: function (args) {
+      var dbs = { passwd: "/etc/passwd", group: "/etc/group" };
+      if (!dbs[args[0]]) return { out: "", err: "Unknown database: " + (args[0] || "") + "\nTry `getent --help' or `getent --usage' for more information.\n", code: 1 };
+      var rows = this.db(dbs[args[0]]);
+      var keys = args.slice(1);
+      if (!keys.length) return ok(unlines(rows.map(function (r) { return r.join(":"); })));
+      var out = [];
+      var missing = false;
+      keys.forEach(function (k) {
+        var row = rows.filter(function (r) { return r[0] === k; })[0];
+        if (row) out.push(row.join(":")); else missing = true;
+      });
+      return { out: unlines(out), err: "", code: missing ? 2 : 0 };
+    },
+    usermod: function (rawArgs) {
+      if (this.user !== "root") {
+        return { out: "", err: "usermod: Permission denied.\nusermod: cannot lock /etc/passwd; try again later.\n", code: 1 };
+      }
+      var p = flags("usermod", rawArgs, "a", "G");
+      var name = p.args[0];
+      if (!name || p.opts.G === undefined) throw new Error("usage: usermod [-a] -G GROUP[,GROUP...] USER");
+      if (!this.account(name)) return { out: "", err: "usermod: user '" + name + "' does not exist\n", code: 6 };
+      var wanted = p.opts.G.split(",").filter(Boolean);
+      var node = this.fs["/etc/group"];
+      var rows = this.db("/etc/group");
+      var bad = wanted.filter(function (g) { return !rows.some(function (r) { return r[0] === g; }); });
+      if (bad.length) return { out: "", err: "usermod: group '" + bad[0] + "' does not exist\n", code: 6 };
+      var acct = this.account(name);
+      rows.forEach(function (r) {
+        var members = (r[3] || "").split(",").filter(Boolean);
+        var has = members.indexOf(name) !== -1;
+        var want = wanted.indexOf(r[0]) !== -1;
+        if (+r[2] === acct.gid) return; // the primary group is never touched
+        if (want && !has) members.push(name);
+        // Without -a, -G REPLACES the supplementary groups: every other one is dropped.
+        if (!want && has && !p.opts.a) members = members.filter(function (m) { return m !== name; });
+        r[3] = members.join(",");
+        while (r.length < 4) r.push("");
+      });
+      node.contents = unlines(rows.map(function (r) { return r.join(":"); }));
+      node.mtime = new Date();
+      return ok();
+    },
+    sudo: function (rawArgs, stdin, io) {
+      var args = rawArgs.slice();
+      var who = "root";
+      var mode = "run";
+      while (args.length && args[0][0] === "-") {
+        var a = args.shift();
+        if (a === "-u") who = args.shift();
+        else if (a === "-l") mode = "list";
+        else if (a === "-i") mode = "login";
+        else if (a === "-k") { this.sudoUntil = -1; return ok(); }
+        else if (a === "--") break;
+        else return { out: "", err: "sudo: invalid option -- '" + a.replace(/^-+/, "") + "'\n", code: 1 };
+      }
+      if (mode === "run" && !args.length) return { out: "", err: "usage: sudo -h | -K | -k | -V\nusage: sudo [-u user] command [arg ...]\n", code: 1 };
+      if (!this.account(who)) return { out: "", err: "sudo: unknown user " + who + "\n", code: 1 };
+      var sh = this;
+      if (this.user !== "root" && this.clock >= this.sudoUntil) {
+        if (!this.password) return { out: "", err: "sudo: there's no password for " + this.user + " on this console, so sudo can't be used here\n", code: 1 };
+        this.pending = { prompt: "[sudo] password for " + this.user + ": ", secret: true, tries: 0, ok: function () { return sh.isSudoer(); } };
+        return { pending: true };
+      }
+      if (!this.isSudoer()) return { out: "", err: this.user + " is not in the sudoers file.\n", code: 1 };
+      if (mode === "list") {
+        return ok("User " + this.user + " may run the following commands on meridian:\n    (ALL : ALL) ALL\n");
+      }
+      if (mode === "login") {
+        this.logins.push({ user: this.user, group: this.group, groups: this.groups, cwd: this.cwd, oldpwd: this.oldpwd,
+          home: this.home, vars: this.vars, exported: this.exported });
+        var vars = {};
+        Object.keys(this.vars).forEach(function (k) { if (sh.exported[k]) vars[k] = sh.vars[k]; });
+        var acct = this.account(who);
+        this.user = who;
+        this.groups = this.groupsOf(who).length ? this.groupsOf(who) : [who];
+        this.group = this.groups[0];
+        this.home = acct.home;
+        this.cwd = this.fs[acct.home] ? acct.home : "/";
+        vars.HOME = this.home; vars.USER = who; vars.LOGNAME = who; vars.PWD = this.cwd;
+        this.vars = vars;
+        return ok();
+      }
+      return this.runAs(who, args, stdin, io);
+    },
+    exit: function (args) {
+      var code = args.length ? parseInt(args[0], 10) || 0 : this.lastStatus;
+      if (this.depth) { this.exiting = true; this.exitCode = code; return { out: "", err: "", code: code }; }
+      if (this.logins.length) {
+        var back = this.logins.pop();
+        var sh = this;
+        Object.keys(back).forEach(function (k) { sh[k] = back[k]; });
+        return ok("logout\n");
+      }
+      return ok("logout\nThere's nowhere to log out to: this console is your station.\n");
+    },
+    true: function () { return ok(); },
+    false: function () { return { out: "", err: "", code: 1 }; },
+    export: function (args) {
+      var sh = this;
+      if (!args.length || args[0] === "-p") {
+        return ok(unlines(Object.keys(this.vars).filter(function (k) { return sh.exported[k]; }).sort().map(function (k) {
+          return "declare -x " + k + '="' + sh.vars[k] + '"';
+        })));
+      }
+      var err = "";
+      args.forEach(function (a) {
+        var m = /^([A-Za-z_][A-Za-z0-9_]*)(=(.*))?$/.exec(a);
+        if (!m) { err += "bash: export: `" + a + "': not a valid identifier\n"; return; }
+        if (m[2] !== undefined) sh.setVar(m[1], m[3]);
+        sh.exported[m[1]] = true;
+      });
+      return { out: "", err: err, code: err ? 1 : 0 };
+    },
+    unset: function (args) {
+      var sh = this;
+      args.forEach(function (a) { delete sh.vars[a]; delete sh.exported[a]; });
+      return ok();
+    },
+    env: function (args, stdin, io) {
+      var sh = this;
+      var i = 0;
+      var extra = [];
+      while (i < args.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(args[i])) extra.push(args[i++]);
+      if (i < args.length) {
+        var saved = {};
+        extra.forEach(function (a) { var k = a.split("=")[0]; saved[k] = [sh.vars[k], sh.exported[k]]; sh.vars[k] = a.slice(k.length + 1); sh.exported[k] = true; });
+        try { return this.exec(args.slice(i), stdin, io); } finally {
+          Object.keys(saved).forEach(function (k) {
+            if (saved[k][0] === undefined) delete sh.vars[k]; else sh.vars[k] = saved[k][0];
+            if (saved[k][1]) sh.exported[k] = true; else delete sh.exported[k];
+          });
+        }
+      }
+      var lines_ = Object.keys(this.vars).filter(function (k) { return sh.exported[k]; }).map(function (k) { return k + "=" + sh.vars[k]; });
+      return ok(unlines(lines_.concat(extra)));
+    },
+    printenv: function (args) {
+      var sh = this;
+      if (!args.length) return COMMANDS.env.call(this, [], "", {});
+      var out = args.filter(function (k) { return sh.exported[k] && k in sh.vars; }).map(function (k) { return sh.vars[k]; });
+      return { out: unlines(out), err: "", code: out.length === args.length ? 0 : 1 };
+    },
+    type: function (rawArgs) {
+      var p = flags("type", rawArgs, "at");
+      var sh = this;
+      var out = "", err = "";
+      p.args.forEach(function (n) {
+        var lines_ = [];
+        if (BUILTINS.indexOf(n) !== -1) lines_.push(p.opts.t ? "builtin" : n + " is a shell builtin");
+        if (!lines_.length || p.opts.a) {
+          sh.which(n, true).slice(0, p.opts.a ? 99 : 1).forEach(function (path) { lines_.push(p.opts.t ? "file" : n + " is " + path); });
+        }
+        if (!lines_.length) err += "bash: type: " + n + ": not found\n";
+        else out += unlines(p.opts.a ? lines_ : lines_.slice(0, 1));
+      });
+      return { out: out, err: err, code: err ? 1 : 0 };
+    },
+    which: function (rawArgs) {
+      var p = flags("which", rawArgs, "a");
+      var sh = this;
+      var out = [];
+      var missing = false;
+      p.args.forEach(function (n) {
+        var found = sh.which(n, p.opts.a);
+        if (!found.length) missing = true;
+        out = out.concat(found);
+      });
+      return { out: unlines(out), err: "", code: missing ? 1 : 0 };
+    },
+    command: function (args, stdin, io) {
+      if (args[0] === "-v") {
+        var n = args[1];
+        if (BUILTINS.indexOf(n) !== -1) return ok(n + "\n");
+        var found = this.which(n)[0];
+        return found ? ok(found + "\n") : { out: "", err: "", code: 1 };
+      }
+      return this.exec(args, stdin, io);
+    },
+    source: function (args) {
+      if (!args.length) throw new Error("filename argument required");
+      var r = this.readFile("bash", args[0]);
+      if (r.error) return { out: "", err: r.error.replace(/^bash: /, "bash: ") + "\n", code: 1 };
+      var out = "", err = "";
+      var sh = this;
+      lines(r.text).forEach(function (line) {
+        if (!line.trim() || /^\s*#/.test(line)) return;
+        var res = sh.runParts(splitLists(line), 0, "");
+        out += res.out || "";
+        err += res.err || "";
+      });
+      return { out: out, err: err, code: this.lastStatus };
+    },
+    ".": function (args, stdin, io) { return COMMANDS.source.call(this, args, stdin, io); },
+    bash: function (args, stdin) {
+      if (args[0] === "-c") {
+        if (args.length < 2) return { out: "", err: "bash: -c: option requires an argument\n", code: 2 };
+        return this.child(args[1], args[2] || "bash", args.slice(3), stdin);
+      }
+      if (args.length) {
+        var r = this.readFile("bash", args[0]);
+        if (r.error) return { out: "", err: r.error + "\n", code: 127 };
+        return this.child(r.text, args[0], args.slice(1), stdin);
+      }
+      return { out: "", err: "bash: interactive shells inside the console aren't available; use bash -c '…' or bash script.sh\n", code: 1 };
+    },
+    sh: function (args, stdin) { return COMMANDS.bash.call(this, args, stdin); },
+    // --- processes ---
+    sleep: function (args) {
+      var m = /^(\d+)(s?)$/.exec(args[0] || "");
+      if (!m) throw new Error(args.length ? "invalid time interval '" + args[0] + "'" : "missing operand");
+      this.clock += parseInt(m[1], 10); // it would block that long; simulated time jumps instead
+      this.reap();
+      return ok();
+    },
+    jobs: function (rawArgs) {
+      var p = flags("jobs", rawArgs, "l");
+      var sh = this;
+      this.reap();
+      var out = unlines(this.jobs.map(function (j) {
+        var line = jobLine(j, sh.jobs, true);
+        return p.opts.l ? line.replace(/^(\[\d+\][+\- ])  /, "$1  " + j.pid + " ") : line;
+      }));
+      // Listing a finished job is how bash tells you, so it's forgotten after.
+      this.jobs = this.jobs.filter(function (j) { return j.state === "Running"; });
+      this.notices = [];
+      return ok(out);
+    },
+    fg: function (args) {
+      var job = this.findJob(args[0]);
+      if (!job) return { out: "", err: "bash: fg: " + (args[0] || "current") + ": no such job\n", code: 1 };
+      var proc = this.procs.filter(function (pr) { return pr.job === job; })[0];
+      if (proc && proc.alive) { this.clock = Math.max(this.clock, proc.end); proc.alive = false; }
+      this.jobs = this.jobs.filter(function (j) { return j !== job; });
+      return ok(job.text + "\n");
+    },
+    bg: function (args) {
+      var job = this.findJob(args[0]);
+      if (!job) return { out: "", err: "bash: bg: " + (args[0] || "current") + ": no such job\n", code: 1 };
+      return { out: "", err: "bash: bg: job " + job.n + " already in background\n", code: 0 };
+    },
+    kill: function (rawArgs) {
+      var args = rawArgs.slice();
+      var sig = "TERM";
+      if (args[0] === "-l") return ok(" 1) SIGHUP\t 2) SIGINT\t 9) SIGKILL\t15) SIGTERM\n");
+      if (args[0] === "-s") { args.shift(); sig = signalName(args.shift() || ""); }
+      else if (args[0] && args[0][0] === "-" && args[0] !== "-") sig = signalName(args.shift().slice(1));
+      if (!sig) return { out: "", err: "bash: kill: invalid signal specification\n", code: 1 };
+      if (!args.length) return { out: "", err: "kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]\n", code: 2 };
+      var sh = this;
+      var err = "";
+      args.forEach(function (t) {
+        var target;
+        if (t[0] === "%") {
+          var job = sh.findJob(t);
+          target = job && job.state === "Running" ? sh.procs.filter(function (pr) { return pr.job === job && pr.alive; })[0] : null;
+          if (!target) { err += "bash: kill: " + t + ": no such job\n"; return; }
+        } else {
+          target = sh.alive().filter(function (pr) { return String(pr.pid) === t; })[0];
+          if (!/^\d+$/.test(t)) { err += "bash: kill: " + t + ": arguments must be process or job IDs\n"; return; }
+          if (!target) { err += "bash: kill: (" + t + ") - No such process\n"; return; }
+        }
+        var why = sh.signal(target, sig);
+        if (why) err += "bash: kill: (" + target.pid + ") - " + why + "\n";
+      });
+      return { out: "", err: err, code: err ? 1 : 0 };
+    },
+    pkill: function (rawArgs) {
+      var args = rawArgs.slice();
+      var sig = "TERM";
+      if (args[0] && /^-[A-Z0-9]+$/i.test(args[0]) && signalName(args[0].slice(1))) sig = signalName(args.shift().slice(1));
+      var p = flags("pkill", args, "f", "u");
+      var matched = this.matching(p);
+      var sh = this;
+      var err = "";
+      matched.forEach(function (pr) {
+        var why = sh.signal(pr, sig);
+        if (why) err += "pkill: killing pid " + pr.pid + " failed: " + why + "\n";
+      });
+      return { out: "", err: err, code: matched.length ? (err ? 1 : 0) : 1 };
+    },
+    pgrep: function (rawArgs) {
+      var p = flags("pgrep", rawArgs, "afl", "u");
+      var matched = this.matching(p);
+      return {
+        out: unlines(matched.map(function (pr) {
+          return pr.pid + (p.opts.a ? " " + pr.command.replace(/^-/, "") : p.opts.l ? " " + procName(pr.command) : "");
+        })),
+        err: "",
+        code: matched.length ? 0 : 1,
+      };
+    },
+    ps: function (rawArgs) {
+      var opts = rawArgs.join(" ");
+      var sort = /--sort=(-?)%?(cpu|mem|pid)/.exec(opts);
+      var all = /(^|\s)-?a?u?x|(^|\s)-e|(^|\s)-A|aux/.test(opts);
+      var sh = this;
+      var self_ = { pid: this.nextPid++, ppid: SHELL_PID, user: this.user, command: "ps " + opts, tty: "pts/0", cpu: 0, mem: 0.0, start: this.clock, alive: true };
+      var list = this.alive().concat([self_]);
+      if (!all) list = list.filter(function (pr) { return pr.tty === "pts/0" && pr.user === sh.user; });
+      list.sort(function (a, b) { return a.pid - b.pid; });
+      if (sort) {
+        var key = sort[2];
+        list.sort(function (a, b) { return (a[key] - b[key]) * (sort[1] ? -1 : 1); });
+      }
+      function started(pr) { return pr.start < 0 ? "Oct08" : stamp(new Date(START_TIME.getTime() + pr.start * 1000)).slice(-5); }
+      // CPU time used so far: %CPU of the time the process has been running.
+      function two(n) { return (n < 10 ? "0" : "") + n; }
+      function seconds(pr) { return Math.round((pr.cpu / 100) * Math.max(0, sh.clock - pr.start)); }
+      function cputime(pr) { var t = seconds(pr); return Math.floor(t / 60) + ":" + two(t % 60); } // aux: M:SS
+      function hms(pr) { var t = seconds(pr); return two(Math.floor(t / 3600)) + ":" + two(Math.floor(t / 60) % 60) + ":" + two(t % 60); }
+      if (/-e|-A/.test(opts) && /f/.test(opts)) {
+        return ok(unlines(["UID          PID    PPID  C STIME TTY          TIME CMD"].concat(list.map(function (pr) {
+          return padRight(pr.user, 8) + " " + padLeft(pr.pid, 7) + " " + padLeft(pr.ppid, 7) + " " + padLeft(Math.round(pr.cpu), 2) + " " +
+            padRight(started(pr), 5) + " " + padRight(pr.tty, 8) + " " + hms(pr) + " " + pr.command;
+        }))));
+      }
+      if (all) {
+        return ok(unlines(["USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND"].concat(list.map(function (pr) {
+          var stat = pr.cpu > 50 ? "R" : pr.tty === "pts/0" && pr.pid === SHELL_PID ? "Ss" : "S";
+          return padRight(pr.user, 8) + " " + padLeft(pr.pid, 7) + " " + padLeft(pr.cpu.toFixed(1), 4) + " " + padLeft(pr.mem.toFixed(1), 4) + " " +
+            padLeft(8000 + (pr.pid * 37) % 90000, 6) + " " + padLeft(900 + (pr.pid * 13) % 9000, 5) + " " + padRight(pr.tty, 8) + " " +
+            padRight(stat, 4) + " " + padRight(started(pr), 5) + " " + padLeft(cputime(pr), 6) + " " + pr.command;
+        }))));
+      }
+      return ok(unlines(["    PID TTY          TIME CMD"].concat(list.map(function (pr) {
+        return padLeft(pr.pid, 7) + " " + padRight(pr.tty, 8) + " 00:00:00 " + procName(pr.command);
+      }))));
+    },
+    top: function () { return { out: "", err: "top: full-screen programs don't run on the station console. Try: ps aux --sort=-%cpu | head\n", code: 1 }; },
+    htop: function () { return COMMANDS.top.call(this); },
+
     echo: function (args) {
       var newline = true;
       if (args[0] === "-n") { newline = false; args = args.slice(1); }
@@ -632,7 +1358,7 @@
     },
     cd: function (args) {
       if (args.length > 1) return { out: "", err: "bash: cd: too many arguments\n", code: 1 };
-      var target = args.length ? args[0] : this.home;
+      var target = args.length ? args[0] : this.vars.HOME;
       var dash = target === "-";
       if (dash) {
         if (!this.oldpwd) return { out: "", err: "bash: cd: OLDPWD not set\n", code: 1 };
@@ -644,6 +1370,8 @@
       if (!this.can(found.node, 1)) return { out: "", err: "bash: cd: " + target + ": Permission denied\n", code: 1 };
       this.oldpwd = this.cwd;
       this.cwd = found.path;
+      this.vars.OLDPWD = this.oldpwd;
+      this.vars.PWD = this.cwd;
       return ok(dash ? this.cwd + "\n" : ""); // `cd -` prints where it went
     },
     ls: function (rawArgs, stdin, io) {
@@ -1066,8 +1794,12 @@
 
   // The same checks as app/terminal.py's passes(), so the console can say
   // "done" the moment it is. The server re-checks; this is only a preview.
-  function passes(check, state, cwd) {
+  function passes(check, state, cwd, processes) {
+    var named = function (name) { return (processes || []).filter(function (p) { return procName(p.command) === name; }); };
     if ("cwd" in check) return cwd === check.cwd;
+    if ("running" in check) return named(check.running).some(function (p) { return p.alive; });
+    if ("stopped" in check) return !named(check.stopped).some(function (p) { return p.alive; });
+    if ("signalled" in check) return named(check.signalled).some(function (p) { return p.signals.indexOf(check.with) !== -1; });
     if ("mode" in check) return !!state[check.mode] && (state[check.mode].mode & 0o777) === parseInt(check.equals, 8);
     if ("owner" in check) {
       var n = state[check.owner];
@@ -1081,10 +1813,18 @@
     }
     return false;
   }
+  // The process table as plain data, the shape the server grades.
+  Shell.prototype.processes = function () {
+    return this.procs.map(function (p) {
+      return { pid: p.pid, user: p.user, command: p.command, alive: !!p.alive, signals: p.signals.slice() };
+    });
+  };
+
   Shell.prototype.solved = function (checks) {
     var state = this.state();
     var cwd = this.cwd;
-    return checks.every(function (c) { return passes(c, state, cwd); });
+    var procs = this.processes();
+    return checks.every(function (c) { return passes(c, state, cwd, procs); });
   };
 
   return { Shell: Shell, tokenize: tokenize, applyMode: applyMode, passes: passes };

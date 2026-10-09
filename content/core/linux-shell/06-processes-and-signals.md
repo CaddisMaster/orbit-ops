@@ -36,6 +36,32 @@ quiz:
     explain: >-
       That's the graceful-then-forceful pattern from this module. An app that ignores `SIGTERM`
       always takes the full 10 seconds to stop, which is a common cause of slow deploys.
+terminal:
+  task: |
+    Something is eating all the CPU in the oxygen recycler. Find the runaway process and stop
+    it: **politely first**, with SIGTERM. If it won't listen, stop it impolitely. Leave the
+    recycler daemon itself, `o2-recyclerd`, running.
+  cwd: /home/cadet
+  processes:
+    - {command: /usr/sbin/o2-recyclerd, user: root, cpu: 1.2, mem: 0.4}
+    - {command: o2-diagnostics --deep-scan, cpu: 98.7, mem: 2.1, ignores: [TERM]}
+    - {command: /usr/sbin/comms-relayd, user: root, cpu: 0.3}
+    - {command: nav-sync --interval 60, cpu: 0.1}
+  files:
+    - {path: /home/cadet, type: dir}
+  checks:
+    - {stopped: o2-diagnostics}
+    - {signalled: o2-diagnostics, with: TERM}
+    - {running: o2-recyclerd}
+  success: |-
+    The fans spin down. "It ignored TERM? Then KILL was the right call," Okafor says. "But you asked first. Always ask first."
+  solution:
+    - ps aux --sort=-%cpu | head -n 4
+    - pgrep -a o2
+    - pkill o2-diagnostics
+    - pgrep -a o2-diagnostics
+    - pkill -9 o2-diagnostics
+    - pgrep -a o2
 cards:
   - front: SIGTERM vs SIGKILL
     back: "SIGTERM (15, kill's default) asks nicely and can be handled. SIGKILL (9) ends the process immediately and can't be caught."

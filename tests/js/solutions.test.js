@@ -23,13 +23,13 @@ for (const [slug, ex] of Object.entries(exercises)) {
       const { output } = sh.run(line);
       assert.notEqual(sh.lastStatus, 127, `${ex.source}: \`${line}\` uses an unknown command:\n${output}`);
     }
-    const failing = ex.spec.checks.filter((c) => !passes(c, sh.state(), sh.cwd));
+    const failing = ex.spec.checks.filter((c) => !passes(c, sh.state(), sh.cwd, sh.processes()));
     assert.deepEqual(failing, [], `${ex.source}: the solution leaves these checks failing`);
   });
 }
 
 test("The browser's checks agree with the server's on every shared case", () => {
   for (const c of parity.cases) {
-    assert.equal(passes(c.check, parity.state, parity.cwd), c.expect, c.name);
+    assert.equal(passes(c.check, parity.state, parity.cwd, parity.processes), c.expect, c.name);
   }
 });
