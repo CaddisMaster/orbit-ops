@@ -9,6 +9,7 @@ from app import progress
 from app.config import get_settings
 from app.content import Catalog, get_catalog
 from app.db import get_db
+from app.game import streaks
 from app.game.levels import standing
 from app.game.xp import total_xp
 from app.models import User
@@ -39,6 +40,8 @@ def dashboard(
 ):
     completed = progress.completed_slugs(db, user.id)
     mission = progress.todays_mission(catalog, completed)
+    streak = streaks.current_streak(db, user.id, streaks.today())
+    db.commit()  # any freezes the streak just spent
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -49,5 +52,7 @@ def dashboard(
             "done": len(completed & catalog.modules.keys()),
             "total": len(catalog.modules),
             "standing": standing(total_xp(db, user.id), catalog.ranks),
+            "streak": streak,
+            "max_freezes": streaks.MAX_FREEZES,
         },
     )

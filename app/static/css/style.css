@@ -212,3 +212,10 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .standing p { margin: 0.25rem 0; }
 .xp-gain { color: var(--accent); font: 600 1.1rem/1.4 var(--mono); }
 .promotion { color: var(--warn); }
+
+/* Streak */
+.streak p { margin: 0.25rem 0; }
+.streak .flame { display: inline-block; width: 1.4em; text-align: center; color: var(--muted); }
+.streak.is-lit strong { color: var(--warn); }
+.streak .filed { color: var(--accent); }
+.streak + .standing { margin-top: 0.75rem; }

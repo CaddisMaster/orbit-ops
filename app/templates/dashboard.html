@@ -24,6 +24,12 @@
   <p>Welcome aboard the <i>Meridian</i>, {{ user.username }}. The station is dark. Each mission you
      finish brings one more system back online.</p>
   {% endif %}
+  <div class="streak{{ ' is-lit' if streak.length }}">
+    <p><span class="flame" aria-hidden="true">{{ '🔥' if streak.length else '·' }}</span>
+       <strong>{{ streak.length }}-day streak</strong>
+       <span class="muted">· {{ streak.freezes }} of {{ max_freezes }} freezes banked</span></p>
+    <p class="muted">Today's log entry: {% if streak.today_done %}<span class="filed">filed</span>{% else %}pending{% endif %}</p>
+  </div>
   <div class="standing">
     <p><strong>Level {{ standing.level }}</strong>{% if standing.rank %} · {{ standing.rank }}{% endif %}
        <span class="muted">· {{ standing.xp }} XP</span></p>

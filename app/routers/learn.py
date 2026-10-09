@@ -10,7 +10,7 @@ from app import progress
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
-from app.game import xp
+from app.game import streaks, xp
 from app.game.levels import standing
 from app.models import User
 from app.security import require_user
@@ -112,7 +112,8 @@ def answer_question(
     record = progress.get_progress(db, user.id, slug)
     xp_gained, promoted_to = 0, None
     if result.just_completed:
-        # Same transaction as the completion: both land or neither does.
+        # Same transaction as the completion: all of it lands or none does.
+        streaks.mark_active(db, user.id, streaks.today())
         before = standing(xp.total_xp(db, user.id), catalog.ranks)
         xp_gained = sum(xp.award(db, user.id, a) for a in xp.completion_awards(module, record.score))
         after = standing(before.xp + xp_gained, catalog.ranks)

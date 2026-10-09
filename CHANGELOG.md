@@ -17,6 +17,11 @@ and why it matters, not what the diff says.
   dashboard shows level, rank and a bar to the next level (#21).
 - A database table for the daily streak: one row per day that counts, either a day with activity
   or a missed day bridged by a freeze. The streak itself is worked out from it (#22).
+- A daily streak. Completing a module marks the day (in `APP_TIMEZONE`) active, and the dashboard
+  shows the streak, the freezes banked and whether today's log entry is filed yet. Every 7th
+  active day banks a freeze (up to 2), and a missed day is bridged automatically if the freezes
+  cover the whole gap; otherwise the streak starts again. Nothing runs at midnight: the streak is
+  worked out when a page is opened (#22).
 
 ## [0.2.0] — 2026-10-08
 
