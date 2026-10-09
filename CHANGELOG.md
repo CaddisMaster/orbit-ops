@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-09
+
+Gamify: XP and ranks, a daily streak with freezes, badges, the station map, a station that looks
+the part, and the station console for hands-on terminal practice.
+
 ### Added
 - A database table for the XP ledger: every award is a row saying what earned it, and totals,
   levels and ranks will be summed from it rather than stored. The database refuses to record the
