@@ -100,3 +100,18 @@ class ActivityDay(Base):
     day: Mapped[date] = mapped_column(Date)
     freeze_used: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BadgeEarned(Base):
+    """One row per badge a learner holds. Badge definitions live in content
+    (syllabus.yml), so this stores only the slug. Unique on (user_id,
+    badge_slug), which makes earning idempotent: a rule satisfied twice is a
+    no-op insert."""
+
+    __tablename__ = "badges_earned"
+    __table_args__ = (UniqueConstraint("user_id", "badge_slug"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    badge_slug: Mapped[str] = mapped_column(String(64))
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
-from app.models import ActivityDay, XpEvent
+from app.models import ActivityDay, BadgeEarned, XpEvent
 
 ROLE = "orbit_app"
 
@@ -20,10 +20,10 @@ def _tables() -> list[str]:
 
 
 def test_there_are_tables_to_check():
-    assert {"users", "module_progress", "exercise_attempts", "xp_events", "activity_days"} <= set(_tables())
+    assert {"users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned"} <= set(_tables())
 
 
-@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events", "activity_days"])
+@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned"])
 def test_app_role_has_dml_but_not_truncate_on_every_table(table):
     # The later tables get their grants from 0002's ALTER DEFAULT PRIVILEGES,
     # not from a GRANT in their own migration. This is what proves that works.
@@ -44,7 +44,7 @@ def test_app_role_cannot_touch_alembic_version_or_create_tables():
 
 def test_app_role_can_use_the_new_sequences():
     with SessionLocal() as db:
-        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq", "activity_days_id_seq"):
+        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq", "activity_days_id_seq", "badges_earned_id_seq"):
             assert db.scalar(text("SELECT has_sequence_privilege(:r, :s, 'USAGE')"), {"r": ROLE, "s": seq})
 
 
@@ -79,5 +79,20 @@ def test_a_day_is_recorded_once_per_learner(make_user):
         db.commit()
         assert freeze_used is False
         db.add(ActivityDay(user_id=user.id, day=date(2026, 10, 8), freeze_used=True))
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+def test_a_badge_is_earned_once_per_learner(make_user):
+    user = make_user()
+    with SessionLocal() as db:
+        # Raw SQL, so it is the column's server default that fills earned_at.
+        earned_at = db.scalar(
+            text("INSERT INTO badges_earned (user_id, badge_slug) VALUES (:u, 'streak-7') RETURNING earned_at"),
+            {"u": user.id},
+        )
+        db.commit()
+        assert earned_at is not None
+        db.add(BadgeEarned(user_id=user.id, badge_slug="streak-7"))
         with pytest.raises(IntegrityError):
             db.commit()

@@ -22,6 +22,8 @@ and why it matters, not what the diff says.
   active day banks a freeze (up to 2), and a missed day is bridged automatically if the freezes
   cover the whole gap; otherwise the streak starts again. Nothing runs at midnight: the streak is
   worked out when a page is opened (#22).
+- A database table for badges: one row per badge a learner holds, recorded once. What each badge
+  is and how it's earned will live in `syllabus.yml` (#23).
 
 ## [0.2.0] — 2026-10-08
 
