@@ -15,6 +15,8 @@ and why it matters, not what the diff says.
   XP, level 10 at 2700) and rank titles run from Cadet to Station Commander, defined in
   `syllabus.yml`. The completion message shows the XP earned and announces promotions; the
   dashboard shows level, rank and a bar to the next level (#21).
+- A database table for the daily streak: one row per day that counts, either a day with activity
+  or a missed day bridged by a freeze. The streak itself is worked out from it (#22).
 
 ## [0.2.0] — 2026-10-08
 

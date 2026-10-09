@@ -2,9 +2,9 @@
 stores only the learner's state, keyed by stable content slugs."""
 
 import secrets
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, String, UniqueConstraint, false, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -83,4 +83,20 @@ class XpEvent(Base):
     amount: Mapped[int]  # negative for penalties (hints, v0.5.0)
     reason: Mapped[str] = mapped_column(String(32))  # "module_complete", "perfect_quiz", …
     ref: Mapped[str] = mapped_column(String(128))  # what earned it, e.g. the module slug
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ActivityDay(Base):
+    """One row per calendar day (in APP_TIMEZONE) the streak counts: a day with
+    activity, or a missed day bridged by a freeze (freeze_used). The streak
+    itself, and the freezes banked, are derived from these rows and never
+    stored (app/game/streaks.py)."""
+
+    __tablename__ = "activity_days"
+    __table_args__ = (UniqueConstraint("user_id", "day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date)
+    freeze_used: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
