@@ -1,12 +1,12 @@
 """The desk on the Meridian, first person: a big port window with the Earth's
 limb and a docking arm, and a desk with a keyboard, a lamp and a coffee mug.
 
-320x180, drawn for a 16:9 scene. The monitor is NOT drawn here: it is HTML,
-laid over the scene at fixed percentages (app/static/css/style.css, "The
-desk"): left 8%, right 8%, top 13%, bottom 9%, i.e. canvas x 26..294 and
-y 23..164. Everything worth seeing therefore lives in the strips around it:
-the window across the top, the Earth down the right, the lamp on the left,
-and the keyboard and mug on the desk below.
+320x180, drawn for a 16:9 scene. The computer is drawn here, but not its
+screen: the glass is HTML, laid into the bezel at fixed percentages
+(app/static/css/style.css, "The desk"), so GLASS below and the CSS must
+agree. Everything else worth seeing lives around the computer: the window
+across the top, the Earth down the right, the lamp on the left, and the
+keyboard and mug on the desk.
 """
 
 import math
@@ -16,7 +16,10 @@ from art.canvas import Canvas
 W, H = 320, 180
 WINDOW = (6, 3, 313, 128)  # x0, y0, x1, y1, inside the frame
 DESK_Y = 150
-DOCK_PORT = (74, 13)  # where the shuttle's nose meets the arm (app/static/css: .window-event)
+DOCK_PORT = (74, 11)  # where the shuttle's nose meets the arm (app/static/css: .window-event)
+CASE = (22, 17, 297, 157)  # the monitor's outer edge
+GLASS = (30, 24, 289, 144)  # the screen, inclusive: CSS left/right 9.375%, top 13.333%, bottom 19.444%
+POWER_LIGHT = (282, 151)  # centre of the power light (CSS .power-light: left 88.125%, top 83.889%)
 
 
 def render() -> Canvas:
@@ -25,6 +28,7 @@ def render() -> Canvas:
     window(c)
     desk(c)
     lamp(c)
+    computer(c)
     keyboard(c)
     mug(c)
     return c
@@ -128,7 +132,7 @@ def lamp(c: Canvas) -> None:
 
 
 def keyboard(c: Canvas) -> None:
-    x0, y0, x1, y1 = 110, 166, 210, 177
+    x0, y0, x1, y1 = 108, 169, 212, 179
     c.rect(x0, y0, x1, y1, "key3")
     c.rect(x0 + 1, y0, x1 - 1, y1 - 1, "key")
     for row, y in enumerate((y0 + 2, y0 + 5, y0 + 8)):
@@ -137,7 +141,7 @@ def keyboard(c: Canvas) -> None:
 
 
 def mug(c: Canvas) -> None:
-    x0, y0 = 297, 142
+    x0, y0 = 301, 140
     c.rect(x0, y0, x0 + 11, y0 + 15, "mug")
     c.vline(x0 + 2, y0 + 2, y0 + 13, "mug3")
     c.rect(x0, y0, x0 + 11, y0 + 1, "mug2")
@@ -147,3 +151,73 @@ def mug(c: Canvas) -> None:
     c.hline(x0, x0 + 11, y0 + 15, "mug2")
     for x, y in ((x0 + 4, y0 - 3), (x0 + 5, y0 - 5), (x0 + 4, y0 - 7), (x0 + 7, y0 - 4), (x0 + 8, y0 - 6), (x0 + 7, y0 - 8), (x0 + 6, y0 - 10)):
         c.px(x, y, "steam")
+
+
+# A tiny 5-high pixel font for the maker's plate; letters are as wide as they need.
+FONT = {
+    "M": ["X...X", "XX.XX", "X.X.X", "X...X", "X...X"], "E": ["XXX", "X..", "XX.", "X..", "XXX"],
+    "R": ["XX.", "X.X", "XX.", "X.X", "X.X"], "I": ["XXX", ".X.", ".X.", ".X.", "XXX"],
+    "D": ["XX.", "X.X", "X.X", "X.X", "XX."], "A": [".X.", "X.X", "XXX", "X.X", "X.X"],
+    "N": ["X..X", "XX.X", "X.XX", "X..X", "X..X"],
+}
+
+
+def text(c: Canvas, x: int, y: int, word: str, colour: str) -> int:
+    for ch in word:
+        for dy, row in enumerate(FONT[ch]):
+            for dx, bit in enumerate(row):
+                if bit == "X":
+                    c.px(x + dx, y + dy, colour)
+        x += len(FONT[ch][0]) + 1
+    return x
+
+
+def text_width(word: str) -> int:
+    return sum(len(FONT[ch][0]) + 1 for ch in word) - 1
+
+
+def computer(c: Canvas) -> None:
+    """A chunky gunmetal monitor on a neck and foot, its glass left for the HTML."""
+    x0, y0, x1, y1 = CASE
+    gx0, gy0, gx1, gy1 = GLASS
+    # its shadow on the window and wall behind, to the lower right
+    c.shade(x1 + 1, y0 + 3, x1 + 3, y1 + 2, 0.55)
+    c.shade(x0 + 4, y1 + 1, x1 + 3, y1 + 2, 0.55)
+    # the foot and neck, behind the case's chin
+    cx = (x0 + x1) // 2
+    c.rect(cx - 9, y1 + 1, cx + 9, 162, "case2")
+    c.vline(cx - 9, y1 + 1, 162, "case3")
+    c.vline(cx + 9, y1 + 1, 162, "caselo")
+    c.shade(cx - 8, y1 + 1, cx + 8, y1 + 2, 0.7)  # under the case's lip
+    c.rect(cx - 32, 162, cx + 32, 166, "case")
+    c.hline(cx - 32, cx + 32, 162, "case3")
+    c.hline(cx - 32, cx + 32, 166, "caselo")
+    c.hline(cx - 33, cx + 33, 167, "caseedge")
+    # the case: an outline, then bevels lit from the top left
+    c.rect(x0, y0, x1, y1, "caseedge")
+    c.rect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, "case")
+    c.hline(x0 + 1, x1 - 1, y0 + 1, "casehi")
+    c.vline(x0 + 1, y0 + 1, y1 - 1, "case3")
+    c.hline(x0 + 2, x1 - 2, y0 + 2, "case3")
+    c.hline(x0 + 1, x1 - 1, y1 - 1, "caselo")
+    c.vline(x1 - 1, y0 + 1, y1 - 1, "caselo")
+    # a faint panel seam above the chin
+    c.hline(x0 + 3, x1 - 3, gy1 + 3, "caselo")
+    c.hline(x0 + 3, x1 - 3, gy1 + 4, "case2")
+    # the recessed lip around the glass: dark, with the light catching its lower edge
+    c.rect(gx0 - 2, gy0 - 2, gx1 + 2, gy1 + 2, "lip")
+    c.hline(gx0 - 2, gx1 + 2, gy1 + 2, "case2")
+    c.vline(gx1 + 2, gy0 - 2, gy1 + 2, "case2")
+    c.rect(gx0, gy0, gx1, gy1, "screenback")
+    # the chin: a maker's plate in the middle, the power light's housing on the right
+    plate_w = text_width("MERIDIAN") + 4
+    px0 = cx - plate_w // 2
+    c.rect(px0, gy1 + 5, px0 + plate_w - 1, gy1 + 11, "plate")
+    c.hline(px0, px0 + plate_w - 1, gy1 + 11, "case3")
+    text(c, px0 + 2, gy1 + 6, "MERIDIAN", "platetext")
+    lx, ly = POWER_LIGHT
+    c.rect(lx - 2, ly - 2, lx + 2, ly + 2, "ledhouse")
+    c.hline(lx - 2, lx + 2, ly + 2, "case3")
+    for bx in (lx - 12, lx - 8):  # two small buttons beside it
+        c.rect(bx, ly - 1, bx + 2, ly + 1, "caselo")
+        c.hline(bx, bx + 2, ly - 1, "case3")

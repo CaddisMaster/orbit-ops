@@ -7,6 +7,10 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Added
+- The desk's monitor looks like a computer (#46): a pixel-art gunmetal case with a bevelled
+  bezel, a "MERIDIAN" maker's plate, buttons and a power light in the deck's colour, on a neck
+  and foot on the desk. The screen is glass, with faint scanlines, a soft glare and darker
+  corners, and its light spills onto the bezel. Lesson text keeps better than 7:1 contrast.
 - The desk (#38). Orbit Ops is now a first-person scene: a pixel-art room on the *Meridian*,
   with a window onto the Earth and a docking arm, a desk with a keyboard, a lamp and a coffee mug,
   and the whole app on the monitor in front of you. Desktop browsers only, 1280×720 and up.

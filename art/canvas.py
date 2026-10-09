@@ -21,6 +21,10 @@ PALETTE = {
     "lamp": (248, 204, 124), "lamp2": (200, 150, 80), "lampglow": (96, 78, 60), "metal": (70, 76, 96), "metal2": (110, 118, 140),
     "note": (240, 214, 120), "ink": (90, 70, 40),
     "screenback": (14, 16, 26),
+    # the computer: a gunmetal case, lit from the top left
+    "case": (58, 64, 84), "case2": (74, 81, 104), "case3": (96, 104, 130), "casehi": (128, 138, 166),
+    "caselo": (40, 44, 60), "caseedge": (18, 20, 30), "lip": (12, 14, 22), "plate": (150, 158, 182), "platetext": (40, 44, 60),
+    "ledhouse": (26, 28, 40),
     # the shuttle
     "hull": (210, 214, 224), "hull2": (150, 156, 172), "hull3": (100, 106, 124), "glass": (90, 200, 220), "thrust": (255, 170, 80),
     # avatars
@@ -63,6 +67,13 @@ class Canvas:
                 d = math.hypot(x - cx, y - cy)
                 if d <= r and (c := paint(x, y, d)):
                     self.px(x, y, c)
+
+    def shade(self, x0: int, y0: int, x1: int, y1: int, factor: float) -> None:
+        """Darken what's already there (a shadow), keeping its hue."""
+        for y in range(max(0, y0), min(self.height, y1 + 1)):
+            for x in range(max(0, x0), min(self.width, x1 + 1)):
+                r, g, b, a = self.rows[y][x]
+                self.rows[y][x] = (int(r * factor), int(g * factor), int(b * factor), a)
 
     def sprite(self, x0: int, y0: int, art: list[str], key: dict[str, str]) -> None:
         """Stamp a text sprite: one character per pixel, '.' is transparent."""
