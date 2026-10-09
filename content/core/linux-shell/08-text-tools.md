@@ -37,6 +37,54 @@ quiz:
     explain: >-
       `awk` splits each line into fields on whitespace (`$1`, `$2`, … and `$0` for the whole
       line). In an Nginx access log, `$1` is the client IP.
+terminal:
+  task: |
+    Someone hammered the docking port's login all night. Write the **three busiest
+    addresses** in `/var/log/docking/access.log` to `noisy.txt` in your home directory, each
+    with its request count, busiest first. The address is the first field of every line,
+    separated by spaces. Don't open the file and count by hand: plumb it.
+  cwd: /home/cadet
+  files:
+    - {path: /home/cadet, type: dir}
+    - path: /var/log/docking/access.log
+      owner: root
+      group: root
+      contents: |
+        192.168.8.40 - - [08/Oct/2026:02:10:00 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:11:07 +0000] "GET /status HTTP/1.1" 200 512
+        10.4.2.17 - - [08/Oct/2026:02:12:14 +0000] "POST /login HTTP/1.1" 200 512
+        172.16.0.5 - - [08/Oct/2026:02:13:21 +0000] "POST /login HTTP/1.1" 200 512
+        10.4.2.17 - - [08/Oct/2026:02:14:28 +0000] "POST /login HTTP/1.1" 200 512
+        10.4.2.90 - - [08/Oct/2026:02:15:35 +0000] "POST /login HTTP/1.1" 401 512
+        192.168.8.40 - - [08/Oct/2026:02:16:42 +0000] "GET /status HTTP/1.1" 200 512
+        10.4.7.3 - - [08/Oct/2026:02:17:49 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.7.3 - - [08/Oct/2026:02:18:56 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.7.3 - - [08/Oct/2026:02:19:03 +0000] "POST /login HTTP/1.1" 200 512
+        10.4.9.12 - - [08/Oct/2026:02:20:10 +0000] "POST /login HTTP/1.1" 200 512
+        192.168.8.40 - - [08/Oct/2026:02:21:17 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:22:24 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.7.3 - - [08/Oct/2026:02:23:31 +0000] "GET /status HTTP/1.1" 200 512
+        192.168.8.40 - - [08/Oct/2026:02:24:38 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.90 - - [08/Oct/2026:02:25:45 +0000] "POST /login HTTP/1.1" 401 512
+        192.168.8.41 - - [08/Oct/2026:02:26:52 +0000] "POST /login HTTP/1.1" 200 512
+        172.16.0.5 - - [08/Oct/2026:02:27:59 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:28:06 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:29:13 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:30:20 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:31:27 +0000] "POST /login HTTP/1.1" 200 512
+        10.4.7.3 - - [08/Oct/2026:02:32:34 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.7.3 - - [08/Oct/2026:02:33:41 +0000] "POST /login HTTP/1.1" 401 512
+        10.4.2.17 - - [08/Oct/2026:02:34:48 +0000] "POST /login HTTP/1.1" 200 512
+  checks:
+    - {contains: /home/cadet/noisy.txt, text: 9 10.4.2.17}
+    - {contains: /home/cadet/noisy.txt, text: 6 10.4.7.3}
+    - {contains: /home/cadet/noisy.txt, text: 4 192.168.8.40}
+  success: |-
+    "10.4.2.17, nine attempts," Okafor reads. "That's the maintenance drone. Someone gave it the wrong password list."
+  solution:
+    - head -n 3 /var/log/docking/access.log
+    - 'cut -d'' '' -f1 /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt'
+    - cat noisy.txt
 cards:
   - front: Count matching lines with grep
     back: "`grep -c pattern file` (or `grep pattern file | wc -l`)."

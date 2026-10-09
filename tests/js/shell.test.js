@@ -205,3 +205,42 @@ test("Brace expansion, as the files-and-globs lesson uses it", () => {
   assert.equal(out(sh, "echo day1*.txt"), "day1.txt day10.txt day11.txt day12.txt\n");
   assert.equal(out(sh, "echo '{a,b}' {x}"), "{a,b} {x}\n");
 });
+
+test("2>&1 follows bash's order rules, and &> sends both streams", () => {
+  const sh = station();
+  assert.equal(out(sh, "ls logs nope > both.txt 2>&1"), "");
+  assert.equal(out(sh, "cat both.txt"), "ls: cannot access 'nope': No such file or directory\nlogs:\na.log\nb.log\n");
+  // 2>&1 first copies the terminal, so the error still shows.
+  assert.equal(out(sh, "ls logs nope 2>&1 > only-out.txt"), "ls: cannot access 'nope': No such file or directory\n");
+  assert.equal(out(sh, "cat only-out.txt"), "logs:\na.log\nb.log\n");
+  assert.equal(out(sh, "ls nope &> all.txt; cat all.txt"), "ls: cannot access 'nope': No such file or directory\n");
+  assert.equal(out(sh, "ls nope 2>&1 | wc -l"), "1\n"); // errors go down the pipe too
+  assert.equal(out(sh, "ls nope > /dev/null 2>&1; echo $?"), "2\n");
+});
+
+test("tee copies its input to files and on down the pipe", () => {
+  const sh = station();
+  assert.equal(out(sh, "grep ERROR logs/a.log | tee errs.txt | wc -l"), "1\n");
+  assert.equal(out(sh, "echo more | tee -a errs.txt"), "more\n");
+  assert.equal(out(sh, "cat errs.txt"), "ERROR one\nmore\n");
+});
+
+test("cd - goes back and says where", () => {
+  const sh = station();
+  assert.equal(out(sh, "cd -"), "bash: cd: OLDPWD not set\n");
+  sh.run("cd logs");
+  assert.equal(out(sh, "cd -"), "/station\n");
+  assert.equal(out(sh, "cd -"), "/station/logs\n");
+  assert.equal(out(sh, "echo $OLDPWD"), "/station\n");
+});
+
+test("The prompt shows ~ only for a real home directory", () => {
+  const sh = new Shell({ user: "cadet", group: "crew", cwd: "/home/cadet", fs: {
+    "/": { type: "dir", mode: 0o755, owner: "root", group: "root", contents: "" },
+    "/home": { type: "dir", mode: 0o755, owner: "root", group: "root", contents: "" },
+    "/home/cadet": { type: "dir", mode: 0o755, owner: "cadet", group: "crew", contents: "" },
+  } });
+  assert.equal(sh.prompt(), "cadet@meridian:~$ ");
+  sh.run("cd /");
+  assert.equal(sh.prompt(), "cadet@meridian:/$ ");
+});

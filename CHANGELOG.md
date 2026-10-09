@@ -6,6 +6,16 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- Station console tasks in four more Unit 1.1 modules: find the life-support logs
+  (filesystem), follow Okafor's hidden note (navigating), capture both output streams for the
+  reactor report (pipes and redirection), and find the three noisiest addresses in the docking
+  log (text tools). Six of the ten modules now have one (#36).
+- The console understands `2>&1` and `&>` (applied left to right, as in bash), `tee`, and
+  `cd -` (#36).
+- Every exercise carries a reference solution that CI runs through the console's shell, so a
+  task that can't be completed fails the build. Solutions are never sent to the browser (#36).
+
 ## [0.3.0] — 2026-10-09
 
 Gamify: XP and ranks, a daily streak with freezes, badges, the station map, a station that looks

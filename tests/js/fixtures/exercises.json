@@ -1,0 +1,583 @@
+{
+ "files-and-globs": {
+  "solution": [
+   "echo logs/crash-2026-10-*",
+   "mkdir archive",
+   "mv logs/crash-2026-10-*.dump archive/",
+   "echo logs/crash-2026-09-*",
+   "rm logs/crash-2026-09-*.dump"
+  ],
+  "source": "core/linux-shell/03-files-and-globs.md",
+  "spec": {
+   "checks": [
+    {
+     "exists": "/station/cargo/archive/crash-2026-10-02.dump",
+     "type": "file"
+    },
+    {
+     "exists": "/station/cargo/archive/crash-2026-10-05.dump",
+     "type": "file"
+    },
+    {
+     "exists": "/station/cargo/archive/crash-2026-10-07.dump",
+     "type": "file"
+    },
+    {
+     "missing": "/station/cargo/logs/crash-2026-10-02.dump"
+    },
+    {
+     "missing": "/station/cargo/logs/crash-2026-10-05.dump"
+    },
+    {
+     "missing": "/station/cargo/logs/crash-2026-10-07.dump"
+    },
+    {
+     "missing": "/station/cargo/logs/crash-2026-09-12.dump"
+    },
+    {
+     "missing": "/station/cargo/logs/crash-2026-09-19.dump"
+    },
+    {
+     "missing": "/station/cargo/logs/crash-2026-09-26.dump"
+    },
+    {
+     "exists": "/station/cargo/logs/app.log",
+     "type": "file"
+    }
+   ],
+   "cwd": "/station/cargo",
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/cargo": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/cargo/logs": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/cargo/logs/app.log": {
+     "contents": "bay door cycled\nbay door cycled\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/logs/crash-2026-09-12.dump": {
+     "contents": "core dump 2026-09-12\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/logs/crash-2026-09-19.dump": {
+     "contents": "core dump 2026-09-19\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/logs/crash-2026-09-26.dump": {
+     "contents": "core dump 2026-09-26\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/logs/crash-2026-10-02.dump": {
+     "contents": "core dump 2026-10-02\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/logs/crash-2026-10-05.dump": {
+     "contents": "core dump 2026-10-05\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/logs/crash-2026-10-07.dump": {
+     "contents": "core dump 2026-10-07\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "success": "\"Archive's tidy and the old dumps are gone,\" Okafor says. \"And app.log survived. You'd be amazed how often it doesn't.\"",
+   "user": "cadet"
+  }
+ },
+ "navigating": {
+  "solution": [
+   "cd /station/comms/relay",
+   "ls",
+   "ls -a",
+   "cat .okafor",
+   "cd ../../docking/bay-2",
+   "pwd"
+  ],
+  "source": "core/linux-shell/02-navigating.md",
+  "spec": {
+   "checks": [
+    {
+     "cwd": "/station/docking/bay-2"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/comms": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/comms/relay": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/comms/relay/.okafor": {
+     "contents": "Meet me at the docking ring: /station/docking/bay-2\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/comms/relay/frequencies.txt": {
+     "contents": "relay-1 121.5\nrelay-2 243.0\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/docking": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/docking/bay-1": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/docking/bay-2": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    }
+   },
+   "group": "crew",
+   "success": "Okafor looks up from a crate as you float in. \"You found the dotfile. Most people walk straight past those.\"",
+   "user": "cadet"
+  }
+ },
+ "permissions": {
+  "solution": [
+   "ls -l",
+   "chmod 600 scrubber.conf",
+   "chmod u+x purge.sh",
+   "ls -l"
+  ],
+  "source": "core/linux-shell/04-permissions.md",
+  "spec": {
+   "checks": [
+    {
+     "equals": "600",
+     "mode": "/station/life-support/scrubber.conf"
+    },
+    {
+     "equals": "744",
+     "mode": "/station/life-support/purge.sh"
+    }
+   ],
+   "cwd": "/station/life-support",
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/life-support": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station/life-support/README": {
+     "contents": "Scrubber configs. Ask Okafor before changing anything.\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/life-support/purge.sh": {
+     "contents": "#!/bin/bash\necho \"Purging scrubber filters...\"\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/life-support/scrubber.conf": {
+     "contents": "# Life support: CO2 scrubber array\ncycle_minutes = 20\noverride_code = 7731-ALPHA\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "success": "Okafor checks the listing over your shoulder. \"600 on the config, 744 on the script. That's how it should have been from the start.\"",
+   "user": "cadet"
+  }
+ },
+ "pipes-and-redirection": {
+  "solution": [
+   "ls /station/reactor /station/reactor-b",
+   "ls /station/reactor /station/reactor-b > reactor.txt 2>&1",
+   "cat reactor.txt",
+   "grep ALERT /station/reactor/core.log > alerts.txt",
+   "wc -l alerts.txt"
+  ],
+  "source": "core/linux-shell/07-pipes-and-redirection.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/reactor.txt",
+     "text": "core.log"
+    },
+    {
+     "contains": "/home/cadet/reactor.txt",
+     "text": "cannot access '/station/reactor-b'"
+    },
+    {
+     "contains": "/home/cadet/alerts.txt",
+     "text": "ALERT coolant pump 2 stalled"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/reactor": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/reactor/coolant.log": {
+     "contents": "pump 1 ok\npump 2 stalled\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/station/reactor/core.log": {
+     "contents": "02:00 reactor temperature nominal\n02:05 ALERT coolant pressure low\n02:10 reactor temperature nominal\n02:15 ALERT coolant pump 2 stalled\n02:20 operator acknowledged\n02:25 ALERT core temperature rising\n02:30 reactor temperature nominal\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "success": "\"Errors and all, in one file,\" Okafor says. \"That's the report I can actually use.\"",
+   "user": "cadet"
+  }
+ },
+ "text-tools": {
+  "solution": [
+   "head -n 3 /var/log/docking/access.log",
+   "cut -d' ' -f1 /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt",
+   "cat noisy.txt"
+  ],
+  "source": "core/linux-shell/08-text-tools.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/noisy.txt",
+     "text": "9 10.4.2.17"
+    },
+    {
+     "contains": "/home/cadet/noisy.txt",
+     "text": "6 10.4.7.3"
+    },
+    {
+     "contains": "/home/cadet/noisy.txt",
+     "text": "4 192.168.8.40"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/docking": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/docking/access.log": {
+     "contents": "192.168.8.40 - - [08/Oct/2026:02:10:00 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:11:07 +0000] \"GET /status HTTP/1.1\" 200 512\n10.4.2.17 - - [08/Oct/2026:02:12:14 +0000] \"POST /login HTTP/1.1\" 200 512\n172.16.0.5 - - [08/Oct/2026:02:13:21 +0000] \"POST /login HTTP/1.1\" 200 512\n10.4.2.17 - - [08/Oct/2026:02:14:28 +0000] \"POST /login HTTP/1.1\" 200 512\n10.4.2.90 - - [08/Oct/2026:02:15:35 +0000] \"POST /login HTTP/1.1\" 401 512\n192.168.8.40 - - [08/Oct/2026:02:16:42 +0000] \"GET /status HTTP/1.1\" 200 512\n10.4.7.3 - - [08/Oct/2026:02:17:49 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.7.3 - - [08/Oct/2026:02:18:56 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.7.3 - - [08/Oct/2026:02:19:03 +0000] \"POST /login HTTP/1.1\" 200 512\n10.4.9.12 - - [08/Oct/2026:02:20:10 +0000] \"POST /login HTTP/1.1\" 200 512\n192.168.8.40 - - [08/Oct/2026:02:21:17 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:22:24 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.7.3 - - [08/Oct/2026:02:23:31 +0000] \"GET /status HTTP/1.1\" 200 512\n192.168.8.40 - - [08/Oct/2026:02:24:38 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.90 - - [08/Oct/2026:02:25:45 +0000] \"POST /login HTTP/1.1\" 401 512\n192.168.8.41 - - [08/Oct/2026:02:26:52 +0000] \"POST /login HTTP/1.1\" 200 512\n172.16.0.5 - - [08/Oct/2026:02:27:59 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:28:06 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:29:13 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:30:20 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:31:27 +0000] \"POST /login HTTP/1.1\" 200 512\n10.4.7.3 - - [08/Oct/2026:02:32:34 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.7.3 - - [08/Oct/2026:02:33:41 +0000] \"POST /login HTTP/1.1\" 401 512\n10.4.2.17 - - [08/Oct/2026:02:34:48 +0000] \"POST /login HTTP/1.1\" 200 512\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "success": "\"10.4.2.17, nine attempts,\" Okafor reads. \"That's the maintenance drone. Someone gave it the wrong password list.\"",
+   "user": "cadet"
+  }
+ },
+ "the-filesystem": {
+  "solution": [
+   "ls /",
+   "ls /var/log",
+   "cd /var/log/life-support",
+   "cat scrubbers.log"
+  ],
+  "source": "core/linux-shell/01-the-filesystem.md",
+  "spec": {
+   "checks": [
+    {
+     "cwd": "/var/log/life-support"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/hostname": {
+     "contents": "meridian\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/life-support": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/life-support/scrubbers.conf": {
+     "contents": "cycle_minutes = 20\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/tmp": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/comms": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/life-support": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/life-support/scrubbers.log": {
+     "contents": "02:00 scrubber A: nominal\n02:20 scrubber B: CO2 rising\n02:40 scrubber B: offline\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/syslog": {
+     "contents": "boot: life support on standby\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "success": "\"Found it,\" Okafor says. \"Scrubber B went offline at 02:40. Remember where the logs live; you'll be back.\"",
+   "user": "cadet"
+  }
+ }
+}

@@ -205,11 +205,12 @@
       } else if (c === "|" || c === ";" || c === "&" || c === ">" || c === "<") {
         end();
         var two = line.slice(i, i + 2);
-        if (two === "||" || two === "&&" || two === ">>") { tokens.push({ type: "op", text: two }); i += 2; }
+        if (line.slice(i, i + 3) === "&>>") { tokens.push({ type: "op", text: "&>>" }); i += 3; }
+        else if (two === "||" || two === "&&" || two === ">>" || two === "&>") { tokens.push({ type: "op", text: two }); i += 2; }
         else if (c === "&") throw new SyntaxError("background jobs (&) aren't available on this console");
         else { tokens.push({ type: "op", text: c }); i++; }
       } else if (c === "2" && !word && line[i + 1] === ">") {
-        var op = line[i + 2] === ">" ? "2>>" : "2>";
+        var op = line.slice(i, i + 4) === "2>&1" ? "2>&1" : line[i + 2] === ">" ? "2>>" : "2>";
         tokens.push({ type: "op", text: op }); i += op.length;
       } else if (c === "#" && !word) {
         break; // a comment
@@ -344,7 +345,7 @@
 
   // One part of a line (no ; && ||) → a pipeline: [{argv, redirects}].
   Shell.prototype.parse = function (text) {
-    var vars = { USER: this.user, LOGNAME: this.user, HOME: this.home, PWD: this.cwd, SHELL: "/bin/bash", "?": this.lastStatus };
+    var vars = { USER: this.user, LOGNAME: this.user, HOME: this.home, PWD: this.cwd, OLDPWD: this.oldpwd || "", SHELL: "/bin/bash", "?": this.lastStatus };
     var tokens = tokenize(text, vars);
     var pipeline = [];
     var cmd = { argv: [], redirects: [] };
@@ -360,6 +361,8 @@
         Array.prototype.push.apply(cmd.argv, self.expand(t));
       } else if (t.text === "|") {
         endCmd("|");
+      } else if (t.text === "2>&1") {
+        cmd.redirects.push({ op: "2>&1" });
       } else {
         var target = tokens[i + 1];
         if (!target || target.type !== "word") throw new SyntaxError("syntax error near unexpected token `newline'");
@@ -437,6 +440,9 @@
     return { output: printed.join(""), clear: clear };
   };
 
+  // Run a pipeline. Redirections are applied left to right, as in bash, so
+  // `> f 2>&1` sends both streams to f while `2>&1 > f` leaves errors on the
+  // terminal: 2>&1 copies wherever stdout points *at that moment*.
   Shell.prototype.runPipeline = function (pipeline) {
     var stdin = "";
     var shown = "";
@@ -445,38 +451,42 @@
     for (var i = 0; i < pipeline.length; i++) {
       var cmd = pipeline[i];
       var last = i === pipeline.length - 1;
-      var toFile = cmd.redirects.some(function (r) { return r.op === ">" || r.op === ">>"; });
-      var res;
-      var inRedirect = cmd.redirects.filter(function (r) { return r.op === "<"; }).pop();
-      if (inRedirect) {
-        var read = this.readFile("bash", inRedirect.path);
-        if (read.error) { shown += read.error.replace(/^bash: /, "bash: ") + "\n"; status = 1; stdin = ""; continue; }
-        stdin = read.text;
+      var fd1 = { to: last ? "tty" : "pipe" };
+      var fd2 = { to: "tty" };
+      var files = []; // [{path, append}] in the order they were opened
+      var opened = {};
+      var failed = null;
+      var self = this;
+      function open(path, append) {
+        if (!opened[path]) { opened[path] = { path: path, append: append, text: "" }; files.push(opened[path]); }
+        return { to: "file", file: opened[path] };
       }
-      if (!cmd.argv.length) res = { out: "", err: "", code: 0 };
-      else res = this.exec(cmd.argv, stdin, { tty: last && !toFile });
+      cmd.redirects.forEach(function (r) {
+        if (r.op === "<") {
+          var read = self.readFile("bash", r.path);
+          if (read.error) failed = failed || read.error;
+          else stdin = read.text;
+        } else if (r.op === ">" || r.op === ">>") fd1 = open(r.path, r.op === ">>");
+        else if (r.op === "2>" || r.op === "2>>") fd2 = open(r.path, r.op === "2>>");
+        else if (r.op === "&>" || r.op === "&>>") { fd1 = open(r.path, r.op === "&>>"); fd2 = fd1; }
+        else if (r.op === "2>&1") fd2 = fd1;
+      });
+      if (failed) { shown += failed + "\n"; status = 1; stdin = ""; continue; }
+      var res = cmd.argv.length ? this.exec(cmd.argv, stdin, { tty: fd1.to === "tty" }) : { out: "", err: "", code: 0 };
       if (res.clear) clear = true;
-      var errTo = cmd.redirects.filter(function (r) { return r.op === "2>" || r.op === "2>>"; }).pop();
-      if (errTo) {
-        var errWhy = this.writeFile(errTo.path, res.err, errTo.op === "2>>");
-        res.err = errWhy ? "bash: " + errWhy + "\n" : "";
-      }
-      shown += res.err;
-      var outTo = cmd.redirects.filter(function (r) { return r.op === ">" || r.op === ">>"; });
-      if (outTo.length) {
-        var self = this;
-        var failed = false;
-        outTo.forEach(function (r, k) {
-          var why = self.writeFile(r.path, k === outTo.length - 1 ? res.out : "", r.op === ">>");
-          if (why) { shown += "bash: " + why + "\n"; failed = true; }
-        });
-        if (failed) res.code = 1;
-        stdin = "";
-      } else if (last) {
-        shown += res.out;
-      } else {
-        stdin = res.out;
-      }
+      var piped = "";
+      // A command's errors usually come out before its last output, so err first.
+      [[fd2, res.err], [fd1, res.out]].forEach(function (pair) {
+        var where = pair[0];
+        if (where.to === "tty") shown += pair[1];
+        else if (where.to === "pipe") piped += pair[1];
+        else where.file.text += pair[1];
+      });
+      files.forEach(function (f) {
+        var why = self.writeFile(f.path, f.text, f.append);
+        if (why) { shown += "bash: " + why + "\n"; res.code = 1; }
+      });
+      stdin = piped;
       status = res.code;
     }
     this.lastStatus = status;
@@ -603,8 +613,8 @@
       return ok(
         "Station console commands:\n" +
         "  pwd cd ls cat echo touch mkdir rmdir cp mv rm chmod chown whoami id\n" +
-        "  grep wc sort uniq head tail cut clear help\n" +
-        "Pipes (|), redirection (> >> <), globs (* ? [...]), ; && || and $VARS work.\n" +
+        "  grep wc sort uniq head tail cut tee clear help\n" +
+        "Pipes (|), redirection (> >> < 2> 2>&1 &>), globs (* ? [...]), {a,b}, ; && || and $VARS work.\n" +
         "Tab completes paths; ↑ and ↓ walk your history; Ctrl-C abandons a line.\n"
       );
     },
@@ -623,12 +633,18 @@
     cd: function (args) {
       if (args.length > 1) return { out: "", err: "bash: cd: too many arguments\n", code: 1 };
       var target = args.length ? args[0] : this.home;
+      var dash = target === "-";
+      if (dash) {
+        if (!this.oldpwd) return { out: "", err: "bash: cd: OLDPWD not set\n", code: 1 };
+        target = this.oldpwd;
+      }
       var found = this.lookup(target);
       if (found.error) return { out: "", err: "bash: cd: " + target + ": " + found.error + "\n", code: 1 };
       if (found.node.type !== "dir") return { out: "", err: "bash: cd: " + target + ": Not a directory\n", code: 1 };
       if (!this.can(found.node, 1)) return { out: "", err: "bash: cd: " + target + ": Permission denied\n", code: 1 };
+      this.oldpwd = this.cwd;
       this.cwd = found.path;
-      return ok();
+      return ok(dash ? this.cwd + "\n" : ""); // `cd -` prints where it went
     },
     ls: function (rawArgs, stdin, io) {
       var p = flags("ls", rawArgs, "lahd1A");
@@ -685,7 +701,7 @@
       files.sort(function (x, y) { return compareNames(x.name, y.name); });
       dirs.sort(function (x, y) { return compareNames(x.name, y.name); });
       if (files.length) out += render(files, null);
-      var many = files.length + dirs.length > 1;
+      var many = operands.length > 1; // GNU counts the operands given, found or not
       dirs.forEach(function (d, k) {
         if (!sh.can(d.node, 4)) { err += "ls: cannot open directory '" + d.name + "': Permission denied\n"; return; }
         if (out || k > 0) out += "\n";
@@ -902,6 +918,17 @@
       flush();
       return { out: unlines(out), err: r.err, code: r.err ? 1 : 0 };
     },
+    tee: function (rawArgs, stdin) {
+      // A T-junction: stdin goes on to stdout and into every file named.
+      var p = flags("tee", rawArgs, "a");
+      var sh = this;
+      var err = "";
+      p.args.forEach(function (a) {
+        var why = sh.writeFile(a, stdin, !!p.opts.a);
+        if (why) err += "tee: " + why + "\n";
+      });
+      return { out: stdin, err: err, code: err ? 1 : 0 };
+    },
     head: function (rawArgs, stdin) { return headTail.call(this, "head", rawArgs, stdin); },
     tail: function (rawArgs, stdin) { return headTail.call(this, "tail", rawArgs, stdin); },
     cut: function (rawArgs, stdin) {
@@ -1039,7 +1066,8 @@
 
   // The same checks as app/terminal.py's passes(), so the console can say
   // "done" the moment it is. The server re-checks; this is only a preview.
-  function passes(check, state) {
+  function passes(check, state, cwd) {
+    if ("cwd" in check) return cwd === check.cwd;
     if ("mode" in check) return !!state[check.mode] && (state[check.mode].mode & 0o777) === parseInt(check.equals, 8);
     if ("owner" in check) {
       var n = state[check.owner];
@@ -1055,7 +1083,8 @@
   }
   Shell.prototype.solved = function (checks) {
     var state = this.state();
-    return checks.every(function (c) { return passes(c, state); });
+    var cwd = this.cwd;
+    return checks.every(function (c) { return passes(c, state, cwd); });
   };
 
   return { Shell: Shell, tokenize: tokenize, applyMode: applyMode, passes: passes };

@@ -14,6 +14,12 @@ if Node isn't installed. CI's Tests job always runs them. They use only `node:te
 nothing to install or pin. A criterion only a JS test or a browser can show goes in the PR body
 as a `Verified by hand:` line naming the test.
 
+Two fixtures connect the halves. `tests/js/fixtures/exercises.json` is every real exercise with
+its reference solution, written by `scripts/export_exercises.py` (a Python test fails if it's
+stale). `tests/js/fixtures/check_cases.json` is a hand-written set of checks and expected
+verdicts that **both** graders must agree on, so a solution the browser accepts is one the server
+accepts.
+
 `test.sh` reuses the running dev `web` container when it has the dev dependencies, otherwise it
 builds a throwaway one. It drops and recreates `orbit_test` and runs `alembic upgrade head` each
 time, so tests always see the current schema.

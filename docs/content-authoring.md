@@ -127,24 +127,40 @@ terminal:
   checks:                     # all must pass; up to 10
     - {mode: /station/life-support/scrubber.conf, equals: "600"}
   success: Okafor nods.       # printed when every check passes
+  solution:                   # required: commands that complete the task (never sent to the browser)
+    - chmod 600 scrubber.conf
 ```
+
+**Every module in a shell-based unit has a console task**, unless its front matter can't yet
+(the console lacks the commands it teaches) and a tracking issue says so. In Unit 1.1 that's 05,
+06 and 09 (#37) and 10.
 
 - **Files you don't own are read-only to the learner.** The shell enforces permissions as a
   normal user with umask `002`. A directory you don't list exists anyway, owned by `root` with
   mode `755`, so the learner can't create files in it. List every directory they need to write
   to.
 - **Checks:** `{mode: P, equals: "600"}`, `{owner: P, user: u, group: g}`, `{exists: P, type: file|dir}`,
-  `{missing: P}`, `{contains: P, text: "…"}`. `mode`, `owner` and `missing` must name a path in the
-  starting filesystem, or validation fails naming the check; `exists` and `contains` may name
-  something the learner creates.
-- **What the console knows:** `pwd cd ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r) mv
-  rm (-r -f) chmod (octal and symbolic, -R) chown whoami id grep (-i -v -n -c) wc sort uniq head
-  tail cut clear help`, plus globs, `{a,b}` and `{1..9}`, pipes, `> >> < 2>`, `; && ||`, `$?` and
-  `$USER`/`$HOME`/`$PWD`. Anything else prints "command not found". Don't set a task that needs
-  more (`sudo`, `find`, `tar`…): add the command to `app/static/js/shell.js` first, with a test in
-  `tests/js/`.
-- **Solve it yourself** before merging: open the module and do the task in the console. It's
-  the terminal equivalent of running every "Try it".
+  `{missing: P}`, `{contains: P, text: "…"}`, and `{cwd: P}` (the console must end in directory
+  P, for navigation tasks). `mode`, `owner` and `missing` must name a path in the starting
+  filesystem, and `cwd` a directory in it, or validation fails naming the check; `exists` and
+  `contains` may name something the learner creates.
+- **The `solution` is proven in CI.** `tests/js/solutions.test.js` runs it through the real
+  shell and requires the task unsolved before and solved after, with no step needing an unknown
+  command (a step may fail on purpose). Node can't read YAML, so after changing any `terminal:`
+  block run `docker compose exec -u "$(id -u):$(id -g)" web python -m scripts.export_exercises`
+  and commit `tests/js/fixtures/exercises.json`; a test fails while it's stale.
+- **What the console knows:** `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p)
+  rmdir cp (-r) mv rm (-r -f) chmod (octal and symbolic, -R) chown whoami id grep (-i -v -n -c)
+  wc sort uniq head tail cut tee clear help`, plus globs, `{a,b}` and `{1..9}`, pipes,
+  `> >> < 2> 2>&1 &>` (applied left to right, as in bash), `; && ||`, `$?` and
+  `$USER`/`$HOME`/`$PWD`/`$OLDPWD`. Anything else prints "command not found". Not yet: `awk`,
+  `sed`, `sudo`, `export`, `find`, `tar`. Don't set a task that needs more: add the command to
+  `app/static/js/shell.js` first, with a test in `tests/js/`.
+- **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
+  the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a
+  real login.
+- **Still open the module and do it yourself** before merging: CI proves the solution works,
+  not that the task reads well.
 
 Raw HTML in lessons is **disabled**: it renders as literal text. Use Markdown.
 

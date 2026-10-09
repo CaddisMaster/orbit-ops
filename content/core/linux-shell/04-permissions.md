@@ -64,6 +64,11 @@ terminal:
     - {mode: /station/life-support/purge.sh, equals: "744"}
   success: |-
     Okafor checks the listing over your shoulder. "600 on the config, 744 on the script. That's how it should have been from the start."
+  solution:
+    - 'ls -l'
+    - 'chmod 600 scrubber.conf'
+    - 'chmod u+x purge.sh'
+    - 'ls -l'
 cards:
   - front: "Octal values of r, w, x"
     back: "r = 4, w = 2, x = 1. Add them per class: 7 = rwx, 6 = rw-, 5 = r-x, 4 = r--."

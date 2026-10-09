@@ -69,6 +69,12 @@ terminal:
     - {exists: /station/cargo/logs/app.log, type: file}
   success: |-
     "Archive's tidy and the old dumps are gone," Okafor says. "And app.log survived. You'd be amazed how often it doesn't."
+  solution:
+    - 'echo logs/crash-2026-10-*'
+    - 'mkdir archive'
+    - 'mv logs/crash-2026-10-*.dump archive/'
+    - 'echo logs/crash-2026-09-*'
+    - 'rm logs/crash-2026-09-*.dump'
 cards:
   - front: How do you copy a whole directory?
     back: "`cp -r src dest`. Without `-r`, `cp` skips directories."
