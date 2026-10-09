@@ -25,9 +25,10 @@ Browser ─HTTPS─▶ host Nginx (TLS, learn.seandesmet.com)
 | `app/templating.py` | Jinja env with `csrf_token()` and `app_version` globals |
 | `app/content/` | `schema.py` (Pydantic models for syllabus and module files), `loader.py` (`load_catalog()` → immutable `Catalog`, collecting every problem before raising `ContentError`), `render.py` (Markdown with raw HTML off, plus Pygments classes) |
 | `app/progress.py` | Lock rules and today's mission as **pure functions** of (catalog, completed slugs); `check_answer()`; `record_answer()` (first attempt per question counts; completing scores the module) |
+| `app/station_map.py` | `layout(catalog, completed)`: the station map as a **pure** function returning decks, nodes (state from `progress.py`'s lock rules) and prerequisite edges in SVG coordinates; `map: {x, y}` from content or an automatic grid |
 | `app/game/` | `levels.py`: the level curve and rank bands as **pure functions** of an XP total (`standing()`); `xp.py`: what a completion awards, `award()` (idempotent `INSERT … ON CONFLICT DO NOTHING`) and `total_xp()`; `streaks.py`: the streak and freezes as a **pure** `compute(days, today)`, plus `mark_active()` and `current_streak()`, which records the freezes a request finds it can spend (no scheduler); `badges.py`: the rule evaluators as a **pure** `qualifying(catalog, facts)` over the learner's whole state, plus `award()` (idempotent, like XP), `earned()` and the dashboard/page shelves |
 | `app/flash.py` | one-shot messages across a redirect, in the session |
-| `app/routers/` | `auth` (login/logout), `main` (dashboard, `/badges`, `/healthz`), `learn` (`/syllabus`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment) |
+| `app/routers/` | `auth` (login/logout), `main` (dashboard, `/badges`, `/healthz`), `learn` (`/syllabus`, `/map`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment) |
 
 ## Content
 

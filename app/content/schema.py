@@ -96,11 +96,21 @@ class ModuleFile(_Strict):
 # ---------------------------------------------------------------------------
 # syllabus.yml
 # ---------------------------------------------------------------------------
+class MapPosition(_Strict):
+    """Where a unit sits on its deck of the station map, as percentages of the
+    deck's drawing area (0–100 each way). The range is checked by the loader,
+    so the error can name the unit."""
+
+    x: int
+    y: int
+
+
 class UnitSpec(_Strict):
     slug: Slug
     title: Text
     briefing: str = ""  # story text shown at the top of the unit (Markdown)
     prerequisites: list[Slug] = []  # unit slugs that must be finished first
+    map: MapPosition | None = None  # unset: laid out automatically (app/station_map.py)
 
 
 class TrackSpec(_Strict):

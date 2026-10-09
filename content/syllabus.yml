@@ -3,6 +3,10 @@
 #
 # A unit listed here with no module files yet shows as "Coming soon", and any
 # unit that requires it stays locked until its content exists.
+#
+# `map: {x, y}` places a unit on its track's deck of the station map (/map), as
+# percentages of the deck's drawing area (0–100). Optional: a unit without it
+# is laid out automatically.
 # Rank titles by level band, lowest first. The level curve is in app/game/levels.py
 # (level 3 = 283 XP, level 10 = 2700 XP, level 21 = 8944 XP).
 ranks:
@@ -23,12 +27,14 @@ tracks:
     units:
       - slug: linux-shell
         title: Linux & the shell
+        map: {x: 50, y: 10}
         briefing: >-
           The *Meridian*'s life-support controllers run Linux, and the only
           interface left working is a terminal. Learn to find your way around
           it before the air scrubbers need you.
       - slug: bash-scripting
         title: Bash scripting
+        map: {x: 10, y: 85}
         prerequisites: [linux-shell]
         briefing: >-
           Typing the same twelve commands every shift is how mistakes happen.
@@ -36,6 +42,7 @@ tracks:
           station can run by itself.
       - slug: git
         title: Git
+        map: {x: 37, y: 85}
         prerequisites: [linux-shell]
         briefing: >-
           Every config change on the station used to be made by hand and
@@ -43,6 +50,7 @@ tracks:
           reason, or it doesn't ship.
       - slug: networking
         title: "Networking: DNS, HTTP, TLS & SSH"
+        map: {x: 63, y: 85}
         prerequisites: [linux-shell]
         briefing: >-
           The comms array is up but nothing can find anything. Names don't
@@ -50,6 +58,7 @@ tracks:
           actually happens between "send" and "received".
       - slug: systemd
         title: systemd & services
+        map: {x: 90, y: 85}
         prerequisites: [linux-shell]
         briefing: >-
           Half the station's daemons die after every power cycle and someone
@@ -65,6 +74,7 @@ tracks:
     units:
       - slug: python-ops
         title: Python for operations
+        map: {x: 15, y: 20}
         prerequisites: [bash-scripting]
         briefing: >-
           Some jobs outgrow Bash: parsing JSON from the cargo manifest API,
@@ -72,12 +82,14 @@ tracks:
           runs on Python.
       - slug: docker
         title: Docker fundamentals
+        map: {x: 65, y: 20}
         prerequisites: [linux-shell, networking]
         briefing: >-
           "It worked on my console" is how the last fabricator caught fire.
           Containers ship the software together with everything it needs.
       - slug: dockerfile-hardening
         title: Dockerfile hardening & multi-stage builds
+        map: {x: 40, y: 85}
         prerequisites: [docker]
         briefing: >-
           The cargo inspector flagged our images: too big, running as root,
@@ -85,6 +97,7 @@ tracks:
           locked down.
       - slug: compose
         title: Docker Compose
+        map: {x: 85, y: 85}
         prerequisites: [docker]
         briefing: >-
           One container is a tool; a station is a system. Describe the app,
@@ -100,6 +113,7 @@ tracks:
     units:
       - slug: k8s-workloads
         title: Pods, Deployments & Services
+        map: {x: 50, y: 5}
         prerequisites: [compose]
         briefing: >-
           The *Meridian* is no longer alone: three supply ships dock next week,
@@ -107,24 +121,28 @@ tracks:
           run software across all of them.
       - slug: k8s-config
         title: Config, Secrets & storage
+        map: {x: 15, y: 50}
         prerequisites: [k8s-workloads]
         briefing: >-
           Workloads come and go; their settings, credentials and data must not.
           Separate what a pod is from what it knows and what it keeps.
       - slug: k8s-ingress
         title: Ingress & cluster networking
+        map: {x: 85, y: 50}
         prerequisites: [k8s-workloads, networking]
         briefing: >-
           The fleet's services can see each other but nothing outside can see
           them. Open exactly the right doors, and no others.
       - slug: helm
         title: Helm
+        map: {x: 15, y: 95}
         prerequisites: [k8s-config]
         briefing: >-
           Fleet Command is drowning in nearly identical YAML files. Package
           each application once and install it anywhere with its own values.
       - slug: k8s-labs
         title: "Cluster labs: kind & k3s"
+        map: {x: 70, y: 95}
         prerequisites: [helm, k8s-ingress]
         briefing: >-
           Simulation is over. Stand up real clusters, deploy to them, break
@@ -139,6 +157,7 @@ tracks:
     units:
       - slug: github-actions
         title: CI/CD with GitHub Actions
+        map: {x: 30, y: 15}
         prerequisites: [git, docker]
         briefing: >-
           Every change to the station is tested and shipped by hand, at 3 a.m.,
@@ -146,6 +165,7 @@ tracks:
           time, the same way.
       - slug: terraform
         title: Terraform
+        map: {x: 10, y: 90}
         prerequisites: [github-actions]
         briefing: >-
           Nobody remembers how the backup relay was configured, and it can't
@@ -153,6 +173,7 @@ tracks:
           repeated and recovered.
       - slug: ansible
         title: Ansible
+        map: {x: 85, y: 15}
         prerequisites: [bash-scripting, systemd]
         briefing: >-
           Forty consoles, each configured slightly differently by a different
@@ -160,6 +181,7 @@ tracks:
           that way.
       - slug: observability
         title: "Observability: metrics, logs & alerts"
+        map: {x: 85, y: 90}
         prerequisites: [compose]
         briefing: >-
           The sensors are online but nobody is watching them. Collect metrics
@@ -167,6 +189,7 @@ tracks:
           matters.
       - slug: devsecops
         title: "DevSecOps: scanning, secrets & supply chain"
+        map: {x: 45, y: 90}
         prerequisites: [dockerfile-hardening, github-actions]
         briefing: >-
           The shields are only as strong as their weakest dependency. Scan

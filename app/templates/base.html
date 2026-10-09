@@ -14,10 +14,11 @@
 </head>
 <body hx-headers='{"X-CSRF-Token": "{{ csrf_token(request) }}"}'>
   <header class="topbar">
-    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> Orbit Ops</a>
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> <span class="brand-name">Orbit Ops</span></a>
     {% if user %}
     <nav>
       <a href="/syllabus">Syllabus</a>
+      <a href="/map">Map</a>
       <a href="/badges">Badges</a>
       <span class="muted who">Cadet {{ user.username }}</span>
       <form method="post" action="/logout" class="inline">

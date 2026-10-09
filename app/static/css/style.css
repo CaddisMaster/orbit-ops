@@ -156,6 +156,12 @@ h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; }
 .brand { white-space: nowrap; }
 @media (max-width: 480px) {
   .topbar nav .who { display: none; }
+  .topbar nav { gap: 0.7rem; }
+  .topbar nav button.link { white-space: nowrap; }
+}
+/* Four nav links and the name don't fit a 375px phone; the mark still links home. */
+@media (max-width: 420px) {
+  .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
 
 /* --- Quiz interaction & progress ---------------------------------------- */
@@ -234,3 +240,42 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .badge.locked { opacity: 0.45; }
 .badge.locked .emblem { color: var(--muted); }
 .recent-badges { margin: 0.75rem 0; }
+
+/* --- Station map ------------------------------------------------------------
+   The colours are custom properties so #18 can theme each deck; a deck's
+   `.deck--<track>` class is the hook (e.g. `.deck--core { --deck: … }`). */
+:root {
+  --map-lit: var(--accent);
+  --map-available: var(--warn);
+  --map-locked: var(--border);
+  --deck: var(--accent);
+}
+.station-map { margin: 1rem 0 1.5rem; }
+.station-map svg { display: block; width: 100%; height: auto; max-width: 560px; margin: 0 auto; }
+.deck-band { fill: var(--bg-elev); stroke: var(--border); }
+.edges { opacity: 0.85; }
+.deck-name { fill: var(--deck); font: 700 13px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.deck-track { fill: var(--muted); font: 12px var(--font); }
+.edge { stroke: var(--map-locked); stroke-width: 2; }
+.edge.is-lit { stroke: var(--map-lit); opacity: 0.7; }
+.node .hit { fill: transparent; }
+.node circle { fill: var(--bg); stroke: var(--map-locked); stroke-width: 2.5; }
+.node-code { fill: var(--muted); font: 600 11px var(--mono); }
+.node-label { fill: var(--muted); font: 11px var(--font); }
+/* A halo in the band's colour, so an edge passing behind text never cuts it. */
+.node-label, .node-code, .deck-name, .deck-track { paint-order: stroke; stroke: var(--bg-elev); stroke-width: 4px; stroke-linejoin: round; }
+.node.complete .node-code { stroke: none; }
+.node.complete circle { fill: var(--map-lit); stroke: var(--map-lit); }
+.node.complete .node-code { fill: var(--accent-ink); }
+.node.complete .node-label { fill: var(--text); }
+.node.available circle { stroke: var(--map-available); animation: map-pulse 2.4s ease-in-out infinite; }
+.node.available .node-code, .node.available .node-label { fill: var(--text); }
+.node.locked { opacity: 0.55; }
+.node:hover circle, .node:focus-visible circle { stroke: var(--text); }
+.node:focus-visible { outline: none; }
+.node:focus-visible .hit { stroke: var(--accent); stroke-width: 2; }
+@keyframes map-pulse { 50% { stroke-opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .node.available circle { animation: none; } }
+.map-list h3 { margin-top: 1rem; }
+.map-list .complete a { color: var(--accent); }
+.unit:target { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 4px; }

@@ -1,4 +1,5 @@
-"""The curriculum pages: the syllabus, modules, and answering quiz questions."""
+"""The curriculum pages: the syllabus, the station map, modules, and answering
+quiz questions."""
 
 from typing import Annotated
 
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from app import progress
+from app import progress, station_map
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
@@ -36,6 +37,19 @@ def syllabus(
             "completed": completed,
             "available": lambda slug: progress.module_available(catalog, slug, completed),
         },
+    )
+
+
+@router.get("/map", response_class=HTMLResponse)
+def station(
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    completed = progress.completed_slugs(db, user.id)
+    return templates.TemplateResponse(
+        request, "map.html", {"user": user, "station": station_map.layout(catalog, completed)}
     )
 
 

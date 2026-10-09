@@ -3,6 +3,7 @@
 {% block content %}
 <p class="eyebrow">Station schematic</p>
 <h1>Syllabus</h1>
+<p><a href="/map">See it as the station map →</a></p>
 {% for track in catalog.tracks %}
 <section class="card track">
   <p class="eyebrow">{{ track.deck }}</p>
@@ -10,7 +11,7 @@
   {% if track.blurb %}<p class="muted">{{ track.blurb }}</p>{% endif %}
   {% for unit_slug in track.units %}
     {% set unit = catalog.units[unit_slug] %}
-    <div class="unit">
+    <div class="unit" id="unit-{{ unit.slug }}">
       <h3>{{ unit.title }}</h3>
       {% if unit.modules %}
       <ul class="modules">
