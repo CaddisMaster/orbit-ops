@@ -37,6 +37,33 @@ quiz:
     explain: >-
       `600` and `u=rw,go=` are the same thing written two ways. `644` lets everyone read it, and
       `700` adds execute for the owner.
+terminal:
+  task: |
+    `scrubber.conf` holds the life-support override code, and right now every crew member can
+    read it. Make it **readable and writable by you only**. While you're there, Okafor wants to
+    run `purge.sh` herself next shift: make it **executable by you**, without changing who else
+    can read it.
+  cwd: /station/life-support
+  files:
+    - {path: /station, type: dir}
+    - {path: /station/life-support, type: dir}
+    - path: /station/life-support/scrubber.conf
+      mode: "644"
+      contents: |
+        # Life support: CO2 scrubber array
+        cycle_minutes = 20
+        override_code = 7731-ALPHA
+    - path: /station/life-support/purge.sh
+      mode: "644"
+      contents: |
+        #!/bin/bash
+        echo "Purging scrubber filters..."
+    - {path: /station/life-support/README, mode: "644", contents: "Scrubber configs. Ask Okafor before changing anything.\n"}
+  checks:
+    - {mode: /station/life-support/scrubber.conf, equals: "600"}
+    - {mode: /station/life-support/purge.sh, equals: "744"}
+  success: |-
+    Okafor checks the listing over your shoulder. "600 on the config, 744 on the script. That's how it should have been from the start."
 cards:
   - front: "Octal values of r, w, x"
     back: "r = 4, w = 2, x = 1. Add them per class: 7 = rwx, 6 = rw-, 5 = r-x, 4 = r--."

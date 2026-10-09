@@ -48,4 +48,16 @@ docker compose exec -T -e TEST_DB="$TEST_DB" db sh -c \
      -c "CREATE DATABASE \"$TEST_DB\""'
 $RUNNER alembic upgrade head
 
+# The console shell's JavaScript tests run on the host: the app image has no
+# Node. CI runs them too (ci.yml), so a machine without Node only skips them.
+if [ $# -eq 0 ]; then
+  if command -v node > /dev/null 2>&1; then
+    node --test tests/js/*.test.js > /tmp/orbit-ops-node-test.log 2>&1 \
+      && echo "→ JS tests: $(grep -E '^# pass' /tmp/orbit-ops-node-test.log | cut -c3-)" \
+      || { cat /tmp/orbit-ops-node-test.log; echo "✗ JS tests failed." >&2; exit 1; }
+  else
+    echo "→ No node on this machine; skipping tests/js (CI runs them)."
+  fi
+fi
+
 exec $RUNNER python -m pytest -p no:cacheprovider $PARALLEL "$@"

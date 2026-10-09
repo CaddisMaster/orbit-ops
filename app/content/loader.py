@@ -18,7 +18,16 @@ import yaml
 from pydantic import ValidationError
 
 from app.content.render import render_markdown
-from app.content.schema import BadgeSpec, Card, ModuleFile, Question, RankSpec, Syllabus, UnitCompleteRule
+from app.content.schema import (
+    BadgeSpec,
+    Card,
+    ModuleFile,
+    Question,
+    RankSpec,
+    Syllabus,
+    TerminalExercise,
+    UnitCompleteRule,
+)
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 MAP_MAX = 100  # unit map positions are percentages of their deck's drawing area
@@ -41,6 +50,8 @@ class Module:
     body_html: str
     quiz: tuple[Question, ...]
     cards: tuple[Card, ...]
+    terminal: TerminalExercise | None
+    terminal_task_html: str
     unit: str
     track: str
     position: int  # 1-based, within its unit
@@ -227,6 +238,8 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             body_html=render_markdown(body),
             quiz=tuple(data.quiz),
             cards=tuple(data.cards),
+            terminal=data.terminal,
+            terminal_task_html=render_markdown(data.terminal.task) if data.terminal else "",
             unit=unit_slug,
             track=track_slug,
             position=len(unit_module_slugs[unit_slug]),

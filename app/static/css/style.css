@@ -16,6 +16,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }  /* the attribute wins over any display: rule */
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -361,4 +362,60 @@ body::after {
    briefing.js checks the same query and shows the briefing in full. */
 @media (prefers-reduced-motion: reduce) {
   body::before, body::after, .completion.is-new { animation: none; }
+}
+
+/* --- Station console (#17) ---------------------------------------------------
+   Our own terminal: a log of output lines and an <input> as the prompt line. */
+.console { margin-top: 1.25rem; }
+.console .task p:last-child { margin-bottom: 0; }
+.term {
+  margin-top: 1rem;
+  background: #05080f;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: 8px;
+  font: 0.85rem/1.5 var(--mono);
+  color: #d7e0f0;
+}
+.term-log {
+  max-height: 22rem;
+  min-height: 9rem;
+  overflow-y: auto;
+  padding: 0.75rem 0.85rem 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.term-out { min-height: 1.5em; }
+.term-banner { color: var(--muted); }
+.term-echo { color: #ffffff; }
+.term-success { color: var(--accent); font-weight: 600; margin: 0.25rem 0; }
+.term-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5ch; padding: 0 0.85rem 0.75rem; }
+.term-prompt { color: var(--accent); white-space: nowrap; flex: none; font-size: inherit; display: inline; }
+.term-input {
+  flex: 1;
+  min-width: 12ch;  /* below this the input wraps under a long prompt */
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  caret-color: var(--accent);
+}
+.term-input:focus-visible { outline: none; }
+.term:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+.term-keys { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.term-key {
+  font: 600 0.8rem var(--mono);
+  min-width: 2.75rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev);
+  color: var(--text);
+}
+.term-reset { margin-left: auto; color: var(--muted); }
+.term-status { margin: 0.5rem 0 0; min-height: 1.6em; font-size: 0.9rem; }
+@media (max-width: 480px) {
+  .term { font-size: 0.78rem; }
 }

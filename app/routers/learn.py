@@ -4,17 +4,17 @@ quiz questions."""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from app import progress, station_map
+from app import progress, station_map, terminal
 from app.console import Readout, console_readout
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
 from app.game import badges, streaks, xp
 from app.game.levels import standing
-from app.models import User
+from app.models import ExerciseAttempt, User
 from app.security import require_user
 from app.templating import templates
 
@@ -93,8 +93,40 @@ def module_page(
             "answers": progress.first_attempts(db, user.id, slug),
             "record": record,
             "next": progress.next_module(catalog, slug, completed) if record.status == "complete" else None,
+            "terminal_spec": terminal.client_spec(module.terminal) if module.terminal else None,
         },
     )
+
+
+@router.post("/modules/{slug}/terminal")
+def terminal_report(
+    slug: str,
+    report: terminal.Report,
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    """The station console reporting the filesystem it ended with. The verdict
+    recorded is the server's, from this module's checks (app/terminal.py)."""
+    module = _module_or_404(catalog, slug)
+    if module.terminal is None:
+        raise HTTPException(status_code=404)
+    if not progress.module_available(catalog, slug, progress.completed_slugs(db, user.id)):
+        return JSONResponse({"error": "locked"}, status_code=403)
+    correct = terminal.grade(module.terminal, report.state)
+    db.add(
+        ExerciseAttempt(
+            user_id=user.id,
+            module_slug=slug,
+            kind="terminal",
+            item=0,
+            submitted={"claimed": report.passed, "state": {p: n.model_dump() for p, n in report.state.items()}},
+            correct=correct,
+        )
+    )
+    db.commit()
+    return JSONResponse({"correct": correct})
 
 
 @router.post("/modules/{slug}/quiz/{index}", response_class=HTMLResponse)

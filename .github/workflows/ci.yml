@@ -77,6 +77,11 @@ jobs:
           alembic check
       - name: Run tests
         run: pytest -q -n auto
+      # The station console's shell is JavaScript (app/static/js/shell.js).
+      # Node ships on the runner and node:test is built in, so there is nothing
+      # to install or pin.
+      - name: Run the console shell's tests
+        run: node --test tests/js/*.test.js
 
   docker-build:
     name: Image builds
