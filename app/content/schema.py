@@ -138,14 +138,18 @@ class ContainsCheck(_Strict):
     text: Text
 
 
-TerminalCheck = ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck
+class CwdCheck(_Strict):
+    cwd: AbsPath  # the console ends in this directory (for navigation tasks)
+
+
+TerminalCheck = ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck | CwdCheck
 
 
 def check_path(check: TerminalCheck) -> str:
     match check:
         case ModeCheck(mode=p) | OwnerCheck(owner=p) | ExistsCheck(exists=p) | MissingCheck(missing=p):
             return p
-        case ContainsCheck(contains=p):
+        case ContainsCheck(contains=p) | CwdCheck(cwd=p):
             return p
     raise TypeError(check)
 
@@ -163,6 +167,9 @@ class TerminalExercise(_Strict):
     files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
     checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
     success: Text = "Okafor's voice crackles over the comm: \"Confirmed. Nice work, cadet.\""
+    # Commands that complete the task, run through the real shell in CI
+    # (tests/js/). Never sent to the browser, like quiz answers.
+    solution: Annotated[list[Annotated[str, Field(min_length=1)]], Field(min_length=1, max_length=40)]
 
     def starting_fs(self) -> dict[str, dict]:
         """{path: node} for the whole starting tree. Parent directories that
@@ -196,7 +203,9 @@ class TerminalExercise(_Strict):
         for i, check in enumerate(self.checks):
             # A mode, owner or missing check reads something that must already be
             # there; exists and contains may name what the learner creates.
-            if not isinstance(check, ExistsCheck | ContainsCheck) and check_path(check) not in fs:
+            if isinstance(check, CwdCheck) and fs.get(check.cwd, {}).get("type") != "dir":
+                raise ValueError(f"checks.{i} ({describe(check)}): {check.cwd} is not a directory in the starting filesystem")
+            if not isinstance(check, ExistsCheck | ContainsCheck | CwdCheck) and check_path(check) not in fs:
                 raise ValueError(
                     f"checks.{i} ({describe(check)}): {check_path(check)} is not in the starting filesystem"
                 )

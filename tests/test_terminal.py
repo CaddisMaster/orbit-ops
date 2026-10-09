@@ -12,6 +12,7 @@ then `two`, which carries a terminal exercise.
 import json
 import re
 import textwrap
+from pathlib import Path
 
 import pytest
 from sqlalchemy import select
@@ -33,6 +34,8 @@ TERMINAL = """terminal:
   checks:
     - {mode: /station/scrubber.conf, equals: "600"}
   success: Okafor nods.
+  solution:
+    - chmod 600 scrubber.conf
 """
 
 
@@ -63,10 +66,10 @@ def _state(mode: int) -> dict:
     }
 
 
-def _report(client, slug, state, passed=True):
+def _report(client, slug, state, passed=True, cwd="/station"):
     return client.post(
         f"/modules/{slug}/terminal",
-        content=json.dumps({"state": state, "passed": passed}),
+        content=json.dumps({"state": state, "cwd": cwd, "passed": passed}),
         headers={"Content-Type": "application/json", "X-CSRF-Token": csrf(client)},
     )
 
@@ -136,7 +139,7 @@ def test_the_real_exercises_load_and_start_unsolved():
     assert {"files-and-globs", "permissions"} <= exercises.keys()
     for exercise in exercises.values():
         start = {p: Node(**n) for p, n in exercise.starting_fs().items()}
-        assert not grade(exercise, start)
+        assert not grade(exercise, start, exercise.cwd)
 
 
 # --- the page ----------------------------------------------------------------------------
@@ -154,6 +157,7 @@ def test_the_module_page_carries_the_console_and_its_starting_filesystem(logged_
     assert re.search(r'<script src="[^"]*/static/js/shell.js" defer></script>', page)
     assert re.search(r'<script src="[^"]*/static/js/console.js" defer></script>', page)
     assert "readable by its owner only" in page
+    assert "solution" not in spec
 
 
 def test_a_module_without_an_exercise_loads_no_console(logged_in, terminal_curriculum):
@@ -211,7 +215,7 @@ def test_reports_need_the_csrf_token(logged_in, terminal_curriculum):
     complete(logged_in, "one")
     response = logged_in.post(
         "/modules/two/terminal",
-        content=json.dumps({"state": _state(0o600), "passed": True}),
+        content=json.dumps({"state": _state(0o600), "cwd": "/station", "passed": True}),
         headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 403
@@ -223,3 +227,73 @@ def test_attempts_are_scoped_to_the_learner(logged_in, terminal_curriculum, user
     _report(logged_in, "two", _state(0o600))
     assert _attempts(other.id) == []
     assert len(_attempts(user.id)) == 1
+
+
+# --- #36: coverage, reference solutions, cwd checks -------------------------------------
+FIXTURES = Path(__file__).resolve().parent / "js" / "fixtures"
+
+
+@pytest.mark.criterion(36, "The shell-ready modules have console tasks")
+def test_the_shell_ready_modules_have_console_tasks():
+    unit = load_catalog().unit_modules("linux-shell")
+    with_tasks = {m.position for m in unit if m.terminal}
+    assert {1, 2, 3, 4, 7, 8} <= with_tasks
+
+
+@pytest.mark.criterion(36, "An exercise without a solution fails CI")
+def test_an_exercise_without_a_solution_fails(tmp_path):
+    _write(tmp_path, TERMINAL.replace("  solution:\n    - chmod 600 scrubber.conf\n", ""))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert "core/shell/02-two.md: terminal.solution: Field required" in str(exc.value)
+
+
+@pytest.mark.criterion(36, "Reference solutions never reach the browser")
+def test_reference_solutions_never_reach_the_browser(logged_in, terminal_curriculum):
+    complete(logged_in, "one")
+    page = logged_in.get("/modules/two").text
+    spec = json.loads(re.search(r"data-terminal='([^']*)'", page).group(1))
+    assert spec["checks"] and "solution" not in spec
+    assert "chmod 600 scrubber.conf" not in page
+
+
+def test_the_exercise_fixture_matches_the_content():
+    # The JS tests run the reference solutions from this file; a stale one would
+    # prove an old version of the exercises.
+    from scripts.export_exercises import FIXTURE, render
+
+    assert FIXTURE.read_text() == render(), (
+        "tests/js/fixtures/exercises.json is stale: run `docker compose exec web python -m scripts.export_exercises`"
+    )
+
+
+def test_the_server_agrees_with_the_shared_check_cases():
+    from pydantic import TypeAdapter
+
+    from app.content.schema import TerminalCheck
+    from app.terminal import Node, passes
+
+    data = json.loads((FIXTURES / "check_cases.json").read_text())
+    state = {p: Node(**n) for p, n in data["state"].items()}
+    adapter = TypeAdapter(TerminalCheck)
+    for case in data["cases"]:
+        assert passes(adapter.validate_python(case["check"]), state, data["cwd"]) is case["expect"], case["name"]
+
+
+def test_a_cwd_check_must_name_a_starting_directory(tmp_path):
+    _write(tmp_path, TERMINAL.replace('{mode: /station/scrubber.conf, equals: "600"}', "{cwd: /station/scrubber.conf}"))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert "checks.0 (cwd /station/scrubber.conf): /station/scrubber.conf is not a directory" in str(exc.value)
+
+
+def test_a_cwd_check_is_graded_against_where_the_console_ended(logged_in, tmp_path, user):
+    _write(tmp_path, TERMINAL.replace('{mode: /station/scrubber.conf, equals: "600"}', "{cwd: /}"))
+    app.dependency_overrides[get_catalog] = lambda: load_catalog(tmp_path)
+    try:
+        complete(logged_in, "one")
+        assert _report(logged_in, "two", _state(0o644), cwd="/station").json() == {"correct": False}
+        assert _report(logged_in, "two", _state(0o644), cwd="/").json() == {"correct": True}
+        assert [a[3]["cwd"] for a in _attempts(user.id)] == ["/station", "/"]
+    finally:
+        app.dependency_overrides.pop(get_catalog, None)

@@ -31,6 +31,32 @@ quiz:
     explain: >-
       `pwd` means **p**rint **w**orking **d**irectory. Your prompt often shows it too, but `pwd`
       always gives the full absolute path.
+terminal:
+  task: |
+    Okafor left you a message in a **hidden** file somewhere in `/station/comms/relay`. Find
+    it, read it, and go where it says. Try getting there with a **relative** path.
+  cwd: /home/cadet
+  files:
+    - {path: /home/cadet, type: dir}
+    - {path: /station, type: dir}
+    - {path: /station/comms, type: dir}
+    - {path: /station/comms/relay, type: dir}
+    - {path: /station/comms/relay/frequencies.txt, contents: "relay-1 121.5\nrelay-2 243.0\n"}
+    - {path: /station/comms/relay/.okafor, contents: "Meet me at the docking ring: /station/docking/bay-2\n"}
+    - {path: /station/docking, type: dir}
+    - {path: /station/docking/bay-1, type: dir}
+    - {path: /station/docking/bay-2, type: dir}
+  checks:
+    - {cwd: /station/docking/bay-2}
+  success: |-
+    Okafor looks up from a crate as you float in. "You found the dotfile. Most people walk straight past those."
+  solution:
+    - cd /station/comms/relay
+    - ls
+    - ls -a
+    - cat .okafor
+    - cd ../../docking/bay-2
+    - pwd
 cards:
   - front: What does `ls -lah` show?
     back: Every entry including hidden ones (`-a`), in long format (`-l`), with human-readable sizes (`-h`).

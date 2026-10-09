@@ -1,0 +1,220 @@
+{
+ "_about": "Cases both graders must agree on: app/terminal.py passes() (tests/test_terminal.py) and shell.js passes() (tests/js/). Edit by hand.",
+ "state": {
+  "/": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "root",
+   "group": "root",
+   "contents": ""
+  },
+  "/s": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": ""
+  },
+  "/s/f": {
+   "type": "file",
+   "mode": 384,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "override=7731\n"
+  },
+  "/s/sticky": {
+   "type": "file",
+   "mode": 2432,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "override=7731\n"
+  },
+  "/s/d": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "root",
+   "group": "root",
+   "contents": ""
+  }
+ },
+ "cwd": "/s",
+ "cases": [
+  {
+   "name": "mode matches",
+   "check": {
+    "mode": "/s/f",
+    "equals": "600"
+   },
+   "expect": true
+  },
+  {
+   "name": "mode with a leading zero",
+   "check": {
+    "mode": "/s/f",
+    "equals": "0600"
+   },
+   "expect": true
+  },
+  {
+   "name": "mode differs",
+   "check": {
+    "mode": "/s/f",
+    "equals": "644"
+   },
+   "expect": false
+  },
+  {
+   "name": "mode ignores setuid and friends",
+   "check": {
+    "mode": "/s/sticky",
+    "equals": "600"
+   },
+   "expect": true
+  },
+  {
+   "name": "mode of a missing path",
+   "check": {
+    "mode": "/s/nope",
+    "equals": "600"
+   },
+   "expect": false
+  },
+  {
+   "name": "owner only",
+   "check": {
+    "owner": "/s/f",
+    "user": "cadet",
+    "group": null
+   },
+   "expect": true
+  },
+  {
+   "name": "owner and group",
+   "check": {
+    "owner": "/s/f",
+    "user": "cadet",
+    "group": "crew"
+   },
+   "expect": true
+  },
+  {
+   "name": "wrong group",
+   "check": {
+    "owner": "/s/f",
+    "user": "cadet",
+    "group": "root"
+   },
+   "expect": false
+  },
+  {
+   "name": "wrong owner",
+   "check": {
+    "owner": "/s/f",
+    "user": "root",
+    "group": null
+   },
+   "expect": false
+  },
+  {
+   "name": "owner of a missing path",
+   "check": {
+    "owner": "/s/nope",
+    "user": "cadet",
+    "group": null
+   },
+   "expect": false
+  },
+  {
+   "name": "exists, any type",
+   "check": {
+    "exists": "/s/d",
+    "type": null
+   },
+   "expect": true
+  },
+  {
+   "name": "exists as a file",
+   "check": {
+    "exists": "/s/f",
+    "type": "file"
+   },
+   "expect": true
+  },
+  {
+   "name": "exists, but as the wrong type",
+   "check": {
+    "exists": "/s/d",
+    "type": "file"
+   },
+   "expect": false
+  },
+  {
+   "name": "does not exist",
+   "check": {
+    "exists": "/s/nope",
+    "type": null
+   },
+   "expect": false
+  },
+  {
+   "name": "missing",
+   "check": {
+    "missing": "/s/nope"
+   },
+   "expect": true
+  },
+  {
+   "name": "not missing",
+   "check": {
+    "missing": "/s/f"
+   },
+   "expect": false
+  },
+  {
+   "name": "contains",
+   "check": {
+    "contains": "/s/f",
+    "text": "7731"
+   },
+   "expect": true
+  },
+  {
+   "name": "does not contain",
+   "check": {
+    "contains": "/s/f",
+    "text": "7732"
+   },
+   "expect": false
+  },
+  {
+   "name": "a directory has no contents to match",
+   "check": {
+    "contains": "/s/d",
+    "text": "root"
+   },
+   "expect": false
+  },
+  {
+   "name": "contains on a missing path",
+   "check": {
+    "contains": "/s/nope",
+    "text": "x"
+   },
+   "expect": false
+  },
+  {
+   "name": "cwd matches",
+   "check": {
+    "cwd": "/s"
+   },
+   "expect": true
+  },
+  {
+   "name": "cwd differs",
+   "check": {
+    "cwd": "/s/d"
+   },
+   "expect": false
+  }
+ ]
+}

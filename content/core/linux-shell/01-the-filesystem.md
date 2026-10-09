@@ -36,6 +36,39 @@ quiz:
     explain: >-
       Absolute paths start at the root, `/`. A path without a leading `/` (like `logs/app.log`)
       is relative to your current directory.
+terminal:
+  task: |
+    Configuration lives under `/etc` and logs live under `/var/log`. Find the directory that
+    holds the **life-support logs** and go there, so you're standing in it when Okafor checks
+    in. Look before you move: `ls` takes a path too.
+  cwd: /home/cadet
+  files:
+    - {path: /home/cadet, type: dir}
+    - {path: /etc/hostname, owner: root, group: root, contents: "meridian\n"}
+    - path: /etc/life-support/scrubbers.conf
+      owner: root
+      group: root
+      contents: |
+        cycle_minutes = 20
+    - {path: /var/log/syslog, owner: root, group: root, contents: "boot: life support on standby\n"}
+    - path: /var/log/life-support/scrubbers.log
+      owner: root
+      group: root
+      contents: |
+        02:00 scrubber A: nominal
+        02:20 scrubber B: CO2 rising
+        02:40 scrubber B: offline
+    - {path: /var/log/comms, type: dir, owner: root, group: root}
+    - {path: /tmp, type: dir, mode: "777", owner: root, group: root}
+  checks:
+    - {cwd: /var/log/life-support}
+  success: |-
+    "Found it," Okafor says. "Scrubber B went offline at 02:40. Remember where the logs live; you'll be back."
+  solution:
+    - ls /
+    - ls /var/log
+    - cd /var/log/life-support
+    - cat scrubbers.log
 cards:
   - front: What lives in `/etc`?
     back: System-wide configuration files (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/`).

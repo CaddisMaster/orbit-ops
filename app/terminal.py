@@ -21,6 +21,7 @@ from app.content.schema import (
     AbsPath,
     Account,
     ContainsCheck,
+    CwdCheck,
     ExistsCheck,
     MissingCheck,
     ModeCheck,
@@ -49,6 +50,7 @@ class Report(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     state: dict[AbsPath, Node]
+    cwd: AbsPath  # where the console ended up, for `cwd` checks
     passed: bool  # the browser's claim; recorded, never believed
 
     @field_validator("state")
@@ -59,8 +61,10 @@ class Report(BaseModel):
         return state
 
 
-def passes(check: TerminalCheck, state: dict[str, Node]) -> bool:
+def passes(check: TerminalCheck, state: dict[str, Node], cwd: str) -> bool:
     match check:
+        case CwdCheck(cwd=expected):
+            return cwd == expected
         case ModeCheck(mode=path, equals=octal):
             return path in state and state[path].mode & 0o777 == int(octal, 8)
         case OwnerCheck(owner=path, user=user, group=group):
@@ -76,15 +80,15 @@ def passes(check: TerminalCheck, state: dict[str, Node]) -> bool:
     return False
 
 
-def grade(exercise: TerminalExercise, state: dict[str, Node]) -> bool:
-    return all(passes(check, state) for check in exercise.checks)
+def grade(exercise: TerminalExercise, state: dict[str, Node], cwd: str) -> bool:
+    return all(passes(check, state, cwd) for check in exercise.checks)
 
 
 def client_spec(exercise: TerminalExercise) -> dict:
     """What the console needs, as JSON: the starting filesystem, where to start,
     who you are, the checks it grades against and the success message. The
     checks are the task restated, so sending them reveals nothing the task
-    text doesn't."""
+    text doesn't. The reference solution is never included."""
     return {
         "user": exercise.user,
         "group": exercise.group,

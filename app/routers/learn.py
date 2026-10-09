@@ -114,14 +114,18 @@ def terminal_report(
         raise HTTPException(status_code=404)
     if not progress.module_available(catalog, slug, progress.completed_slugs(db, user.id)):
         return JSONResponse({"error": "locked"}, status_code=403)
-    correct = terminal.grade(module.terminal, report.state)
+    correct = terminal.grade(module.terminal, report.state, report.cwd)
     db.add(
         ExerciseAttempt(
             user_id=user.id,
             module_slug=slug,
             kind="terminal",
             item=0,
-            submitted={"claimed": report.passed, "state": {p: n.model_dump() for p, n in report.state.items()}},
+            submitted={
+                "claimed": report.passed,
+                "cwd": report.cwd,
+                "state": {p: n.model_dump() for p, n in report.state.items()},
+            },
             correct=correct,
         )
     )

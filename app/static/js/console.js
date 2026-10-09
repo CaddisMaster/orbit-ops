@@ -61,7 +61,7 @@
       fetch(reportUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
-        body: JSON.stringify({ state: sh.state(), passed: true }),
+        body: JSON.stringify({ state: sh.state(), cwd: sh.cwd, passed: true }),
         credentials: "same-origin",
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })

@@ -37,6 +37,42 @@ quiz:
     explain: >-
       Only stdout goes through the pipe. Errors still appear on your terminal unless you add
       `2>&1` before the `|` (or use `|&` in Bash).
+terminal:
+  task: |
+    The reactor monitor needs a status report for the bridge, in your home directory:
+
+    1. `reactor.txt` must hold **both** the listing of `/station/reactor` **and** the error
+       you get for `/station/reactor-b`, which is offline. One `ls` of both, both streams
+       into the file.
+    2. `alerts.txt` must hold every `ALERT` line from `/station/reactor/core.log`, and nothing
+       else.
+  cwd: /home/cadet
+  files:
+    - {path: /home/cadet, type: dir}
+    - path: /station/reactor/core.log
+      owner: root
+      group: root
+      contents: |
+        02:00 reactor temperature nominal
+        02:05 ALERT coolant pressure low
+        02:10 reactor temperature nominal
+        02:15 ALERT coolant pump 2 stalled
+        02:20 operator acknowledged
+        02:25 ALERT core temperature rising
+        02:30 reactor temperature nominal
+    - {path: /station/reactor/coolant.log, owner: root, group: root, contents: "pump 1 ok\npump 2 stalled\n"}
+  checks:
+    - {contains: /home/cadet/reactor.txt, text: core.log}
+    - {contains: /home/cadet/reactor.txt, text: "cannot access '/station/reactor-b'"}
+    - {contains: /home/cadet/alerts.txt, text: ALERT coolant pump 2 stalled}
+  success: |-
+    "Errors and all, in one file," Okafor says. "That's the report I can actually use."
+  solution:
+    - ls /station/reactor /station/reactor-b
+    - ls /station/reactor /station/reactor-b > reactor.txt 2>&1
+    - cat reactor.txt
+    - grep ALERT /station/reactor/core.log > alerts.txt
+    - wc -l alerts.txt
 cards:
   - front: File descriptors 0, 1, 2
     back: "0 = stdin, 1 = stdout, 2 = stderr."
