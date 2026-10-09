@@ -26,6 +26,10 @@ and why it matters, not what the diff says.
     runaway diagnostic politely and then impolitely (processes and signals), and make the
     navigation `python3` win and stick (environment and PATH). Nine of Unit 1.1's ten modules
     now have a console task.
+- The console has a small `awk` (`-F`, `pattern { print $N }`, `BEGIN`/`END`, comparisons and
+  regex matches) and `sed` (`s///g` with groups, `-n`/`p`, `d`, `q`, line and regex addresses,
+  `-i.bak`), enough for the text-tools lesson's own pipelines. Anything beyond them says it isn't
+  supported rather than giving a wrong answer (#41).
 - Every exercise carries a reference solution that CI runs through the console's shell, so a
   task that can't be completed fails the build. Solutions are never sent to the browser (#36).
 

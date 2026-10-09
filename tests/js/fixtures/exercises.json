@@ -786,7 +786,7 @@
  "text-tools": {
   "solution": [
    "head -n 3 /var/log/docking/access.log",
-   "cut -d' ' -f1 /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt",
+   "awk '{print $1}' /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt",
    "cat noisy.txt"
   ],
   "source": "core/linux-shell/08-text-tools.md",

@@ -169,7 +169,13 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 - **What the console knows** (`help` lists it):
   - files: `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r) mv
     rm (-r -f) chmod (octal and symbolic, -R) chown`
-  - text: `grep (-i -v -n -c) wc sort uniq head tail cut tee`
+  - text: `grep (-i -v -n -c) wc sort uniq head tail cut tee`, and small `awk` and `sed`:
+    - awk: `-F SEP`; `pattern { print … }` rules with `BEGIN`/`END`; patterns of `/re/`,
+      comparisons (numeric when both sides are numbers), `~ !~ ! && ||`; `print` of `$0`, `$N`,
+      `$NF`, `NF`, `NR`, strings and concatenation. No variables, arithmetic, `printf` or arrays.
+    - sed: `-n -e -E -i[SUFFIX]`; `s/RE/REPL/[gpI]` (with `&` and `\1`…), `p`, `d`, `q`;
+      addresses `N`, `$`, `/re/` and ranges. Basic regexes by default, as GNU sed.
+    - Anything outside the subset is refused with "unsupported on the station console".
   - users: `whoami id [user] groups getent sudo (-l -i -u -k) usermod (-aG / -G)`. sudo asks
     for the password through a masked prompt and remembers it for 15 simulated minutes; it
     checks `/etc/group` live, while `id` with no name shows the login's groups (changes apply
@@ -184,7 +190,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   - syntax: globs, `{a,b}`, `{1..9}`, pipes, `> >> < 2> 2>&1 &>` (applied left to right, as in
     bash), `; && || &`, `$?`, `$1…$9`, `$#`, `$@`.
 
-  Anything else prints "command not found". Not yet: `awk`/`sed` (#41), `find`, `tar`,
+  Anything else prints "command not found". Not yet: `find`, `tar`,
   full-screen programs (`top`, `less`, `vim`). Don't set a task that needs more: add the
   command to `app/static/js/shell.js` first, with a test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows

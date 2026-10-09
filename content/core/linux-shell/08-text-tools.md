@@ -41,8 +41,8 @@ terminal:
   task: |
     Someone hammered the docking port's login all night. Write the **three busiest
     addresses** in `/var/log/docking/access.log` to `noisy.txt` in your home directory, each
-    with its request count, busiest first. The address is the first field of every line,
-    separated by spaces. Don't open the file and count by hand: plumb it.
+    with its request count, busiest first. The address is the first field of every line
+    (`awk` or `cut` will get it). Don't open the file and count by hand: plumb it.
   cwd: /home/cadet
   files:
     - {path: /home/cadet, type: dir}
@@ -83,7 +83,7 @@ terminal:
     "10.4.2.17, nine attempts," Okafor reads. "That's the maintenance drone. Someone gave it the wrong password list."
   solution:
     - head -n 3 /var/log/docking/access.log
-    - 'cut -d'' '' -f1 /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt'
+    - 'awk ''{print $1}'' /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt'
     - cat noisy.txt
 cards:
   - front: Count matching lines with grep
