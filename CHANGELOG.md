@@ -38,6 +38,21 @@ and why it matters, not what the diff says.
   from `map: {x, y}` in `syllabus.yml`, with an automatic layout for units without one. No
   JavaScript, and the CSP is unchanged (#24).
 - On a narrow phone the top bar shows only the ◎ mark, to fit the four links (#24).
+- The station feels like a station (#18):
+  - Each deck has its own colour (Life Support teal, Cargo & Fabrication amber, Fleet Command
+    violet, Comms, Sensors & Shields rose), carried by its module pages, its syllabus section,
+    the mission card and the map.
+  - Briefings arrive as an incoming transmission that types itself out; a click or any key shows
+    it all at once.
+  - A slow starfield drifts behind every page.
+  - A console readout under the top bar shows "Systems online 1/10 · Streak 3".
+  - The Life Support units have line-art emblems (an air scrubber, a script, a branch, a comms
+    dish, a reactor).
+  - Completing a module powers up the "System restored" banner.
+  - Under the system's reduced-motion setting nothing moves and briefings appear in full. The
+    Content-Security-Policy is unchanged.
+- Right and wrong quiz answers keep fixed colours (teal and amber) on every deck, so a deck's
+  colour never makes them look alike (#18).
 
 ## [0.2.0] — 2026-10-08
 

@@ -56,6 +56,7 @@ class Unit:
     prerequisites: tuple[str, ...]
     modules: tuple[str, ...]  # module slugs, in order
     map: tuple[int, int] | None = None  # (x, y) on its deck, 0–100; None = automatic
+    emblem: str | None = None  # a name from templates/partials/_unit_emblem.html
 
 
 @dataclass(frozen=True)
@@ -244,6 +245,7 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             prerequisites=tuple(u.prerequisites),
             modules=tuple(unit_module_slugs[u.slug]),
             map=(u.map.x, u.map.y) if u.map else None,
+            emblem=u.emblem,
         )
         for t in syllabus.tracks
         for u in t.units
