@@ -3,6 +3,8 @@
 <section id="completion" class="card completion"{% if just_completed %} hx-swap-oob="true"{% endif %}>
   <p class="eyebrow">System restored</p>
   <h2>Module complete · {{ record.score }}%</h2>
+  {% if xp_gained %}<p class="xp-gain">+{{ xp_gained }} XP</p>{% endif %}
+  {% if promoted_to %}<p class="promotion"><strong>Promoted to {{ promoted_to }}.</strong></p>{% endif %}
   {% if next %}
     <p>Next: <a href="/modules/{{ next.slug }}">{{ next.title }}</a> →</p>
   {% else %}

@@ -18,7 +18,7 @@ import yaml
 from pydantic import ValidationError
 
 from app.content.render import render_markdown
-from app.content.schema import Card, ModuleFile, Question, Syllabus
+from app.content.schema import Card, ModuleFile, Question, RankSpec, Syllabus
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 _MODULE_FILENAME = re.compile(r"^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
@@ -70,6 +70,7 @@ class Catalog:
     tracks: tuple[Track, ...]
     units: dict[str, Unit] = field(repr=False)
     modules: dict[str, Module] = field(repr=False)
+    ranks: tuple[RankSpec, ...] = ()  # ascending by level
 
     def unit_modules(self, unit_slug: str) -> list[Module]:
         return [self.modules[s] for s in self.units[unit_slug].modules]
@@ -229,4 +230,4 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
         Track(slug=t.slug, title=t.title, deck=t.deck, blurb=t.blurb, units=tuple(u.slug for u in t.units))
         for t in syllabus.tracks
     )
-    return Catalog(tracks=tracks, units=units, modules=modules)
+    return Catalog(tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks))

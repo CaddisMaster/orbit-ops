@@ -24,6 +24,13 @@
   <p>Welcome aboard the <i>Meridian</i>, {{ user.username }}. The station is dark. Each mission you
      finish brings one more system back online.</p>
   {% endif %}
+  <div class="standing">
+    <p><strong>Level {{ standing.level }}</strong>{% if standing.rank %} · {{ standing.rank }}{% endif %}
+       <span class="muted">· {{ standing.xp }} XP</span></p>
+    <progress max="{{ standing.level_span }}" value="{{ standing.into_level }}"
+              aria-label="Progress to level {{ standing.level + 1 }}"></progress>
+    <p class="muted">{{ standing.to_next }} XP to level {{ standing.level + 1 }}</p>
+  </div>
   <p><strong>{{ done }}</strong> of {{ total }} module{{ '' if total == 1 else 's' }} complete.</p>
   <p><a href="/syllabus">Open the station schematic (syllabus) →</a></p>
 </section>
