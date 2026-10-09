@@ -1,4 +1,163 @@
 {
+ "environment-and-path": {
+  "solution": [
+   "type -a python3",
+   "python3 --version",
+   "export PATH=\"/opt/nav/bin:$PATH\"",
+   "which python3",
+   "python3 --version > nav.txt",
+   "echo 'export PATH=\"/opt/nav/bin:$PATH\"' >> ~/.bashrc"
+  ],
+  "source": "core/linux-shell/09-environment-and-path.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/nav.txt",
+     "text": "navigation build"
+    },
+    {
+     "contains": "/home/cadet/.bashrc",
+     "text": "/opt/nav/bin"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/home/cadet/.bashrc": {
+     "contents": "# ~/.bashrc: read by every new interactive shell\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/opt": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/opt/nav": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/opt/nav/bin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/opt/nav/bin/python3": {
+     "contents": "#!/bin/bash\necho 'Python 3.12.3 (navigation build)'\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/bin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/bin/python3": {
+     "contents": "#!/bin/bash\necho 'Python 3.12.3'\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/bin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/bin/python3": {
+     "contents": "#!/bin/bash\necho 'Python 3.8.10 (left over from testing)'\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "\"That's the build the course plots were tested on,\" Okafor says. \"And now it'll still be there tomorrow.\"",
+   "user": "cadet"
+  }
+ },
  "files-and-globs": {
   "solution": [
    "echo logs/crash-2026-10-*",
@@ -46,11 +205,40 @@
     }
    ],
    "cwd": "/station/cargo",
+   "env": {},
    "fs": {
     "/": {
      "contents": "",
      "group": "root",
      "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
      "owner": "root",
      "type": "dir"
     },
@@ -126,6 +314,9 @@
     }
    },
    "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
    "success": "\"Archive's tidy and the old dumps are gone,\" Okafor says. \"And app.log survived. You'd be amazed how often it doesn't.\"",
    "user": "cadet"
   }
@@ -147,6 +338,7 @@
     }
    ],
    "cwd": "/home/cadet",
+   "env": {},
    "fs": {
     "/": {
      "contents": "",
@@ -154,6 +346,27 @@
      "mode": 493,
      "owner": "root",
      "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
     },
     "/home": {
      "contents": "",
@@ -167,6 +380,13 @@
      "group": "crew",
      "mode": 493,
      "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
      "type": "dir"
     },
     "/station": {
@@ -227,6 +447,9 @@
     }
    },
    "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
    "success": "Okafor looks up from a crate as you float in. \"You found the dotfile. Most people walk straight past those.\"",
    "user": "cadet"
   }
@@ -251,11 +474,40 @@
     }
    ],
    "cwd": "/station/life-support",
+   "env": {},
    "fs": {
     "/": {
      "contents": "",
      "group": "root",
      "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
      "owner": "root",
      "type": "dir"
     },
@@ -296,6 +548,9 @@
     }
    },
    "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
    "success": "Okafor checks the listing over your shoulder. \"600 on the config, 744 on the script. That's how it should have been from the start.\"",
    "user": "cadet"
   }
@@ -325,6 +580,7 @@
     }
    ],
    "cwd": "/home/cadet",
+   "env": {},
    "fs": {
     "/": {
      "contents": "",
@@ -332,6 +588,27 @@
      "mode": 493,
      "owner": "root",
      "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
     },
     "/home": {
      "contents": "",
@@ -345,6 +622,13 @@
      "group": "crew",
      "mode": 493,
      "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
      "type": "dir"
     },
     "/station": {
@@ -377,7 +661,125 @@
     }
    },
    "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
    "success": "\"Errors and all, in one file,\" Okafor says. \"That's the report I can actually use.\"",
+   "user": "cadet"
+  }
+ },
+ "processes-and-signals": {
+  "solution": [
+   "ps aux --sort=-%cpu | head -n 4",
+   "pgrep -a o2",
+   "pkill o2-diagnostics",
+   "pgrep -a o2-diagnostics",
+   "pkill -9 o2-diagnostics",
+   "pgrep -a o2"
+  ],
+  "source": "core/linux-shell/06-processes-and-signals.md",
+  "spec": {
+   "checks": [
+    {
+     "stopped": "o2-diagnostics"
+    },
+    {
+     "signalled": "o2-diagnostics",
+     "with": "TERM"
+    },
+    {
+     "running": "o2-recyclerd"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [
+    {
+     "command": "/usr/sbin/o2-recyclerd",
+     "cpu": 1.2,
+     "ignores": [],
+     "mem": 0.4,
+     "user": "root"
+    },
+    {
+     "command": "o2-diagnostics --deep-scan",
+     "cpu": 98.7,
+     "ignores": [
+      "TERM"
+     ],
+     "mem": 2.1,
+     "user": "cadet"
+    },
+    {
+     "command": "/usr/sbin/comms-relayd",
+     "cpu": 0.3,
+     "ignores": [],
+     "mem": 0.1,
+     "user": "root"
+    },
+    {
+     "command": "nav-sync --interval 60",
+     "cpu": 0.1,
+     "ignores": [],
+     "mem": 0.1,
+     "user": "cadet"
+    }
+   ],
+   "success": "The fans spin down. \"It ignored TERM? Then KILL was the right call,\" Okafor says. \"But you asked first. Always ask first.\"",
    "user": "cadet"
   }
  },
@@ -404,6 +806,7 @@
     }
    ],
    "cwd": "/home/cadet",
+   "env": {},
    "fs": {
     "/": {
      "contents": "",
@@ -411,6 +814,27 @@
      "mode": 493,
      "owner": "root",
      "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
     },
     "/home": {
      "contents": "",
@@ -424,6 +848,13 @@
      "group": "crew",
      "mode": 493,
      "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
      "type": "dir"
     },
     "/var": {
@@ -456,6 +887,9 @@
     }
    },
    "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
    "success": "\"10.4.2.17, nine attempts,\" Okafor reads. \"That's the maintenance drone. Someone gave it the wrong password list.\"",
    "user": "cadet"
   }
@@ -475,6 +909,7 @@
     }
    ],
    "cwd": "/home/cadet",
+   "env": {},
    "fs": {
     "/": {
      "contents": "",
@@ -489,6 +924,13 @@
      "mode": 493,
      "owner": "root",
      "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
     },
     "/etc/hostname": {
      "contents": "meridian\n",
@@ -511,6 +953,13 @@
      "owner": "root",
      "type": "file"
     },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
     "/home": {
      "contents": "",
      "group": "root",
@@ -523,6 +972,13 @@
      "group": "crew",
      "mode": 493,
      "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
      "type": "dir"
     },
     "/tmp": {
@@ -576,7 +1032,127 @@
     }
    },
    "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
    "success": "\"Found it,\" Okafor says. \"Scrubber B went offline at 02:40. Remember where the logs live; you'll be back.\"",
+   "user": "cadet"
+  }
+ },
+ "users-and-sudo": {
+  "solution": [
+   "id",
+   "getent group airlock sudo",
+   "sudo usermod -aG airlock cadet",
+   "meridian",
+   "getent group airlock sudo",
+   "id cadet",
+   "grep airlock /etc/passwd | cut -d: -f7 > airlock-shell.txt"
+  ],
+  "source": "core/linux-shell/05-users-and-sudo.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/etc/group",
+     "text": "airlock:x:990:cadet"
+    },
+    {
+     "contains": "/etc/group",
+     "text": "sudo:x:27:cadet"
+    },
+    {
+     "contains": "/home/cadet/airlock-shell.txt",
+     "text": "/usr/sbin/nologin"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\nairlock:x:990:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nairlock:x:990:990:Airlock controller:/var/lib/airlock:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/lib/airlock": {
+     "contents": "",
+     "group": "airlock",
+     "mode": 488,
+     "owner": "airlock",
+     "type": "dir"
+    },
+    "/var/lib/airlock/doors.conf": {
+     "contents": "outer = sealed\ninner = sealed\n",
+     "group": "airlock",
+     "mode": 416,
+     "owner": "airlock",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "password": "meridian",
+   "processes": [],
+   "success": "\"Welcome to the airlock group,\" Okafor says. \"It takes effect at your next login, so I'll sign you in fresh at the start of your next shift.\"",
    "user": "cadet"
   }
  }

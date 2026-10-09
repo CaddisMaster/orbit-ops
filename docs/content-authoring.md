@@ -131,17 +131,34 @@ terminal:
     - chmod 600 scrubber.conf
 ```
 
-**Every module in a shell-based unit has a console task**, unless its front matter can't yet
-(the console lacks the commands it teaches) and a tracking issue says so. In Unit 1.1 that's 05,
-06 and 09 (#37) and 10.
+**Every module in a shell-based unit has a console task**, unless a comment at the top of its
+front matter says why not. In Unit 1.1 that's only 10 (packages): a fake apt would teach the
+command names and nothing that matters.
+
+Optional fields for users, processes and the environment (#37):
+
+```yaml
+  groups: [sudo]              # the user's supplementary groups
+  password: meridian          # sudo's password; in-story and shown in the task, not a secret
+  accounts:                   # more lines for /etc/passwd (service accounts)
+    - {name: airlock, uid: 990, comment: Airlock controller, home: /var/lib/airlock}
+  processes:                  # running when the console starts
+    - {command: o2-diagnostics --deep-scan, cpu: 98.7, ignores: [TERM]}   # user defaults to yours
+  env: {EDITOR: nano}         # extra exported variables (PATH may be overridden here)
+```
+
+`/etc/passwd`, `/etc/group` and `/root` are generated from these unless you list them yourself.
+Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group is 1000.
 
 - **Files you don't own are read-only to the learner.** The shell enforces permissions as a
   normal user with umask `002`. A directory you don't list exists anyway, owned by `root` with
   mode `755`, so the learner can't create files in it. List every directory they need to write
   to.
 - **Checks:** `{mode: P, equals: "600"}`, `{owner: P, user: u, group: g}`, `{exists: P, type: file|dir}`,
-  `{missing: P}`, `{contains: P, text: "…"}`, and `{cwd: P}` (the console must end in directory
-  P, for navigation tasks). `mode`, `owner` and `missing` must name a path in the starting
+  `{missing: P}`, `{contains: P, text: "…"}`, `{cwd: P}` (the console must end in directory
+  P, for navigation tasks), and for processes `{running: NAME}`, `{stopped: NAME}` and
+  `{signalled: NAME, with: TERM}` (NAME is the program's file name, as `ps` shows it; `stopped`
+  and `signalled` must name a starting process). `mode`, `owner` and `missing` must name a path in the starting
   filesystem, and `cwd` a directory in it, or validation fails naming the check; `exists` and
   `contains` may name something the learner creates.
 - **The `solution` is proven in CI.** `tests/js/solutions.test.js` runs it through the real
@@ -149,13 +166,27 @@ terminal:
   command (a step may fail on purpose). Node can't read YAML, so after changing any `terminal:`
   block run `docker compose exec -u "$(id -u):$(id -g)" web python -m scripts.export_exercises`
   and commit `tests/js/fixtures/exercises.json`; a test fails while it's stale.
-- **What the console knows:** `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p)
-  rmdir cp (-r) mv rm (-r -f) chmod (octal and symbolic, -R) chown whoami id grep (-i -v -n -c)
-  wc sort uniq head tail cut tee clear help`, plus globs, `{a,b}` and `{1..9}`, pipes,
-  `> >> < 2> 2>&1 &>` (applied left to right, as in bash), `; && ||`, `$?` and
-  `$USER`/`$HOME`/`$PWD`/`$OLDPWD`. Anything else prints "command not found". Not yet: `awk`,
-  `sed`, `sudo`, `export`, `find`, `tar`. Don't set a task that needs more: add the command to
-  `app/static/js/shell.js` first, with a test in `tests/js/`.
+- **What the console knows** (`help` lists it):
+  - files: `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r) mv
+    rm (-r -f) chmod (octal and symbolic, -R) chown`
+  - text: `grep (-i -v -n -c) wc sort uniq head tail cut tee`
+  - users: `whoami id [user] groups getent sudo (-l -i -u -k) usermod (-aG / -G)`. sudo asks
+    for the password through a masked prompt and remembers it for 15 simulated minutes; it
+    checks `/etc/group` live, while `id` with no name shows the login's groups (changes apply
+    at the next login, as on a real system).
+  - environment: `export unset env printenv type (-a) which command -v source bash -c`, plus
+    `VAR=x` and `VAR=x cmd`. Child shells see only exported variables. Commands are found on
+    `$PATH`: an executable file in the exercise wins over the console's own commands, which
+    live in `/usr/bin` and `/bin`; `./script` runs a file (it needs `x`).
+  - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
+    sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
+    foreground `sleep N` jumps N.
+  - syntax: globs, `{a,b}`, `{1..9}`, pipes, `> >> < 2> 2>&1 &>` (applied left to right, as in
+    bash), `; && || &`, `$?`, `$1…$9`, `$#`, `$@`.
+
+  Anything else prints "command not found". Not yet: `awk`/`sed` (#41), `find`, `tar`,
+  full-screen programs (`top`, `less`, `vim`). Don't set a task that needs more: add the
+  command to `app/static/js/shell.js` first, with a test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
   the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a
   real login.

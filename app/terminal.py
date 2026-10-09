@@ -26,11 +26,17 @@ from app.content.schema import (
     MissingCheck,
     ModeCheck,
     OwnerCheck,
+    RunningCheck,
+    Signal,
+    SignalledCheck,
+    StoppedCheck,
     TerminalCheck,
     TerminalExercise,
+    proc_name,
 )
 
 MAX_NODES = 500
+MAX_PROCESSES = 200
 MAX_CONTENTS = 20_000  # characters per file
 
 
@@ -44,6 +50,16 @@ class Node(BaseModel):
     contents: Annotated[str, Field(max_length=MAX_CONTENTS)] = ""
 
 
+class Process(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    pid: Annotated[int, Field(ge=1, le=4_194_304)]
+    user: Account
+    command: Annotated[str, Field(max_length=200)]
+    alive: bool
+    signals: Annotated[list[Signal], Field(max_length=50)] = []
+
+
 class Report(BaseModel):
     """What the console POSTs: the state it ended with and its own verdict."""
 
@@ -51,6 +67,7 @@ class Report(BaseModel):
 
     state: dict[AbsPath, Node]
     cwd: AbsPath  # where the console ended up, for `cwd` checks
+    processes: Annotated[list[Process], Field(max_length=MAX_PROCESSES)] = []
     passed: bool  # the browser's claim; recorded, never believed
 
     @field_validator("state")
@@ -61,8 +78,15 @@ class Report(BaseModel):
         return state
 
 
-def passes(check: TerminalCheck, state: dict[str, Node], cwd: str) -> bool:
+def passes(check: TerminalCheck, state: dict[str, Node], cwd: str, processes: list[Process] = ()) -> bool:
+    named = lambda name: [p for p in processes if proc_name(p.command) == name]  # noqa: E731
     match check:
+        case RunningCheck(running=name):
+            return any(p.alive for p in named(name))
+        case StoppedCheck(stopped=name):
+            return not any(p.alive for p in named(name))
+        case SignalledCheck(signalled=name, with_=sig):
+            return any(sig in p.signals for p in named(name))
         case CwdCheck(cwd=expected):
             return cwd == expected
         case ModeCheck(mode=path, equals=octal):
@@ -80,8 +104,8 @@ def passes(check: TerminalCheck, state: dict[str, Node], cwd: str) -> bool:
     return False
 
 
-def grade(exercise: TerminalExercise, state: dict[str, Node], cwd: str) -> bool:
-    return all(passes(check, state, cwd) for check in exercise.checks)
+def grade(exercise: TerminalExercise, state: dict[str, Node], cwd: str, processes: list[Process] = ()) -> bool:
+    return all(passes(check, state, cwd, processes) for check in exercise.checks)
 
 
 def client_spec(exercise: TerminalExercise) -> dict:
@@ -92,8 +116,15 @@ def client_spec(exercise: TerminalExercise) -> dict:
     return {
         "user": exercise.user,
         "group": exercise.group,
+        "groups": exercise.groups,
+        "password": exercise.password,
         "cwd": exercise.cwd,
+        "env": exercise.env,
         "fs": exercise.starting_fs(),
-        "checks": [c.model_dump() for c in exercise.checks],
+        "processes": [
+            {"command": p.command, "user": p.user or exercise.user, "cpu": p.cpu, "mem": p.mem, "ignores": p.ignores}
+            for p in exercise.processes
+        ],
+        "checks": [c.model_dump(by_alias=True) for c in exercise.checks],
         "success": exercise.success,
     }

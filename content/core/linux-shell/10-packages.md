@@ -1,4 +1,6 @@
 ---
+# No console task (#37): a simulated apt/dpkg would teach the command names but not what
+# matters (real repositories, versions, dependencies). The "Try it" on a real machine covers it.
 title: Installing software with apt
 minutes: 15
 story: |

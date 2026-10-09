@@ -40,6 +40,34 @@ quiz:
       `source` (or `.`) runs the file inside your current shell, so its changes take effect
       there. Running it as `bash ~/.bashrc` would apply them to a child shell that exits
       immediately.
+terminal:
+  task: |
+    The navigation console runs the wrong `python3`. There are three on this machine, and
+    the one the navigators need is `/opt/nav/bin/python3`.
+
+    1. Put `/opt/nav/bin` **first** on your `PATH`, then write `python3 --version`'s output
+       to `nav.txt` in your home directory.
+    2. Make it stick: add the line that does it to `~/.bashrc`, so every new shell gets it.
+  cwd: /home/cadet
+  files:
+    - {path: /home/cadet, type: dir}
+    - {path: /home/cadet/.bashrc, contents: "# ~/.bashrc: read by every new interactive shell\n"}
+    - {path: /usr/local/bin/python3, owner: root, group: root, mode: "755", contents: "#!/bin/bash\necho 'Python 3.8.10 (left over from testing)'\n"}
+    - {path: /usr/bin/python3, owner: root, group: root, mode: "755", contents: "#!/bin/bash\necho 'Python 3.12.3'\n"}
+    - {path: /opt/nav/bin/python3, owner: root, group: root, mode: "755", contents: "#!/bin/bash\necho 'Python 3.12.3 (navigation build)'\n"}
+  checks:
+    - {contains: /home/cadet/nav.txt, text: navigation build}
+    - {contains: /home/cadet/.bashrc, text: /opt/nav/bin}
+  success: |-
+    "That's the build the course plots were tested on," Okafor says. "And now it'll still be there tomorrow."
+  solution:
+    - type -a python3
+    - python3 --version
+    - 'export PATH="/opt/nav/bin:$PATH"'
+    - which python3
+    - python3 --version > nav.txt
+    - |-
+      echo 'export PATH="/opt/nav/bin:$PATH"' >> ~/.bashrc
 cards:
   - front: Shell variable vs environment variable
     back: "`NAME=x` is visible only to this shell. `export NAME=x` is also inherited by every program started from it."

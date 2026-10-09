@@ -38,6 +38,38 @@ quiz:
       The Docker daemon runs as root and does what group members ask, including `docker run -v
       /:/host …`. Treat `docker` group membership like `sudo`. The droplet's `deploy` user is in
       it on purpose and has nothing else.
+terminal:
+  task: |
+    The airlock controller only takes orders from members of the `airlock` group. Add
+    yourself to it, and **append**: if you replace your groups instead, you'll lose `sudo` with
+    them. Your password for `sudo` is `meridian`.
+
+    Then Okafor wants to know which login shell the `airlock` service account has. Write it,
+    and nothing else, to `airlock-shell.txt` in your home directory. It's field 7 of the
+    account's line in `/etc/passwd`.
+  cwd: /home/cadet
+  groups: [sudo]
+  password: meridian
+  accounts:
+    - {name: airlock, uid: 990, comment: Airlock controller, home: /var/lib/airlock}
+  files:
+    - {path: /home/cadet, type: dir}
+    - {path: /var/lib/airlock, type: dir, owner: airlock, group: airlock, mode: "750"}
+    - {path: /var/lib/airlock/doors.conf, owner: airlock, group: airlock, mode: "640", contents: "outer = sealed\ninner = sealed\n"}
+  checks:
+    - {contains: /etc/group, text: "airlock:x:990:cadet"}
+    - {contains: /etc/group, text: "sudo:x:27:cadet"}
+    - {contains: /home/cadet/airlock-shell.txt, text: /usr/sbin/nologin}
+  success: |-
+    "Welcome to the airlock group," Okafor says. "It takes effect at your next login, so I'll sign you in fresh at the start of your next shift."
+  solution:
+    - id
+    - getent group airlock sudo
+    - sudo usermod -aG airlock cadet
+    - meridian
+    - getent group airlock sudo
+    - id cadet
+    - 'grep airlock /etc/passwd | cut -d: -f7 > airlock-shell.txt'
 cards:
   - front: How do you see your user, UID and groups?
     back: "`id` (or `whoami` for just the name, `groups` for just the groups)."

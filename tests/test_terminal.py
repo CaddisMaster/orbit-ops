@@ -276,8 +276,12 @@ def test_the_server_agrees_with_the_shared_check_cases():
     data = json.loads((FIXTURES / "check_cases.json").read_text())
     state = {p: Node(**n) for p, n in data["state"].items()}
     adapter = TypeAdapter(TerminalCheck)
+    from app.terminal import Process
+
+    processes = [Process(**p) for p in data["processes"]]
     for case in data["cases"]:
-        assert passes(adapter.validate_python(case["check"]), state, data["cwd"]) is case["expect"], case["name"]
+        check = adapter.validate_python(case["check"])
+        assert passes(check, state, data["cwd"], processes) is case["expect"], case["name"]
 
 
 def test_a_cwd_check_must_name_a_starting_directory(tmp_path):
@@ -297,3 +301,92 @@ def test_a_cwd_check_is_graded_against_where_the_console_ended(logged_in, tmp_pa
         assert [a[3]["cwd"] for a in _attempts(user.id)] == ["/station", "/"]
     finally:
         app.dependency_overrides.pop(get_catalog, None)
+
+
+# --- #37: users, environment and processes -------------------------------------------------
+@pytest.mark.criterion(37, "The new modules have console tasks")
+def test_users_processes_and_environment_modules_have_console_tasks():
+    unit = load_catalog().unit_modules("linux-shell")
+    assert {1, 2, 3, 4, 5, 6, 7, 8, 9} <= {m.position for m in unit if m.terminal}
+    # ...each with a reference solution, which tests/js/solutions.test.js runs.
+    assert all(m.terminal.solution for m in unit if m.terminal)
+
+
+def test_the_account_files_are_generated_from_the_exercise():
+    from app.content.schema import TerminalExercise
+
+    ex = TerminalExercise(
+        task="t", cwd="/home/cadet", groups=["sudo", "airlock", "docker"], password="pw",
+        accounts=[{"name": "airlock", "uid": 990, "comment": "Airlock", "home": "/var/lib/airlock"}],
+        files=[{"path": "/home/cadet", "type": "dir"}], checks=[{"cwd": "/home/cadet"}], solution=["pwd"],
+    )
+    fs = ex.starting_fs()
+    assert fs["/etc/passwd"]["contents"] == (
+        "root:x:0:0:root:/root:/bin/bash\n"
+        "airlock:x:990:990:Airlock:/var/lib/airlock:/usr/sbin/nologin\n"
+        "cadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n"
+    )
+    assert fs["/etc/group"]["contents"] == (
+        "root:x:0:\nsudo:x:27:cadet\nairlock:x:990:cadet\ndocker:x:998:cadet\ncrew:x:1000:\n"
+    )
+    assert fs["/root"]["mode"] == 0o700
+
+
+def test_a_listed_account_file_wins_over_the_generated_one(tmp_path):
+    _write(tmp_path, TERMINAL.replace(
+        "    - {path: /station, type: dir}\n",
+        '    - {path: /station, type: dir}\n    - {path: /etc/passwd, contents: "custom\\n"}\n',
+    ))
+    fs = load_catalog(tmp_path).modules["two"].terminal.starting_fs()
+    assert fs["/etc/passwd"]["contents"] == "custom\n"
+
+
+@pytest.mark.parametrize(
+    ("add", "check", "expect"),
+    [
+        ("", "{stopped: warp-core}", "checks.0 (stopped warp-core): no starting process is called warp-core"),
+        ("", "{signalled: warp-core, with: TERM}", "no starting process is called warp-core"),
+        ("  processes:\n    - {command: warp-core, user: nobody}\n", "{running: warp-core}", "runs as nobody, which is not an account"),
+        ("  processes:\n    - {command: warp-core, ignores: [KILL]}\n", "{stopped: warp-core}", "terminal.processes.0.ignores.0"),
+        ("", "{signalled: x, with: STOP}", "terminal.checks.0"),
+    ],
+)
+def test_bad_process_exercises_are_reported(tmp_path, add, check, expect):
+    _write(tmp_path, TERMINAL.replace("  files:\n", add + "  files:\n").replace('{mode: /station/scrubber.conf, equals: "600"}', check))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert expect in str(exc.value)
+
+
+def test_process_checks_are_graded_from_the_reported_process_table(logged_in, tmp_path, user):
+    _write(tmp_path, TERMINAL.replace("  files:\n", "  processes:\n    - {command: o2-diagnostics, ignores: [TERM]}\n  files:\n").replace(
+        '    - {mode: /station/scrubber.conf, equals: "600"}',
+        "    - {stopped: o2-diagnostics}\n    - {signalled: o2-diagnostics, with: TERM}",
+    ))
+    app.dependency_overrides[get_catalog] = lambda: load_catalog(tmp_path)
+    try:
+        complete(logged_in, "one")
+        proc = {"pid": 400, "user": "cadet", "command": "o2-diagnostics"}
+
+        def report(alive, signals):
+            return logged_in.post(
+                "/modules/two/terminal",
+                content=json.dumps({"state": _state(0o644), "cwd": "/station", "passed": True,
+                                    "processes": [{**proc, "alive": alive, "signals": signals}]}),
+                headers={"Content-Type": "application/json", "X-CSRF-Token": csrf(logged_in)},
+            ).json()
+
+        assert report(True, ["TERM"]) == {"correct": False}  # it ignored TERM and is still running
+        assert report(False, ["KILL"]) == {"correct": False}  # stopped, but never asked politely
+        assert report(False, ["TERM", "KILL"]) == {"correct": True}
+        assert _attempts(user.id)[-1][3]["processes"] == [{**proc, "alive": False, "signals": ["TERM", "KILL"]}]
+    finally:
+        app.dependency_overrides.pop(get_catalog, None)
+
+
+def test_the_sudo_password_is_sent_only_for_exercises_that_set_one(tmp_path):
+    from app.terminal import client_spec
+
+    _write(tmp_path)
+    assert client_spec(load_catalog(tmp_path).modules["two"].terminal)["password"] is None
+    assert client_spec(load_catalog().modules["users-and-sudo"].terminal)["password"] == "meridian"
