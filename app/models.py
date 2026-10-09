@@ -64,3 +64,23 @@ class ExerciseAttempt(Base):
     submitted: Mapped[list] = mapped_column(JSONB)
     correct: Mapped[bool]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class XpEvent(Base):
+    """The XP ledger: one row per award (or, later, penalty). Totals, levels and
+    ranks are always summed from here and never stored, so every point can be
+    traced to what earned it. (reason, ref) is unique per user, which is what
+    makes an award idempotent: the database refuses to pay twice."""
+
+    __tablename__ = "xp_events"
+    __table_args__ = (
+        UniqueConstraint("user_id", "reason", "ref"),
+        CheckConstraint("amount <> 0", name="xp_events_amount_nonzero"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    amount: Mapped[int]  # negative for penalties (hints, v0.5.0)
+    reason: Mapped[str] = mapped_column(String(32))  # "module_complete", "perfect_quiz", …
+    ref: Mapped[str] = mapped_column(String(128))  # what earned it, e.g. the module slug
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

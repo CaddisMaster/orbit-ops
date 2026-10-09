@@ -2,8 +2,10 @@
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
+from app.models import XpEvent
 
 ROLE = "orbit_app"
 
@@ -16,10 +18,10 @@ def _tables() -> list[str]:
 
 
 def test_there_are_tables_to_check():
-    assert {"users", "module_progress", "exercise_attempts"} <= set(_tables())
+    assert {"users", "module_progress", "exercise_attempts", "xp_events"} <= set(_tables())
 
 
-@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts"])
+@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events"])
 def test_app_role_has_dml_but_not_truncate_on_every_table(table):
     # The later tables get their grants from 0002's ALTER DEFAULT PRIVILEGES,
     # not from a GRANT in their own migration. This is what proves that works.
@@ -40,5 +42,25 @@ def test_app_role_cannot_touch_alembic_version_or_create_tables():
 
 def test_app_role_can_use_the_new_sequences():
     with SessionLocal() as db:
-        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq"):
+        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq"):
             assert db.scalar(text("SELECT has_sequence_privilege(:r, :s, 'USAGE')"), {"r": ROLE, "s": seq})
+
+
+def test_the_same_xp_award_cannot_be_recorded_twice(make_user):
+    # Idempotency lives in the schema, so a double submit can't race past an
+    # app-level "already awarded?" check.
+    user = make_user()
+    with SessionLocal() as db:
+        db.add(XpEvent(user_id=user.id, amount=50, reason="module_complete", ref="the-filesystem"))
+        db.commit()
+        db.add(XpEvent(user_id=user.id, amount=50, reason="module_complete", ref="the-filesystem"))
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+def test_a_zero_xp_event_is_refused(make_user):
+    user = make_user()
+    with SessionLocal() as db:
+        db.add(XpEvent(user_id=user.id, amount=0, reason="module_complete", ref="the-filesystem"))
+        with pytest.raises(IntegrityError):
+            db.commit()

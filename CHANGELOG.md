@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- A database table for the XP ledger: every award is a row saying what earned it, and totals,
+  levels and ranks will be summed from it rather than stored. The database refuses to record the
+  same award twice (#21).
+
 ## [0.2.0] — 2026-10-08
 
 The learn loop: the full syllabus, Unit 1.1's ten Linux modules, quizzes that complete a
