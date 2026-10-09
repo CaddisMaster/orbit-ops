@@ -111,5 +111,20 @@ class TrackSpec(_Strict):
     units: Annotated[list[UnitSpec], Field(min_length=1)]
 
 
+class RankSpec(_Strict):
+    title: Text
+    level: Annotated[int, Field(ge=1)]  # the level at which this rank is reached
+
+
 class Syllabus(_Strict):
     tracks: Annotated[list[TrackSpec], Field(min_length=1)]
+    ranks: list[RankSpec] = []  # rank titles by level band, lowest first
+
+    @model_validator(mode="after")
+    def _ranks_ascend_from_level_1(self):
+        if self.ranks and self.ranks[0].level != 1:
+            raise ValueError(f"ranks: the first rank must start at level 1, not {self.ranks[0].level}")
+        levels = [r.level for r in self.ranks]
+        if any(b <= a for a, b in zip(levels, levels[1:], strict=False)):
+            raise ValueError(f"ranks: levels must strictly ascend, got {levels}")
+        return self

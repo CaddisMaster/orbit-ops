@@ -22,6 +22,9 @@ content/
 ## syllabus.yml
 
 ```yaml
+ranks:                         # rank titles by level band; first at level 1, levels ascending
+  - {title: Cadet, level: 1}
+  - {title: Technician, level: 3}
 tracks:
   - slug: core                 # lowercase-hyphenated
     title: Core Systems
@@ -40,7 +43,7 @@ tracks:
 ---
 title: The filesystem tree
 minutes: 15            # 5–30; aim for 15–20 including the quiz
-xp: 50                 # optional, default 50
+xp: 50                 # optional, default 50; awarded once on completion (+20 for a perfect quiz)
 story: |               # the mission-log briefing (Markdown)
   **Mission log, day 1.** …
 quiz:                  # 1–8 questions; aim for 3–5

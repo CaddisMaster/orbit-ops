@@ -3,6 +3,16 @@
 #
 # A unit listed here with no module files yet shows as "Coming soon", and any
 # unit that requires it stays locked until its content exists.
+# Rank titles by level band, lowest first. The level curve is in app/game/levels.py
+# (level 3 = 283 XP, level 10 = 2700 XP, level 21 = 8944 XP).
+ranks:
+  - {title: Cadet, level: 1}
+  - {title: Technician, level: 3}
+  - {title: Engineer, level: 6}
+  - {title: Systems Officer, level: 10}
+  - {title: Chief Engineer, level: 15}
+  - {title: Station Commander, level: 21}
+
 tracks:
   - slug: core
     title: Core Systems

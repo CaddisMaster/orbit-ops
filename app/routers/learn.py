@@ -10,6 +10,8 @@ from app import progress
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
+from app.game import xp
+from app.game.levels import standing
 from app.models import User
 from app.security import require_user
 from app.templating import templates
@@ -107,9 +109,17 @@ def answer_question(
         )
 
     result = progress.record_answer(db, user.id, module, index, answer, correct)
+    record = progress.get_progress(db, user.id, slug)
+    xp_gained, promoted_to = 0, None
+    if result.just_completed:
+        # Same transaction as the completion: both land or neither does.
+        before = standing(xp.total_xp(db, user.id), catalog.ranks)
+        xp_gained = sum(xp.award(db, user.id, a) for a in xp.completion_awards(module, record.score))
+        after = standing(before.xp + xp_gained, catalog.ranks)
+        if after.rank != before.rank:
+            promoted_to = after.rank
     db.commit()
     completed = progress.completed_slugs(db, user.id)
-    record = progress.get_progress(db, user.id, slug)
     return templates.TemplateResponse(
         request,
         "partials/_answered.html",
@@ -118,6 +128,8 @@ def answer_question(
             "attempt": result.attempt,
             "just_completed": result.just_completed,
             "record": record,
+            "xp_gained": xp_gained,
+            "promoted_to": promoted_to,
             "next": progress.next_module(catalog, slug, completed) if result.just_completed else None,
         },
     )

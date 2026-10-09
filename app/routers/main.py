@@ -9,6 +9,8 @@ from app import progress
 from app.config import get_settings
 from app.content import Catalog, get_catalog
 from app.db import get_db
+from app.game.levels import standing
+from app.game.xp import total_xp
 from app.models import User
 from app.security import require_user
 from app.templating import templates
@@ -46,5 +48,6 @@ def dashboard(
             "mission_unit": catalog.units[mission.unit] if mission else None,
             "done": len(completed & catalog.modules.keys()),
             "total": len(catalog.modules),
+            "standing": standing(total_xp(db, user.id), catalog.ranks),
         },
     )

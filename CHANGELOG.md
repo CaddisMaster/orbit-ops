@@ -10,6 +10,11 @@ and why it matters, not what the diff says.
 - A database table for the XP ledger: every award is a row saying what earned it, and totals,
   levels and ranks will be summed from it rather than stored. The database refuses to record the
   same award twice (#21).
+- XP and ranks. Completing a module earns its XP (50 by default), plus 20 for a perfect quiz,
+  once per module no matter how often it is re-answered. Levels follow a curve (level 2 at 100
+  XP, level 10 at 2700) and rank titles run from Cadet to Station Commander, defined in
+  `syllabus.yml`. The completion message shows the XP earned and announces promotions; the
+  dashboard shows level, rank and a bar to the next level (#21).
 
 ## [0.2.0] — 2026-10-08
 
