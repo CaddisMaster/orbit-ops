@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Station map · Orbit Ops{% endblock %}
+{% block content %}
+<p class="eyebrow">Station map</p>
+<h1>The <i>Meridian</i></h1>
+<p class="muted">Each deck is a track and each node a unit. Lit units are complete, outlined ones are ready to start, and dimmed ones are still waiting on what feeds into them.</p>
+
+{# Inline SVG, server-rendered: no JavaScript, no CSP change. Layers, bottom
+   up: deck bands, edges, then deck names and nodes, so no edge covers text.
+   Every node is a real link; the list below is the text equivalent. #}
+<figure class="station-map">
+  <svg viewBox="0 0 {{ station.width }} {{ station.height | round(1) }}" role="img"
+       aria-labelledby="map-title" xmlns="http://www.w3.org/2000/svg">
+    <title id="map-title">Map of the station: {{ station.decks | length }} decks, one node per unit</title>
+    {% for deck in station.decks %}
+    <g class="deck deck--{{ deck.slug }}">
+      <rect class="deck-band" x="1" y="{{ deck.y + 1 }}" width="{{ station.width - 2 }}" height="{{ deck.height - 2 }}" rx="12"/>
+    </g>
+    {% endfor %}
+    <g class="edges">
+      {% for edge in station.edges %}
+      <line class="edge{{ ' is-lit' if edge.lit }}" data-from="{{ edge.source }}" data-to="{{ edge.target }}"
+            x1="{{ edge.x1 | round(1) }}" y1="{{ edge.y1 | round(1) }}" x2="{{ edge.x2 | round(1) }}" y2="{{ edge.y2 | round(1) }}"/>
+      {% endfor %}
+    </g>
+    {% for deck in station.decks %}
+    <g class="deck-nodes deck--{{ deck.slug }}">
+      <text class="deck-name" x="16" y="{{ deck.y + 26 }}">{{ deck.name }}</text>
+      <text class="deck-track" x="{{ station.width - 16 }}" y="{{ deck.y + 26 }}" text-anchor="end">{{ deck.track }}</text>
+      {% for node in deck.nodes %}
+      <a class="node {{ node.state }}" href="{{ node.href }}" data-unit="{{ node.slug }}">
+        <title>{{ node.tooltip }}</title>
+        <rect class="hit" x="{{ (node.x - 44) | round(1) }}" y="{{ (node.y - 22) | round(1) }}" width="88" height="88"/>
+        <circle cx="{{ node.x | round(1) }}" cy="{{ node.y | round(1) }}" r="18"/>
+        <text class="node-code" x="{{ node.x | round(1) }}" y="{{ (node.y + 4) | round(1) }}" text-anchor="middle">{{ node.code }}</text>
+        <text class="node-label" x="{{ node.x | round(1) }}" y="{{ (node.y + 34) | round(1) }}" text-anchor="middle">
+          {%- for line in node.label %}<tspan x="{{ node.x | round(1) }}" dy="{{ 0 if loop.first else 13 }}">{{ line }}</tspan>{% endfor -%}
+        </text>
+      </a>
+      {% endfor %}
+    </g>
+    {% endfor %}
+  </svg>
+</figure>
+
+<section class="card map-list" aria-labelledby="map-list-title">
+  <h2 id="map-list-title">Every unit, by deck</h2>
+  {% for deck in station.decks %}
+  <h3>{{ deck.name }} <span class="muted">· {{ deck.track }}</span></h3>
+  <ul class="modules">
+    {% for node in deck.nodes %}
+    <li class="{{ node.state }}"><a href="{{ node.href }}">{{ node.code }} {{ node.title }}</a>
+      <span class="muted">· {{ node.state }}{% if node.total %} · {{ node.done }}/{{ node.total }}{% else %} · coming soon{% endif %}{% if node.waiting_on %} · waiting on {{ node.waiting_on | join(", ") }}{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+</section>
+{% endblock %}

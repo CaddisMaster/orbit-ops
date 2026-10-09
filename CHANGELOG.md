@@ -30,6 +30,14 @@ and why it matters, not what the diff says.
   announces new badges, the dashboard shows the three most recent, and a new Badges page lists
   every badge: earned ones with their date, locked ones dimmed with what it takes to earn them.
   A unit finished before badges existed earns its badge at the next module completion (#23).
+- A station map (`/map`, linked from the nav and the dashboard). The syllabus is drawn as the
+  *Meridian*: one deck per track, one node per unit, and a line from each prerequisite to the
+  unit that needs it. Complete units are lit, ones ready to start pulse, and locked ones are
+  dimmed; each node links to its unit on the syllabus and its tooltip gives progress and what
+  it's waiting on. A plain list below the drawing carries the same information. Positions come
+  from `map: {x, y}` in `syllabus.yml`, with an automatic layout for units without one. No
+  JavaScript, and the CSP is unchanged (#24).
+- On a narrow phone the top bar shows only the ◎ mark, to fit the four links (#24).
 
 ## [0.2.0] — 2026-10-08
 

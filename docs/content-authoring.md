@@ -35,6 +35,7 @@ tracks:
         title: Linux & the shell
         briefing: Story text for the unit (Markdown).
         prerequisites: []      # unit slugs that must be finished first; no cycles
+        map: {x: 50, y: 10}    # optional: where it sits on its deck of /map, 0–100 each way
 badges:                        # in the order the badges page shows them
   - slug: unit-linux-shell     # permanent ID, stored when earned: never rename an earned badge
     name: Air Scrubbers Online
@@ -42,6 +43,12 @@ badges:                        # in the order the badges page shows them
     emblem: life-support       # life-support | fabrication | fleet | shields | flame | star
     rule: {unit_complete: linux-shell}
 ```
+
+`map` positions a unit within its track's deck on the station map, as percentages of the
+deck's drawing area (`x` left to right, `y` top to bottom). Anything outside 0–100 fails
+validation, naming the unit. Leave it out and the unit goes on an automatic three-column grid,
+so a new unit always appears. Labels under the nodes drop any subtitle after a colon and wrap
+at about 16 characters, so place nodes about 25 apart across a row.
 
 A badge's `rule` is one of a fixed set, so content picks the rule but cannot run code:
 
