@@ -215,12 +215,18 @@ comms:
     - {from: okafor, text: "That's the one."}
   complete:
     - {from: mission, text: "Supply shuttle *Kestrel* on final approach."}
-  window: {complete: shuttle-dock}     # the set: shuttle-dock
+  window: {complete: shuttle-dock}     # any beat; the set: shuttle-dock, relay-pass, debris-drift, aurora
 ```
 
 - `from` is a slug from `cast:` in `syllabus.yml` (Okafor, MERIDIAN, Mission Control), or
   validation fails naming the file and the character. `text` is inline Markdown.
 - `console_done` needs a `terminal:` exercise in the same module.
+- A window event plays once, when its beat happens: `open` on the first visit, `console_done`
+  with the console's first pass, `complete` with the completing answer. Unit 1.1 uses
+  `relay-pass` (02 open), `shuttle-dock` (04 complete), `debris-drift` (06 open) and `aurora`
+  (10 complete, the end of the unit).
+- **If MERIDIAN quotes a number** (CPU, attempts, a time), it must be true of the exercise:
+  `test_the_stations_figures_match_the_exercises` checks Unit 1.1's.
 - ⚠️ **Quote any `text` with a comma** when using the `{from: …, text: …}` form: YAML splits an
   unquoted `text: Good, now go` at the comma.
 - Write like chat, not like a lesson: a sentence or two per message, three or four messages a
@@ -237,8 +243,9 @@ cast:
 ```
 
 A new character needs an avatar sprite in `art/sprites.py` (and its name in `Avatar` in
-`app/content/schema.py`); a new window event needs a sprite and keyframes in `style.css`
-(and its name in `WindowEvent`). The art is code: change it in `art/`, run
+`app/content/schema.py`); a new window event needs a sprite in `art/sprites.py`, its entry in
+`WINDOW_SPRITES` (`app/comms.py`), its name in `WindowEvent`, and a rule plus keyframes in
+`style.css` whose `left`/`top` also make a sensible still for reduced motion. The art is code: change it in `art/`, run
 `docker compose exec -u "$(id -u):$(id -g)" web python -m art.build`, and commit both
 (`tests/test_art.py` fails if the PNGs and the scripts disagree).
 

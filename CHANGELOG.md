@@ -7,6 +7,14 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Added
+- All of Unit 1.1 is told on the desk's comms log (#45): ten days of bringing the *Meridian*'s
+  life support back, from the first boot to the last green light, with Okafor, MERIDIAN and
+  Mission Control. Every briefing, every console task's reply and every debrief is a short
+  conversation, and the numbers the station quotes are the ones in your console.
+- Three more things happen outside the window: a relay satellite rises as comms come back
+  (navigating), a debris field drifts past and sets off the runaway scan (processes and signals),
+  and an aurora shimmers over the Earth when the unit is finished (packages). Window events can
+  now play at any beat: opening a module, passing its console task, or completing it (#45).
 - The desk's monitor looks like a computer (#46): a pixel-art gunmetal case with a bevelled
   bezel, a "MERIDIAN" maker's plate, buttons and a power light in the deck's colour, on a neck
   and foot on the desk. The screen is glass, with faint scanlines, a soft glare and darker

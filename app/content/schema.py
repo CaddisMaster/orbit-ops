@@ -410,7 +410,7 @@ class BadgeSpec(_Strict):
 # The comms log (#38): the cast, and the messages a module sends at its beats.
 # ---------------------------------------------------------------------------
 Avatar = Literal["okafor", "meridian", "mission"]  # the sprites in art/sprites.py
-WindowEvent = Literal["shuttle-dock"]  # the animations in style.css, "Window events"
+WindowEvent = Literal["shuttle-dock", "relay-pass", "debris-drift", "aurora"]  # app/comms.py WINDOW_SPRITES
 
 
 class CastSpec(_Strict):

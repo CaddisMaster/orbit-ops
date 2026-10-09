@@ -32,7 +32,7 @@ def test_a_life_support_module_carries_its_deck_and_unit_emblem(logged_in):
     page = logged_in.get("/modules/the-filesystem").text
     assert '<body class="deck--core"' in page
     assert re.search(r'<header class="card briefing">\s*<div class="briefing-head">\s*<svg class="unit-emblem" data-emblem="scrubber"', page)
-    assert "Incoming transmission · Life Support" in page
+    assert "Briefing incoming on comms" in page  # its briefing is on comms (#45)
 
 
 def test_every_deck_has_its_own_colour():
@@ -86,12 +86,13 @@ def test_the_csp_is_unchanged_and_nothing_inline_needs_it(logged_in, path):
     assert re.search(r'<script src="[^"]*/static/js/briefing.js" defer></script>', html)  # served, not inline
 
 
-def test_the_briefing_is_served_in_full_without_javascript(logged_in):
-    # briefing.js only hides and re-reveals text the server already sent, so
-    # with no JavaScript (or reduced motion) the whole story is simply there.
-    page = logged_in.get("/modules/the-filesystem").text
+def test_the_briefing_is_served_in_full_without_javascript(logged_in, xp_curriculum):  # noqa: F811
+    # A module without comms keeps its typed transmission. briefing.js only
+    # hides and re-reveals text the server already sent, so with no JavaScript
+    # (or reduced motion) the whole story is simply there.
+    page = logged_in.get("/modules/one").text
     story = re.search(r'<div class="story transmission" data-transmission>(.*?)</div>', page, re.S).group(1)
-    assert "Mission log, day 1." in story
+    assert "Day." in story
     assert "is-typing" not in page
 
 

@@ -57,6 +57,18 @@ terminal:
     - cat .okafor
     - cd ../../docking/bay-2
     - pwd
+comms:
+  open:
+    - {from: meridian, text: "RELAY SATELLITE RL-7 · RISING · COMMS WINDOW 14 MIN"}
+    - {from: okafor, text: "No map, no menu. Just a cursor that knows where it is. Ask it."}
+    - {from: okafor, text: "I left you a note in the relay's directory. You'll have to look harder than `ls` to see it."}
+  console_done:
+    - {from: okafor, text: "Bay 2. You found the dotfile. Most people walk straight past those."}
+    - {from: mission, text: "*Meridian*, this is Mission Control. We have you on the relay. Good to hear from you."}
+  complete:
+    - {from: mission, text: "Send us everything from the outage you can. We'll start the analysis on our side."}
+    - {from: okafor, text: "You heard them. Tomorrow we clean up the cargo bay."}
+  window: {open: relay-pass}
 cards:
   - front: What does `ls -lah` show?
     back: Every entry including hidden ones (`-a`), in long format (`-l`), with human-readable sizes (`-h`).

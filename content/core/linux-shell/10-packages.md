@@ -48,6 +48,15 @@ quiz:
     explain: >-
       `dpkg` is the low-level tool underneath apt. `dpkg -L pkg` lists a package's files, and
       `dpkg -S /path` tells you which package owns a file.
+comms:
+  open:
+    - {from: okafor, text: "Life support is stable. Last job: the console's missing half the tools you'd expect."}
+    - {from: okafor, text: "There's a supply depot for that. Learn to order from it properly, and read the label before you install."}
+  complete:
+    - {from: meridian, text: "LIFE SUPPORT · ALL SYSTEMS NOMINAL · DECK ONLINE"}
+    - {from: mission, text: "*Meridian*, Mission Control. That's every life-support system green. Outstanding work, cadet."}
+    - {from: okafor, text: "Look out the window. You've earned that one."}
+  window: {complete: aurora}
 cards:
   - front: "`apt update` vs `apt upgrade`"
     back: "`update` refreshes the package lists; `upgrade` installs newer versions of what's installed."

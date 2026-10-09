@@ -78,6 +78,7 @@ def module_page(
         flash(request, f"“{module.title}” is still locked. {progress.blocker(catalog, slug, completed)}")
         return RedirectResponse("/", status_code=303)
 
+    first_visit = progress.get_progress(db, user.id, slug) is None
     record = progress.start_module(db, user.id, slug)
     db.commit()
     unit = catalog.units[module.unit]
@@ -94,6 +95,8 @@ def module_page(
             "record": record,
             "next": progress.next_module(catalog, slug, completed) if record.status == "complete" else None,
             "terminal_spec": terminal.client_spec(module.terminal) if module.terminal else None,
+            # A window event at the `open` beat plays on the first visit only (#45).
+            "window_event": module.comms.window.get("open") if module.comms and first_visit else None,
         },
     )
 
@@ -137,6 +140,10 @@ def terminal_report(
         # The first time the task passes, the crew answers on the comms log (#38).
         body["comms"] = templates.get_template("partials/_comms_lines.html").render(
             lines=comms.beat(catalog, module, "console_done", new=True), request=request
+        )
+    if first_pass and module.comms and (event := module.comms.window.get("console_done")):
+        body["window"] = templates.get_template("partials/_window_event.html").render(
+            event=event, oob=False, request=request
         )
     return JSONResponse(body)
 
