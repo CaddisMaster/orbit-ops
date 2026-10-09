@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "partials/_emblem.html" import emblem %}
+{% block title %}Badges · Orbit Ops{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow">Commendations</p>
+  <h1>Badges</h1>
+  <p class="muted">{{ held }} of {{ shelf | length }} earned.</p>
+  <ul class="badge-grid">
+    {% for item in shelf %}
+    <li class="badge {{ 'earned' if item.earned_on else 'locked' }}">
+      {{ emblem(item.badge.emblem) }}
+      <div>
+        <p class="badge-name">{{ item.badge.name }}</p>
+        <p class="badge-desc">{{ item.badge.description }}</p>
+        {% if item.earned_on %}
+        <p class="badge-date">Earned <time datetime="{{ item.earned_on.isoformat() }}">{{ item.earned_on.strftime("%-d %b %Y") }}</time></p>
+        {% else %}
+        <p class="badge-date">Locked</p>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

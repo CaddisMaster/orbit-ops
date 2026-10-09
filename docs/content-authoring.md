@@ -35,7 +35,27 @@ tracks:
         title: Linux & the shell
         briefing: Story text for the unit (Markdown).
         prerequisites: []      # unit slugs that must be finished first; no cycles
+badges:                        # in the order the badges page shows them
+  - slug: unit-linux-shell     # permanent ID, stored when earned: never rename an earned badge
+    name: Air Scrubbers Online
+    description: Complete the unit "Linux & the shell".   # shown even while locked
+    emblem: life-support       # life-support | fabrication | fleet | shields | flame | star
+    rule: {unit_complete: linux-shell}
 ```
+
+A badge's `rule` is one of a fixed set, so content picks the rule but cannot run code:
+
+| Rule | Earned when |
+|---|---|
+| `{unit_complete: <unit slug>}` | every module in that unit is complete (the unit must exist) |
+| `{streak: <days>}` | the daily streak reaches that many days (2 or more) |
+| `{first_perfect_quiz: true}` | any module is completed with every quiz answer right first time |
+
+Rules are checked after every module completion against everything the learner has done, so a
+badge added later is earned at the learner's next completion. Emblems are inline SVGs in
+`app/templates/partials/_emblem.html`; adding one means adding it there and to `Emblem` in
+`app/content/schema.py`. A new *kind* of rule is code: a model in the schema and a case in
+`app/game/badges.py`.
 
 ## A module
 

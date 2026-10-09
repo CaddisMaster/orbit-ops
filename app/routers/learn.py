@@ -10,7 +10,7 @@ from app import progress
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
-from app.game import streaks, xp
+from app.game import badges, streaks, xp
 from app.game.levels import standing
 from app.models import User
 from app.security import require_user
@@ -110,7 +110,7 @@ def answer_question(
 
     result = progress.record_answer(db, user.id, module, index, answer, correct)
     record = progress.get_progress(db, user.id, slug)
-    xp_gained, promoted_to = 0, None
+    xp_gained, promoted_to, new_badges = 0, None, []
     if result.just_completed:
         # Same transaction as the completion: all of it lands or none does.
         streaks.mark_active(db, user.id, streaks.today())
@@ -119,6 +119,12 @@ def answer_question(
         after = standing(before.xp + xp_gained, catalog.ranks)
         if after.rank != before.rank:
             promoted_to = after.rank
+        facts = badges.Facts(
+            completed=progress.completed_slugs(db, user.id),  # autoflush: includes this module
+            streak=streaks.current_streak(db, user.id, streaks.today()).length,
+            perfect_quiz=badges.has_perfect_quiz(db, user.id),
+        )
+        new_badges = badges.award(db, user.id, catalog, facts)
     db.commit()
     completed = progress.completed_slugs(db, user.id)
     return templates.TemplateResponse(
@@ -131,6 +137,7 @@ def answer_question(
             "record": record,
             "xp_gained": xp_gained,
             "promoted_to": promoted_to,
+            "new_badges": new_badges,
             "next": progress.next_module(catalog, slug, completed) if result.just_completed else None,
         },
     )

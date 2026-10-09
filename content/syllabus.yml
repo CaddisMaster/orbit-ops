@@ -172,3 +172,133 @@ tracks:
           The shields are only as strong as their weakest dependency. Scan
           what you ship, keep secrets out of the repo, and prove where every
           artefact came from.
+
+# Badges, in the order the badges page shows them. `rule` names one evaluator in
+# app/game/badges.py: {unit_complete: <unit slug>}, {streak: <days>} or
+# {first_perfect_quiz: true}. `emblem` is one of the inline SVGs in
+# app/templates/partials/_emblem.html. A badge's slug is its permanent ID:
+# never rename one that has been earned.
+badges:
+  - slug: first-perfect-quiz
+    name: Clean Readout
+    description: Finish a module with every quiz answer right first time.
+    emblem: star
+    rule: {first_perfect_quiz: true}
+  - slug: streak-7
+    name: First Watch
+    description: Keep a 7-day streak.
+    emblem: flame
+    rule: {streak: 7}
+  - slug: streak-30
+    name: Long Haul
+    description: Keep a 30-day streak.
+    emblem: flame
+    rule: {streak: 30}
+  - slug: streak-100
+    name: Permanent Crew
+    description: Keep a 100-day streak.
+    emblem: flame
+    rule: {streak: 100}
+
+  # Core Systems: Life Support
+  - slug: unit-linux-shell
+    name: Air Scrubbers Online
+    description: Complete the unit "Linux & the shell".
+    emblem: life-support
+    rule: {unit_complete: linux-shell}
+  - slug: unit-bash-scripting
+    name: Routine Automated
+    description: Complete the unit "Bash scripting".
+    emblem: life-support
+    rule: {unit_complete: bash-scripting}
+  - slug: unit-git
+    name: Every Change Logged
+    description: Complete the unit "Git".
+    emblem: life-support
+    rule: {unit_complete: git}
+  - slug: unit-networking
+    name: Comms Array Restored
+    description: "Complete the unit \"Networking: DNS, HTTP, TLS & SSH\"."
+    emblem: life-support
+    rule: {unit_complete: networking}
+  - slug: unit-systemd
+    name: Daemons Tamed
+    description: Complete the unit "systemd & services".
+    emblem: life-support
+    rule: {unit_complete: systemd}
+
+  # Python & Containers: Cargo & Fabrication
+  - slug: unit-python-ops
+    name: Fabricator Scripted
+    description: Complete the unit "Python for operations".
+    emblem: fabrication
+    rule: {unit_complete: python-ops}
+  - slug: unit-docker
+    name: Cargo Sealed
+    description: Complete the unit "Docker fundamentals".
+    emblem: fabrication
+    rule: {unit_complete: docker}
+  - slug: unit-dockerfile-hardening
+    name: Hull Reinforced
+    description: Complete the unit "Dockerfile hardening & multi-stage builds".
+    emblem: fabrication
+    rule: {unit_complete: dockerfile-hardening}
+  - slug: unit-compose
+    name: Bay Choreographer
+    description: Complete the unit "Docker Compose".
+    emblem: fabrication
+    rule: {unit_complete: compose}
+
+  # Kubernetes: Fleet Command
+  - slug: unit-k8s-workloads
+    name: Fleet Deployed
+    description: Complete the unit "Pods, Deployments & Services".
+    emblem: fleet
+    rule: {unit_complete: k8s-workloads}
+  - slug: unit-k8s-config
+    name: Sealed Orders
+    description: Complete the unit "Config, Secrets & storage".
+    emblem: fleet
+    rule: {unit_complete: k8s-config}
+  - slug: unit-k8s-ingress
+    name: Docking Control
+    description: Complete the unit "Ingress & cluster networking".
+    emblem: fleet
+    rule: {unit_complete: k8s-ingress}
+  - slug: unit-helm
+    name: At the Helm
+    description: Complete the unit "Helm".
+    emblem: fleet
+    rule: {unit_complete: helm}
+  - slug: unit-k8s-labs
+    name: Live Fire Drill
+    description: "Complete the unit \"Cluster labs: kind & k3s\"."
+    emblem: fleet
+    rule: {unit_complete: k8s-labs}
+
+  # Delivery & Reliability: Comms, Sensors & Shields
+  - slug: unit-github-actions
+    name: Night Shift Retired
+    description: Complete the unit "CI/CD with GitHub Actions".
+    emblem: shields
+    rule: {unit_complete: github-actions}
+  - slug: unit-terraform
+    name: Blueprints Filed
+    description: Complete the unit "Terraform".
+    emblem: shields
+    rule: {unit_complete: terraform}
+  - slug: unit-ansible
+    name: Forty Consoles Aligned
+    description: Complete the unit "Ansible".
+    emblem: shields
+    rule: {unit_complete: ansible}
+  - slug: unit-observability
+    name: Eyes on the Sensors
+    description: "Complete the unit \"Observability: metrics, logs & alerts\"."
+    emblem: shields
+    rule: {unit_complete: observability}
+  - slug: unit-devsecops
+    name: Shields at Full
+    description: "Complete the unit \"DevSecOps: scanning, secrets & supply chain\"."
+    emblem: shields
+    rule: {unit_complete: devsecops}
