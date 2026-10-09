@@ -6,6 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-09
+
+Hands-on and the desk: a station console task in nine of Unit 1.1's ten modules, with sudo,
+processes, the environment, awk and sed, and the whole app on a computer at a pixel-art desk,
+where the crew's messages tell the unit as one story.
+
 ### Added
 - All of Unit 1.1 is told on the desk's comms log (#45): ten days of bringing the *Meridian*'s
   life support back, from the first boot to the last green light, with Okafor, MERIDIAN and
