@@ -25,7 +25,7 @@ Browser ─HTTPS─▶ host Nginx (TLS, learn.seandesmet.com)
 | `app/templating.py` | Jinja env with `csrf_token()` and `app_version` globals |
 | `app/content/` | `schema.py` (Pydantic models for syllabus and module files), `loader.py` (`load_catalog()` → immutable `Catalog`, collecting every problem before raising `ContentError`), `render.py` (Markdown with raw HTML off, plus Pygments classes) |
 | `app/progress.py` | Lock rules and today's mission as **pure functions** of (catalog, completed slugs); `check_answer()`; `record_answer()` (first attempt per question counts; completing scores the module) |
-| `app/game/` | `levels.py`: the level curve and rank bands as **pure functions** of an XP total (`standing()`); `xp.py`: what a completion awards, `award()` (idempotent `INSERT … ON CONFLICT DO NOTHING`) and `total_xp()` |
+| `app/game/` | `levels.py`: the level curve and rank bands as **pure functions** of an XP total (`standing()`); `xp.py`: what a completion awards, `award()` (idempotent `INSERT … ON CONFLICT DO NOTHING`) and `total_xp()`; `streaks.py`: the streak and freezes as a **pure** `compute(days, today)`, plus `mark_active()` and `current_streak()`, which records the freezes a request finds it can spend (no scheduler) |
 | `app/flash.py` | one-shot messages across a redirect, in the session |
 | `app/routers/` | `auth` (login/logout), `main` (dashboard, `/healthz`), `learn` (`/syllabus`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment) |
 
@@ -43,9 +43,10 @@ database never stores content, only learner state keyed by module slug.
 | `users` | id, username (unique), password_hash, session_token, created_at | rotating `session_token` revokes every session |
 | `module_progress` | user_id, module_slug (unique together), status (`in_progress`/`complete`), score 0–100, started_at, completed_at | locked/available is derived, never stored |
 | `exercise_attempts` | user_id, module_slug, kind (`quiz`), item (question index), submitted (JSONB), correct, created_at | full history; the first attempt per item counts |
+| `activity_days` | user_id, day (in `APP_TIMEZONE`; unique with user_id), freeze_used, created_at | a day that counted: active, or a missed day a freeze bridged; the streak is derived |
 | `xp_events` | user_id, amount (≠ 0), reason, ref (unique with user_id + reason), created_at | the XP ledger; totals, levels and ranks are summed from it, never stored |
 
-Planned tables (v0.3–v0.5): `activity_days`, `badges_earned`, `card_state` (SM-2), `ai_requests`.
+Planned tables (v0.3–v0.5): `badges_earned`, `card_state` (SM-2), `ai_requests`.
 See `docs/roadmap.md` §2.
 
 ## Roles
