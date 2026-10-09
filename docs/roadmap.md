@@ -137,9 +137,10 @@ These are copied from `/home/sean/Developer/personal-projects/budget-buddy` and 
 1. **v0.1.0 Skeleton and deploy:** repo, tooling, CI, Docker, FastAPI app factory, settings, `/healthz`, login, security headers/CSRF, Alembic baseline, release and deploy pipeline. **Live at learn.seandesmet.com early**, so the pipeline is proven first.
 2. **v0.2.0 Learn loop:** content schema and loader, syllabus, module page (Markdown rendered with syntax highlighting), HTMX quizzes, completion/progress, Unit 1.1 content.
 3. **v0.3.0 Gamify:** XP ledger, levels/ranks, streaks and freezes, badges, the dashboard, the station map SVG.
-4. **v0.4.0 Practice:** Pyodide challenges (Web Worker + CSP), SM-2 flashcards with a review queue.
-5. **v0.5.0 Labs and AI:** labs with verify checks, Claude lab review, hints, the budget cap, `draft_module.py`, the `content-reviewer` agent.
-6. **Ongoing:** writing units ahead of Sean's progress. Follow-ups: TOTP MFA, async SQLAlchemy refactor, PWA/push reminders reusing BB's `push.js`, and a stats page.
+4. **v0.4.0 Hands-on and the desk** (shipped 2026-10-09, added after planning): a simulated station console with a task in nine of Unit 1.1's modules, and the visual novel's first form: a pixel-art desk with the app on its monitor and the crew on a comms log. Desktop only.
+5. **v0.5.0 Practice:** Pyodide challenges (Web Worker + CSP), SM-2 flashcards with a review queue.
+6. **v0.6.0 Labs and AI:** labs with verify checks, Claude lab review, hints, the budget cap, `draft_module.py`, the `content-reviewer` agent.
+7. **Ongoing:** writing units ahead of Sean's progress. Follow-ups: TOTP MFA, async SQLAlchemy refactor, PWA/push reminders reusing BB's `push.js`, and a stats page.
 
 ## 9. Bootstrap steps (done in the first session)
 1. `mkdir /home/sean/Developer/personal-projects/orbit-ops`, then `git init`. Create a GitHub repo `caddismaster/orbit-ops` (public, like BB? **confirm when creating**) and protect `main`.

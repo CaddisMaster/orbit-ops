@@ -80,7 +80,7 @@ class XpEvent(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    amount: Mapped[int]  # negative for penalties (hints, v0.5.0)
+    amount: Mapped[int]  # negative for penalties (hints, v0.6.0)
     reason: Mapped[str] = mapped_column(String(32))  # "module_complete", "perfect_quiz", …
     ref: Mapped[str] = mapped_column(String(128))  # what earned it, e.g. the module slug
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -9,15 +9,56 @@ A per-session log, standing decisions and a release ledger. Newest first.
 - **One uvicorn process**, no Redis, no scheduler container — RAM on the shared droplet.
 - **Content in git**, AI for hints / lab review / drafting (the "hybrid" option).
 - **Single user**, but every learner-state query is user-scoped.
+- **Desktop only** (Mac/Windows browsers, 1280×720 and up), decided 2026-10-09 for the desk
+  (#38). No phone layouts or phone criteria in new work.
+- **The station console is a simulated shell** in the browser (`static/js/shell.js`), never a
+  server-side one. It's drawn with our own markup, not xterm.js: xterm injects `<style>`
+  elements that `style-src 'self'` blocks (#17).
+- **The art is code** (`art/`, stdlib Python → `app/static/img/`), checked by redrawing it.
+- **Comms, locks and streaks are derived from progress**, never stored.
 
 ## Release ledger
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.4.0 | 2026-10-09 | Console tasks in 9/10 Unit 1.1 modules (sudo, processes, env, awk/sed); the pixel-art desk, its computer and the comms log; Unit 1.1 told as one story |
+| 0.3.0 | 2026-10-09 | XP/ranks, streaks + freezes, badges, station map, deck colours, the station console; migrations `0004`–`0006` |
 | 0.2.0 | 2026-10-08 | Learn loop: syllabus, Unit 1.1 (10 modules), quizzes, completion, locking; migration `0003` |
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-09 — v0.3.0 and v0.4.0 shipped
+
+- Started by explaining the "Acceptance criteria" failure emails: PR #13 (a migration-only PR)
+  said `Closes #5`, so the check demanded #5's scenarios. Documented in `docs/testing.md` (#30).
+- **v0.3.0** (Gamify) was finished and shipped: #23 badges (#31 `0006`, #32), #24 station map
+  (#33), #18 immersion (#34), #17 station console (#35). `APP_TIMEZONE` on the droplet is
+  `America/New_York` (Sean checked). Release run `37942583419`, `/healthz` 0.3.0 / `236e518`.
+- **#17 changed approach mid-issue:** xterm.js 6.0.0 injects `<style>` elements the CSP blocks,
+  so Sean chose our own renderer (log + `<input>`).
+- **v0.4.0** (Hands-on and the desk), all in one session:
+  - #36 (#40) console tasks for 01, 02, 07 and 08, with a `solution:` per exercise that CI runs
+    through the shell. The fixture is from `scripts/export_exercises.py`, and
+    `check_cases.json` holds both graders to the same verdicts.
+  - #37 (#42) sudo with a masked prompt, `/etc/passwd`/`group`, env/PATH/child shells, and a
+    process table on a simulated clock. Tasks for 05, 06 and 09; 10 has none (by decision).
+  - #41 (#43) small awk and sed that refuse anything outside their subset.
+  - #38 (#44) the desk: a pixel-art room, the app on the monitor, the comms log and window events.
+  - #46 (#47) the computer drawn in the art, with the HTML as glass only.
+  - #45 (#48) all of Unit 1.1 told on comms, plus relay-pass, debris-drift and aurora.
+  - Release run `37952415044`, `/healthz` 0.4.0 / `73dfbcb`. No migrations.
+- Roadmap re-sequenced: Pyodide and flashcards move to **v0.5.0**, labs and AI to **v0.6.0**.
+- Process notes:
+  - The dev server doesn't reload on `content/` edits (uvicorn without `watchfiles`):
+    `docker compose restart web`. It's in gotchas.
+  - Reading a command's real transcript caught more shell bugs than the tests did (`$?`
+    timing, `ls` headers and order, `ps` CPU time and PID reuse). Keep doing it for new
+    commands.
+  - YAML flow mappings split unquoted text at commas: quote comms `text`.
+- **Next:** open milestone v0.5.0 (Practice: Pyodide, flashcards) and file its issues.
+  Candidates on the way: refine the art (lamp light, mug steam), a `find`/`tar` subset, and
+  `.dockerignore` for `art/` and `tests/` (harmless today, flagged by release-prep).
 
 ### 2026-10-08 (evening) — v0.2.0 shipped; XP and streaks merged
 
