@@ -216,3 +216,95 @@ def test_the_real_cast_and_the_pilot_module():
     assert set(catalog.cast) == {"okafor", "meridian", "mission"}
     pilot = catalog.modules["permissions"].comms
     assert pilot.open and pilot.console_done and pilot.complete and pilot.window == {"complete": "shuttle-dock"}
+
+
+# --- #45: all of Unit 1.1 on comms ----------------------------------------------------------
+@pytest.mark.criterion(45, "Every Unit 1.1 module is told on comms")
+def test_every_unit_1_1_module_is_told_on_comms():
+    for module in load_catalog().unit_modules("linux-shell"):
+        assert module.comms and module.comms.open and module.comms.complete, module.slug
+        assert bool(module.comms.console_done) == bool(module.terminal), module.slug
+
+
+def test_the_stations_figures_match_the_exercises():
+    # MERIDIAN quotes numbers; they must be true of the console the learner sees.
+    from app.terminal import client_spec
+
+    catalog = load_catalog()
+
+    def said(slug):
+        return " ".join(html for beat in catalog.modules[slug].comms_html.values() for _, html in beat)
+
+    log = client_spec(catalog.modules["text-tools"].terminal)["fs"]["/var/log/docking/access.log"]["contents"]
+    logins = [line for line in log.splitlines() if "POST /login" in line]
+    assert f"{len(logins)} LOGIN ATTEMPTS" in said("text-tools")
+    assert f"{sum(' 401 ' in line for line in logins)} FAILED" in said("text-tools")
+    scrubbers = client_spec(catalog.modules["the-filesystem"].terminal)["fs"]["/var/log/life-support/scrubbers.log"]["contents"]
+    assert "02:40 scrubber B: offline" in scrubbers and "OFFLINE SINCE 02:40" in said("the-filesystem")
+    core = client_spec(catalog.modules["pipes-and-redirection"].terminal)["fs"]["/station/reactor/core.log"]["contents"]
+    assert f"{core.count('ALERT')} ALERTS" in said("pipes-and-redirection")
+    diag = next(p for p in catalog.modules["processes-and-signals"].terminal.processes if "o2-diagnostics" in p.command)
+    assert f"CPU {diag.cpu}%" in said("processes-and-signals")
+
+
+@pytest.mark.criterion(45, "The unit's end is marked outside the window")
+def test_the_units_end_is_marked_outside_the_window(logged_in, user):
+    unit = load_catalog().unit_modules("linux-shell")
+    with SessionLocal() as db:
+        for m in unit[:-1]:
+            db.add(ModuleProgress(user_id=user.id, module_slug=m.slug, status="complete", score=100, completed_at=datetime.now(UTC)))
+        db.commit()
+    last = unit[-1]
+    logged_in.get(f"/modules/{last.slug}")
+    from tests.test_progress import answer
+
+    for i, q in enumerate(last.quiz):
+        values = [str(q.answer)] if q.type == "choice" else [str(a) for a in q.answer] if q.type == "multi" else [q.answer[0]]
+        response = answer(logged_in, last.slug, i, *values)
+    assert '<div id="window-event" class="window-event aurora" hx-swap-oob="true" data-event="aurora">' in response.text
+    assert 'src="http://testserver/static/img/aurora.png"' in response.text
+    assert "aurora" not in logged_in.get(f"/modules/{last.slug}").text.split('id="window-event"')[1][:80]  # once
+
+
+def test_open_and_console_done_beats_can_play_window_events(logged_in, tmp_path):
+    two = COMMS_TWO.replace("window: {complete: shuttle-dock}", "window: {open: relay-pass, console_done: debris-drift}")
+    _write(tmp_path, comms_two=two)
+    app.dependency_overrides[get_catalog] = lambda: load_catalog(tmp_path)
+    try:
+        complete(logged_in, "one")
+        first = logged_in.get("/modules/two").text
+        assert '<div id="window-event" class="window-event relay-pass" data-event="relay-pass">' in first
+        assert '<div id="window-event" class="window-event"></div>' in logged_in.get("/modules/two").text  # first visit only
+        body = logged_in.post(
+            "/modules/two/terminal",
+            content=json.dumps({"state": _state(0o600), "cwd": "/station", "passed": True}),
+            headers={"Content-Type": "application/json", "X-CSRF-Token": csrf(logged_in)},
+        ).json()
+        assert '<div id="window-event" class="window-event debris-drift" data-event="debris-drift">' in body["window"]
+    finally:
+        app.dependency_overrides.pop(get_catalog, None)
+
+
+@pytest.mark.criterion(45, "New window events respect reduced motion")
+def test_new_window_events_respect_reduced_motion(client):
+    from app.comms import WINDOW_SPRITES
+
+    css = client.get("/static/css/style.css").text
+    reduced = "".join(re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", css, re.S))
+    assert ".window-event img { animation: none; }" in reduced
+    for event in WINDOW_SPRITES:  # each event is animated, and each has a still position to fall back to
+        rule = re.search(rf"\.window-event\.{event} img \{{(.*?)\}}", css, re.S).group(1)
+        assert "animation:" in rule and "left:" in rule and "top:" in rule, event
+
+
+def test_every_window_event_has_a_sprite_drawn_as_code():
+    from typing import get_args
+
+    from app.comms import WINDOW_SPRITES
+    from app.content.schema import WindowEvent
+    from art import build
+
+    assert set(WINDOW_SPRITES) == set(get_args(WindowEvent))
+    for event, (name, width, height) in WINDOW_SPRITES.items():
+        drawn = build.scenes()[name]()
+        assert (drawn.width, drawn.height) == (width, height), event

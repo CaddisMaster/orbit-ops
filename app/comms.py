@@ -24,6 +24,15 @@ from app.models import ExerciseAttempt, ModuleProgress
 
 BEATS = ("open", "console_done", "complete")
 
+# Each window event's sprite (app/static/img/, drawn by art/sprites.py) and its
+# native size; style.css animates it under `.window-event.<event>`.
+WINDOW_SPRITES = {
+    "shuttle-dock": ("shuttle.png", 22, 7),
+    "relay-pass": ("satellite.png", 20, 7),
+    "debris-drift": ("debris.png", 40, 6),
+    "aurora": ("aurora.png", 84, 126),
+}
+
 
 @dataclass(frozen=True)
 class Line:

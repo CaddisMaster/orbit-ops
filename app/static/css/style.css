@@ -521,7 +521,53 @@ html, body { height: 100%; }
   88% { left: 23.4%; opacity: 1; }
   100% { left: 23.4%; opacity: 0; }
 }
+/* A relay satellite crossing the top of the window, left to right (#45).
+   20x7 px; with no motion it's a still, mid-window. */
+.window-event.relay-pass img {
+  width: 6.25%;
+  top: 3.333%;
+  left: 58%;
+  animation: relay-pass 18s linear forwards;
+}
+@keyframes relay-pass {
+  0% { left: -7%; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+/* A debris field drifting past, right to left, slowly (#45). 40x6 px. */
+.window-event.debris-drift img {
+  width: 12.5%;
+  top: 3.889%;
+  left: 44%;
+  animation: debris-drift 26s linear forwards;
+}
+@keyframes debris-drift {
+  0% { left: 100%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: -13%; opacity: 0; }
+}
+/* An aurora over the Earth when Unit 1.1 is done (#45): curtains just inside
+   the limb, at art/sprites.py AURORA_AT (230, 3), 84x126 px; it brightens,
+   shimmers and fades. Transparent over the drawn computer. */
+.window-event.aurora img {
+  width: 26.25%;
+  top: 1.667%;
+  left: 71.875%;
+  animation: aurora 24s ease-in-out forwards;
+}
+@keyframes aurora {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  28% { opacity: 0.7; }
+  42% { opacity: 1; }
+  58% { opacity: 0.75; }
+  72% { opacity: 1; }
+  100% { opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .window-event.shuttle-dock img { animation: none; }  /* a still: docked */
+  .window-event img { animation: none; }  /* every event is a still */
+  .window-event.shuttle-dock img { animation: none; }  /* docked */
   .comms-line.is-new.shown { animation: none; }
 }

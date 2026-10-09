@@ -68,6 +68,16 @@ terminal:
     - python3 --version > nav.txt
     - |-
       echo 'export PATH="/opt/nav/bin:$PATH"' >> ~/.bashrc
+comms:
+  open:
+    - {from: mission, text: "*Meridian*, your last course plot is off by 0.3 degrees. Please check your navigation build."}
+    - {from: okafor, text: "Same command, different program. Find out which `python3` runs, and why."}
+  console_done:
+    - {from: meridian, text: "NAVIGATION · python3 3.12.3 (navigation build) · COURSE PLOT VERIFIED"}
+    - {from: okafor, text: "That's the build the plots were tested on. And it'll still be there tomorrow."}
+  complete:
+    - {from: mission, text: "Correction burn confirmed. You're right where we want you."}
+    - {from: okafor, text: "One more day. The console's missing half the tools it should have. We'll fix that next."}
 cards:
   - front: Shell variable vs environment variable
     back: "`NAME=x` is visible only to this shell. `export NAME=x` is also inherited by every program started from it."

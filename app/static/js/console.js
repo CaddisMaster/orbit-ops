@@ -77,6 +77,8 @@
             commsLog.insertAdjacentHTML("beforeend", body.comms);
             document.dispatchEvent(new CustomEvent("comms:arrived"));
           }
+          var outside = document.getElementById("window-event");
+          if (body.window && outside) outside.outerHTML = body.window; // a window event, once
           status.textContent = body.correct
             ? "Logged: task complete."
             : "The bridge couldn't confirm that. Check the task and try again.";

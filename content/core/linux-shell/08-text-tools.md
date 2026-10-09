@@ -85,6 +85,16 @@ terminal:
     - head -n 3 /var/log/docking/access.log
     - 'awk ''{print $1}'' /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt'
     - cat noisy.txt
+comms:
+  open:
+    - {from: meridian, text: "DOCKING PORT · 22 LOGIN ATTEMPTS OVERNIGHT · 14 FAILED"}
+    - {from: okafor, text: "Someone's been hammering the docking port all night. The access log knows who."}
+    - {from: okafor, text: "I want the noisiest addresses in five minutes. Without opening the file."}
+  console_done:
+    - {from: okafor, text: "10.4.2.17, nine attempts. That's the maintenance drone. Someone gave it the wrong password list."}
+    - {from: meridian, text: "DRONE MD-3 · CREDENTIALS RESET · LOGIN ATTEMPTS STOPPED"}
+  complete:
+    - {from: okafor, text: "No intruder, just a confused drone. Most mysteries on this station are."}
 cards:
   - front: Count matching lines with grep
     back: "`grep -c pattern file` (or `grep pattern file | wc -l`)."

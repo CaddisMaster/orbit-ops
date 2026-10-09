@@ -62,6 +62,18 @@ terminal:
     - pgrep -a o2-diagnostics
     - pkill -9 o2-diagnostics
     - pgrep -a o2
+comms:
+  open:
+    - {from: meridian, text: "DEBRIS FIELD · BEARING 270 · CLOSEST PASS 4 KM · NO IMPACT RISK"}
+    - {from: meridian, text: "DEEP-SCAN STARTED · o2-diagnostics · CPU 98.7%"}
+    - {from: okafor, text: "The debris alarm kicked off a deep scan, and it's eating the oxygen recycler's CPU. Find it and stop it."}
+    - {from: okafor, text: "Politely first. If it won't listen, impolitely."}
+  console_done:
+    - {from: meridian, text: "o2-diagnostics · SIGTERM IGNORED · SIGKILL · STOPPED · o2-recyclerd · NOMINAL"}
+    - {from: okafor, text: "It ignored TERM? Then KILL was the right call. But you asked first. Always ask first."}
+  complete:
+    - {from: okafor, text: "The recycler's breathing easy again. So are we, literally."}
+  window: {open: debris-drift}
 cards:
   - front: SIGTERM vs SIGKILL
     back: "SIGTERM (15, kill's default) asks nicely and can be handled. SIGKILL (9) ends the process immediately and can't be caught."

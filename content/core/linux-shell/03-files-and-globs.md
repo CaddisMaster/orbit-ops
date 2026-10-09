@@ -75,6 +75,17 @@ terminal:
     - 'mv logs/crash-2026-10-*.dump archive/'
     - 'echo logs/crash-2026-09-*'
     - 'rm logs/crash-2026-09-*.dump'
+comms:
+  open:
+    - {from: okafor, text: "The cargo bay's log directory is full of crash dumps from the outage."}
+    - {from: mission, text: "We need October's dumps for the analysis. September's are from the old firmware: bin them."}
+    - {from: okafor, text: "Carefully. There's no undo on this station. `echo` the glob before you hand it to `rm`."}
+  console_done:
+    - {from: meridian, text: "ARCHIVE · 3 FILES · DELETED · 3 FILES · `app.log` · INTACT"}
+    - {from: okafor, text: "And app.log survived. You'd be amazed how often it doesn't."}
+  complete:
+    - {from: mission, text: "Dumps received. First look: something in life support has been readable by the whole crew."}
+    - {from: okafor, text: "That's tomorrow's problem, then. And I have a feeling I know which file."}
 cards:
   - front: How do you copy a whole directory?
     back: "`cp -r src dest`. Without `-r`, `cp` skips directories."

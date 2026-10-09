@@ -20,7 +20,8 @@
      monitor. The room is decoration; everything you need is on the screen. #}
   <div class="scene">
     <div class="room" aria-hidden="true">
-      <div id="window-event" class="window-event"></div>
+      {% if window_event %}{% with event = window_event, oob = false %}{% include "partials/_window_event.html" %}{% endwith %}
+      {% else %}<div id="window-event" class="window-event"></div>{% endif %}
       <span class="power-light"></span>
     </div>
     <div class="monitor">

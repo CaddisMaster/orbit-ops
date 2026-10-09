@@ -73,6 +73,16 @@ terminal:
     - cat reactor.txt
     - grep ALERT /station/reactor/core.log > alerts.txt
     - wc -l alerts.txt
+comms:
+  open:
+    - {from: mission, text: "Requesting a reactor status report for the bridge, *Meridian*. Errors included, please."}
+    - {from: okafor, text: "The reactor monitor prints ten thousand lines a minute. Don't read it. Plumb it."}
+  console_done:
+    - {from: meridian, text: "REPORT FILED · `reactor.txt` · `alerts.txt` · 3 ALERTS"}
+    - {from: okafor, text: "Errors and all, in one file. That's the report I can actually use."}
+  complete:
+    - {from: mission, text: "Report received. Coolant pump 2 matches what we saw in your crash dumps. Nice work."}
+    - {from: okafor, text: "Now that the reactor's talking, let's find out who's been knocking on the front door all night."}
 cards:
   - front: File descriptors 0, 1, 2
     back: "0 = stdin, 1 = stdout, 2 = stderr."

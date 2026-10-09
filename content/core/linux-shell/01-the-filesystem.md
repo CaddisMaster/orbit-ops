@@ -69,6 +69,16 @@ terminal:
     - ls /var/log
     - cd /var/log/life-support
     - cat scrubbers.log
+comms:
+  open:
+    - {from: meridian, text: "POWER RESTORED · CONTROL ROOM · LIFE SUPPORT ON STANDBY"}
+    - {from: okafor, text: "You're awake. Good. The outage took half the station dark and nobody's sure what still works."}
+    - {from: okafor, text: "Before you touch anything, learn where things *live*. Every system on this station is a file somewhere."}
+  console_done:
+    - {from: meridian, text: "SCRUBBER LOG FOUND · `/var/log/life-support/scrubbers.log` · SCRUBBER B OFFLINE SINCE 02:40"}
+    - {from: okafor, text: "That's the one. Logs in `/var/log`, config in `/etc`. Remember that and you're never lost."}
+  complete:
+    - {from: okafor, text: "Day one done. Get some sleep. Tomorrow we find out who else is still out there."}
 cards:
   - front: What lives in `/etc`?
     back: System-wide configuration files (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/`).

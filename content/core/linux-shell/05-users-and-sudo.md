@@ -70,6 +70,17 @@ terminal:
     - getent group airlock sudo
     - id cadet
     - 'grep airlock /etc/passwd | cut -d: -f7 > airlock-shell.txt'
+comms:
+  open:
+    - {from: meridian, text: "AIRLOCK 2 · COMMAND REFUSED · USER cadet NOT AUTHORISED"}
+    - {from: okafor, text: "The *Kestrel*'s cargo has to come in through airlock 2, and the controller only takes orders from its own group."}
+    - {from: okafor, text: "You're a cadet. The airlock answers to root. And no, I'm not giving you the root password: learn `sudo`."}
+  console_done:
+    - {from: meridian, text: "GROUP airlock · MEMBER ADDED · cadet · EFFECTIVE AT NEXT LOGIN"}
+    - {from: okafor, text: "Appended, not replaced: you've still got sudo. Good. Plenty of people lock themselves out doing that."}
+  complete:
+    - {from: okafor, text: "Cargo's coming through. Least privilege: you get the airlock, not the whole station."}
+    - {from: mission, text: "*Kestrel* reports cargo transfer complete. Thank you, *Meridian*."}
 cards:
   - front: How do you see your user, UID and groups?
     back: "`id` (or `whoami` for just the name, `groups` for just the groups)."

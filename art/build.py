@@ -13,7 +13,13 @@ OUT = Path(__file__).resolve().parents[1] / "app" / "static" / "img"
 
 def scenes():
     """{file name: render function}: everything build() writes and tests check."""
-    out = {"room.png": room.render, "shuttle.png": sprites.shuttle}
+    out = {
+        "room.png": room.render,
+        "shuttle.png": sprites.shuttle,
+        "satellite.png": sprites.satellite,
+        "debris.png": sprites.debris,
+        "aurora.png": sprites.aurora,
+    }
     for name in sprites.AVATARS:
         out[f"avatar-{name}.png"] = lambda name=name: sprites.avatar(name)
     return out

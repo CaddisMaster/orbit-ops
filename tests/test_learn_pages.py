@@ -11,7 +11,7 @@ def test_module_page_shows_story_lesson_and_quiz(logged_in):
     assert page.status_code == 200
     html = page.text
     assert "The filesystem tree" in html
-    assert "Mission log, day 1." in html  # story briefing
+    assert "POWER RESTORED · CONTROL ROOM" in html  # the briefing, on comms (#45)
     assert "<h2>One tree, one root</h2>" in html  # lesson Markdown
     assert '<pre class="highlight" data-lang="bash">' in html  # highlighted code
     assert "Which directory is the top of the entire Linux filesystem?" in html  # quiz

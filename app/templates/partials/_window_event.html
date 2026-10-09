@@ -1,0 +1,6 @@
+{# A window event outside the desk's window (#38): it plays once, when it's
+   rendered. `event` is a WindowEvent; `oob` swaps it in out of band. #}
+{% set sprite = window_sprites[event] %}
+<div id="window-event" class="window-event {{ event }}"{% if oob %} hx-swap-oob="true"{% endif %} data-event="{{ event }}">
+  <img src="{{ url_for('static', path='img/' ~ sprite[0]) }}" alt="" width="{{ sprite[1] }}" height="{{ sprite[2] }}">
+</div>
