@@ -21,3 +21,12 @@
   {% endif %}
   <p><a href="/">Back to the bridge</a></p>
 </section>
+{% if just_completed and arrivals %}
+{# The debrief joins the comms log (#38), and any window event plays once. #}
+<div hx-swap-oob="beforeend:#comms-log">{% for line in arrivals %}{% include "partials/_comms_line.html" %}{% endfor %}</div>
+{% endif %}
+{% if just_completed and window_event %}
+<div id="window-event" class="window-event {{ window_event }}" hx-swap-oob="true" data-event="{{ window_event }}">
+  <img src="{{ url_for('static', path='img/shuttle.png') }}" alt="" width="22" height="7">
+</div>
+{% endif %}

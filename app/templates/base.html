@@ -12,34 +12,57 @@
   <link rel="stylesheet" href="{{ url_for('static', path='css/pygments.css') }}">
   <script src="{{ url_for('static', path='htmx.min.js') }}" defer></script>
   <script src="{{ url_for('static', path='js/briefing.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/comms.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRF-Token": "{{ csrf_token(request) }}"}'>
-  <header class="topbar">
-    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> <span class="brand-name">Orbit Ops</span></a>
-    {% if user %}
-    <nav>
-      <a href="/syllabus">Syllabus</a>
-      <a href="/map">Map</a>
-      <a href="/badges">Badges</a>
-      <span class="muted who">Cadet {{ user.username }}</span>
-      <form method="post" action="/logout" class="inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <button type="submit" class="link">Log out</button>
-      </form>
-    </nav>
-    {% endif %}
-  </header>
-  {% if console %}
-  {# The console readout: what's online and the streak, on every signed-in page. #}
-  <div class="readout" role="status" aria-label="Station status">
-    <span>Systems online <strong>{{ console.online }}/{{ console.systems }}</strong></span>
-    <span>Streak <strong>{{ console.streak }}</strong></span>
+  {# The desk (#38): a first-person pixel-art room, and the whole app on its
+     monitor. The room is decoration; everything you need is on the screen. #}
+  <div class="scene">
+    <div class="room" aria-hidden="true">
+      <div id="window-event" class="window-event"></div>
+    </div>
+    <div class="monitor">
+      <div class="screen{{ ' has-comms' if console }}">
+        <div class="screen-main">
+          <header class="topbar">
+            <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> <span class="brand-name">Orbit Ops</span></a>
+            {% if user %}
+            <nav>
+              <a href="/syllabus">Syllabus</a>
+              <a href="/map">Map</a>
+              <a href="/badges">Badges</a>
+              <span class="muted who">Cadet {{ user.username }}</span>
+              <form method="post" action="/logout" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <button type="submit" class="link">Log out</button>
+              </form>
+            </nav>
+            {% endif %}
+          </header>
+          {% if console %}
+          {# The console readout: what's online and the streak, on every signed-in page. #}
+          <div class="readout" role="status" aria-label="Station status">
+            <span>Systems online <strong>{{ console.online }}/{{ console.systems }}</strong></span>
+            <span>Streak <strong>{{ console.streak }}</strong></span>
+          </div>
+          {% endif %}
+          <main class="container">
+            {% block content %}{% endblock %}
+          </main>
+          <footer class="footer muted">Station <i>Meridian</i> · {% if app_version != 'dev' %}v{% endif %}{{ app_version }}</footer>
+        </div>
+        {% if console %}
+        <aside class="comms" aria-labelledby="comms-title">
+          <h2 class="comms-title" id="comms-title">Comms</h2>
+          <ol class="comms-log" id="comms-log" role="log" aria-live="polite" aria-label="Messages">
+            {% if not console.comms %}<li class="comms-empty muted">No messages yet. The crew will be in touch.</li>{% endif %}
+            {% for line in console.comms %}{% include "partials/_comms_line.html" %}{% endfor %}
+          </ol>
+        </aside>
+        {% endif %}
+      </div>
+    </div>
   </div>
-  {% endif %}
-  <main class="container">
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="footer muted">Station <i>Meridian</i> · {% if app_version != 'dev' %}v{% endif %}{{ app_version }}</footer>
 </body>
 </html>

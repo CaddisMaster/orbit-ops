@@ -11,6 +11,7 @@
   --danger: #fc8181;
   --ok: #4fd1c5;  /* right answers: fixed, so a deck's accent never changes what "right" looks like */
   --radius: 10px;
+  --wall: #1a1e32;  /* the room's wall (art/canvas.py "wall"), around a letterboxed scene */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", Menlo, monospace;
 }
@@ -20,10 +21,8 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: radial-gradient(ellipse at top, #16204a 0%, var(--bg) 60%) fixed, var(--bg);
+  overflow: hidden;  /* the app scrolls inside the desk's monitor, never the page */
+  background: var(--wall);
   color: var(--text);
   font: 16px/1.6 var(--font);
 }
@@ -327,41 +326,10 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-/* Starfield: two tiled layers of dots drifting at different speeds. Each layer
-   moves exactly one tile, so the loop is seamless. */
-body::before, body::after {
-  content: "";
-  position: fixed;
-  inset: -400px 0 0 0;
-  z-index: -1;
-  pointer-events: none;
-  background-repeat: repeat;
-}
-body::before {
-  background-image:
-    radial-gradient(1px 1px at 23px 41px, rgb(255 255 255 / 0.55), transparent),
-    radial-gradient(1px 1px at 137px 89px, rgb(255 255 255 / 0.4), transparent),
-    radial-gradient(1px 1px at 71px 163px, rgb(255 255 255 / 0.5), transparent),
-    radial-gradient(1px 1px at 181px 17px, rgb(255 255 255 / 0.35), transparent);
-  background-size: 200px 200px;
-  animation: drift-near 240s linear infinite;
-}
-body::after {
-  background-image:
-    radial-gradient(1.5px 1.5px at 61px 113px, rgb(200 220 255 / 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 307px 251px, rgb(255 255 255 / 0.45), transparent),
-    radial-gradient(1px 1px at 211px 347px, rgb(180 200 255 / 0.5), transparent);
-  background-size: 400px 400px;
-  animation: drift-far 480s linear infinite;
-}
-@keyframes drift-near { to { transform: translateY(200px); } }
-@keyframes drift-far { to { transform: translateY(400px); } }
-
-/* Reduced motion: the starfield is still, the completion banner appears as it
-   is, and the map stops pulsing (above).
-   briefing.js checks the same query and shows the briefing in full. */
+/* Reduced motion: the completion banner appears as it is, and the map stops
+   pulsing (above). briefing.js and comms.js check the same query. */
 @media (prefers-reduced-motion: reduce) {
-  body::before, body::after, .completion.is-new { animation: none; }
+  .completion.is-new { animation: none; }
 }
 
 /* --- Station console (#17) ---------------------------------------------------
@@ -418,4 +386,125 @@ body::after {
 .term-status { margin: 0.5rem 0 0; min-height: 1.6em; font-size: 0.9rem; }
 @media (max-width: 480px) {
   .term { font-size: 0.78rem; }
+}
+
+/* --- The desk (#38) --------------------------------------------------------------
+   A 16:9 scene, as large as the window allows and letterboxed in the wall's
+   colour, holding the pixel-art room (art/room.py, 320x180) and the monitor.
+   The monitor sits at fixed percentages of the scene, the ones art/room.py
+   leaves free (canvas x 26..294, y 23..164), so screen and art always line
+   up. The whole app scrolls inside the screen; the page itself never scrolls.
+   Desktop only: 1280x720 and up. */
+html, body { height: 100%; }
+.scene {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+}
+.room {
+  position: absolute;
+  inset: 0;
+  background: url("../img/room.png") 0 0 / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+.monitor {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 13%;
+  bottom: 9%;
+  padding: 0.6% 0.6% 1.1%;
+  background: linear-gradient(#2c3248, #1f2436);
+  border: 2px solid #11141f;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #3a4260 inset, 0 12px 30px rgb(0 0 0 / 0.55), 0 0 60px color-mix(in srgb, var(--deck) 12%, transparent);
+}
+.monitor::after {  /* the power light, in the deck's colour */
+  content: "";
+  position: absolute;
+  right: 2%;
+  bottom: 0.35%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--deck);
+  box-shadow: 0 0 6px var(--deck);
+}
+.screen {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 4px;
+  border-top: 2px solid var(--deck);
+  background: radial-gradient(ellipse at top, #141c3e 0%, var(--bg) 70%);
+}
+.screen.has-comms { grid-template-columns: minmax(0, 1fr) clamp(240px, 24%, 320px); }
+.screen-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.screen-main .container { flex: 1; }
+
+/* The comms log: one conversation, oldest at the top. */
+.comms {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: rgb(5 8 15 / 0.65);
+}
+.comms-title {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+  font: 600 0.72rem/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.comms-log { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 0.75rem; }
+.comms-empty { font-size: 0.85rem; margin-bottom: 0.75rem; }
+.comms-line ~ .comms-empty, .comms-empty:has(~ .comms-line) { display: none; }
+.comms-line { display: flex; gap: 0.55rem; align-items: flex-start; margin-bottom: 0.75rem; }
+.comms-line .avatar { flex: none; image-rendering: pixelated; border-radius: 4px; background: #0b1020; border: 1px solid var(--border); }
+.comms-line .bubble { min-width: 0; }
+.comms-line p { margin: 0; }
+.comms-line .who { font-size: 0.78rem; font-weight: 700; }
+.comms-line .role, .comms-line .delay { color: var(--muted); font-weight: 400; }
+.comms-line .delay { font-family: var(--mono); font-size: 0.7rem; }
+.comms-line .said { font-size: 0.88rem; line-height: 1.45; overflow-wrap: anywhere; }
+.comms-line.from-meridian .said { font: 0.78rem/1.5 var(--mono); color: #f6c38a; letter-spacing: 0.02em; }
+.comms-line.from-okafor .who { color: var(--accent); }
+.comms-line.from-mission .who { color: #8fbff0; }
+.comms-line code { font-size: 0.9em; }
+.comms-typing { color: var(--muted); font: 0.75rem var(--mono); margin: 0 0 0.75rem 2.6rem; }
+.comms-typing::after { content: "…"; }
+/* With JavaScript, new lines wait for comms.js to bring them in. */
+.js-comms .comms-line.is-new:not(.shown) { display: none; }
+.comms-line.is-new.shown { animation: comms-in 0.25s ease-out; }
+@keyframes comms-in { from { opacity: 0; transform: translateY(4px); } }
+.comms-pointer { margin-top: 0.75rem; }
+
+/* Window events: things that happen outside, at story beats. Each plays once,
+   when the response that earns it arrives, then the view settles back. */
+.window-event { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.window-event img { position: absolute; image-rendering: pixelated; height: auto; }
+/* The supply shuttle: in from the right along the top of the window, to the
+   docking port at canvas (74, 13); 22x7 px on a 320x180 canvas. */
+.window-event.shuttle-dock img {
+  width: 6.875%;
+  top: 5.4%;
+  left: 23.4%;
+  animation: shuttle-dock 14s ease-in-out forwards;
+}
+@keyframes shuttle-dock {
+  0% { left: 96%; opacity: 0; }
+  6% { opacity: 1; }
+  60% { left: 23.4%; }
+  88% { left: 23.4%; opacity: 1; }
+  100% { left: 23.4%; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .window-event.shuttle-dock img { animation: none; }  /* a still: docked */
+  .comms-line.is-new.shown { animation: none; }
 }

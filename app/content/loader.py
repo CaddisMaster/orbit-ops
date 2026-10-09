@@ -17,10 +17,12 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-from app.content.render import render_markdown
+from app.content.render import render_inline, render_markdown
 from app.content.schema import (
     BadgeSpec,
     Card,
+    CastSpec,
+    Comms,
     ModuleFile,
     Question,
     RankSpec,
@@ -52,6 +54,8 @@ class Module:
     cards: tuple[Card, ...]
     terminal: TerminalExercise | None
     terminal_task_html: str
+    comms: Comms | None
+    comms_html: dict  # {beat: ((cast slug, message html), ...)}, rendered once at startup
     unit: str
     track: str
     position: int  # 1-based, within its unit
@@ -86,6 +90,7 @@ class Catalog:
     modules: dict[str, Module] = field(repr=False)
     ranks: tuple[RankSpec, ...] = ()  # ascending by level
     badges: tuple[BadgeSpec, ...] = ()  # in syllabus order
+    cast: dict[str, CastSpec] = field(default_factory=dict)
 
     def unit_modules(self, unit_slug: str) -> list[Module]:
         return [self.modules[s] for s in self.units[unit_slug].modules]
@@ -240,11 +245,31 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             cards=tuple(data.cards),
             terminal=data.terminal,
             terminal_task_html=render_markdown(data.terminal.task) if data.terminal else "",
+            comms=data.comms,
+            comms_html={
+                beat: tuple((m.from_, render_inline(m.text)) for m in getattr(data.comms, beat))
+                for beat in ("open", "console_done", "complete")
+            }
+            if data.comms
+            else {},
             unit=unit_slug,
             track=track_slug,
             position=len(unit_module_slugs[unit_slug]),
             source=rel,
         )
+
+    cast = {c.slug: c for c in syllabus.cast}
+    if len(cast) != len(syllabus.cast):
+        problems.append("syllabus.yml: cast: a slug is used twice")
+    for module in modules.values():
+        if not module.comms:
+            continue
+        for beat in ("open", "console_done", "complete"):
+            for i, message in enumerate(getattr(module.comms, beat)):
+                if message.from_ not in cast:
+                    problems.append(f"{module.source}: comms.{beat}.{i}.from: '{message.from_}' is not in the cast")
+        if (module.comms.console_done or "console_done" in module.comms.window) and not module.terminal:
+            problems.append(f"{module.source}: comms.console_done: the module has no terminal exercise")
 
     if problems:
         raise ContentError(problems)
@@ -268,5 +293,6 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
         for t in syllabus.tracks
     )
     return Catalog(
-        tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks), badges=tuple(syllabus.badges)
+        tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks), badges=tuple(syllabus.badges),
+        cast=cast,
     )

@@ -21,12 +21,17 @@
         <h1>{{ module.title }}</h1>
       </div>
     </div>
+    {% if module.comms and module.comms.open %}
+    {# This module's briefing comes in on the comms log beside the page (#38). #}
+    <p class="comm-from comms-pointer">▸ Briefing incoming on comms</p>
+    {% else %}
     {# A transmission: static/js/briefing.js types it out and a click or key
        skips. Without JavaScript, or under reduced motion, it is simply here. #}
     <div class="story transmission" data-transmission>
       <p class="comm-from" aria-hidden="true">▸ Incoming transmission · {{ track.deck }}</p>
       {{ module.story_html | safe }}
     </div>
+    {% endif %}
   </header>
 
   {# body_html is rendered from repo Markdown with raw HTML disabled (app/content/render.py). #}

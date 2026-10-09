@@ -71,6 +71,12 @@
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function (body) {
+          var commsLog = document.getElementById("comms-log");
+          if (body.comms && commsLog) {
+            // The crew's reply: server-rendered markup from our own template.
+            commsLog.insertAdjacentHTML("beforeend", body.comms);
+            document.dispatchEvent(new CustomEvent("comms:arrived"));
+          }
           status.textContent = body.correct
             ? "Logged: task complete."
             : "The bridge couldn't confirm that. Check the task and try again.";
