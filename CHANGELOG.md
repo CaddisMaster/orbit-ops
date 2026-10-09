@@ -51,6 +51,15 @@ and why it matters, not what the diff says.
   - Completing a module powers up the "System restored" banner.
   - Under the system's reduced-motion setting nothing moves and briefings appear in full. The
     Content-Security-Policy is unchanged.
+- The station console: hands-on terminal exercises inside a module (#17). A module can set a
+  task over a filesystem it defines, and you do it by typing real commands into a console on the
+  page: `ls -l`, `chmod`, `mv`, globs, pipes, redirection, history, Tab completion and Ctrl-C,
+  with an on-screen key row on phones. The shell is simulated in the browser, so nothing runs on
+  the server. Permissions are enforced as for a normal user. The console says when the task is
+  done, and the server re-checks the final filesystem against the module's own checks before
+  recording it, so the browser's word isn't taken for it. The first two exercises are in
+  "Making, moving and matching files" and "Permissions and ownership". Unsupported commands say
+  so and the console carries on.
 - Right and wrong quiz answers keep fixed colours (teal and amber) on every deck, so a deck's
   colour never makes them look alike (#18).
 

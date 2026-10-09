@@ -1,0 +1,27 @@
+{# The station console for a module's terminal exercise. static/js/console.js
+   brings it to life over the simulated shell in static/js/shell.js; until then
+   (or without JavaScript) only the task and a note show. The spec rides in a
+   data attribute: |tojson escapes < > & and ', so it is safe in single quotes. #}
+<section class="card console" aria-labelledby="console-heading"
+         data-terminal='{{ terminal_spec | tojson }}' data-report="/modules/{{ module.slug }}/terminal">
+  <p class="eyebrow">Station console</p>
+  <h2 id="console-heading">Hands on</h2>
+  <div class="task prose">{{ module.terminal_task_html | safe }}</div>
+  <p class="term-nojs muted">The station console needs JavaScript. The lesson and the quiz work without it.</p>
+  <div class="term" hidden>
+    <div class="term-log" role="log" aria-live="polite" aria-label="Console output"></div>
+    <form class="term-line">
+      <label class="term-prompt" for="term-input"></label>
+      <input class="term-input" id="term-input" type="text" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Command">
+    </form>
+  </div>
+  <div class="term-keys" data-needs-js hidden>
+    <button type="button" class="term-key" data-key="Tab">Tab</button>
+    <button type="button" class="term-key" data-key="Ctrl-C">Ctrl-C</button>
+    <button type="button" class="term-key" data-key="Up" aria-label="Previous command">↑</button>
+    <button type="button" class="term-key" data-key="Down" aria-label="Next command">↓</button>
+    <button type="button" class="term-key term-reset" data-reset>Reset</button>
+  </div>
+  <p class="term-status muted" role="status"></p>
+</section>

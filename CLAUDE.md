@@ -44,6 +44,7 @@ app/content/         schema.py, loader.py (load_catalog → Catalog), render.py 
 app/progress.py      lock rules + today's mission (pure), check_answer, record_answer
 app/game/            xp.py, streaks.py, badges.py (pure rules + their ledgers)
 app/station_map.py   the /map layout (pure); app/console.py: the header readout dependency
+app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js is the simulated shell
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz)
 alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0006 badges_earned)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md

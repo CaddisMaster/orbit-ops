@@ -1,0 +1,225 @@
+"""Terminal exercises (#17): the content schema, the page that carries the
+console, and the server re-grading what the console reports.
+
+The shell itself is JavaScript and is tested by `node --test tests/js/*.test.js`
+(CI's Tests job): commands, permissions, globs, completion and the client-side
+checks.
+
+Route tests use a throwaway curriculum: unit `shell` has `one` (a quiz only)
+then `two`, which carries a terminal exercise.
+"""
+
+import json
+import re
+import textwrap
+
+import pytest
+from sqlalchemy import select
+
+from app.content import ContentError, get_catalog, load_catalog
+from app.db import SessionLocal
+from app.main import app
+from app.models import ExerciseAttempt
+from tests.conftest import csrf
+from tests.test_progress import complete
+from tests.test_xp import MODULE, SYLLABUS
+
+TERMINAL = """terminal:
+  task: Make `scrubber.conf` readable by its owner only.
+  cwd: /station
+  files:
+    - {path: /station, type: dir}
+    - {path: /station/scrubber.conf, mode: "644", contents: "override=7731\\n"}
+  checks:
+    - {mode: /station/scrubber.conf, equals: "600"}
+  success: Okafor nods.
+"""
+
+
+def _write(root, terminal=TERMINAL):
+    (root / "syllabus.yml").write_text(textwrap.dedent(SYLLABUS))
+    (root / "core" / "shell").mkdir(parents=True)
+    (root / "core/shell/01-one.md").write_text(MODULE.format(title="One", xp=50))
+    two = MODULE.format(title="Two", xp=50)
+    (root / "core/shell/02-two.md").write_text(two.replace("---\nLesson.", terminal + "---\nLesson.", 1))
+
+
+@pytest.fixture
+def terminal_curriculum(tmp_path):
+    _write(tmp_path)
+    app.dependency_overrides[get_catalog] = lambda: load_catalog(tmp_path)
+    yield
+    app.dependency_overrides.pop(get_catalog, None)
+
+
+def _state(mode: int) -> dict:
+    node = {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}
+    return {
+        "/": node,
+        "/station": {**node, "owner": "cadet", "group": "crew"},
+        "/station/scrubber.conf": {
+            "type": "file", "mode": mode, "owner": "cadet", "group": "crew", "contents": "override=7731\n",
+        },
+    }
+
+
+def _report(client, slug, state, passed=True):
+    return client.post(
+        f"/modules/{slug}/terminal",
+        content=json.dumps({"state": state, "passed": passed}),
+        headers={"Content-Type": "application/json", "X-CSRF-Token": csrf(client)},
+    )
+
+
+def _attempts(user_id):
+    with SessionLocal() as db:
+        rows = db.execute(
+            select(ExerciseAttempt.module_slug, ExerciseAttempt.kind, ExerciseAttempt.correct, ExerciseAttempt.submitted)
+            .where(ExerciseAttempt.user_id == user_id, ExerciseAttempt.kind == "terminal")
+            .order_by(ExerciseAttempt.id)
+        )
+        return [tuple(r) for r in rows]
+
+
+# --- the schema ------------------------------------------------------------------------
+@pytest.mark.criterion(17, "Invalid terminal exercises fail CI")
+def test_a_check_on_a_path_the_starting_filesystem_never_creates_fails(tmp_path):
+    _write(tmp_path, TERMINAL.replace('{mode: /station/scrubber.conf, equals: "600"}', '{mode: /station/scrubber.cfg, equals: "600"}'))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    message = str(exc.value)
+    assert "core/shell/02-two.md: terminal:" in message
+    assert "checks.0 (mode /station/scrubber.cfg): /station/scrubber.cfg is not in the starting filesystem" in message
+
+
+@pytest.mark.parametrize(
+    ("replace", "with_", "expect"),
+    [
+        ("cwd: /station", "cwd: /nowhere", "cwd: /nowhere is not a directory"),
+        ('mode: "644"', 'mode: "999"', "terminal.files.1.mode"),
+        ("equals: \"600\"", "equals: \"rw\"", "terminal.checks.0"),
+        ("{path: /station, type: dir}", "{path: /station, contents: x}", "/station/scrubber.conf is inside /station, which is a file"),
+        ("{path: /station, type: dir}", "{path: /station, type: dir, contents: x}", "a directory has no contents"),
+        ("{path: /station, type: dir}", "{path: station, type: dir}", "terminal.files.0.path"),
+        ("{mode: /station/scrubber.conf", "{run: /station/scrubber.conf", "terminal.checks.0"),
+        ("    - {path: /station, type: dir}\n", "    - {path: /station, type: dir}\n    - {path: /station, type: dir}\n", "/station listed twice"),
+    ],
+)
+def test_bad_terminal_exercises_are_reported(tmp_path, replace, with_, expect):
+    assert replace in TERMINAL
+    _write(tmp_path, TERMINAL.replace(replace, with_))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert "core/shell/02-two.md" in str(exc.value) and expect in str(exc.value)
+
+
+def test_exists_and_contains_may_name_what_the_learner_creates(tmp_path):
+    _write(tmp_path, TERMINAL.replace(
+        '    - {mode: /station/scrubber.conf, equals: "600"}',
+        "    - {exists: /station/backup, type: dir}\n    - {contains: /station/notes.txt, text: done}",
+    ))
+    assert len(load_catalog(tmp_path).modules["two"].terminal.checks) == 2
+
+
+def test_unlisted_parent_directories_exist_owned_by_root(tmp_path):
+    _write(tmp_path, TERMINAL.replace("    - {path: /station, type: dir}\n", ""))
+    fs = load_catalog(tmp_path).modules["two"].terminal.starting_fs()
+    assert fs["/station"] == {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}
+    assert fs["/station/scrubber.conf"]["owner"] == "cadet" and fs["/station/scrubber.conf"]["mode"] == 0o644
+
+
+def test_the_real_exercises_load_and_start_unsolved():
+    from app.terminal import Node, grade
+
+    catalog = load_catalog()
+    exercises = {slug: m.terminal for slug, m in catalog.modules.items() if m.terminal}
+    assert {"files-and-globs", "permissions"} <= exercises.keys()
+    for exercise in exercises.values():
+        start = {p: Node(**n) for p, n in exercise.starting_fs().items()}
+        assert not grade(exercise, start)
+
+
+# --- the page ----------------------------------------------------------------------------
+@pytest.mark.criterion(17, "The console starts in the module's filesystem")
+def test_the_module_page_carries_the_console_and_its_starting_filesystem(logged_in, terminal_curriculum):
+    complete(logged_in, "one")
+    page = logged_in.get("/modules/two").text
+    spec = json.loads(re.search(r"data-terminal='([^']*)'", page).group(1))
+    assert spec["cwd"] == "/station" and spec["user"] == "cadet"
+    assert spec["fs"]["/station/scrubber.conf"] == {
+        "type": "file", "mode": 0o644, "owner": "cadet", "group": "crew", "contents": "override=7731\n",
+    }
+    assert spec["checks"] == [{"mode": "/station/scrubber.conf", "equals": "600"}]
+    assert 'data-report="/modules/two/terminal"' in page
+    assert re.search(r'<script src="[^"]*/static/js/shell.js" defer></script>', page)
+    assert re.search(r'<script src="[^"]*/static/js/console.js" defer></script>', page)
+    assert "readable by its owner only" in page
+
+
+def test_a_module_without_an_exercise_loads_no_console(logged_in, terminal_curriculum):
+    page = logged_in.get("/modules/one").text
+    assert "data-terminal" not in page and "console.js" not in page
+
+
+# --- reporting -----------------------------------------------------------------------------
+@pytest.mark.criterion(17, "Completing the task is recognised")
+def test_a_state_that_satisfies_every_check_is_recorded_as_correct(logged_in, terminal_curriculum, user):
+    complete(logged_in, "one")
+    response = _report(logged_in, "two", _state(0o600))
+    assert response.status_code == 200 and response.json() == {"correct": True}
+    [(slug, kind, correct, submitted)] = _attempts(user.id)
+    assert (slug, kind, correct, submitted["claimed"]) == ("two", "terminal", True, True)
+    assert submitted["state"]["/station/scrubber.conf"]["mode"] == 0o600
+
+
+@pytest.mark.criterion(17, "The server doesn't trust the browser's verdict")
+def test_a_claimed_pass_with_a_failing_state_is_recorded_as_incorrect(logged_in, terminal_curriculum, user):
+    complete(logged_in, "one")
+    response = _report(logged_in, "two", _state(0o644), passed=True)
+    assert response.json() == {"correct": False}
+    [(_, _, correct, submitted)] = _attempts(user.id)
+    assert correct is False and submitted["claimed"] is True
+
+
+def test_a_locked_module_cannot_be_reported(logged_in, terminal_curriculum, user):
+    assert _report(logged_in, "two", _state(0o600)).status_code == 403
+    assert _attempts(user.id) == []
+
+
+def test_a_module_without_an_exercise_has_no_report_route(logged_in, terminal_curriculum):
+    assert _report(logged_in, "one", _state(0o600)).status_code == 404
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        {"relative/path": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew"}},
+        {"/x": {"type": "socket", "mode": 0o600, "owner": "cadet", "group": "crew"}},
+        {"/x": {"type": "file", "mode": 0o600, "owner": "Robert'); DROP", "group": "crew"}},
+        {"/x": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew", "contents": "x" * 20_001}},
+        {f"/f{i}": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew"} for i in range(501)},
+    ],
+    ids=["relative-path", "bad-type", "bad-owner", "huge-file", "too-many-paths"],
+)
+def test_malformed_or_oversized_reports_are_refused(logged_in, terminal_curriculum, user, state):
+    complete(logged_in, "one")
+    assert _report(logged_in, "two", state).status_code == 422
+    assert _attempts(user.id) == []
+
+
+def test_reports_need_the_csrf_token(logged_in, terminal_curriculum):
+    complete(logged_in, "one")
+    response = logged_in.post(
+        "/modules/two/terminal",
+        content=json.dumps({"state": _state(0o600), "passed": True}),
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 403
+
+
+def test_attempts_are_scoped_to_the_learner(logged_in, terminal_curriculum, user, make_user):
+    other = make_user()
+    complete(logged_in, "one")
+    _report(logged_in, "two", _state(0o600))
+    assert _attempts(other.id) == []
+    assert len(_attempts(user.id)) == 1

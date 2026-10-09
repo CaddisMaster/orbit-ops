@@ -106,6 +106,46 @@ CommonMark plus tables. Fenced code blocks with a language (```bash, ```python,
 ```yaml, ```text …) are syntax-highlighted.
 ```
 
+### A terminal exercise (optional)
+
+A module can carry a task for the **station console**, a shell simulated in the browser over a
+filesystem the module defines. It sits between the lesson and the quiz.
+
+```yaml
+terminal:
+  task: |                     # what Okafor asks for (Markdown)
+    Make `scrubber.conf` **readable and writable by you only**.
+  cwd: /station/life-support  # where the console starts; also $HOME, so plain `cd` returns here
+  user: cadet                 # optional; default cadet, group crew
+  files:                      # the starting filesystem
+    - {path: /station, type: dir}            # list a directory to own it
+    - {path: /station/life-support, type: dir}
+    - path: /station/life-support/scrubber.conf
+      mode: "644"             # a quoted octal string; default 644 for files, 755 for dirs
+      contents: |
+        override_code = 7731
+  checks:                     # all must pass; up to 10
+    - {mode: /station/life-support/scrubber.conf, equals: "600"}
+  success: Okafor nods.       # printed when every check passes
+```
+
+- **Files you don't own are read-only to the learner.** The shell enforces permissions as a
+  normal user with umask `002`. A directory you don't list exists anyway, owned by `root` with
+  mode `755`, so the learner can't create files in it. List every directory they need to write
+  to.
+- **Checks:** `{mode: P, equals: "600"}`, `{owner: P, user: u, group: g}`, `{exists: P, type: file|dir}`,
+  `{missing: P}`, `{contains: P, text: "…"}`. `mode`, `owner` and `missing` must name a path in the
+  starting filesystem, or validation fails naming the check; `exists` and `contains` may name
+  something the learner creates.
+- **What the console knows:** `pwd cd ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r) mv
+  rm (-r -f) chmod (octal and symbolic, -R) chown whoami id grep (-i -v -n -c) wc sort uniq head
+  tail cut clear help`, plus globs, `{a,b}` and `{1..9}`, pipes, `> >> < 2>`, `; && ||`, `$?` and
+  `$USER`/`$HOME`/`$PWD`. Anything else prints "command not found". Don't set a task that needs
+  more (`sudo`, `find`, `tar`…): add the command to `app/static/js/shell.js` first, with a test in
+  `tests/js/`.
+- **Solve it yourself** before merging: open the module and do the task in the console. It's
+  the terminal equivalent of running every "Try it".
+
 Raw HTML in lessons is **disabled**: it renders as literal text. Use Markdown.
 
 Formatting inside a code block is literal, so `*word*` in a ```text diagram shows the asterisks.

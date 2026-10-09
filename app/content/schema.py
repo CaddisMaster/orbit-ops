@@ -81,6 +81,128 @@ class Card(_Strict):
     back: Text
 
 
+# ---------------------------------------------------------------------------
+# Terminal exercises (#17): a starting filesystem for the station console, a
+# task, and checks against the filesystem the learner leaves behind. The
+# console (static/js/console.js) is a simulated shell over this filesystem;
+# the server re-runs the checks (app/terminal.py) on the state it is sent.
+# ---------------------------------------------------------------------------
+AbsPath = Annotated[str, Field(pattern=r"^/([A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)?$", max_length=200)]
+Octal = Annotated[str, Field(pattern=r"^0?[0-7]{3}$")]  # "600" or "0600"
+Account = Annotated[str, Field(pattern=r"^[a-z_][a-z0-9_-]{0,31}$")]
+
+
+def _parent(path: str) -> str:
+    return path.rsplit("/", 1)[0] or "/"
+
+
+class FsEntry(_Strict):
+    path: AbsPath
+    type: Literal["file", "dir"] = "file"
+    contents: str = ""
+    mode: Octal | None = None  # default 644 for a file, 755 for a directory
+    owner: Account | None = None  # default: the exercise's user
+    group: Account | None = None  # default: the exercise's group
+
+    @model_validator(mode="after")
+    def _dirs_have_no_contents(self):
+        if self.type == "dir" and self.contents:
+            raise ValueError(f"{self.path}: a directory has no contents")
+        if self.path == "/":
+            raise ValueError("/ always exists; don't list it")
+        return self
+
+
+class ModeCheck(_Strict):
+    mode: AbsPath
+    equals: Octal
+
+
+class OwnerCheck(_Strict):
+    owner: AbsPath
+    user: Account
+    group: Account | None = None
+
+
+class ExistsCheck(_Strict):
+    exists: AbsPath
+    type: Literal["file", "dir"] | None = None
+
+
+class MissingCheck(_Strict):
+    missing: AbsPath
+
+
+class ContainsCheck(_Strict):
+    contains: AbsPath
+    text: Text
+
+
+TerminalCheck = ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck
+
+
+def check_path(check: TerminalCheck) -> str:
+    match check:
+        case ModeCheck(mode=p) | OwnerCheck(owner=p) | ExistsCheck(exists=p) | MissingCheck(missing=p):
+            return p
+        case ContainsCheck(contains=p):
+            return p
+    raise TypeError(check)
+
+
+def describe(check: TerminalCheck) -> str:
+    """A check as an author wrote it, for error messages: "mode /station/x"."""
+    return f"{next(iter(type(check).model_fields))} {check_path(check)}"
+
+
+class TerminalExercise(_Strict):
+    task: Text  # what Okafor asks for (Markdown)
+    user: Account = "cadet"
+    group: Account = "crew"
+    cwd: AbsPath = "/station"
+    files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
+    checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
+    success: Text = "Okafor's voice crackles over the comm: \"Confirmed. Nice work, cadet.\""
+
+    def starting_fs(self) -> dict[str, dict]:
+        """{path: node} for the whole starting tree. Parent directories that
+        aren't listed exist anyway, owned by root, mode 755, as on a real system."""
+        fs = {"/": {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}}
+        for entry in self.files:
+            parent = _parent(entry.path)
+            while parent not in fs:
+                fs[parent] = {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}
+                parent = _parent(parent)
+            fs[entry.path] = {
+                "type": entry.type,
+                "mode": int(entry.mode or ("755" if entry.type == "dir" else "644"), 8),
+                "owner": entry.owner or self.user,
+                "group": entry.group or self.group,
+                "contents": entry.contents,
+            }
+        return dict(sorted(fs.items()))
+
+    @model_validator(mode="after")
+    def _consistent(self):
+        paths = [e.path for e in self.files]
+        if dupes := sorted({p for p in paths if paths.count(p) > 1}):
+            raise ValueError(f"files: {', '.join(dupes)} listed twice")
+        fs = self.starting_fs()
+        for entry in self.files:
+            if fs[_parent(entry.path)]["type"] != "dir":
+                raise ValueError(f"files: {entry.path} is inside {_parent(entry.path)}, which is a file")
+        if fs.get(self.cwd, {}).get("type") != "dir":
+            raise ValueError(f"cwd: {self.cwd} is not a directory in the starting filesystem")
+        for i, check in enumerate(self.checks):
+            # A mode, owner or missing check reads something that must already be
+            # there; exists and contains may name what the learner creates.
+            if not isinstance(check, ExistsCheck | ContainsCheck) and check_path(check) not in fs:
+                raise ValueError(
+                    f"checks.{i} ({describe(check)}): {check_path(check)} is not in the starting filesystem"
+                )
+        return self
+
+
 class ModuleFile(_Strict):
     """A module's YAML front matter. The slug and the position in its unit come
     from the filename (`NN-slug.md`), not from here, so they cannot disagree."""
@@ -91,6 +213,7 @@ class ModuleFile(_Strict):
     story: Text  # the mission-log briefing that opens the module (Markdown)
     quiz: Annotated[list[Question], Field(min_length=1, max_length=8)]
     cards: list[Card] = []
+    terminal: TerminalExercise | None = None  # a station-console task (#17)
 
 
 # ---------------------------------------------------------------------------

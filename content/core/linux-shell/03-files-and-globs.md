@@ -38,6 +38,37 @@ quiz:
     explain: >-
       Renaming is just moving within the same directory: `mv old new`. Careful: if `final.txt`
       already exists, `mv` replaces it without asking (`mv -i` asks).
+terminal:
+  task: |
+    The cargo bay's `logs` directory is full of crash dumps. Okafor wants the ones from
+    **October** kept, moved into a new directory `/station/cargo/archive`, and the
+    **September** ones deleted. Leave `app.log` where it is. Preview each glob with `echo`
+    before you hand it to `mv` or `rm`.
+  cwd: /station/cargo
+  files:
+    - {path: /station, type: dir}
+    - {path: /station/cargo, type: dir}
+    - {path: /station/cargo/logs, type: dir}
+    - {path: /station/cargo/logs/app.log, contents: "bay door cycled\nbay door cycled\n"}
+    - {path: /station/cargo/logs/crash-2026-09-12.dump, contents: "core dump 2026-09-12\n"}
+    - {path: /station/cargo/logs/crash-2026-09-19.dump, contents: "core dump 2026-09-19\n"}
+    - {path: /station/cargo/logs/crash-2026-09-26.dump, contents: "core dump 2026-09-26\n"}
+    - {path: /station/cargo/logs/crash-2026-10-02.dump, contents: "core dump 2026-10-02\n"}
+    - {path: /station/cargo/logs/crash-2026-10-05.dump, contents: "core dump 2026-10-05\n"}
+    - {path: /station/cargo/logs/crash-2026-10-07.dump, contents: "core dump 2026-10-07\n"}
+  checks:
+    - {exists: /station/cargo/archive/crash-2026-10-02.dump, type: file}
+    - {exists: /station/cargo/archive/crash-2026-10-05.dump, type: file}
+    - {exists: /station/cargo/archive/crash-2026-10-07.dump, type: file}
+    - {missing: /station/cargo/logs/crash-2026-10-02.dump}
+    - {missing: /station/cargo/logs/crash-2026-10-05.dump}
+    - {missing: /station/cargo/logs/crash-2026-10-07.dump}
+    - {missing: /station/cargo/logs/crash-2026-09-12.dump}
+    - {missing: /station/cargo/logs/crash-2026-09-19.dump}
+    - {missing: /station/cargo/logs/crash-2026-09-26.dump}
+    - {exists: /station/cargo/logs/app.log, type: file}
+  success: |-
+    "Archive's tidy and the old dumps are gone," Okafor says. "And app.log survived. You'd be amazed how often it doesn't."
 cards:
   - front: How do you copy a whole directory?
     back: "`cp -r src dest`. Without `-r`, `cp` skips directories."

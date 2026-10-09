@@ -28,9 +28,11 @@ Browser ─HTTPS─▶ host Nginx (TLS, learn.seandesmet.com)
 | `app/station_map.py` | `layout(catalog, completed)`: the station map as a **pure** function returning decks, nodes (state from `progress.py`'s lock rules) and prerequisite edges in SVG coordinates; `map: {x, y}` from content or an automatic grid |
 | `app/console.py` | `console_readout`, a dependency the signed-in pages share for the header's "Systems online 3/10 · Streak 5" (reads only: `streaks.peek()` never records freezes) |
 | `app/static/js/briefing.js` | types a module's briefing out as an incoming transmission; a click or key skips. Progressive enhancement: the server sends the full text, and nothing happens under reduced motion or without JS |
+| `app/terminal.py` | terminal exercises on the server: `Report` (the posted final filesystem, size-bounded), `grade()` (this module's checks; the browser's verdict is recorded but never believed), `client_spec()` |
+| `app/static/js/shell.js`, `console.js` | the station console: `shell.js` is a **pure** simulated shell over the exercise's filesystem (tested by `node --test tests/js/*.test.js`); `console.js` draws it (our own log + `<input>`, not xterm.js, whose injected `<style>` the CSP blocks) and POSTs the final state to `/modules/{slug}/terminal` |
 | `app/game/` | `levels.py`: the level curve and rank bands as **pure functions** of an XP total (`standing()`); `xp.py`: what a completion awards, `award()` (idempotent `INSERT … ON CONFLICT DO NOTHING`) and `total_xp()`; `streaks.py`: the streak and freezes as a **pure** `compute(days, today)`, plus `mark_active()` and `current_streak()`, which records the freezes a request finds it can spend (no scheduler); `badges.py`: the rule evaluators as a **pure** `qualifying(catalog, facts)` over the learner's whole state, plus `award()` (idempotent, like XP), `earned()` and the dashboard/page shelves |
 | `app/flash.py` | one-shot messages across a redirect, in the session |
-| `app/routers/` | `auth` (login/logout), `main` (dashboard, `/badges`, `/healthz`), `learn` (`/syllabus`, `/map`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment) |
+| `app/routers/` | `auth` (login/logout), `main` (dashboard, `/badges`, `/healthz`), `learn` (`/syllabus`, `/map`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment, `POST /modules/{slug}/terminal` → JSON verdict) |
 
 ## Content
 

@@ -2,6 +2,10 @@
 {% from "partials/_unit_emblem.html" import unit_emblem %}
 {% block title %}{{ module.title }} · Orbit Ops{% endblock %}
 {% block body_class %}deck--{{ track.slug }}{% endblock %}
+{% block scripts %}{% if terminal_spec %}
+  <script src="{{ url_for('static', path='js/shell.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/console.js') }}" defer></script>
+{% endif %}{% endblock %}
 {% block content %}
 <nav class="crumbs muted" aria-label="Breadcrumb">
   <a href="/syllabus">{{ track.deck }}</a> <span aria-hidden="true">›</span> {{ unit.title }}
@@ -27,6 +31,8 @@
 
   {# body_html is rendered from repo Markdown with raw HTML disabled (app/content/render.py). #}
   <section class="lesson prose">{{ module.body_html | safe }}</section>
+
+  {% if terminal_spec %}{% include "partials/_terminal.html" %}{% endif %}
 
   <section class="card quiz" aria-labelledby="quiz-heading">
     <p class="eyebrow">Systems check</p>

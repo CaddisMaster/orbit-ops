@@ -8,6 +8,12 @@
 SKIP_LINT=1 ./test.sh
 ```
 
+The station console's shell is JavaScript and has its own tests: `node --test tests/js/*.test.js`.
+`./test.sh` runs them on the host first (the app image has no Node) and skips them, saying so,
+if Node isn't installed. CI's Tests job always runs them. They use only `node:test`, so there's
+nothing to install or pin. A criterion only a JS test or a browser can show goes in the PR body
+as a `Verified by hand:` line naming the test.
+
 `test.sh` reuses the running dev `web` container when it has the dev dependencies, otherwise it
 builds a throwaway one. It drops and recreates `orbit_test` and runs `alembic upgrade head` each
 time, so tests always see the current schema.
