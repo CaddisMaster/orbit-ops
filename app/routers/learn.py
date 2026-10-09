@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from app import progress, station_map, terminal
+from app import comms, progress, station_map, terminal
 from app.console import Readout, console_readout
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
@@ -115,6 +115,7 @@ def terminal_report(
     if not progress.module_available(catalog, slug, progress.completed_slugs(db, user.id)):
         return JSONResponse({"error": "locked"}, status_code=403)
     correct = terminal.grade(module.terminal, report.state, report.cwd, report.processes)
+    first_pass = correct and slug not in comms.console_passed(db, user.id)
     db.add(
         ExerciseAttempt(
             user_id=user.id,
@@ -131,7 +132,13 @@ def terminal_report(
         )
     )
     db.commit()
-    return JSONResponse({"correct": correct})
+    body = {"correct": correct}
+    if first_pass and module.comms and module.comms.console_done:
+        # The first time the task passes, the crew answers on the comms log (#38).
+        body["comms"] = templates.get_template("partials/_comms_lines.html").render(
+            lines=comms.beat(catalog, module, "console_done", new=True), request=request
+        )
+    return JSONResponse(body)
 
 
 @router.post("/modules/{slug}/quiz/{index}", response_class=HTMLResponse)
@@ -165,7 +172,7 @@ def answer_question(
 
     result = progress.record_answer(db, user.id, module, index, answer, correct)
     record = progress.get_progress(db, user.id, slug)
-    xp_gained, promoted_to, new_badges = 0, None, []
+    xp_gained, promoted_to, new_badges, arrivals, window_event = 0, None, [], [], None
     if result.just_completed:
         # Same transaction as the completion: all of it lands or none does.
         streaks.mark_active(db, user.id, streaks.today())
@@ -180,6 +187,9 @@ def answer_question(
             perfect_quiz=badges.has_perfect_quiz(db, user.id),
         )
         new_badges = badges.award(db, user.id, catalog, facts)
+        if module.comms:
+            arrivals = comms.beat(catalog, module, "complete", new=True)
+            window_event = module.comms.window.get("complete")
     db.commit()
     completed = progress.completed_slugs(db, user.id)
     return templates.TemplateResponse(
@@ -193,6 +203,8 @@ def answer_question(
             "xp_gained": xp_gained,
             "promoted_to": promoted_to,
             "new_badges": new_badges,
+            "arrivals": arrivals,
+            "window_event": window_event,
             "next": progress.next_module(catalog, slug, completed) if result.just_completed else None,
         },
     )

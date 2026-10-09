@@ -18,6 +18,13 @@ ranks:
   - {title: Chief Engineer, level: 15}
   - {title: Station Commander, level: 21}
 
+# Who can message you on the desk's comms log (#38). `avatar` is one of the
+# sprites in art/sprites.py; `delay` stamps a light-delay on every message.
+cast:
+  - {slug: okafor, name: Okafor, role: Chief Engineer, avatar: okafor}
+  - {slug: meridian, name: MERIDIAN, role: Station systems, avatar: meridian}
+  - {slug: mission, name: Mission Control, role: Earth, avatar: mission, delay: "1.3 s"}
+
 tracks:
   - slug: core
     title: Core Systems

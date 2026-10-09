@@ -97,8 +97,9 @@ def test_the_briefing_is_served_in_full_without_javascript(logged_in):
 
 def test_motion_is_switched_off_under_reduced_motion():
     css = (STATIC / "css" / "style.css").read_text()
-    block = css[css.rindex("@media (prefers-reduced-motion: reduce)") :]
-    assert "body::before, body::after, .completion.is-new { animation: none; }" in block
+    reduced = "".join(re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", css, re.S))
+    assert ".completion.is-new { animation: none; }" in reduced
+    assert "drift-near" not in css  # the starfield is gone: the desk's window replaced it (#38)
     assert "prefers-reduced-motion: reduce" in (STATIC / "js" / "briefing.js").read_text()
 
 

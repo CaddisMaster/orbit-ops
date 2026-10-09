@@ -199,6 +199,49 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 - **Still open the module and do it yourself** before merging: CI proves the solution works,
   not that the task reads well.
 
+### Comms: the crew's messages (optional)
+
+A module can send messages to the comms log on the desk's monitor, at three beats: `open`
+(the briefing, on the first visit; it replaces the italic `story` on the page), `console_done`
+(the first time its console task passes) and `complete` (the debrief). A beat can also play a
+window event outside the desk's window.
+
+```yaml
+comms:
+  open:
+    - {from: meridian, text: "ALERT · `scrubber.conf` · MODE 644"}
+    - {from: okafor, text: "Cadet. Someone left the override code where **everyone** can read it."}
+  console_done:
+    - {from: okafor, text: "That's the one."}
+  complete:
+    - {from: mission, text: "Supply shuttle *Kestrel* on final approach."}
+  window: {complete: shuttle-dock}     # the set: shuttle-dock
+```
+
+- `from` is a slug from `cast:` in `syllabus.yml` (Okafor, MERIDIAN, Mission Control), or
+  validation fails naming the file and the character. `text` is inline Markdown.
+- `console_done` needs a `terminal:` exercise in the same module.
+- ⚠️ **Quote any `text` with a comma** when using the `{from: …, text: …}` form: YAML splits an
+  unquoted `text: Good, now go` at the comma.
+- Write like chat, not like a lesson: a sentence or two per message, three or four messages a
+  beat. MERIDIAN speaks in terse status lines with `·` separators.
+- The log is rebuilt from progress on every page, in the order modules were completed, so
+  editing a module's comms changes what everyone sees in their history too.
+
+The cast is declared in `syllabus.yml`:
+
+```yaml
+cast:
+  - {slug: okafor, name: Okafor, role: Chief Engineer, avatar: okafor}
+  - {slug: mission, name: Mission Control, role: Earth, avatar: mission, delay: "1.3 s"}  # light-delay stamp
+```
+
+A new character needs an avatar sprite in `art/sprites.py` (and its name in `Avatar` in
+`app/content/schema.py`); a new window event needs a sprite and keyframes in `style.css`
+(and its name in `WindowEvent`). The art is code: change it in `art/`, run
+`docker compose exec -u "$(id -u):$(id -g)" web python -m art.build`, and commit both
+(`tests/test_art.py` fails if the PNGs and the scripts disagree).
+
 Raw HTML in lessons is **disabled**: it renders as literal text. Use Markdown.
 
 Formatting inside a code block is literal, so `*word*` in a ```text diagram shows the asterisks.

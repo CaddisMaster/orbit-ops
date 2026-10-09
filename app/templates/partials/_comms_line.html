@@ -1,0 +1,9 @@
+{# One message in the comms log. `line` is an app.comms.Line; is-new lines are
+   revealed one at a time by static/js/comms.js (all at once without JS). #}
+<li class="comms-line from-{{ line.who.slug }}{{ ' is-new' if line.new }}" data-beat="{{ line.beat }}" data-module="{{ line.module }}">
+  <img class="avatar" src="{{ url_for('static', path='img/avatar-' ~ line.who.avatar ~ '.png') }}" alt="" width="32" height="32">
+  <div class="bubble">
+    <p class="who">{{ line.who.name }} <span class="role">· {{ line.who.role }}</span>{% if line.who.delay %} <span class="delay">+{{ line.who.delay }} light-delay</span>{% endif %}</p>
+    <p class="said">{{ line.html }}</p>
+  </div>
+</li>

@@ -337,6 +337,7 @@ class ModuleFile(_Strict):
     quiz: Annotated[list[Question], Field(min_length=1, max_length=8)]
     cards: list[Card] = []
     terminal: TerminalExercise | None = None  # a station-console task (#17)
+    comms: Comms | None = None  # messages in the comms log (#38)
 
 
 # ---------------------------------------------------------------------------
@@ -405,8 +406,45 @@ class BadgeSpec(_Strict):
     rule: BadgeRule
 
 
+# ---------------------------------------------------------------------------
+# The comms log (#38): the cast, and the messages a module sends at its beats.
+# ---------------------------------------------------------------------------
+Avatar = Literal["okafor", "meridian", "mission"]  # the sprites in art/sprites.py
+WindowEvent = Literal["shuttle-dock"]  # the animations in style.css, "Window events"
+
+
+class CastSpec(_Strict):
+    slug: Slug
+    name: Text
+    role: Text
+    avatar: Avatar
+    delay: Annotated[str, Field(pattern=r"^\d+(\.\d+)? s$")] | None = None  # light-delay, e.g. "1.3 s"
+
+
+class Message(_Strict):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    from_: Slug = Field(alias="from")  # a cast slug
+    text: Text  # inline Markdown
+
+
+Beat = Literal["open", "console_done", "complete"]
+
+
+class Comms(_Strict):
+    """What a module's messages are and when they arrive: `open` when the
+    module is first opened (the briefing), `console_done` when its console task
+    passes, `complete` when it's completed (the debrief)."""
+
+    open: list[Message] = []
+    console_done: list[Message] = []
+    complete: list[Message] = []
+    window: dict[Beat, WindowEvent] = {}  # a window event that plays at a beat
+
+
 class Syllabus(_Strict):
     tracks: Annotated[list[TrackSpec], Field(min_length=1)]
+    cast: list[CastSpec] = []  # who can send messages
     ranks: list[RankSpec] = []  # rank titles by level band, lowest first
     badges: list[BadgeSpec] = []  # in the order the badges page shows them
 

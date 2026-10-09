@@ -69,6 +69,19 @@ terminal:
     - 'chmod 600 scrubber.conf'
     - 'chmod u+x purge.sh'
     - 'ls -l'
+comms:
+  open:
+    - {from: meridian, text: "ALERT · `/station/life-support/scrubber.conf` · MODE 644 · READABLE BY ALL CREW"}
+    - {from: okafor, text: "Cadet. Someone left the life-support override code in a file **everyone on the station can read**."}
+    - {from: okafor, text: "Read up on permissions, then fix it from the console. I'll be watching the listing."}
+  console_done:
+    - {from: meridian, text: "MODE CHANGE LOGGED · `scrubber.conf` 600 · `purge.sh` 744"}
+    - {from: okafor, text: "That's the one. Now the systems check, so I know you know *why* it's 600."}
+  complete:
+    - {from: okafor, text: "Good work. Permissions are how this station decides who gets to break what."}
+    - {from: mission, text: "*Meridian*, Mission Control. Supply shuttle *Kestrel* is on final approach to docking arm 2."}
+    - {from: meridian, text: "DOCKING ARM 2 · CLEAR · *KESTREL* CAPTURED"}
+  window: {complete: shuttle-dock}
 cards:
   - front: "Octal values of r, w, x"
     back: "r = 4, w = 2, x = 1. Add them per class: 7 = rwx, 6 = rw-, 5 = r-x, 4 = r--."

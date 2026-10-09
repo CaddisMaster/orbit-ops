@@ -7,6 +7,18 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Added
+- The desk (#38). Orbit Ops is now a first-person scene: a pixel-art room on the *Meridian*,
+  with a window onto the Earth and a docking arm, a desk with a keyboard, a lamp and a coffee mug,
+  and the whole app on the monitor in front of you. Desktop browsers only, 1280×720 and up.
+  - **A comms log** beside every page holds every message the crew has sent you, in order: Chief
+    Engineer Okafor, MERIDIAN (the station's own terse status lines) and Mission Control (with a
+    light-delay stamp). New messages arrive one at a time after "… is typing"; Escape or a click
+    brings them all in.
+  - **Permissions and ownership is the first module told this way:** its briefing arrives on
+    comms, passing its console task gets Okafor's reply, and completing it brings the debrief
+    while the supply shuttle *Kestrel* docks outside the window.
+  - The art is code (`art/`), checked by a test that redraws it, and the CSP is unchanged.
+    Under reduced motion messages appear at once and the shuttle is a still, docked.
 - Station console tasks in four more Unit 1.1 modules: find the life-support logs
   (filesystem), follow Okafor's hidden note (navigating), capture both output streams for the
   reactor report (pipes and redirection), and find the three noisiest addresses in the docking
@@ -32,6 +44,10 @@ and why it matters, not what the diff says.
   supported rather than giving a wrong answer (#41).
 - Every exercise carries a reference solution that CI runs through the console's shell, so a
   task that can't be completed fails the build. Solutions are never sent to the browser (#36).
+
+### Changed
+- The starfield behind every page is gone: the desk's window shows real space now (#38).
+- Phones are no longer supported: Orbit Ops is built for desktop browsers (#38).
 
 ## [0.3.0] — 2026-10-09
 
