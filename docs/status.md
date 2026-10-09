@@ -14,9 +14,48 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.2.0 | 2026-10-08 | Learn loop: syllabus, Unit 1.1 (10 modules), quizzes, completion, locking; migration `0003` |
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-08 (evening) — v0.2.0 shipped; XP and streaks merged
+
+- **Released v0.2.0.** The `release-prep` agent said GO, with no blockers. The CHANGELOG cut was
+  #20. Release run `37864244817`: backup ok, migration, `running version 0.2.0`, healthy.
+  `/healthz` reports `0.2.0` / `63cf507`, and Budget Buddy stayed green. Alembic's upgrade lines
+  don't appear in the deploy log, only the one-off `web-run` container. Checking a module page
+  on production would confirm `0003`.
+- Milestones: v0.2.0 is closed and **v0.3.0 — Gamify** is open, holding #17, #18 and four new
+  issues: #21 XP, #22 streaks, #23 badges, #24 station map.
+- **#21 done** (#25 `0004 xp_events`, #26 feature).
+  - Awards are idempotent through a unique `(user_id, reason, ref)` and
+    `INSERT … ON CONFLICT DO NOTHING`.
+  - Level *n*→*n+1* costs `100·n^1.5` in total. That's an interpretation: the issue's literal
+    wording would need 100 XP to *be* level 1.
+  - Rank bands live in `syllabus.yml` (Cadet 1 … Station Commander 21).
+  - No backfill for completions made before the ledger existed.
+- **#22 done** (#27 `0005 activity_days`, #28 feature).
+  - The streak is a pure function of the rows and today, so there's no scheduler.
+  - The first request that finds a gap it can bridge writes the `freeze_used` rows.
+  - A frozen day keeps a run alive but doesn't lengthen it.
+  - A gap is bridged only if the freezes cover all of it.
+- ⚠️ **Before releasing v0.3.0:** confirm the droplet's `.env` sets `APP_TIMEZONE` to Sean's
+  zone (it defaults to UTC, so the streak day would roll over at UTC midnight). Release-prep won't
+  flag it, because the variable isn't new.
+- Process notes:
+  - `gh pr merge --delete-branch` also deletes the *local* branch. For a stacked branch, check
+    that the old base tree equals `origin/main` (`git diff --quiet`), then
+    `git reset origin/main` (keeping the working tree). That replaces the stash dance.
+  - SQLAlchemy 2.1 deprecates `Result.tuples()`: rows already unpack as tuples.
+  - Tests that depend on "today" pin `app.game.streaks._now` and set `get_settings().app_timezone`
+    with monkeypatch, because the dev container's `.env` may not be UTC.
+- **Next:**
+  1. #23 badges. Its `badges_earned` migration goes first. Evaluate after completion and after
+     the streak update.
+  2. #24 station map.
+  3. #17 and #18.
+  4. Cut v0.3.0 once the milestone is empty, after the `APP_TIMEZONE` check.
 
 ### 2026-10-08 (afternoon) — milestone v0.2.0 built, not yet released
 
