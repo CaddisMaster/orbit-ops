@@ -8,9 +8,9 @@
 // Ubuntu's default) and the exact `ls -l` layout. What it doesn't implement
 // says "command not found", in the station's voice.
 (function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory();
-  else root.OrbitShell = factory();
-})(typeof self !== "undefined" ? self : this, function () {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./manual.js"));
+  else root.OrbitShell = factory(root.OrbitManual);
+})(typeof self !== "undefined" ? self : this, function (MANUAL) {
   "use strict";
 
   var UMASK = 0o002;
@@ -1253,7 +1253,8 @@
       step = { done: true };
     }
     if (!step.done) {
-      this.pending = { prompt: step.value.prompt, secret: !!step.value.secret, gen: gen };
+      var v = step.value;
+      this.pending = { prompt: v.prompt || "", secret: !!v.secret, editor: v.editor || null, pager: v.pager || null, gen: gen };
       return { output: this.screen, clear: this.cleared, pending: true };
     }
     this.reap();
@@ -1262,7 +1263,8 @@
   };
 
   // The answer to a pending prompt. The console masks a secret one and never
-  // echoes or stores it.
+  // echoes or stores it. When an editor or a pager closes, the console calls
+  // this with no line to carry on with the command that opened it.
   Shell.prototype.answer = function (line) {
     var p = this.pending;
     this.pending = null;
@@ -1726,6 +1728,12 @@
   // A command is a function, or a generator function when it runs shell code
   // or asks for input (sudo, read, bash, source).
   Shell.prototype.call = function* (name, argv, stdin, io) {
+    // CMD --help prints its usage, as GNU tools and bash builtins do. Not for
+    // echo and test, which print or test the word instead.
+    if (argv.indexOf("--help") > 0 && argv.slice(1, argv.indexOf("--help")).indexOf("--") === -1 && ["echo", "test", "["].indexOf(name) === -1) {
+      if (BUILTINS.indexOf(name) !== -1 && MANUAL.HELP[name]) return ok(renderHelp(name));
+      if (MANUAL.PAGES[name]) return ok(renderUsage(name));
+    }
     try {
       var r = COMMANDS[name].call(this, argv.slice(1), stdin, io);
       if (r && typeof r.next === "function") r = yield* r;
@@ -1933,9 +1941,322 @@
     return fields;
   }
 
+  // --- the editor, the pager, and the manual (#66) ------------------------------------
+  function countLines(text) { return lines(text).length; }
+
+  // nano, as far as the console goes. console.js draws it (nano's title bar,
+  // a <textarea>, the message line and the shortcuts) and passes keys here
+  // with the text as it stands; this decides what happens. `save(body)`
+  // writes the file and says {ok} or {ok: false, message}.
+  //   modes: "edit"; "write" (File Name to Write, Enter confirms);
+  //          "ask" (Save modified buffer? Y/N, after ^X)
+  function Nano(o) {
+    this.name = o.name;
+    this.text = o.text;
+    this.saved = o.text;
+    this.save = o.save;
+    this.message = o.message || "";
+    this.mode = "edit";
+    this.exitAfterWrite = false;
+    this.done = false;
+  }
+  Nano.prototype.modified = function (text) { return text !== this.saved; };
+  Nano.prototype.prompt = function () {
+    if (this.mode === "write") return "File Name to Write: " + this.name;
+    if (this.mode === "ask") return "Save modified buffer?   Y Yes   N No   ^C Cancel";
+    return "";
+  };
+  Nano.prototype.key = function (k, text) {
+    this.text = text;
+    if (this.mode === "write") {
+      if (k === "Enter") return this.write(text);
+      if (k === "^C") { this.mode = "edit"; this.exitAfterWrite = false; this.message = "[ Cancelled ]"; }
+      return this;
+    }
+    if (this.mode === "ask") {
+      if (k === "y" || k === "Y") { this.mode = "write"; this.exitAfterWrite = true; }
+      else if (k === "n" || k === "N") this.done = true;
+      else if (k === "^C") { this.mode = "edit"; this.message = "[ Cancelled ]"; }
+      return this;
+    }
+    this.message = "";
+    if (k === "^O") { this.mode = "write"; this.exitAfterWrite = false; }
+    else if (k === "^X") { if (this.modified(text)) this.mode = "ask"; else this.done = true; }
+    return this;
+  };
+  // nano ends a saved file with a newline, as POSIX text files do.
+  Nano.prototype.write = function (text) {
+    var body = text !== "" && text.slice(-1) !== "\n" ? text + "\n" : text;
+    var r = this.save(body);
+    this.mode = "edit";
+    if (!r.ok) { this.message = r.message; this.exitAfterWrite = false; return this; }
+    this.saved = text;
+    var n = countLines(body);
+    this.message = "[ Wrote " + n + " line" + (n === 1 ? "" : "s") + " ]";
+    if (this.exitAfterWrite) this.done = true;
+    return this;
+  };
+
+  // less, and man's pager. console.js shows view() and passes keys.
+  function Pager(o) {
+    this.lines = lines(o.text);
+    this.name = o.name;
+    this.man = !!o.man;
+    this.height = o.height || 20;
+    this.top = 0;
+    this.pattern = null;
+    this.match = -1;
+    this.message = "";
+    this.done = false;
+  }
+  Pager.prototype.maxTop = function () { return Math.max(0, this.lines.length - this.height); };
+  Pager.prototype.atEnd = function () { return this.top + this.height >= this.lines.length; };
+  Pager.prototype.status = function () {
+    if (this.message) return this.message;
+    if (this.man) return "Manual page " + this.name + " line " + (this.top + 1) + (this.atEnd() ? " (END)" : "") + " (press h for help or q to quit)";
+    if (this.atEnd()) return "(END)";
+    return this.top === 0 && this.name ? this.name : ":";
+  };
+  Pager.prototype.view = function () {
+    return { lines: this.lines.slice(this.top, this.top + this.height), pattern: this.pattern, status: this.status() };
+  };
+  Pager.prototype.key = function (k) {
+    var was = this.message;
+    this.message = "";
+    if (was && k === "Enter") return this; // "(press RETURN)"
+    switch (k) {
+      case " ": case "f": case "PageDown": this.top = Math.max(this.top, Math.min(this.top + this.height, this.maxTop())); break;
+      case "b": case "PageUp": this.top = Math.max(0, this.top - this.height); break;
+      case "j": case "ArrowDown": case "Enter": this.top = Math.max(this.top, Math.min(this.top + 1, this.maxTop())); break;
+      case "k": case "ArrowUp": this.top = Math.max(0, this.top - 1); break;
+      case "g": case "Home": this.top = 0; break;
+      case "G": case "End": this.top = this.maxTop(); break;
+      case "n": this.find(1); break;
+      case "N": this.find(-1); break;
+      case "h": this.message = "Space: next screen   b: back   j/k: a line   g/G: start/end   /text: search   n/N: next/previous match   q: quit"; break;
+      case "q": case "Q": this.done = true; break;
+    }
+    return this;
+  };
+  Pager.prototype.search = function (pattern) {
+    if (pattern) this.pattern = pattern;
+    this.match = this.top - 1;
+    return this.find(1);
+  };
+  Pager.prototype.regex = function () {
+    try { return new RegExp(this.pattern); } catch (e) { return new RegExp(this.pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); }
+  };
+  Pager.prototype.find = function (dir) {
+    if (!this.pattern) { this.message = "No previous regular expression"; return this; }
+    var re = this.regex();
+    var from = this.match >= 0 ? this.match : this.top - (dir > 0 ? 1 : -1);
+    for (var i = from + dir; i >= 0 && i < this.lines.length; i += dir) {
+      if (re.test(this.lines[i])) { this.match = i; this.top = i; return this; }
+    }
+    this.message = "Pattern not found  (press RETURN)";
+    return this;
+  };
+
+  // less FILE, or a pipe into less. Into a pipe itself, it's cat.
+  function* page(cmd, args, stdin, io) {
+    var text, name = "";
+    if (args.length) {
+      var r = this.readFile(cmd, args[0]);
+      if (r.error) return { out: "", err: r.error.replace(cmd + ": ", "") + "\n", code: 1 };
+      text = r.text;
+      name = args[0];
+    } else if (!io.stdin.tty) {
+      if (this.reading) this.reading.used = true;
+      text = stdin;
+    } else return { out: "", err: cmd === "less" ? 'Missing filename ("less --help" for help)\n' : "more: bad usage\nTry 'more --help' for more information.\n", code: 1 };
+    if (!io.tty) return ok(text);
+    yield { pager: new Pager({ text: text, name: name }) };
+    return ok();
+  }
+
+  // The page for `man [SECTION] NAME`: crontab(1) is "crontab", crontab(5) "crontab.5".
+  function manKey(name, section) {
+    var keys = section ? [name + "." + section, name] : [name, name + ".5"];
+    return keys.filter(function (k) {
+      return MANUAL.PAGES[k] && (!section || String(MANUAL.PAGES[k].section || 1) === section);
+    })[0] || null;
+  }
+
+  // An option's flag, then its text wrapped at `at` columns (on a line of its
+  // own if the flag is too long to share one).
+  function optionLines(flag, text, at) {
+    var out = wrap(text, 78, at);
+    if (flag.length < at) out[0] = flag + out[0].slice(flag.length);
+    else out.unshift(flag);
+    return out;
+  }
+
+  // Word-wrap `text` to `width` columns at `indent` spaces. Paragraphs are
+  // split on blank lines; a line starting with four spaces is kept as it is.
+  function wrap(text, width, indent) {
+    var pad = new Array(indent + 1).join(" ");
+    var out = [];
+    text.split("\n").forEach(function (para) {
+      if (para === "") { out.push(""); return; }
+      if (/^ {4}/.test(para)) { out.push(pad + para); return; }
+      var line = "";
+      para.split(/\s+/).forEach(function (word) {
+        if (line && pad.length + line.length + 1 + word.length > width) { out.push(pad + line); line = word; }
+        else line = line ? line + " " + word : word;
+      });
+      if (line) out.push(pad + line);
+    });
+    return out;
+  }
+
+  // man's layout: NAME(1) headers, sections at the margin, text at 7 columns.
+  function renderMan(key) {
+    var page = MANUAL.PAGES[key];
+    var name = page.name || key;
+    var head = name.toUpperCase() + "(" + (page.section || 1) + ")";
+    var middle = page.section === 5 ? "File Formats" : "User Commands";
+    var gap = Math.max(1, Math.floor((78 - 2 * head.length - middle.length) / 2));
+    var spaces = function (n) { return new Array(n + 1).join(" "); };
+    var out = [head + spaces(gap) + middle + spaces(78 - 2 * head.length - middle.length - gap) + head, "", "NAME", "       " + name + " - " + page.summary, ""];
+    if (page.synopsis) out = out.concat(["SYNOPSIS"], page.synopsis.map(function (l) { return "       " + l; }), [""]);
+    out = out.concat(["DESCRIPTION"], wrap(page.description, 78, 7));
+    (page.options || []).forEach(function (o) {
+      out = out.concat([""], ["       " + o[0]], wrap(o[1], 78, 14));
+    });
+    if (page.options) {
+      out = out.concat(["", "STATION CONSOLE"], wrap("This console knows only the options above, and only their short forms (-a, not --all).", 78, 7));
+    }
+    out = out.concat(["", "Meridian station" + spaces(78 - 16 - head.length) + head]);
+    return out.join("\n") + "\n";
+  }
+
+  // CMD --help, in GNU's style.
+  function renderUsage(key) {
+    var page = MANUAL.PAGES[key];
+    var out = ["Usage: " + page.synopsis[0]].concat(page.synopsis.slice(1).map(function (l) { return "  or:  " + l; }));
+    out = out.concat(wrap(page.description, 78, 0));
+    if (page.options) {
+      out.push("");
+      page.options.forEach(function (o) { out = out.concat(optionLines("  " + o[0], o[1], 30)); });
+    }
+    return out.join("\n") + "\n";
+  }
+
+  // bash's `help NAME`.
+  function renderHelp(name) {
+    var h = MANUAL.HELP[name];
+    var out = [name + ": " + h.usage, "    " + h.summary];
+    if (h.description) out = out.concat(["    "], wrap(h.description, 78, 4));
+    if (h.options) {
+      out = out.concat(["    ", "    Options:"]);
+      h.options.forEach(function (o) { out = out.concat(optionLines("      " + o[0], o[1], 18)); });
+    }
+    return out.join("\n") + "\n";
+  }
+
+  // --- crontab -------------------------------------------------------------------------
+  var CRON_SPOOL = "/var/spool/cron/crontabs";
+  var CRON_TEMP = "/tmp/crontab.Mr7KqZ/crontab";
+  var CRONTAB_USAGE =
+    "usage:\tcrontab [-u user] file\n\tcrontab [ -u user ] [ -i ] { -e | -l | -r }\n" +
+    "\t\t(default operation is replace, per 1003.2)\n\t-e\t(edit user's crontab)\n\t-l\t(list user's crontab)\n\t-r\t(delete user's crontab)\n";
+  // What `crontab -e` starts from on Ubuntu.
+  var CRONTAB_TEMPLATE = [
+    "# Edit this file to introduce tasks to be run by cron.",
+    "# ",
+    "# Each task to run has to be defined through a single line",
+    "# indicating with different fields when the task will be run",
+    "# and what command to run for the task",
+    "# ",
+    "# To define the time you can provide concrete values for",
+    "# minute (m), hour (h), day of month (dom), month (mon),",
+    "# and day of week (dow) or use '*' in these fields (for 'any').",
+    "# ",
+    "# Notice that tasks will be started based on the cron's system",
+    "# daemon's notion of time and timezones.",
+    "# ",
+    "# Output of the crontab jobs (including errors) is sent through",
+    "# email to the user the crontab file belongs to (unless redirected).",
+    "# ",
+    "# For example, you can run a backup of all your user accounts",
+    "# at 5 a.m every week with:",
+    "# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/",
+    "# ",
+    "# For more information see the manual pages of crontab(5) and cron(8)",
+    "# ",
+    "# m h  dom mon dow   command",
+    "",
+  ].join("\n");
+  var CRON_FIELDS = [
+    { name: "minute", lo: 0, hi: 59 },
+    { name: "hour", lo: 0, hi: 23 },
+    { name: "day-of-month", lo: 1, hi: 31 },
+    { name: "month", lo: 1, hi: 12, names: ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], first: 1 },
+    { name: "day-of-week", lo: 0, hi: 7, names: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"], first: 0 },
+  ];
+  var CRON_SPECIALS = ["reboot", "yearly", "annually", "monthly", "weekly", "daily", "midnight", "hourly"];
+
+  // One time field: *, N, N-M, lists of those, each with an optional /STEP.
+  function cronField(text, f) {
+    function value(t) {
+      if (/^\d+$/.test(t)) return +t >= f.lo && +t <= f.hi ? +t : null;
+      var i = f.names ? f.names.indexOf(t.toLowerCase()) : -1;
+      return i === -1 ? null : i + f.first;
+    }
+    return text.split(",").every(function (item) {
+      var m = /^(?:(\*)|([0-9A-Za-z]+)(?:-([0-9A-Za-z]+))?)(?:\/(\d+))?$/.exec(item);
+      if (!m || (m[4] !== undefined && +m[4] === 0)) return false;
+      if (m[1]) return true;
+      var a = value(m[2]);
+      var b = m[3] === undefined ? a : value(m[3]);
+      return a !== null && b !== null && a <= b;
+    });
+  }
+
+  // Check a crontab as cron loads it: "FILE":LINE: bad FIELD, per bad line.
+  function checkCrontab(text, file) {
+    var errors = "";
+    lines(text).forEach(function (line, i) {
+      var t = line.trim();
+      if (!t || t[0] === "#" || /^[A-Za-z_][A-Za-z0-9_]*\s*=/.test(t)) return;
+      var where = '"' + file + '":' + (i + 1) + ": ";
+      if (t[0] === "@") {
+        var at = /^@(\S+)\s*(.*)$/.exec(t);
+        if (CRON_SPECIALS.indexOf(at[1]) === -1) errors += where + "bad time specifier\n";
+        else if (!at[2]) errors += where + "bad command\n";
+        return;
+      }
+      var parts = t.split(/\s+/);
+      for (var k = 0; k < CRON_FIELDS.length; k++) {
+        if (parts[k] === undefined || !cronField(parts[k], CRON_FIELDS[k])) { errors += where + "bad " + CRON_FIELDS[k].name + "\n"; return; }
+      }
+      if (parts.length < 6) errors += where + "bad command\n";
+    });
+    return errors || null;
+  }
+
+  // The spool is root's, mode 1730, so users can't read it directly: crontab
+  // (setgid crontab on a real system) is the way in and out.
+  Shell.prototype.installCrontab = function (text) {
+    var fs = this.fs;
+    var dirs = [["/var", 0o755, "root"], ["/var/spool", 0o755, "root"], ["/var/spool/cron", 0o755, "root"], [CRON_SPOOL, 0o1730, "crontab"]];
+    dirs.forEach(function (d) {
+      if (!fs[d[0]]) fs[d[0]] = { type: "dir", mode: d[1], owner: "root", group: d[2], contents: "", mtime: new Date() };
+    });
+    fs[CRON_SPOOL + "/" + this.user] = { type: "file", mode: 0o600, owner: this.user, group: "crontab", contents: text, mtime: new Date() };
+  };
+
   // --- the commands ---------------------------------------------------------------
   var COMMANDS = {
-    help: function () {
+    help: function (args) {
+      if (args.length) {
+        var out = "", err = "";
+        args.forEach(function (n) {
+          if (MANUAL.HELP[n]) out += renderHelp(n);
+          else err += "bash: help: no help topics match `" + n + "'.  Try `help help' or `man -k " + n + "' or `info " + n + "'.\n";
+        });
+        return { out: out, err: err, code: err ? 1 : 0 };
+      }
       return ok(
         "Station console commands:\n" +
         "  files:     pwd cd ls cat echo touch mkdir rmdir cp mv rm chmod chown\n" +
@@ -1943,13 +2264,116 @@
         "  users:     whoami id groups getent sudo usermod\n" +
         "  env:       export unset env printenv type which command source bash\n" +
         "  processes: ps pgrep pkill kill sleep jobs fg bg\n" +
+        "  editing:   nano less man crontab\n" +
         "  console:   clear help exit\n" +
         "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
         "Pipes (|), redirection (> >> < 2> 2>&1 >&2 &>), globs (* ? [...]), {a,b}, ; && ||, $VARS, $(command) and $((1 + 2)) work.\n" +
-        "Tab completes paths; ↑ and ↓ walk your history; Ctrl-C abandons a line.\n"
+        "Tab completes paths; ↑ and ↓ walk your history; Ctrl-C abandons a line.\n" +
+        "Read about a command with `man CMD` or `CMD --help`, and about a builtin with `help NAME`.\n"
       );
     },
     clear: function () { return { out: "", err: "", code: 0, clear: true }; },
+    // nano FILE: the console opens its editor (a Nano, below) in the panel
+    // and comes back here when it closes.
+    nano: function* (args, stdin, io) {
+      if (!args.length || args[0][0] === "-") return { out: "", err: "nano: give it a file to edit: nano FILE (its options aren't on this console)\n", code: 1 };
+      if (!io.tty || !io.stdin.tty) return { out: "", err: "nano: the editor needs the console's screen; it can't run in a pipe or a $( )\n", code: 1 };
+      var name = args[0];
+      var sh = this;
+      var found = this.lookup(name);
+      var text = "", message;
+      if (found.node && found.node.type === "dir") message = '[ "' + name + '" is a directory ]';
+      else if (found.node && !this.can(found.node, 4)) message = "[ Error reading " + name + ": Permission denied ]";
+      else if (found.node) { text = found.node.contents; message = "[ Read " + countLines(text) + " line" + (countLines(text) === 1 ? "" : "s") + " ]"; }
+      else if (found.error === "No such file or directory") message = "[ New File ]";
+      else message = "[ Error reading " + name + ": " + found.error + " ]";
+      var editor = new Nano({
+        name: name,
+        text: text,
+        message: message,
+        save: function (body) {
+          var why = sh.writeFile(name, body, false);
+          return why ? { ok: false, message: "[ Error writing " + name + ": " + why.slice(why.lastIndexOf(": ") + 2) + " ]" } : { ok: true };
+        },
+      });
+      yield { editor: editor };
+      return ok();
+    },
+    vi: function () { return { out: "", err: "vi: not on this console. Use nano FILE instead: ^O saves, ^X exits.\n", code: 127 }; },
+    vim: function () { return { out: "", err: "vim: not on this console. Use nano FILE instead: ^O saves, ^X exits.\n", code: 127 }; },
+
+    // man [SECTION] PAGE: the page in the pager; plain text into a pipe.
+    man: function* (args, stdin, io) {
+      args = args.slice();
+      var section = /^[1-8]$/.test(args[0] || "") && args.length > 1 ? args.shift() : null;
+      if (!args.length) return { out: "", err: "What manual page do you want?\nFor example, try 'man man'.\n", code: 1 };
+      var out = "", err = "";
+      for (var i = 0; i < args.length; i++) {
+        var key = manKey(args[i], section);
+        if (!key) { err += "No manual entry for " + args[i] + (section ? " in section " + section : "") + "\n"; continue; }
+        var text = renderMan(key);
+        if (!io.tty) { out += text; continue; }
+        var page = MANUAL.PAGES[key];
+        yield { pager: new Pager({ text: text, name: (page.name || key) + "(" + (page.section || 1) + ")", man: true }) };
+      }
+      return { out: out, err: err, code: err ? 16 : 0 };
+    },
+    less: function* (args, stdin, io) { return yield* page.call(this, "less", args, stdin, io); },
+    more: function* (args, stdin, io) { return yield* page.call(this, "more", args, stdin, io); },
+
+    // crontab: install, list, edit or remove this user's table for cron. It's
+    // checked as cron would read it, and refused with cron's messages if it's
+    // wrong. Nothing runs on a schedule: a task's checks read the file.
+    crontab: function* (args, stdin, io) {
+      var user = this.user;
+      var spool = CRON_SPOOL + "/" + user;
+      var current = this.fs[spool] ? this.fs[spool].contents : null;
+      var op = args[0];
+      if (op === "-l") return current === null ? { out: "", err: "no crontab for " + user + "\n", code: 1 } : ok(current);
+      if (op === "-r") {
+        if (current === null) return { out: "", err: "no crontab for " + user + "\n", code: 1 };
+        delete this.fs[spool];
+        return ok();
+      }
+      if (op === "-e") {
+        if (!io.tty || !io.stdin.tty) return { out: "", err: "crontab: the editor needs the console's screen\n", code: 1 };
+        var original = current === null ? CRONTAB_TEMPLATE : current;
+        var text = original;
+        for (;;) {
+          var edited = null;
+          var editor = new Nano({
+            name: CRON_TEMP,
+            text: text,
+            message: "[ Read " + countLines(text) + " lines ]",
+            save: function (body) { edited = body; return { ok: true }; },
+          });
+          yield { editor: editor };
+          if (edited === null || edited === original) return { out: "", err: "crontab: no changes made to crontab\n", code: 0 };
+          var errors = checkCrontab(edited, CRON_TEMP);
+          if (!errors) {
+            this.installCrontab(edited);
+            return { out: "", err: "crontab: installing new crontab\n", code: 0 };
+          }
+          io.err.write(errors + "errors in crontab file, can't install.\n");
+          var again = yield { prompt: "Do you want to retry the same edit? (y/n) " };
+          if (!/^\s*y/i.test(again || "")) return { out: "", err: "crontab: edits left in " + CRON_TEMP + "\n", code: 1 };
+          text = edited;
+        }
+      }
+      if (op === undefined) return { out: "", err: "crontab: usage error: file name or - (for stdin) must be specified\n" + CRONTAB_USAGE, code: 1 };
+      if (op[0] === "-" && op !== "-") return { out: "", err: "crontab: invalid option -- '" + op.slice(1) + "'\n" + CRONTAB_USAGE, code: 1 };
+      var source;
+      if (op === "-") { if (this.reading) this.reading.used = true; source = { text: stdin }; }
+      else source = this.readFile("crontab", op);
+      if (source.error) return { out: "", err: source.error + "\n", code: 1 };
+      if (source.text !== "" && source.text.slice(-1) !== "\n") {
+        return { out: "", err: "new crontab file is missing newline before EOF, can't install.\n", code: 1 };
+      }
+      var problems = checkCrontab(source.text, op === "-" ? "-" : op);
+      if (problems) return { out: "", err: problems + "errors in crontab file, can't install.\n", code: 1 };
+      this.installCrontab(source.text);
+      return ok();
+    },
     pwd: function () { return ok(this.cwd + "\n"); },
     whoami: function () { return ok(this.user + "\n"); },
     id: function (args) {
@@ -3195,5 +3619,5 @@
     return checks.every(function (c) { return passes(c, state, cwd, procs); });
   };
 
-  return { Shell: Shell, parse: parse, applyMode: applyMode, passes: passes };
+  return { Shell: Shell, Nano: Nano, Pager: Pager, parse: parse, applyMode: applyMode, passes: passes, checkCrontab: checkCrontab };
 });

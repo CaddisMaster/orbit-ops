@@ -21,6 +21,15 @@ and why it matters, not what the diff says.
   - sudo can ask for its password inside a loop or a script.
   - A loop that never ends is stopped after 10,000 commands instead of freezing the page.
   - `grep -q` answers yes or no without printing, for `if grep -q …`.
+- The console has an editor, a manual and cron (#66).
+  - **nano** opens in the console panel. `nano check.sh` lets you write a script right there:
+    ^O then Enter saves, and ^X exits, asking first if there are unsaved changes. Saving
+    follows file permissions, so `/etc/hostname` is refused for a cadet.
+  - **man** opens a pager: Space, b, `/` to search, q to quit. So do **less** and `CMD | less`.
+    `CMD --help` and `help cd` work too, and every command the console knows has a page.
+  - **crontab -e** opens your crontab in nano. It's checked the way cron reads it and refused
+    with cron's own error messages if a line is wrong. `crontab -l` lists it. Nothing actually
+    runs on a schedule.
 
 ### Fixed
 - A release now reaches your browser straight away (#92). After an update, browsers could keep

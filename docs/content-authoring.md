@@ -228,6 +228,16 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     `VAR=x` and `VAR=x cmd`. Child shells see only exported variables. Commands are found on
     `$PATH`: an executable file in the exercise wins over the console's own commands, which
     live in `/usr/bin` and `/bin`; `./script` runs a file (it needs `x`).
+  - editing and reading (#66): `nano FILE` opens an editor in the panel (^O then Enter writes,
+    ^X exits and asks about unsaved changes, ^K/^U cut and paste a line; Esc then Tab leaves the
+    textarea), and saving obeys permissions. `man [5] CMD` and `less FILE` / `CMD | less` open a
+    pager (Space, b, j/k, g/G, /pattern, n/N, q); into a pipe they print plain text. `CMD --help`
+    and `help BUILTIN` work too. Pages live in `app/static/js/manual.js`: **a command added to
+    the console needs a page or a `help` entry** (a test checks every command `help` lists).
+    `vi`/`vim` point at nano. `crontab -l -e -r` and `crontab FILE|-` keep the table at
+    `/var/spool/cron/crontabs/<user>` (root's spool, mode 1730: `cat` can't read it, as on a
+    real system, but a task's `contains` check can). It's checked as cron loads it (`bad
+    minute`, `bad day-of-week`, …) and refused if wrong. Nothing runs on a schedule.
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
     sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
     foreground `sleep N` jumps N.
@@ -250,7 +260,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     arrays and `select`.
 
   Anything else prints "command not found". Not yet: `set`, `printf`, `find`, `tar`,
-  full-screen programs (`top`, `less`, `vim`). Don't set a task that needs more: add the
+  `top`. Don't set a task that needs more: add the
   command to `app/static/js/shell.js` first, with a test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
   the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a

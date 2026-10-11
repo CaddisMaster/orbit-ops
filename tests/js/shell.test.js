@@ -48,7 +48,9 @@ test("Commands behave like their real counterparts: chmod 600 then ls -l", () =>
 
 test("An unsupported command fails gracefully and the console keeps working", () => {
   const sh = station();
-  assert.match(out(sh, "vim scrubber.conf"), /^vim: command not found\./);
+  assert.match(out(sh, "telnet relay"), /^telnet: command not found\./);
+  assert.equal(sh.lastStatus, 127);
+  assert.match(out(sh, "vim scrubber.conf"), /^vim: not on this console\. Use nano FILE instead/); // #66
   assert.equal(sh.lastStatus, 127);
   assert.equal(out(sh, "echo still here"), "still here\n");
 });

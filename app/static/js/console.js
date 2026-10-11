@@ -28,7 +28,20 @@
     var input = root.querySelector(".term-input");
     var promptEl = root.querySelector(".term-prompt");
     var status = root.querySelector(".term-status");
+    var keysBar = root.querySelector("[data-shell-only]");
+    var editorEl = root.querySelector(".term-editor");
+    var textarea = root.querySelector(".nano-text");
+    var nanoName = root.querySelector(".nano-name");
+    var nanoFlag = root.querySelector(".nano-flag");
+    var nanoMessage = root.querySelector(".nano-message");
+    var pagerEl = root.querySelector(".term-pager");
+    var pagerText = root.querySelector(".pager-text");
+    var pagerStatus = root.querySelector(".pager-status");
+    var pagerFind = root.querySelector(".pager-find");
+    var pagerInput = root.querySelector(".pager-input");
+    var PAGER_ROWS = 16;
     var sh, history, at, reported;
+    var editor = null, pager = null, clipboard = "", leaving = false;
 
     function print(text, cls) {
       if (!text) return;
@@ -48,6 +61,166 @@
       input.setAttribute("aria-label", secret ? "Password" : "Command");
     }
 
+    // --- the shell, nano or the pager: one owns the panel at a time ---------------
+    function show(mode) {
+      log.hidden = form.hidden = mode !== "shell";
+      editorEl.hidden = mode !== "editor";
+      pagerEl.hidden = mode !== "pager";
+      keysBar.hidden = mode !== "shell";
+    }
+
+    // After the shell runs: print, then hand the panel to whatever the command
+    // opened, or back to the prompt.
+    function settle(result) {
+      if (result.clear) log.textContent = "";
+      print(result.output);
+      var p = sh.pending;
+      if (p && p.editor) openEditor(p.editor);
+      else if (p && p.pager) openPager(p.pager);
+      else {
+        editor = pager = null;
+        show("shell");
+        setPrompt();
+        input.focus();
+      }
+      if (!reported && sh.solved(spec.checks)) report();
+    }
+
+    function openEditor(ed) {
+      editor = ed;
+      leaving = false;
+      textarea.value = ed.text;
+      nanoName.textContent = ed.name;
+      show("editor");
+      drawEditor();
+      textarea.focus();
+      textarea.setSelectionRange(0, 0);
+      textarea.scrollTop = 0;
+    }
+
+    function drawEditor() {
+      nanoFlag.textContent = editor.modified(textarea.value) ? "Modified" : "";
+      var asking = editor.prompt();
+      nanoMessage.classList.toggle("is-prompt", !!asking);
+      nanoMessage.textContent = "";
+      if (asking) nanoMessage.textContent = asking;
+      else if (editor.message) {
+        var span = document.createElement("span");
+        span.textContent = editor.message;
+        nanoMessage.appendChild(span);
+      }
+    }
+
+    function editorKey(k) {
+      editor.key(k, textarea.value);
+      if (editor.done) settle(sh.answer());
+      else drawEditor();
+    }
+
+    // ^K cuts the line the cursor is on (into nano's own cutbuffer); ^U pastes it.
+    function cutLine() {
+      var v = textarea.value;
+      var start = v.lastIndexOf("\n", textarea.selectionStart - 1) + 1;
+      var end = v.indexOf("\n", textarea.selectionStart);
+      end = end === -1 ? v.length : end + 1;
+      clipboard = v.slice(start, end);
+      textarea.setRangeText("", start, end, "start");
+    }
+    function pasteLine() {
+      var v = textarea.value;
+      var start = v.lastIndexOf("\n", textarea.selectionStart - 1) + 1;
+      textarea.setRangeText(clipboard, start, start, "end");
+    }
+
+    textarea.addEventListener("keydown", function (e) {
+      if (!editor) return;
+      var ctrl = e.ctrlKey && !e.metaKey && !e.altKey ? e.key.toLowerCase() : null;
+      if (editor.mode !== "edit") {
+        // Write Out's or Exit's question: the keys answer it, the text is untouched.
+        if (e.key === "Tab") return;
+        e.preventDefault();
+        if (e.key === "Enter") editorKey("Enter");
+        else if (ctrl === "c") editorKey("^C");
+        else if (e.key.length === 1) editorKey(e.key);
+        return;
+      }
+      if (e.key === "Escape") { leaving = true; return; }
+      if (e.key === "Tab" && !e.shiftKey && !leaving) { e.preventDefault(); textarea.setRangeText("\t", textarea.selectionStart, textarea.selectionEnd, "end"); drawEditor(); return; }
+      leaving = false;
+      if (ctrl === "o") { e.preventDefault(); editorKey("^O"); }
+      else if (ctrl === "x") { e.preventDefault(); editorKey("^X"); }
+      else if (ctrl === "k") { e.preventDefault(); cutLine(); drawEditor(); }
+      else if (ctrl === "u") { e.preventDefault(); pasteLine(); drawEditor(); }
+    });
+    textarea.addEventListener("input", function () { if (editor) drawEditor(); });
+
+    function openPager(pg) {
+      pager = pg;
+      pager.height = PAGER_ROWS;
+      pagerFind.hidden = true;
+      show("pager");
+      drawPager();
+      pagerEl.focus();
+    }
+
+    function drawPager() {
+      var view = pager.view();
+      pagerText.textContent = "";
+      var re = null;
+      if (view.pattern) { try { re = new RegExp(view.pattern, "g"); } catch (e) { re = null; } }
+      view.lines.forEach(function (line, i) {
+        if (i) pagerText.appendChild(document.createTextNode("\n"));
+        if (!re) { pagerText.appendChild(document.createTextNode(line)); return; }
+        var last = 0;
+        line.replace(re, function (m, offset) {
+          if (!m) return m;
+          pagerText.appendChild(document.createTextNode(line.slice(last, offset)));
+          var mark = document.createElement("mark");
+          mark.textContent = m;
+          pagerText.appendChild(mark);
+          last = offset + m.length;
+          return m;
+        });
+        pagerText.appendChild(document.createTextNode(line.slice(last)));
+      });
+      for (var k = view.lines.length; k < PAGER_ROWS; k++) {
+        var tilde = document.createElement("span");
+        tilde.className = "pager-tilde";
+        tilde.textContent = (k ? "\n" : "") + "~";
+        pagerText.appendChild(tilde);
+      }
+      pagerStatus.textContent = view.status;
+    }
+
+    var PAGER_KEYS = [" ", "f", "b", "j", "k", "g", "G", "n", "N", "h", "q", "Q", "Enter",
+      "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"];
+    pagerEl.addEventListener("keydown", function (e) {
+      if (!pager || e.target !== pagerEl || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "/") {
+        e.preventDefault();
+        pagerFind.hidden = false;
+        pagerStatus.textContent = "";
+        pagerInput.value = "";
+        pagerInput.focus();
+        return;
+      }
+      if (PAGER_KEYS.indexOf(e.key) === -1) return;
+      e.preventDefault();
+      pager.key(e.key);
+      if (pager.done) settle(sh.answer());
+      else drawPager();
+    });
+    pagerFind.addEventListener("submit", function (e) {
+      e.preventDefault();
+      pagerFind.hidden = true;
+      pager.search(pagerInput.value);
+      drawPager();
+      pagerEl.focus();
+    });
+    pagerInput.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.preventDefault(); pagerFind.hidden = true; drawPager(); pagerEl.focus(); }
+    });
+
     function reset() {
       sh = new OrbitShell.Shell(spec);
       history = [];
@@ -55,6 +228,8 @@
       reported = false;
       log.textContent = "";
       status.textContent = "";
+      editor = pager = null;
+      show("shell");
       print("Meridian station console · " + spec.user + " · type `help` for commands", "term-banner");
       setPrompt();
     }
@@ -98,11 +273,7 @@
         if (history.length > HISTORY_MAX) history.shift();
       }
       at = history.length;
-      var result = sh.run(line);
-      if (result.clear) log.textContent = "";
-      print(result.output);
-      setPrompt();
-      if (!reported && sh.solved(spec.checks)) report();
+      settle(sh.run(line));
     }
 
     function interrupt() {
