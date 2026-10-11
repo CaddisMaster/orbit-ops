@@ -266,7 +266,7 @@ ALSO, and that's the page you need to change a setting.
 
 `less +F app.log` opens a log already following. `tail -f app.log` does the same without the
 pager, and `tail -n 50` prints the last fifty lines and stops. `head -n 20` is the same from the
-top.
+top. The station console's files don't grow, so it has no `F`, `+F` or `tail -f`.
 
 **On the real station:** `git log`, `journalctl` and `man` all page through less, so these keys
 work in all of them. `docker compose logs -f web` follows Orbit Ops's log on the droplet the way

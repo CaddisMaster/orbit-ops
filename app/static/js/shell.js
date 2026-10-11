@@ -3137,7 +3137,7 @@
       var where = p.args.length === 1 ? "." : p.args[p.args.length - 1];
       var dest = this.lookup(where);
       var intoDir = dest.node && dest.node.type === "dir" && !(p.opts.n && this.lookup(where, true).node.type === "link");
-      if (targets.length > 1 && !intoDir) return { out: "", err: "ln: target '" + where + "': Not a directory\n", code: 1 };
+      if (targets.length > 1 && !intoDir) return { out: "", err: "ln: target '" + where + "': " + (dest.node ? "Not a directory" : "No such file or directory") + "\n", code: 1 };
       var err = "", out = "";
       targets.forEach(function (target) {
         var name = intoDir ? join(dest.path, baseName(target.replace(/\/+$/, "")) || target) : sh.lookup(where, true).path;
@@ -3937,31 +3937,34 @@
       });
       return { out: "", err: err, code: err ? 1 : 0 };
     },
-    rm: function (rawArgs) {
+    // rm [-r] [-f] [-i] FILE...: -i asks before each removal, in GNU's words (#101).
+    rm: function* (rawArgs, stdin, io) {
       var p = flags("rm", rawArgs, "rfRi");
       var recursive = p.opts.r || p.opts.R;
+      var asking = lastOf(rawArgs, "fi") === "i";
       if (!p.args.length && !p.opts.f) throw new Error("missing operand");
-      var err = "";
-      var sh = this;
-      p.args.forEach(function (a) {
-        var f = sh.lookup(a, true);
-        if (f.error) { if (!p.opts.f || f.error !== "No such file or directory") err += "rm: cannot remove '" + a + "': " + f.error + "\n"; return; }
-        if (f.path === "/") { err += "rm: it is dangerous to operate recursively on '/'\n"; return; }
-        if (f.node.type === "dir" && !recursive) { err += "rm: cannot remove '" + a + "': Is a directory\n"; return; }
-        var why = sh.writableParent(f.path);
-        if (why) { err += "rm: cannot remove '" + a + "': " + why + "\n"; return; }
-        sh.removeTree(f.path);
-      });
-      return { out: "", err: err, code: err ? 1 : 0 };
+      var out = { err: "" };
+      for (var i = 0; i < p.args.length; i++) {
+        var a = p.args[i];
+        var f = this.lookup(a, true);
+        if (f.error) { if (!p.opts.f || f.error !== "No such file or directory") out.err += "rm: cannot remove '" + a + "': " + f.error + "\n"; continue; }
+        if (f.path === "/") { out.err += "rm: it is dangerous to operate recursively on '/'\n"; continue; }
+        if (f.node.type === "dir" && !recursive) { out.err += "rm: cannot remove '" + a + "': Is a directory\n"; continue; }
+        var why = this.writableParent(f.path);
+        if (why) { out.err += "rm: cannot remove '" + a + "': " + why + "\n"; continue; }
+        if (!asking) { this.removeTree(f.path); continue; }
+        yield* this.removeAsking(f.path, a, io, out);
+      }
+      return { out: "", err: out.err, code: out.err ? 1 : 0 };
     },
-    cp: function (rawArgs) {
-      var p = flags("cp", rawArgs, "rRa");
+    cp: function* (rawArgs, stdin, io) {
+      var p = flags("cp", rawArgs, "rRai");
       var recursive = p.opts.r || p.opts.R || p.opts.a;
-      return this.transfer("cp", p.args, recursive, false);
+      return yield* this.transfer("cp", p.args, recursive, false, p.opts.i ? io : null);
     },
-    mv: function (rawArgs) {
+    mv: function* (rawArgs, stdin, io) {
       var p = flags("mv", rawArgs, "fi");
-      return this.transfer("mv", p.args, true, true);
+      return yield* this.transfer("mv", p.args, true, true, lastOf(rawArgs, "fi") === "i" ? io : null);
     },
     chmod: function (rawArgs) {
       // Not flags(): a mode like "-w" starts with a dash too.
@@ -4511,28 +4514,74 @@
     return { out: out, err: r.err, code: r.err ? 1 : 0 };
   }
 
-  // cp and mv: one source to a name, or several into a directory.
-  Shell.prototype.transfer = function (cmd, args, recursive, move) {
+  // Which of `letters` comes last among the options (rm -fi asks, rm -if doesn't).
+  function lastOf(rawArgs, letters) {
+    var last = null;
+    for (var i = 0; i < rawArgs.length && rawArgs[i] !== "--"; i++) {
+      if (!/^-[a-zA-Z]+$/.test(rawArgs[i])) continue;
+      rawArgs[i].slice(1).split("").forEach(function (l) { if (letters.indexOf(l) !== -1) last = l; });
+    }
+    return last;
+  }
+
+  // A yes-or-no question for -i: from the keyboard at the prompt, or a line of
+  // standard input, as GNU's tools read it. Anything starting with y is yes.
+  Shell.prototype.confirm = function* (question, io, out) {
+    var answer;
+    if (io.stdin.tty) answer = yield { prompt: question };
+    else {
+      out.err += question;
+      var stream = io.stdin, nl = stream.text.indexOf("\n", stream.pos);
+      if (stream.pos >= stream.text.length) answer = "";
+      else if (nl === -1) { answer = stream.text.slice(stream.pos); stream.pos = stream.text.length; }
+      else { answer = stream.text.slice(stream.pos, nl); stream.pos = nl + 1; }
+    }
+    return /^[yY]/.test(answer || "");
+  };
+
+  // rm -i: one question per file, and for a directory (with -r) "descend into"
+  // first and "remove directory" last, skipped if anything inside was kept.
+  Shell.prototype.removeAsking = function* (abs, shown, io, out) {
+    var node = this.fs[abs];
+    if (node.type !== "dir") {
+      var kind = node.type === "link" ? "symbolic link" : size(node) ? "regular file" : "regular empty file";
+      if (yield* this.confirm("rm: remove " + kind + " '" + shown + "'? ", io, out)) delete this.fs[abs];
+      return;
+    }
+    var fs = this.fs;
+    var inside = Object.keys(fs).filter(function (q) { return q.indexOf(abs + "/") === 0 && q.slice(abs.length + 1).indexOf("/") === -1; }).sort();
+    if (inside.length && !(yield* this.confirm("rm: descend into directory '" + shown + "'? ", io, out))) return;
+    for (var i = 0; i < inside.length; i++) yield* this.removeAsking(inside[i], shown.replace(/\/$/, "") + "/" + baseName(inside[i]), io, out);
+    var left = Object.keys(fs).some(function (q) { return q.indexOf(abs + "/") === 0; });
+    if (!left && (yield* this.confirm("rm: remove directory '" + shown + "'? ", io, out))) delete fs[abs];
+  };
+
+  // cp and mv: one source to a name, or several into a directory. With `asking`
+  // (the command's io, for -i), overwriting an existing file is asked first.
+  Shell.prototype.transfer = function* (cmd, args, recursive, move, asking) {
     if (args.length < 2) throw new Error(args.length ? "missing destination file operand after '" + args[0] + "'" : "missing file operand");
     var sh = this;
     var dest = args[args.length - 1];
     var sources = args.slice(0, -1);
     var destFound = this.lookup(dest);
     var intoDir = destFound.node && destFound.node.type === "dir";
-    if (sources.length > 1 && !intoDir) return { out: "", err: cmd + ": target '" + dest + "': Not a directory\n", code: 1 };
-    var err = "";
-    sources.forEach(function (src) {
+    if (sources.length > 1 && !intoDir) return { out: "", err: cmd + ": target '" + dest + "': " + (destFound.node ? "Not a directory" : "No such file or directory") + "\n", code: 1 };
+    var out = { err: "" }, declined = false;
+    for (var i = 0; i < sources.length; i++) {
+      var src = sources[i];
       var s = sh.lookup(src, move); // mv moves a link; cp copies what it points to
-      if (s.error) { err += cmd + ": cannot stat '" + src + "': " + s.error + "\n"; return; }
-      if (s.node.type === "dir" && !recursive) { err += "cp: -r not specified; omitting directory '" + src + "'\n"; return; }
-      if (!move && !sh.can(s.node, 4)) { err += "cp: cannot open '" + src + "' for reading: Permission denied\n"; return; }
+      if (s.error) { out.err += cmd + ": cannot stat '" + src + "': " + s.error + "\n"; continue; }
+      if (s.node.type === "dir" && !recursive) { out.err += "cp: -r not specified; omitting directory '" + src + "'\n"; continue; }
+      if (!move && !sh.can(s.node, 4)) { out.err += "cp: cannot open '" + src + "' for reading: Permission denied\n"; continue; }
       var target = intoDir ? join(destFound.path, baseName(s.path)) : destFound.path;
-      if (target === s.path) { err += cmd + ": '" + src + "' and '" + dest + "' are the same file\n"; return; }
-      if (target.indexOf(s.path + "/") === 0) { err += cmd + ": cannot " + (move ? "move" : "copy") + " '" + src + "' to a subdirectory of itself\n"; return; }
+      if (target === s.path) { out.err += cmd + ": '" + src + "' and '" + dest + "' are the same file\n"; continue; }
+      if (target.indexOf(s.path + "/") === 0) { out.err += cmd + ": cannot " + (move ? "move" : "copy") + " '" + src + "' to a subdirectory of itself\n"; continue; }
       var why = sh.writableParent(target) || (move ? sh.writableParent(s.path) : null);
-      if (why) { err += cmd + ": cannot " + (move ? "move" : "create regular file") + " '" + dest + "': " + why + "\n"; return; }
+      if (why) { out.err += cmd + ": cannot " + (move ? "move" : "create regular file") + " '" + dest + "': " + why + "\n"; continue; }
       var existing = sh.fs[target];
-      if (existing && existing.type === "dir" && s.node.type !== "dir") { err += cmd + ": cannot overwrite directory '" + target + "' with non-directory\n"; return; }
+      if (existing && existing.type === "dir" && s.node.type !== "dir") { out.err += cmd + ": cannot overwrite directory '" + target + "' with non-directory\n"; continue; }
+      var shownTarget = intoDir ? dest.replace(/\/$/, "") + "/" + baseName(s.path) : dest;
+      if (existing && asking && !(yield* sh.confirm(cmd + ": overwrite '" + shownTarget + "'? ", asking, out))) { declined = true; continue; }
       var paths = Object.keys(sh.fs).filter(function (q) { return q === s.path || q.indexOf(s.path + "/") === 0; });
       if (existing) sh.removeTree(target);
       paths.forEach(function (q) {
@@ -4545,8 +4594,9 @@
         sh.fs[target + q.slice(s.path.length)] = copy;
       });
       if (move) paths.forEach(function (q) { delete sh.fs[q]; });
-    });
-    return { out: "", err: err, code: err ? 1 : 0 };
+    }
+    // GNU's mv answers 1 when a file was kept by declining; cp answers 0.
+    return { out: "", err: out.err, code: out.err || (declined && move) ? 1 : 0 };
   };
 
   // --- completion, state, checks ------------------------------------------------------

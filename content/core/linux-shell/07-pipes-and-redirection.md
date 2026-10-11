@@ -106,7 +106,9 @@ Every process starts with three open **file descriptors**:
 | 2 | stderr | your terminal |
 
 Normal output and error messages both land on your screen, but they're **separate streams**,
-and you can send them to different places.
+and you can send them to different places. One command can produce both: `ls /etc /nope` lists
+`/etc` on stdout and complains about `/nope` on stderr, because `ls` takes several paths and
+deals with each in turn.
 
 ## Redirection
 
@@ -123,7 +125,8 @@ cmd > /dev/null 2>&1         # silence: throw everything away
 ### Why `2>&1` order matters
 
 Redirections are processed **left to right**, and `2>&1` means "make FD 2 point wherever FD 1
-points *right now*".
+points *right now*". So `cmd > out.log 2>&1` first points stdout at the file, then points
+stderr at the same place: both end up in `out.log`.
 
 ```bash
 cmd > out.log 2>&1     # 1 → file, then 2 → (where 1 is) file          ✓ both in file
@@ -141,6 +144,14 @@ cat /var/log/syslog | tail -n 50      # works, but `tail -n 50 /var/log/syslog` 
 docker compose logs web 2>&1 | grep -i error     # include stderr in what grep sees
 ```
 
+Two small tools get you a long way, here and in the console:
+
+| Command | Does |
+|---|---|
+| `grep WORD FILE` | prints only the lines of FILE that contain WORD (or of stdin, after a `\|`) |
+| `wc -l FILE` | counts the lines (`wc -l < FILE` prints just the number) |
+
+So `grep ALERT core.log > alerts.txt` keeps every line with `ALERT` in it, and nothing else.
 Small tools that each do one thing, chained together, is the core Unix idea. Next module is the
 tools that make it powerful.
 

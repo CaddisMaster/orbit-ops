@@ -63,19 +63,27 @@
       description: "Remove (unlink) the FILE(s). By default, rm does not remove directories: use -r for that. There is no undo.",
       options: [
         ["-f, --force", "ignore nonexistent files and arguments, never prompt"],
+        ["-i", "prompt before every removal (whichever of -f and -i comes last wins)"],
         ["-r, -R, --recursive", "remove directories and their contents recursively"],
       ],
     },
     cp: {
       summary: "copy files and directories",
       synopsis: ["cp [OPTION]... SOURCE DEST", "cp [OPTION]... SOURCE... DIRECTORY"],
-      description: "Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY.",
-      options: [["-r, -R, --recursive", "copy directories recursively"]],
+      description: "Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY. The last argument is always where the copies go, and with more than one SOURCE it must be a directory that exists.",
+      options: [
+        ["-i, --interactive", "prompt before overwrite"],
+        ["-r, -R, --recursive", "copy directories recursively"],
+      ],
     },
     mv: {
       summary: "move (rename) files",
-      synopsis: ["mv SOURCE DEST", "mv SOURCE... DIRECTORY"],
-      description: "Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY.",
+      synopsis: ["mv [OPTION]... SOURCE DEST", "mv [OPTION]... SOURCE... DIRECTORY"],
+      description: "Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY. The last argument is always where things go, and with more than one SOURCE it must be a directory that exists.",
+      options: [
+        ["-f, --force", "do not prompt before overwriting"],
+        ["-i, --interactive", "prompt before overwrite (whichever of -f and -i comes last wins)"],
+      ],
     },
     chmod: {
       summary: "change file mode bits",

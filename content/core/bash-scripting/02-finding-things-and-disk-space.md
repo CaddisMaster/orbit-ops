@@ -242,6 +242,13 @@ On a disk that's really full, the archive needs room too, so free what you can f
 
 A **symlink** is a small file that points at another path, like a shortcut:
 
+| Command | Does |
+|---|---|
+| `ln -s TARGET NAME` | makes a link called NAME that points at TARGET |
+| `ln -sf TARGET NAME` | the same, replacing a link that's already called NAME |
+| `readlink NAME` | prints where a link points |
+| `ls -l NAME` | shows it as `NAME -> TARGET` |
+
 ```bash
 ln -s /var/log/o2/2026-10-08.log current.log    # current.log → today's log
 ln -sf /var/log/o2/2026-10-09.log current.log   # -f: replace the link that's there

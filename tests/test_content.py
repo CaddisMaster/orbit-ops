@@ -234,6 +234,14 @@ def _taught_text(module) -> str:
     return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", module.body_html)).split())
 
 
+def _prose_text(module) -> str:
+    """What the lesson says in prose and tables, before Try it: a command only in a
+    code block or in Try it isn't taught yet (#101)."""
+    from tests.test_lesson_needs import _says
+
+    return _says(module)
+
+
 def _commands(line: str) -> set[str]:
     """The command names on a solution line: the first word of each stage of
     every pipeline, past any `VAR=x` assignments, `sudo` and shell keywords."""
@@ -261,7 +269,7 @@ def test_no_console_task_needs_an_untaught_command():
     taught = ""
     catalog = load_catalog()
     for module in catalog.unit_modules("linux-shell") + catalog.unit_modules("bash-scripting"):
-        taught += " " + _taught_text(module)  # this module's lesson, and every earlier one
+        taught += " " + _prose_text(module)  # this module's lesson, and every earlier one
         if not module.terminal:
             continue
         password = module.terminal.password
@@ -280,7 +288,7 @@ def test_shell_keywords_are_not_commands():
 def test_reading_a_file_is_taught_in_module_01():
     first = load_catalog().unit_modules("linux-shell")[0]
     text = _taught_text(first)
-    reading = text.index("Moving and reading")
+    reading = text.index("Looking, moving and reading")
     assert reading < text.index("Try it")
     for command in ("cat ", "less ", "head -n", "tail -n", "nano"):
         assert command in text[reading:], command
