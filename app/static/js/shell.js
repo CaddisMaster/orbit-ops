@@ -88,7 +88,12 @@
     this.notices = [];
     this.lastBg = "";
     this.sudoUntil = -1; // sudo remembers a correct password for 15 minutes
-    this.pending = null; // a prompt waiting for an answer (sudo's password)
+    this.pending = null; // a prompt waiting for an answer (sudo's password, read)
+    this.more = null; // the lines so far of a command that isn't finished (the "> " prompt)
+    this.screen = ""; // what this run has printed on the terminal
+    var sh = this;
+    this.tty = { write: function (s) { sh.screen += s; } };
+    this.loopDepth = 0;
     this.logins = []; // shells stacked by `sudo -i`, popped by `exit`
   }
 
@@ -97,6 +102,7 @@
   // isn't anyone's home, so the prompt shows where you are.
   Shell.prototype.prompt = function () {
     if (this.pending) return this.pending.prompt;
+    if (this.more !== null) return "> ";
     var realHome = this.home === (this.user === "root" ? "/root" : "/home/" + this.user);
     var where = realHome && this.cwd === this.home ? "~" : this.cwd;
     return this.user + "@meridian:" + where + (this.user === "root" ? "# " : "$ ");
@@ -199,89 +205,479 @@
     return { text: found.node.contents };
   };
 
-  // --- parsing -----------------------------------------------------------------
-  // Words keep a parallel "quoted" mask so globs and ~ only act on unquoted text.
-  function tokenize(line, vars) {
+  // --- reading a command line --------------------------------------------------------
+  // Input is read into a tree before any of it runs (#64): words, pipelines,
+  // lists and the compound commands (if, for, while, until, case, { }, [[ ]]).
+  // A word keeps its quoting as a list of atoms and is expanded only when its
+  // command runs, so `false; echo $?` sees the new status and a loop body's
+  // "$i" is different each time round.
+  //   {c: "ab", q: bool}   literal text (q: it was quoted, so no globbing or splitting)
+  //   {x: {...}, q: bool}  an expansion: $name, ${…}, $(…) or `…`, $((…))
+  // A quoted empty string is {c: "", q: true}, so "" still makes a word.
+  function SyntaxErr(message, line) { this.message = message; this.line = line; }
+  function Incomplete(message, line) { this.message = message; this.line = line; } // ran out of input: the prompt asks for more
+  function ExpansionError(message) { this.message = message; }
+  function Runaway() {}
+
+  var OPS = ["&>>", "&&", "&>", "&", ";;", ";", "||", "|", ">>", ">&2", ">&1", ">", "<<<", "<<", "<", "(", ")"];
+  var FD_OPS = ["2>&1", "1>&2", "2>>", "1>>", "2>", "1>"];
+  var REDIRECTS = {
+    "<": { fd: 0 }, ">": { fd: 1 }, "1>": { fd: 1 }, ">>": { fd: 1, append: true }, "1>>": { fd: 1, append: true },
+    "2>": { fd: 2 }, "2>>": { fd: 2, append: true }, "&>": { fd: 3 }, "&>>": { fd: 3, append: true }, "<<<": {},
+    "2>&1": { fd: 2, dup: 1 }, ">&2": { fd: 1, dup: 2 }, "1>&2": { fd: 1, dup: 2 }, ">&1": { fd: 1, dup: 1 }, "<<": {},
+  };
+
+  // `oneWord`: read all of src as a single word (the inside of $(( )) and ${x:-…}).
+  function lex(src, oneWord) {
     var tokens = [];
-    var word = null;
-    var i = 0;
-    function startWord() { if (!word) word = { text: "", quoted: [] }; }
-    function add(ch, quoted) { startWord(); word.text += ch; word.quoted.push(quoted); }
-    function end() {
-      if (!word) return;
-      var m = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(word.text);
-      var assign = m && word.quoted.slice(0, m[0].length).every(function (q) { return !q; });
-      tokens.push({ type: "word", text: word.text, quoted: word.quoted, assign: assign ? m[1] : null });
-      word = null;
+    var i = 0, line = 1;
+    var atoms = null, from = 0;
+    function lit(text, q) {
+      var last = atoms[atoms.length - 1];
+      if (last && "c" in last && last.q === q && text) last.c += text;
+      else atoms.push({ c: text, q: q });
     }
-    function variable(quoted) {
-      // at line[i] === "$"
-      var m = /^\$(\?|!|#|@|[0-9]|[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})/.exec(line.slice(i));
-      if (!m) { add("$", quoted); i++; return; }
-      var name = m[1].replace(/[{}]/g, "");
-      startWord();
-      String(vars[name] !== undefined ? vars[name] : "").split("").forEach(function (c) { add(c, true); });
+    function start() { if (!atoms) { atoms = []; from = i; } }
+    function end() {
+      if (!atoms) return;
+      tokens.push({ t: "word", atoms: atoms, text: src.slice(from, i), line: line, p: from, e: i });
+      atoms = null;
+    }
+    function advance(to) {
+      for (var k = i; k < to; k++) if (src[k] === "\n") line++;
+      i = to;
+    }
+    // The index of the ) closing the ( at `open`, skipping quotes.
+    function closing(open, what) {
+      var depth = 0;
+      for (var k = open; k < src.length; k++) {
+        var ch = src[k];
+        if (ch === "\\") k++;
+        else if (ch === "'") { k = src.indexOf("'", k + 1); if (k === -1) break; }
+        else if (ch === '"') { k++; while (k < src.length && src[k] !== '"') { if (src[k] === "\\") k++; k++; } }
+        else if (ch === "(") depth++;
+        else if (ch === ")" && --depth === 0) return k;
+      }
+      throw new Incomplete("unexpected EOF while looking for matching `" + what + "'", line);
+    }
+    function dollar(q) {
+      if (src[i] === "`") {
+        var tick = src.indexOf("`", i + 1);
+        if (tick === -1) throw new Incomplete("unexpected EOF while looking for matching ``'", line);
+        atoms.push({ x: { t: "cmd", src: src.slice(i + 1, tick) }, q: q });
+        return advance(tick + 1);
+      }
+      var next = src[i + 1];
+      if (next === "(" && src[i + 2] === "(") {
+        var inner = closing(i + 2, ")");
+        if (src[inner + 1] === ")") {
+          atoms.push({ x: { t: "arith", src: src.slice(i + 3, inner) }, q: q });
+          return advance(inner + 2);
+        }
+      }
+      if (next === "(") {
+        var close = closing(i + 1, ")");
+        atoms.push({ x: { t: "cmd", src: src.slice(i + 2, close) }, q: q });
+        return advance(close + 1);
+      }
+      if (next === "{") {
+        var brace = src.indexOf("}", i);
+        if (brace === -1) throw new Incomplete("unexpected EOF while looking for matching `}'", line);
+        atoms.push({ x: braceParam(src.slice(i + 2, brace)), q: q });
+        return advance(brace + 1);
+      }
+      var m = /^\$([?#@*!$0-9]|[A-Za-z_][A-Za-z0-9_]*)/.exec(src.slice(i));
+      if (!m) { lit("$", q); i++; return; }
+      atoms.push({ x: { t: "var", name: m[1] }, q: q });
       i += m[0].length;
     }
-    while (i < line.length) {
-      var c = line[i];
-      if (c === "'") {
-        var close = line.indexOf("'", i + 1);
-        if (close === -1) throw new SyntaxError("unexpected EOF while looking for matching `''");
-        startWord();
-        line.slice(i + 1, close).split("").forEach(function (ch) { add(ch, true); });
-        i = close + 1;
-      } else if (c === '"') {
-        i++;
-        startWord();
-        while (i < line.length && line[i] !== '"') {
-          if (line[i] === "\\" && i + 1 < line.length && '"\\$`'.indexOf(line[i + 1]) !== -1) { add(line[i + 1], true); i += 2; }
-          else if (line[i] === "$") variable(true);
-          else { add(line[i], true); i++; }
+    try {
+      while (i < src.length) {
+        var c = src[i];
+        if (c === "\\" && src[i + 1] === "\n") { advance(i + 2); continue; }
+        if (c === "\\") {
+          if (i + 1 >= src.length) throw new Incomplete("unexpected end of file", line);
+          start(); lit(src[i + 1], true); i += 2;
+        } else if (c === "'") {
+          var q1 = src.indexOf("'", i + 1);
+          if (q1 === -1) throw new Incomplete("unexpected EOF while looking for matching `''", line);
+          start(); atoms.push({ c: "", q: true }); lit(src.slice(i + 1, q1), true);
+          advance(q1 + 1);
+        } else if (c === '"') {
+          start(); atoms.push({ c: "", q: true });
+          i++;
+          while (i < src.length && src[i] !== '"') {
+            if (src[i] === "\\" && src[i + 1] === "\n") advance(i + 2);
+            else if (src[i] === "\\" && i + 1 < src.length && '"\\$`'.indexOf(src[i + 1]) !== -1) { lit(src[i + 1], true); i += 2; }
+            else if (src[i] === "$" || src[i] === "`") dollar(true);
+            else { lit(src[i], true); advance(i + 1); }
+          }
+          if (i >= src.length) throw new Incomplete('unexpected EOF while looking for matching `"\'', line);
+          i++;
+        } else if (c === "$" || c === "`") {
+          start(); dollar(false);
+        } else if (oneWord) {
+          start(); lit(c, false); advance(i + 1);
+        } else if (c === " " || c === "\t") {
+          end(); i++;
+        } else if (c === "\n") {
+          end(); tokens.push({ t: "nl", line: line }); advance(i + 1);
+        } else if (c === "#" && !atoms) {
+          while (i < src.length && src[i] !== "\n") i++;
+        } else if (!atoms && (c === "1" || c === "2") && src[i + 1] === ">") {
+          var fdOp = FD_OPS.filter(function (o) { return src.slice(i, i + o.length) === o; })[0];
+          tokens.push({ t: "op", v: fdOp, line: line, p: i, e: i + fdOp.length }); i += fdOp.length;
+        } else if ("|&;<>()".indexOf(c) !== -1) {
+          end();
+          var op = OPS.filter(function (o) { return src.slice(i, i + o.length) === o; })[0];
+          tokens.push({ t: "op", v: op, line: line, p: i, e: i + op.length }); i += op.length;
+        } else {
+          start(); lit(c, false); i++;
         }
-        if (i >= line.length) throw new SyntaxError('unexpected EOF while looking for matching `"\'');
-        i++;
-      } else if (c === "\\") {
-        if (i + 1 < line.length) add(line[i + 1], true);
-        i += 2;
-      } else if (c === "$") {
-        variable(false);
-      } else if (c === " " || c === "\t") {
-        end(); i++;
-      } else if (c === "|" || c === ";" || c === "&" || c === ">" || c === "<") {
-        end();
-        var two = line.slice(i, i + 2);
-        if (line.slice(i, i + 3) === "&>>") { tokens.push({ type: "op", text: "&>>" }); i += 3; }
-        else if (two === "||" || two === "&&" || two === ">>" || two === "&>") { tokens.push({ type: "op", text: two }); i += 2; }
-        else if (c === "&") throw new SyntaxError("background jobs (&) aren't available on this console");
-        else { tokens.push({ type: "op", text: c }); i++; }
-      } else if (c === "2" && !word && line[i + 1] === ">") {
-        var op = line.slice(i, i + 4) === "2>&1" ? "2>&1" : line[i + 2] === ">" ? "2>>" : "2>";
-        tokens.push({ type: "op", text: op }); i += op.length;
-      } else if (c === "#" && !word) {
-        break; // a comment
-      } else {
-        add(c, false); i++;
       }
+    } catch (e) {
+      // A script runs up to the line it can't read, so the error waits for
+      // the parser to reach it instead of stopping everything now.
+      if (!(e instanceof Incomplete)) throw e;
+      atoms = null;
+      tokens.push({ t: "eof", line: line, error: e });
+      return tokens;
     }
     end();
+    tokens.push({ t: "eof", line: line });
     return tokens;
   }
 
-  function globRegex(part, quoted, offset) {
+  function braceParam(inner) {
+    var m = /^#([A-Za-z_][A-Za-z0-9_]*|[0-9@*#?])$/.exec(inner);
+    if (m) return { t: "len", name: m[1] };
+    m = /^([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[?#@*!$])(?:(:?[-=+?]|##?|%%?)([\s\S]*))?$/.exec(inner);
+    if (m) return m[2] ? { t: "param", name: m[1], op: m[2], arg: m[3] } : { t: "var", name: m[1] };
+    return { t: "bad", text: inner };
+  }
+
+  // The plain text of a word token, or null if any of it is quoted or expanded.
+  // Only plain words can be keywords (`"if"` is a command named if).
+  function plain(tok) {
+    if (!tok || tok.t !== "word") return null;
+    var s = "";
+    for (var k = 0; k < tok.atoms.length; k++) {
+      if (!("c" in tok.atoms[k]) || tok.atoms[k].q) return null;
+      s += tok.atoms[k].c;
+    }
+    return s;
+  }
+
+  function Parser(src) { this.src = src; this.toks = lex(src); this.at = 0; }
+  Parser.prototype.peek = function () { return this.toks[this.at]; };
+  Parser.prototype.next = function () { return this.toks[this.at++]; };
+  Parser.prototype.is = function (kw) { return plain(this.peek()) === kw; };
+  Parser.prototype.isOp = function (v) { var t = this.peek(); return t.t === "op" && t.v === v; };
+  Parser.prototype.linebreak = function () { while (this.peek().t === "nl") this.at++; };
+  Parser.prototype.fail = function (tok) {
+    if (tok.t === "eof") {
+      if (tok.error) throw tok.error;
+      throw new Incomplete("syntax error: unexpected end of file", tok.line);
+    }
+    var name = tok.t === "nl" ? "newline" : tok.t === "op" ? tok.v : tok.text;
+    throw new SyntaxErr("syntax error near unexpected token `" + name + "'", tok.line);
+  };
+  Parser.prototype.expect = function (kw, items) {
+    if (items && !items.length) this.fail(this.peek());
+    if (!this.is(kw)) this.fail(this.peek());
+    this.next();
+  };
+
+  // The whole input. With `partial`, a syntax error comes back with the
+  // commands before it, as a script runs up to its first bad line.
+  Parser.prototype.program = function (partial) {
+    var items = [];
+    try {
+      for (;;) {
+        this.linebreak();
+        if (this.peek().t === "eof") {
+          if (this.peek().error) throw this.peek().error;
+          break;
+        }
+        // A line runs only once all of it has been read: `if …; fi fi` runs nothing.
+        var line = this.list([], true);
+        var t = this.peek();
+        if (t.t !== "nl" && t.t !== "eof") this.fail(t);
+        if (t.t === "eof" && t.error) throw t.error;
+        if (line.length) line[0].op = items.length ? ";" : null;
+        items = items.concat(line);
+      }
+    } catch (e) {
+      if (!partial || !(e instanceof SyntaxErr || e instanceof Incomplete || e instanceof Unsupported)) throw e;
+      return { items: items, error: e };
+    }
+    return { items: items, error: null };
+  };
+
+  // and-or lists joined by ; & or newlines, flat: each item says how it joins
+  // the one before (null, ";", "&&" or "||"), as bash runs them left to right.
+  // Stops before a word or operator in `stop`, or (`oneLine`) a newline.
+  Parser.prototype.list = function (stop, oneLine) {
+    var items = [];
+    var op = null;
+    if (!oneLine) this.linebreak();
+    for (;;) {
+      var t = this.peek();
+      if (t.t === "eof" || stop.indexOf(t.t === "op" ? t.v : plain(t)) !== -1) break;
+      var node = this.pipeline();
+      items.push({ op: op, node: node, bg: false, text: this.src.slice(t.p, this.toks[this.at - 1].e) });
+      t = this.peek();
+      if (t.t === "op" && (t.v === "&&" || t.v === "||")) {
+        this.next();
+        op = t.v;
+        this.linebreak();
+        var n = this.peek();
+        if (n.t === "eof" || stop.indexOf(n.t === "op" ? n.v : plain(n)) !== -1) this.fail(n);
+      } else if (t.t === "op" && (t.v === ";" || t.v === "&")) {
+        this.next();
+        if (t.v === "&") items[items.length - 1].bg = true;
+        op = ";";
+        if (oneLine && this.peek().t === "nl") break;
+        if (!oneLine) this.linebreak();
+      } else if (t.t === "nl" && !oneLine) {
+        this.linebreak();
+        op = ";";
+      } else break;
+    }
+    return items;
+  };
+
+  Parser.prototype.pipeline = function () {
+    var negate = false;
+    if (this.is("!")) { this.next(); negate = true; }
+    var cmds = [this.command()];
+    while (this.isOp("|")) {
+      this.next();
+      this.linebreak();
+      if (this.peek().t === "eof") this.fail(this.peek());
+      cmds.push(this.command());
+    }
+    return { t: "pipeline", cmds: cmds, negate: negate };
+  };
+
+  var CLOSERS = ["then", "elif", "else", "fi", "do", "done", "esac", "}", "in", "]]"];
+
+  Parser.prototype.command = function () {
+    var t = this.peek();
+    var w = plain(t);
+    var node = null;
+    if (w === "if") node = this.ifCmd();
+    else if (w === "for") node = this.forCmd();
+    else if (w === "while" || w === "until") node = this.whileCmd(w);
+    else if (w === "case") node = this.caseCmd();
+    else if (w === "{") { this.next(); var body = this.list(["}"]); this.expect("}", body); node = { t: "group", body: body }; }
+    else if (w === "[[") node = this.condCmd();
+    else if (CLOSERS.indexOf(w) !== -1) this.fail(t);
+    else if (t.t === "op" && t.v === "(") {
+      this.next();
+      if (this.isOp("(")) throw new Unsupported("(( )) arithmetic commands; use [ \"$i\" -lt 5 ] to compare, and i=$((i + 1)) to count");
+      var inner = this.list([")"]);
+      if (!inner.length || !this.isOp(")")) this.fail(this.peek());
+      this.next();
+      node = { t: "subshell", body: inner };
+    }
+    if (!node) return this.simple();
+    node.redirects = this.redirects();
+    return node;
+  };
+
+  Parser.prototype.redirects = function () {
+    var out = [];
+    while (this.peek().t === "op" && REDIRECTS[this.peek().v]) out.push(this.redirect());
+    return out;
+  };
+
+  Parser.prototype.redirect = function () {
+    var op = this.next().v;
+    if (op === "<<") throw new Unsupported("here-documents (<<)");
+    if (op === "<<<") throw new Unsupported("here-strings (<<<); use echo \"…\" | command");
+    var spec = REDIRECTS[op];
+    if (spec.dup) return { fd: spec.fd, dup: spec.dup };
+    var target = this.peek();
+    if (target.t !== "word") {
+      if (target.t === "eof" && target.error) throw target.error;
+      throw new SyntaxErr("syntax error near unexpected token `" + (target.t === "op" ? target.v : "newline") + "'", target.line);
+    }
+    this.next();
+    return { fd: spec.fd, append: !!spec.append, word: target.atoms };
+  };
+
+  Parser.prototype.simple = function () {
+    var cmd = { t: "simple", assigns: [], words: [], redirects: [] };
+    for (;;) {
+      var t = this.peek();
+      if (t.t === "word") {
+        var m = !cmd.words.length && t.atoms[0] && "c" in t.atoms[0] && !t.atoms[0].q && /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(t.atoms[0].c);
+        if (m) {
+          var value = [{ c: t.atoms[0].c.slice(m[0].length), q: false }].concat(t.atoms.slice(1));
+          cmd.assigns.push({ name: m[1], value: value });
+        } else {
+          if (!cmd.words.length && this.toks[this.at + 1].t === "op" && this.toks[this.at + 1].v === "(") {
+            throw new Unsupported("functions (name() { … })");
+          }
+          cmd.words.push(t.atoms);
+        }
+        this.next();
+      } else if (t.t === "op" && REDIRECTS[t.v]) {
+        cmd.redirects.push(this.redirect());
+      } else break;
+    }
+    if (!cmd.words.length && !cmd.assigns.length && !cmd.redirects.length) this.fail(this.peek());
+    return cmd;
+  };
+
+  Parser.prototype.ifCmd = function () {
+    this.next();
+    var clauses = [];
+    var otherwise = null;
+    do {
+      var cond = this.list(["then"]);
+      this.expect("then", cond);
+      var body = this.list(["elif", "else", "fi"]);
+      if (!body.length) this.fail(this.peek());
+      clauses.push({ cond: cond, body: body });
+    } while (this.is("elif") && this.next());
+    if (this.is("else")) {
+      this.next();
+      otherwise = this.list(["fi"]);
+      if (!otherwise.length) this.fail(this.peek());
+    }
+    this.expect("fi");
+    return { t: "if", clauses: clauses, otherwise: otherwise };
+  };
+
+  Parser.prototype.forCmd = function () {
+    this.next();
+    if (this.isOp("(")) throw new Unsupported("for (( … )) loops; use for i in {1..5}");
+    var nameTok = this.next();
+    var name = plain(nameTok);
+    if (nameTok.t !== "word") this.fail(nameTok);
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name || "")) throw new SyntaxErr("`" + nameTok.text + "': not a valid identifier", nameTok.line);
+    var words = null;
+    this.linebreak();
+    if (this.is("in")) {
+      this.next();
+      words = [];
+      while (this.peek().t === "word") words.push(this.next().atoms);
+      if (this.isOp(";") || this.peek().t === "nl") this.next();
+      else this.fail(this.peek());
+    } else if (this.isOp(";")) this.next();
+    this.linebreak();
+    this.expect("do");
+    var body = this.list(["done"]);
+    this.expect("done", body);
+    return { t: "for", name: name, words: words, body: body };
+  };
+
+  Parser.prototype.whileCmd = function (kind) {
+    this.next();
+    var cond = this.list(["do"]);
+    this.expect("do", cond);
+    var body = this.list(["done"]);
+    this.expect("done", body);
+    return { t: "while", until: kind === "until", cond: cond, body: body };
+  };
+
+  Parser.prototype.caseCmd = function () {
+    this.next();
+    var subject = this.next();
+    if (subject.t !== "word") this.fail(subject);
+    this.linebreak();
+    this.expect("in");
+    var clauses = [];
+    for (;;) {
+      this.linebreak();
+      if (this.is("esac")) { this.next(); break; }
+      if (this.isOp("(")) this.next();
+      var patterns = [];
+      for (;;) {
+        var p = this.next();
+        if (p.t !== "word") this.fail(p);
+        patterns.push(p.atoms);
+        if (this.isOp("|")) { this.next(); continue; }
+        if (this.isOp(")")) { this.next(); break; }
+        this.fail(this.peek());
+      }
+      var body = this.list([";;", "esac"]);
+      clauses.push({ patterns: patterns, body: body });
+      if (this.isOp(";;")) { this.next(); continue; }
+      this.expect("esac");
+      break;
+    }
+    return { t: "case", subject: subject.atoms, clauses: clauses };
+  };
+
+  // [[ … ]]: && || ! ( ) here are part of the test, not the command line.
+  var UNARY = ["-e", "-f", "-d", "-r", "-w", "-x", "-s", "-z", "-n", "-L", "-h"];
+  var BINARY = ["=", "==", "!=", "<", ">", "-eq", "-ne", "-lt", "-le", "-gt", "-ge", "-nt", "-ot", "=~"];
+
+  Parser.prototype.condCmd = function () {
+    this.next();
+    var expr = this.condOr();
+    if (!this.is("]]")) this.fail(this.peek());
+    this.next();
+    return { t: "cond", expr: expr };
+  };
+  Parser.prototype.condOr = function () {
+    var l = this.condAnd();
+    while (this.isOp("||")) { this.next(); l = { t: "or", l: l, r: this.condAnd() }; }
+    return l;
+  };
+  Parser.prototype.condAnd = function () {
+    var l = this.condNot();
+    while (this.isOp("&&")) { this.next(); l = { t: "and", l: l, r: this.condNot() }; }
+    return l;
+  };
+  Parser.prototype.condNot = function () {
+    if (this.is("!")) { this.next(); return { t: "not", e: this.condNot() }; }
+    if (this.isOp("(")) {
+      this.next();
+      var e = this.condOr();
+      if (!this.isOp(")")) this.fail(this.peek());
+      this.next();
+      return e;
+    }
+    var t = this.peek();
+    if (t.t !== "word" || plain(t) === "]]") this.fail(t);
+    var after = this.toks[this.at + 1];
+    if (UNARY.indexOf(plain(t)) !== -1 && after.t === "word" && plain(after) !== "]]") {
+      this.next();
+      return { t: "unary", op: plain(t), arg: this.next().atoms };
+    }
+    this.next();
+    var o = this.peek();
+    var op = o.t === "op" && (o.v === "<" || o.v === ">") ? o.v : plain(o);
+    if (BINARY.indexOf(op) === -1) return { t: "str", w: t.atoms };
+    this.next();
+    if (op === "=~") throw new Unsupported("[[ =~ ]] regular expressions; use == with a glob pattern");
+    var r = this.next();
+    if (r.t !== "word") this.fail(r);
+    return { t: "binary", op: op, l: t.atoms, r: r.atoms };
+  };
+
+  function parse(src) { return new Parser(src).program(false).items; }
+  function parseScript(src) { return new Parser(src).program(true); }
+
+  // --- expanding words -------------------------------------------------------------
+  function globRegex(part, quoted, offset, anyChar) {
     var re = "";
     for (var i = 0; i < part.length; i++) {
       var c = part[i];
       var q = quoted[offset + i];
-      if (!q && c === "*") re += "[^/]*";
-      else if (!q && c === "?") re += "[^/]";
+      if (!q && c === "*") re += anyChar ? "[\\s\\S]*" : "[^/]*";
+      else if (!q && c === "?") re += anyChar ? "[\\s\\S]" : "[^/]";
       else if (!q && c === "[") {
         var close = part.indexOf("]", i + 2);
         if (close === -1) { re += "\\["; continue; }
         var body = part.slice(i + 1, close).replace(/^!/, "^").replace(/\\/g, "\\\\");
         re += "[" + body + "]";
         i = close;
-      } else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+      } else re += c.replace(/[.+^${}()|[\]\\*?]/g, "\\$&");
     }
     return new RegExp("^" + re + "$");
   }
@@ -293,67 +689,203 @@
     return false;
   }
 
-  // Brace expansion, before anything else, as in bash: a{b,c}d → abd acd, and
-  // {1..3} → 1 2 3. Only unquoted braces with a comma or a range count.
-  function braces(word) {
-    var depth = 0;
-    var open = -1;
-    for (var i = 0; i < word.text.length; i++) {
-      if (word.quoted[i]) continue;
-      var c = word.text[i];
+  // Brace expansion, first of all, as in bash: a{b,c}d → abd acd, and {1..3}
+  // → 1 2 3. Only unquoted braces with a comma or a range count. Works on
+  // atoms, one literal character at a time, so {$a,$b} expands too.
+  function braces(atoms) {
+    var flat = [];
+    atoms.forEach(function (a) {
+      if ("c" in a && a.c.length > 1) a.c.split("").forEach(function (ch) { flat.push({ c: ch, q: a.q }); });
+      else flat.push(a);
+    });
+    var ch = function (a) { return "c" in a && !a.q ? a.c : null; };
+    var depth = 0, open = -1;
+    for (var i = 0; i < flat.length; i++) {
+      var c = ch(flat[i]);
       if (c === "{") { if (depth++ === 0) open = i; }
       else if (c === "}" && depth > 0 && --depth === 0) {
-        var inner = word.text.slice(open + 1, i);
-        var innerQ = word.quoted.slice(open + 1, i);
+        var inner = flat.slice(open + 1, i);
         var options = null;
-        var range = /^(-?\d+)\.\.(-?\d+)$/.exec(inner);
-        if (range && innerQ.every(function (q) { return !q; })) {
+        var text = inner.map(function (a) { return ch(a) === null ? "\0" : ch(a); }).join("");
+        var range = /^(-?\d+)\.\.(-?\d+)$/.exec(text);
+        if (range) {
           var a = parseInt(range[1], 10), b = parseInt(range[2], 10), step = a <= b ? 1 : -1;
           options = [];
-          for (var n = a; step > 0 ? n <= b : n >= b; n += step) {
-            var t = String(n);
-            options.push({ text: t, quoted: t.split("").map(function () { return true; }) });
-          }
+          for (var n = a; step > 0 ? n <= b : n >= b; n += step) options.push([{ c: String(n), q: true }]);
         } else {
           var parts = [];
           var d = 0, from = 0;
           for (var k = 0; k <= inner.length; k++) {
-            if (k < inner.length && !innerQ[k] && inner[k] === "{") d++;
-            else if (k < inner.length && !innerQ[k] && inner[k] === "}") d--;
-            else if (k === inner.length || (d === 0 && !innerQ[k] && inner[k] === ",")) {
-              parts.push({ text: inner.slice(from, k), quoted: innerQ.slice(from, k) });
-              from = k + 1;
-            }
+            var ck = k < inner.length ? ch(inner[k]) : null;
+            if (ck === "{") d++;
+            else if (ck === "}") d--;
+            else if (k === inner.length || (d === 0 && ck === ",")) { parts.push(inner.slice(from, k)); from = k + 1; }
           }
           if (parts.length > 1) options = parts;
         }
         if (!options) continue;
-        var pre = { text: word.text.slice(0, open), quoted: word.quoted.slice(0, open) };
-        var post = { text: word.text.slice(i + 1), quoted: word.quoted.slice(i + 1) };
+        var pre = flat.slice(0, open), post = flat.slice(i + 1);
         var out = [];
-        options.forEach(function (o) {
-          braces({ text: pre.text + o.text + post.text, quoted: pre.quoted.concat(o.quoted, post.quoted) }).forEach(function (w) { out.push(w); });
-        });
+        options.forEach(function (o) { braces(pre.concat(o, post)).forEach(function (w) { out.push(w); }); });
         return out;
       }
     }
-    return [word];
+    return [flat];
   }
 
-  Shell.prototype.expand = function (word) {
-    var self = this;
+  // A parameter's value: a string, undefined when unset, or for $@ and $* the
+  // list of arguments.
+  Shell.prototype.param = function (name) {
+    var args = this.args || [];
+    if (name === "@" || name === "*") return args.slice();
+    if (name === "0") return this.scriptName || "-bash";
+    if (/^\d+$/.test(name)) return args[+name - 1];
+    if (name === "?") return String(this.lastStatus);
+    if (name === "#") return String(args.length);
+    if (name === "!") return this.lastBg;
+    if (name === "$") return String(SHELL_PID);
+    return this.vars[name];
+  };
+
+  // One expansion's value: a string, or a list for $@ / $*.
+  Shell.prototype.expansion = function* (x, io) {
+    var value;
+    if (x.t === "var") {
+      value = this.param(x.name);
+      return value === undefined ? "" : value;
+    }
+    if (x.t === "len") {
+      value = this.param(x.name);
+      return String(Array.isArray(value) ? value.length : (value || "").length);
+    }
+    if (x.t === "cmd") return yield* this.substitute(x.src, io);
+    if (x.t === "arith") return String(arith(yield* this.expandText(x.src, io), this));
+    if (x.t === "bad") throw new ExpansionError("${" + x.text + "}: bad substitution");
+    value = this.param(x.name);
+    if (Array.isArray(value)) value = value.join(" ");
+    var unset = value === undefined, empty = unset || value === "";
+    var colon = x.op.charAt(0) === ":";
+    var missing = colon ? empty : unset;
+    switch (x.op.replace(":", "")) {
+      case "-": return missing ? yield* this.expandText(x.arg, io) : value;
+      case "=":
+        if (!missing) return value;
+        if (!/^[A-Za-z_]/.test(x.name)) throw new ExpansionError("$" + x.name + ": cannot assign in this way");
+        value = yield* this.expandText(x.arg, io);
+        this.setVar(x.name, value);
+        return value;
+      case "+": return missing ? "" : yield* this.expandText(x.arg, io);
+      case "?":
+        if (!missing) return value;
+        throw new ExpansionError(x.name + ": " + ((yield* this.expandText(x.arg, io)) || "parameter null or not set"));
+    }
+    // ${x#pattern} ${x##pattern} ${x%pattern} ${x%%pattern}: trim a match.
+    var tok = lex(x.arg, true)[0];
+    var pat = yield* this.expandPattern(tok.t === "word" ? tok.atoms : [], io);
+    var re = globRegex(pat.text, pat.quoted, 0, true);
+    var s = value || "";
+    var longest = x.op.length === 2;
+    if (x.op[0] === "#") {
+      for (var a = longest ? s.length : 0; longest ? a >= 0 : a <= s.length; a += longest ? -1 : 1) {
+        if (re.test(s.slice(0, a))) return s.slice(a);
+      }
+    } else {
+      for (var b = longest ? 0 : s.length; longest ? b <= s.length : b >= 0; b += longest ? 1 : -1) {
+        if (re.test(s.slice(b))) return s.slice(0, b);
+      }
+    }
+    return s;
+  };
+
+  // A word → fields: braces, then ~, $… expansions, splitting of unquoted
+  // results on $IFS, then globs. "$@" makes one field per argument.
+  Shell.prototype.expandFields = function* (atoms, io) {
     var out = [];
-    braces(word).forEach(function (w) { Array.prototype.push.apply(out, self.expandOne(w)); });
+    var groups = braces(atoms);
+    for (var g = 0; g < groups.length; g++) {
+      var fields = yield* this.fieldsOf(this.tilde(groups[g]), io);
+      for (var f = 0; f < fields.length; f++) Array.prototype.push.apply(out, this.glob(fields[f]));
+    }
     return out;
   };
 
-  Shell.prototype.expandOne = function (word) {
-    var text = word.text;
-    if (!word.quoted[0] && (text === "~" || text.indexOf("~/") === 0)) {
-      var pad = this.home.split("").map(function () { return true; });
-      word = { text: this.home + text.slice(1), quoted: pad.concat(word.quoted.slice(1)) };
-      text = word.text;
+  Shell.prototype.tilde = function (atoms) {
+    var first = atoms[0];
+    if (first && "c" in first && !first.q && (first.c === "~" || first.c.indexOf("~/") === 0)) {
+      return [{ c: this.home, q: true }, { c: first.c.slice(1), q: false }].concat(atoms.slice(1));
     }
+    return atoms;
+  };
+
+  Shell.prototype.fieldsOf = function* (atoms, io) {
+    var fields = [];
+    var cur = null;
+    var ifs = this.vars.IFS === undefined ? " \t\n" : this.vars.IFS;
+    function add(text, q) {
+      if (!cur) cur = { text: "", quoted: [], real: false };
+      if (q) cur.real = true;
+      cur.text += text;
+      for (var k = 0; k < text.length; k++) cur.quoted.push(q);
+    }
+    function cut(force) {
+      if (cur && (cur.real || cur.text)) fields.push(cur);
+      else if (force) fields.push({ text: "", quoted: [], real: true });
+      cur = null;
+    }
+    for (var i = 0; i < atoms.length; i++) {
+      var a = atoms[i];
+      if ("c" in a) { add(a.c, a.q); continue; }
+      var value = yield* this.expansion(a.x, io);
+      if (Array.isArray(value)) {
+        if (a.q && a.x.name === "@") {
+          for (var k = 0; k < value.length; k++) { if (k) cut(); add(value[k], true); }
+          continue;
+        }
+        value = value.join(a.q ? (ifs.charAt(0) || "") : " ");
+      }
+      if (a.q) { add(value, true); continue; }
+      // Unquoted: split on $IFS. Its whitespace separates; anything else in
+      // it is a delimiter of its own (so a,,b has an empty field).
+      for (var j = 0; j < value.length; j++) {
+        var c = value[j];
+        if (ifs.indexOf(c) === -1) add(c, false);
+        else if (" \t\n".indexOf(c) !== -1) cut();
+        else cut(true);
+      }
+    }
+    cut();
+    return fields;
+  };
+
+  // A word as one string: no splitting, no globs (assignments, case words,
+  // redirect targets, [[ ]] operands).
+  Shell.prototype.expandString = function* (atoms, io) {
+    return (yield* this.expandPattern(this.tilde(atoms), io)).text;
+  };
+
+  // A word as a pattern: {text, quoted}, where quoted characters match only
+  // themselves. Used for case, [[ == ]] and ${x#…}.
+  Shell.prototype.expandPattern = function* (atoms, io) {
+    var text = "", quoted = [];
+    for (var i = 0; i < atoms.length; i++) {
+      var a = atoms[i];
+      var value = "c" in a ? a.c : yield* this.expansion(a.x, io);
+      if (Array.isArray(value)) value = value.join(" ");
+      text += value;
+      for (var k = 0; k < value.length; k++) quoted.push(a.q);
+    }
+    return { text: text, quoted: quoted };
+  };
+
+  // The inside of $(( )) or ${x:-…}: expansions done, quotes removed.
+  Shell.prototype.expandText = function* (src, io) {
+    var tok = lex(src, true)[0];
+    if (tok.t === "eof" && tok.error) throw new ExpansionError(tok.error.message);
+    return tok.t === "word" ? yield* this.expandString(tok.atoms, io) : "";
+  };
+
+  Shell.prototype.glob = function (word) {
+    var text = word.text;
     if (!hasGlob(word)) return [text];
     var absolute = text.charAt(0) === "/";
     var parts = text.split("/");
@@ -363,7 +895,7 @@
     var self = this;
     var results = [{ shown: absolute ? "" : null, abs: absolute ? "/" : this.cwd }];
     parts.forEach(function (part, idx) {
-      if (part === "" ) return;
+      if (part === "") return;
       var next = [];
       results.forEach(function (r) {
         var shownPrefix = r.shown === null ? "" : r.shown + "/";
@@ -389,235 +921,589 @@
     return results.map(function (r) { return absolute ? "/" + r.shown.replace(/^\//, "") : r.shown; });
   };
 
-  // One part of a line (no ; && ||) → a pipeline: [{argv, redirects}].
-  Shell.prototype.parse = function (text) {
-    var vars = {};
-    var self = this;
-    Object.keys(this.vars).forEach(function (k) { vars[k] = self.vars[k]; });
-    var args = this.args || [];
-    vars["?"] = this.lastStatus;
-    vars["!"] = this.lastBg;
-    vars["#"] = args.length;
-    vars["@"] = args.join(" ");
-    vars["0"] = this.scriptName || "-bash";
-    for (var n = 1; n <= 9; n++) vars[String(n)] = args[n - 1] !== undefined ? args[n - 1] : "";
-    var tokens = tokenize(text, vars);
-    var pipeline = [];
-    var cmd = { argv: [], redirects: [], assigns: [] };
-    var self = this;
-    function endCmd(next) {
-      if (!cmd.argv.length && !cmd.redirects.length && !cmd.assigns.length) throw new SyntaxError("syntax error near unexpected token `" + next + "'");
-      pipeline.push(cmd);
-      cmd = { argv: [], redirects: [], assigns: [] };
+  // $(…): a subshell's output, less trailing newlines.
+  Shell.prototype.substitute = function* (src, io) {
+    var prog = parseScript(src);
+    if (prog.error) throw new ExpansionError("command substitution: " + prog.error.message);
+    var buf = new Sink();
+    yield* this.subshell(prog.items, { stdin: io.stdin, out: buf, err: io.err });
+    this.substituted = true;
+    return buf.text.replace(/\n+$/, "");
+  };
+
+  // ( … ) and $(…) run in a subshell: a copy of everything (not only what's
+  // exported), and nothing it changes (variables, cd, exit) comes back.
+  Shell.prototype.subshell = function* (items, io) {
+    var saved = this.saveState();
+    this.vars = Object.assign({}, this.vars);
+    this.exported = Object.assign({}, this.exported);
+    this.depth = (this.depth || 0) + 1;
+    this.loopDepth = 0;
+    var code;
+    try {
+      yield* this.runList(items, io);
+      code = this.exiting ? this.exitCode : this.lastStatus;
+    } finally {
+      this.restoreState(saved);
+      this.depth -= 1;
     }
-    for (var i = 0; i < tokens.length; i++) {
-      var t = tokens[i];
-      if (t.type === "word" && t.assign && !cmd.argv.length) {
-        // NAME=value before a command (or alone): no globbing, no splitting.
-        cmd.assigns.push([t.assign, t.text.slice(t.assign.length + 1)]);
-      } else if (t.type === "word") {
-        Array.prototype.push.apply(cmd.argv, self.expand(t));
-      } else if (t.text === "|") {
-        endCmd("|");
-      } else if (t.text === "2>&1") {
-        cmd.redirects.push({ op: "2>&1" });
-      } else {
-        var target = tokens[i + 1];
-        if (!target || target.type !== "word") throw new SyntaxError("syntax error near unexpected token `newline'");
-        cmd.redirects.push({ op: t.text, path: self.expand(target)[0] });
-        i++;
+    this.lastStatus = code;
+    return code;
+  };
+
+  // Integer arithmetic for $(( )) and [[ -lt ]]: + - * / % ** and C's
+  // comparisons, logic, bit operators and ?:. Names are variables (unset is 0).
+  function arith(src, sh) {
+    var toks = [], pos = [];
+    var expr = src.replace(/^\s+/, "");
+    var re = /\s*(0[xX][0-9a-fA-F]+|\d+|[A-Za-z_][A-Za-z0-9_]*|\*\*|<<|>>|<=|>=|==|!=|&&|\|\||\+\+|--|[-+*\/%()<>!~&|^?:=,])/y;
+    var at = 0;
+    while (at < src.length) {
+      if (/^\s*$/.test(src.slice(at))) break;
+      re.lastIndex = at;
+      var m = re.exec(src);
+      if (!m) throw new ExpansionError(expr + ": syntax error: invalid arithmetic operator (error token is \"" + src.slice(at).replace(/^\s+/, "") + "\")");
+      toks.push(m[1]);
+      pos.push(re.lastIndex - m[1].length);
+      at = re.lastIndex;
+    }
+    var i = 0;
+    function fail(what) {
+      throw new ExpansionError(expr + ": syntax error: " + what + " (error token is \"" + (i < toks.length ? src.slice(pos[i]) : expr) + "\")");
+    }
+    function value(name, depth) {
+      var v = sh.param(name);
+      if (v === undefined || v === "") return 0;
+      v = String(v).trim();
+      if (/^-?\d+$/.test(v)) return parseInt(v, 10);
+      if (depth < 10 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(v)) return value(v, depth + 1);
+      return arith(v, sh);
+    }
+    function primary() {
+      var t = toks[i++];
+      if (t === undefined) { i = toks.length - 1; fail("operand expected"); }
+      if (t === "(") { var v = ternary(); if (toks[i++] !== ")") fail("missing `)'"); return v; }
+      if (t === "-") return -primary();
+      if (t === "+") return +primary();
+      if (t === "!") return primary() ? 0 : 1;
+      if (t === "~") return ~primary();
+      if (t === "++" || t === "--") throw new Unsupported("++ and -- inside $(( )); write i=$((i + 1))");
+      if (/^0[xX]/.test(t)) return parseInt(t, 16);
+      if (/^0\d/.test(t)) { // a leading 0 means octal, as in C
+        if (/[89]/.test(t)) throw new ExpansionError(t + ": value too great for base (error token is \"" + t + "\")");
+        return parseInt(t, 8);
+      }
+      if (/^\d/.test(t)) return parseInt(t, 10);
+      if (/^[A-Za-z_]/.test(t)) {
+        if (toks[i] === "++" || toks[i] === "--") throw new Unsupported("++ and -- inside $(( )); write i=$((i + 1))");
+        if (toks[i] === "=" || (toks[i] && /^[-+*\/%]$/.test(toks[i]) && toks[i + 1] === "=")) {
+          throw new Unsupported("assignment inside $(( )); write i=$((i + 1))");
+        }
+        return value(t, 0);
+      }
+      i--;
+      fail("operand expected");
+    }
+    function power() {
+      var b = primary();
+      if (toks[i] === "**") { i++; var e = power(); if (e < 0) fail("exponent less than 0"); return Math.trunc(Math.pow(b, e)); }
+      return b;
+    }
+    var LEVELS = [["||"], ["&&"], ["|"], ["^"], ["&"], ["==", "!="], ["<", "<=", ">", ">="], ["<<", ">>"], ["+", "-"], ["*", "/", "%"]];
+    function level(n) {
+      if (n === LEVELS.length) return power();
+      var l = level(n + 1);
+      while (LEVELS[n].indexOf(toks[i]) !== -1) {
+        var op = toks[i++];
+        var r = level(n + 1);
+        switch (op) {
+          case "||": l = l || r ? 1 : 0; break;
+          case "&&": l = l && r ? 1 : 0; break;
+          case "|": l = l | r; break;
+          case "^": l = l ^ r; break;
+          case "&": l = l & r; break;
+          case "==": l = l === r ? 1 : 0; break;
+          case "!=": l = l !== r ? 1 : 0; break;
+          case "<": l = l < r ? 1 : 0; break;
+          case "<=": l = l <= r ? 1 : 0; break;
+          case ">": l = l > r ? 1 : 0; break;
+          case ">=": l = l >= r ? 1 : 0; break;
+          case "<<": l = l << r; break;
+          case ">>": l = l >> r; break;
+          case "+": l = l + r; break;
+          case "-": l = l - r; break;
+          case "*": l = l * r; break;
+          case "/": case "%":
+            if (r === 0) throw new ExpansionError(expr + ": division by 0 (error token is \"" + src.slice(pos[i - 1]) + "\")");
+            l = op === "/" ? Math.trunc(l / r) : l % r;
+            break;
+        }
+      }
+      return l;
+    }
+    function ternary() {
+      var c = level(0);
+      if (toks[i] !== "?") return c;
+      i++;
+      var a = ternary();
+      if (toks[i++] !== ":") fail("`:' expected for conditional expression");
+      var b = ternary();
+      return c ? a : b;
+    }
+    if (!toks.length) return 0;
+    var result = ternary();
+    if (i < toks.length) {
+      if (toks[i] === "=") throw new Unsupported("assignment inside $(( )); write i=$((i + 1))");
+      fail("syntax error in expression");
+    }
+    return result;
+  }
+
+  // --- tests: test, [ ], [[ ]] --------------------------------------------------------
+  function TestError(message) { this.message = message; }
+
+  Shell.prototype.unaryTest = function (op, arg) {
+    if (op === "-z") return arg === "";
+    if (op === "-n") return arg !== "";
+    if (op === "-L" || op === "-h") return false; // no symbolic links on the console yet
+    var found = arg === "" ? { error: true } : this.lookup(arg);
+    if (found.error) return false;
+    var n = found.node;
+    switch (op) {
+      case "-e": return true;
+      case "-f": return n.type === "file";
+      case "-d": return n.type === "dir";
+      case "-r": return this.can(n, 4);
+      case "-w": return this.can(n, 2);
+      case "-x": return this.can(n, 1);
+      case "-s": return size(n) > 0;
+    }
+    return false;
+  };
+
+  // `num` turns an operand into an integer for -eq and the rest.
+  Shell.prototype.binaryTest = function (op, l, r, num) {
+    switch (op) {
+      case "=": case "==": return l === r;
+      case "!=": return l !== r;
+      case "<": return l < r;
+      case ">": return l > r;
+      case "-nt": case "-ot": {
+        var a = this.lookup(l), b = this.lookup(r);
+        if (op === "-ot") { var t = a; a = b; b = t; }
+        return !!a.node && (!b.node || a.node.mtime > b.node.mtime);
       }
     }
-    endCmd("newline");
-    return pipeline;
+    var x = num(l), y = num(r);
+    switch (op) {
+      case "-eq": return x === y;
+      case "-ne": return x !== y;
+      case "-lt": return x < y;
+      case "-le": return x <= y;
+      case "-gt": return x > y;
+      case "-ge": return x >= y;
+    }
+    return false;
+  };
+
+  // test / [: the arguments are already expanded. Throws TestError.
+  Shell.prototype.testArgs = function (args) {
+    var sh = this;
+    var i = 0;
+    function integer(s) {
+      if (!/^\s*[-+]?\d+\s*$/.test(s)) throw new TestError(s + ": integer expression expected");
+      return parseInt(s, 10);
+    }
+    function or() {
+      var v = and();
+      while (args[i] === "-o") { i++; var r = and(); v = v || r; }
+      return v;
+    }
+    function and() {
+      var v = not();
+      while (args[i] === "-a") { i++; var r = not(); v = v && r; }
+      return v;
+    }
+    function not() {
+      if (args[i] === "!" && i + 1 < args.length && BINARY.indexOf(args[i + 1]) === -1) { i++; return !not(); }
+      return primary();
+    }
+    function primary() {
+      if (i >= args.length) throw new TestError("argument expected");
+      var a = args[i];
+      if (i + 2 < args.length && BINARY.indexOf(args[i + 1]) !== -1 && args[i + 1] !== "=~") {
+        var op = args[i + 1], r = args[i + 2];
+        i += 3;
+        return sh.binaryTest(op, a, r, integer);
+      }
+      if (a === "(" && i + 1 < args.length) {
+        i++;
+        var v = or();
+        if (args[i] !== ")") throw new TestError("`)' expected");
+        i++;
+        return v;
+      }
+      if (UNARY.indexOf(a) !== -1 && i + 1 < args.length) { i += 2; return sh.unaryTest(a, args[i - 1]); }
+      i++;
+      return a !== "";
+    }
+    // Up to four arguments are read by count, as POSIX says and bash does:
+    // that's what makes [ $empty = x ] say "unary operator expected".
+    var n = args.length;
+    var one = function (a) { return a !== ""; };
+    var two = function (a, b) {
+      if (a === "!") return !one(b);
+      if (UNARY.indexOf(a) !== -1) return sh.unaryTest(a, b);
+      throw new TestError(a + ": unary operator expected");
+    };
+    var three = function (a, op, b) {
+      if (BINARY.indexOf(op) !== -1 && op !== "=~") return sh.binaryTest(op, a, b, integer);
+      if (op === "-a") return one(a) && one(b);
+      if (op === "-o") return one(a) || one(b);
+      if (a === "!") return !two(op, b);
+      if (a === "(" && b === ")") return one(op);
+      throw new TestError(op + ": binary operator expected");
+    };
+    if (n === 0) return false;
+    if (n === 1) return one(args[0]);
+    if (n === 2) return two(args[0], args[1]);
+    if (n === 3) return three(args[0], args[1], args[2]);
+    if (n === 4 && args[0] === "!") return !three(args[1], args[2], args[3]);
+    if (n === 4 && args[0] === "(" && args[3] === ")") return two(args[1], args[2]);
+    var result = or();
+    if (i < args.length) throw new TestError("too many arguments");
+    return result;
+  };
+
+  Shell.prototype.cond = function* (e, io) {
+    var sh = this;
+    switch (e.t) {
+      case "and": return (yield* this.cond(e.l, io)) && (yield* this.cond(e.r, io));
+      case "or": return (yield* this.cond(e.l, io)) || (yield* this.cond(e.r, io));
+      case "not": return !(yield* this.cond(e.e, io));
+      case "str": return (yield* this.expandString(e.w, io)) !== "";
+      case "unary": return this.unaryTest(e.op, yield* this.expandString(e.arg, io));
+    }
+    var l = yield* this.expandString(e.l, io);
+    if (e.op === "==" || e.op === "=" || e.op === "!=") {
+      // The right of == is a pattern unless quoted: [[ $f == *.log ]].
+      var p = yield* this.expandPattern(this.tilde(e.r), io);
+      return globRegex(p.text, p.quoted, 0, true).test(l) !== (e.op === "!=");
+    }
+    var r = yield* this.expandString(e.r, io);
+    return this.binaryTest(e.op, l, r, function (s) { return arith(s, sh); });
   };
 
   // --- running -------------------------------------------------------------------
-  // Split a line at top-level ; && || (outside quotes), so each part can be
-  // expanded just before it runs: `false; echo $?` must see the new status.
-  function splitLists(line) {
-    var parts = [];
-    var op = null;
-    var start = 0;
-    var quote = null;
-    for (var i = 0; i < line.length; i++) {
-      var c = line[i];
-      if (quote) { if (c === quote) quote = null; else if (c === "\\" && quote === '"') i++; continue; }
-      if (c === "'" || c === '"') { quote = c; continue; }
-      if (c === "\\") { i++; continue; }
-      if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) break;
-      var two = line.slice(i, i + 2);
-      // A lone & (not &&, &>, >& or 2>&1) ends a command and runs it in the background.
-      var lone = c === "&" && two !== "&&" && line[i + 1] !== ">" && line[i - 1] !== ">" && line[i - 1] !== "&";
-      if (c === ";" || two === "&&" || two === "||" || lone) {
-        parts.push({ op: op, text: line.slice(start, i), bg: lone });
-        op = lone || c === ";" ? ";" : two;
-        i += op.length - 1;
-        start = i + 1;
-      }
-    }
-    parts.push({ op: op, text: line.slice(start, quote ? line.length : i) });
-    return parts;
-  }
+  // Output goes to sinks: the terminal, a pipe, a file, or $(…)'s capture.
+  // Commands still return {out, err, code}; scripts and compound commands
+  // write as they go, so a prompt in the middle of a script follows what it
+  // has already printed.
+  function Sink() { this.text = ""; }
+  Sink.prototype.write = function (s) { this.text += s; };
 
-  // run(line) → {output, clear}: everything the terminal should print. While
-  // a prompt is pending (sudo's password), the line is its answer instead.
+  var STEP_LIMIT = 10000;
+
+  // run(line) → {output, clear, pending?}: everything the terminal should
+  // print. An unfinished command (an open if, a trailing |) waits for more
+  // lines at the "> " prompt, as in bash. While a prompt is pending (sudo's
+  // password, read), the line is its answer instead.
   Shell.prototype.run = function (line) {
     if (this.pending) return this.answer(line);
+    var src = this.more === null ? line : this.more + "\n" + line;
+    var items;
+    try {
+      // Bash reads the whole command before running any of it, so a syntax
+      // error anywhere in it means nothing runs.
+      items = parse(src);
+    } catch (e) {
+      if (e instanceof Incomplete) {
+        this.more = src;
+        return { output: "", clear: false };
+      }
+      this.more = null;
+      this.clock += 1;
+      this.reap();
+      this.lastStatus = 2;
+      if (e instanceof SyntaxErr) return { output: "bash: " + e.message + "\n", clear: false };
+      if (e instanceof Unsupported) return { output: "bash: unsupported on the station console: " + e.message + "\n", clear: false };
+      throw e;
+    }
+    this.more = null;
     this.clock += 1;
     this.reap();
-    var parts = splitLists(line);
-    try {
-      // Bash reads the whole line before running any of it, so a quoting or
-      // syntax error anywhere means nothing runs.
-      parts.forEach(function (part, i) {
-        var empty = !part.text.trim();
-        if (empty && (part.op || i < parts.length - 1) && !(i === parts.length - 1 && part.op === ";")) {
-          throw new SyntaxError("syntax error near unexpected token `" + (parts[i + 1] ? parts[i + 1].op : part.op) + "'");
-        }
-        tokenize(part.text, {});
-      });
-    } catch (e) {
-      this.lastStatus = 2;
-      return { output: "bash: " + e.message + "\n", clear: false };
-    }
-    return this.runParts(parts, 0, "");
+    this.screen = "";
+    this.cleared = false;
+    this.steps = 0;
+    this.exiting = false;
+    this.breaking = this.continuing = 0;
+    var keyboard = { text: "", pos: 0, tty: true };
+    return this.drive(this.runList(items, { stdin: keyboard, out: this.tty, err: this.tty }));
   };
 
-  // Run parts[from…] of a parsed line; `printed` is what's been shown so far.
-  Shell.prototype.runParts = function (parts, from, printed) {
-    var clear = false;
-    var out = "", err = "";
-    for (var i = from; i < parts.length; i++) {
-      var part = parts[i];
-      if (!part.text.trim()) continue;
-      if (part.op === "&&" && this.lastStatus !== 0) continue;
-      if (part.op === "||" && this.lastStatus === 0) continue;
-      var pipeline;
-      try {
-        pipeline = this.parse(part.text);
-      } catch (e) {
-        this.lastStatus = 2;
-        printed += "bash: " + e.message + "\n";
-        continue;
-      }
-      var r = part.bg ? this.background(pipeline, part.text.trim()) : this.runPipeline(pipeline);
-      if (r.pending) {
-        // sudo wants a password: park this part and the rest of the line.
-        this.pending.resume = { parts: parts, from: i };
-        return { output: printed + r.output, clear: clear, pending: true };
-      }
-      printed += r.output;
-      out += r.out || "";
-      err += r.err || "";
-      if (r.clear) { clear = true; printed = ""; }
-      if (this.exiting) break;
+  // Run until the command finishes or asks for a line of input.
+  Shell.prototype.drive = function (gen, answer) {
+    var step;
+    try {
+      step = gen.next(answer);
+    } catch (e) {
+      if (!(e instanceof Runaway)) throw e;
+      this.screen += "bash: stopped after " + STEP_LIMIT.toLocaleString("en-US") + " commands: is a loop running forever?\n";
+      this.lastStatus = 130;
+      step = { done: true };
+    }
+    if (!step.done) {
+      this.pending = { prompt: step.value.prompt, secret: !!step.value.secret, gen: gen };
+      return { output: this.screen, clear: this.cleared, pending: true };
     }
     this.reap();
-    printed += this.flushNotices();
-    return { output: printed, out: out, err: err, clear: clear };
+    this.screen += this.flushNotices();
+    return { output: this.screen, clear: this.cleared };
   };
 
-  // The answer to a pending prompt. Only sudo asks for one. The console
-  // masks what's typed and never echoes or stores it.
+  // The answer to a pending prompt. The console masks a secret one and never
+  // echoes or stores it.
   Shell.prototype.answer = function (line) {
     var p = this.pending;
-    if (line === this.password) {
-      this.pending = null;
-      this.sudoUntil = this.clock + 15 * 60;
-      if (p.ok()) return this.runParts(p.resume.parts, p.resume.from, "");
-      // The right password, but no right to use sudo at all.
-      this.lastStatus = 1;
-      return this.runParts(p.resume.parts, p.resume.from + 1, this.user + " is not in the sudoers file.\n");
-    }
-    p.tries += 1;
-    if (p.tries >= 3) {
-      this.pending = null;
-      this.lastStatus = 1;
-      return this.runParts(p.resume.parts, p.resume.from + 1, "sudo: 3 incorrect password attempts\n");
-    }
-    return { output: "Sorry, try again.\n", clear: false, pending: true };
+    this.pending = null;
+    this.screen = "";
+    this.cleared = false;
+    return this.drive(p.gen, line);
   };
 
-  // Ctrl-C at a prompt abandons it, and the rest of the line.
+  // Ctrl-C abandons a prompt, or the lines of an unfinished command.
   Shell.prototype.cancel = function () {
+    if (this.more !== null) { this.more = null; this.lastStatus = 130; return true; }
     if (!this.pending) return false;
+    var gen = this.pending.gen;
     this.pending = null;
+    gen.return(); // unwinds: a script's variables, sudo's user, all restored
     this.lastStatus = 1;
     return true;
   };
 
-  // Run a pipeline. Redirections are applied left to right, as in bash, so
-  // `> f 2>&1` sends both streams to f while `2>&1 > f` leaves errors on the
-  // terminal: 2>&1 copies wherever stdout points *at that moment*.
-  // Returns {output, out, err}: `output` is what the terminal shows, in order;
-  // `out` and `err` are the same split by stream, for a script's caller.
-  Shell.prototype.runPipeline = function (pipeline) {
-    var stdin = "";
-    var shown = "", shownOut = "", shownErr = "";
+  Shell.prototype.runList = function* (items, io) {
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (item.op === "&&" && this.lastStatus !== 0) continue;
+      if (item.op === "||" && this.lastStatus === 0) continue;
+      if (item.bg) yield* this.background(item, io);
+      else yield* this.runPipeline(item.node, io);
+      if (this.exiting || this.breaking || this.continuing) break;
+    }
+    return this.lastStatus;
+  };
+
+  Shell.prototype.runPipeline = function* (node, io) {
+    var stdin = io.stdin;
     var status = 0;
-    var clear = false;
-    var self = this;
-    for (var i = 0; i < pipeline.length; i++) {
-      var cmd = pipeline[i];
-      var last = i === pipeline.length - 1;
-      var fd1 = { to: last ? "tty" : "pipe" };
-      var fd2 = { to: "tty" };
-      var files = []; // [{path, append}] in the order they were opened
-      var opened = {};
-      var failed = null;
-      function open(path, append) {
-        if (!opened[path]) { opened[path] = { path: path, append: append, text: "" }; files.push(opened[path]); }
-        return { to: "file", file: opened[path] };
-      }
-      cmd.redirects.forEach(function (r) {
-        if (r.op === "<") {
-          var read = self.readFile("bash", r.path);
-          if (read.error) failed = failed || read.error;
-          else stdin = read.text;
-        } else if (r.op === ">" || r.op === ">>") fd1 = open(r.path, r.op === ">>");
-        else if (r.op === "2>" || r.op === "2>>") fd2 = open(r.path, r.op === "2>>");
-        else if (r.op === "&>" || r.op === "&>>") { fd1 = open(r.path, r.op === "&>>"); fd2 = fd1; }
-        else if (r.op === "2>&1") fd2 = fd1;
-      });
-      if (failed) { shown += failed + "\n"; shownErr += failed + "\n"; status = 1; stdin = ""; continue; }
-      var res;
-      if (!cmd.argv.length) {
-        // Assignments alone set shell variables (and update exported ones).
-        cmd.assigns.forEach(function (a) { self.setVar(a[0], a[1]); });
-        res = { out: "", err: "", code: 0 };
-      } else {
-        // NAME=value cmd: set (and export) for this one command only.
-        var saved = cmd.assigns.map(function (a) { return [a[0], self.vars[a[0]], self.exported[a[0]]]; });
-        cmd.assigns.forEach(function (a) { self.vars[a[0]] = a[1]; self.exported[a[0]] = true; });
-        res = this.exec(cmd.argv, stdin, { tty: fd1.to === "tty" });
-        saved.forEach(function (v) {
-          if (v[1] === undefined) delete self.vars[v[0]]; else self.vars[v[0]] = v[1];
-          if (v[2]) self.exported[v[0]] = true; else delete self.exported[v[0]];
-        });
-      }
-      if (res.pending) return { output: shown, pending: true };
-      if (res.clear) clear = true;
-      var piped = "";
-      // A command's errors usually come out before its last output, so err first.
-      [[fd2, res.err, "err"], [fd1, res.out, "out"]].forEach(function (pair) {
-        var where = pair[0];
-        if (where.to === "tty") {
-          shown += pair[1];
-          if (pair[2] === "err") shownErr += pair[1]; else shownOut += pair[1];
-        } else if (where.to === "pipe") piped += pair[1];
-        else where.file.text += pair[1];
-      });
-      files.forEach(function (f) {
-        var why = self.writeFile(f.path, f.text, f.append);
-        if (why) { shown += "bash: " + why + "\n"; shownErr += "bash: " + why + "\n"; res.code = 1; }
-      });
-      stdin = piped;
-      status = res.code;
+    for (var k = 0; k < node.cmds.length; k++) {
+      var last = k === node.cmds.length - 1;
+      var out = last ? io.out : new Sink();
+      status = yield* this.runCommand(node.cmds[k], { stdin: stdin, out: out, err: io.err });
+      if (!last) stdin = { text: out.text, pos: 0 };
       if (this.exiting) break;
     }
+    if (node.negate) status = status === 0 ? 1 : 0;
     this.lastStatus = status;
-    return { output: shown, out: shownOut, err: shownErr, clear: clear };
+    return status;
+  };
+
+  // Redirections are applied left to right, as in bash, so `> f 2>&1` sends
+  // both streams to f while `2>&1 > f` leaves errors on the terminal: 2>&1
+  // copies wherever stdout points *at that moment*. Files are written when the
+  // command finishes.
+  Shell.prototype.runCommand = function* (node, io) {
+    var cur = { stdin: io.stdin, out: io.out, err: io.err };
+    var files = [];
+    var opened = {};
+    for (var i = 0; i < node.redirects.length; i++) {
+      var r = node.redirects[i];
+      if (r.dup) {
+        if (r.fd === 2) cur.err = r.dup === 1 ? cur.out : cur.err;
+        else cur.out = r.dup === 2 ? cur.err : cur.out;
+        continue;
+      }
+      var path;
+      try {
+        path = yield* this.expandString(r.word, io);
+      } catch (e) {
+        if (!(e instanceof ExpansionError)) throw e;
+        io.err.write("bash: " + e.message + "\n");
+        return (this.lastStatus = 1);
+      }
+      if (r.fd === 0) {
+        var read = path === "/dev/null" ? { text: "" } : this.readFile("bash", path);
+        if (read.error) { io.err.write(read.error + "\n"); return (this.lastStatus = 1); }
+        cur.stdin = { text: read.text, pos: 0 };
+        continue;
+      }
+      if (!opened[path]) { opened[path] = { path: path, append: r.append, sink: new Sink() }; files.push(opened[path]); }
+      if (r.fd === 1 || r.fd === 3) cur.out = opened[path].sink;
+      if (r.fd === 2 || r.fd === 3) cur.err = opened[path].sink;
+    }
+    var code;
+    switch (node.t) {
+      case "simple": code = yield* this.runSimple(node, cur); break;
+      case "group": code = yield* this.runList(node.body, cur); break;
+      case "subshell": code = yield* this.subshell(node.body, cur); break;
+      case "if": code = yield* this.runIf(node, cur); break;
+      case "while": code = yield* this.runWhile(node, cur); break;
+      case "for": code = yield* this.runFor(node, cur); break;
+      case "case": code = yield* this.runCase(node, cur); break;
+      case "cond":
+        try {
+          code = (yield* this.cond(node.expr, cur)) ? 0 : 1;
+        } catch (e) {
+          if (e instanceof ExpansionError) { cur.err.write("bash: " + e.message + "\n"); code = 1; }
+          else if (e instanceof Unsupported) { cur.err.write("bash: unsupported on the station console: " + e.message + "\n"); code = 2; }
+          else throw e;
+        }
+        break;
+    }
+    var self = this;
+    files.forEach(function (f) {
+      var why = self.writeFile(f.path, f.sink.text, f.append);
+      if (why) { io.err.write("bash: " + why + "\n"); code = 1; }
+    });
+    this.lastStatus = code;
+    return code;
+  };
+
+  Shell.prototype.runSimple = function* (node, io) {
+    if (++this.steps > STEP_LIMIT) throw new Runaway();
+    var argv = [];
+    var assigns = [];
+    this.substituted = false;
+    try {
+      for (var w = 0; w < node.words.length; w++) Array.prototype.push.apply(argv, yield* this.expandFields(node.words[w], io));
+      for (var a = 0; a < node.assigns.length; a++) assigns.push([node.assigns[a].name, yield* this.expandString(node.assigns[a].value, io)]);
+    } catch (e) {
+      if (e instanceof ExpansionError) { io.err.write("bash: " + e.message + "\n"); return 1; }
+      if (e instanceof Unsupported) { io.err.write("bash: unsupported on the station console: " + e.message + "\n"); return 2; }
+      throw e;
+    }
+    var self = this;
+    if (!argv.length) {
+      // Assignments alone set shell variables (and update exported ones). The
+      // status is the last $(…)'s, or 0.
+      assigns.forEach(function (v) { self.setVar(v[0], v[1]); });
+      return this.substituted ? this.lastStatus : 0;
+    }
+    // NAME=value cmd: set (and export) for this one command only.
+    var saved = assigns.map(function (v) { return [v[0], self.vars[v[0]], self.exported[v[0]]]; });
+    assigns.forEach(function (v) { self.vars[v[0]] = v[1]; self.exported[v[0]] = true; });
+    var stream = io.stdin;
+    var mark = { used: false };
+    var outer = this.reading;
+    this.reading = mark;
+    var res;
+    try {
+      res = yield* this.exec(argv, stream.text.slice(stream.pos), { tty: io.out === this.tty, stdin: stream, out: io.out, err: io.err });
+    } finally {
+      this.reading = outer;
+      saved.forEach(function (v) {
+        if (v[1] === undefined) delete self.vars[v[0]]; else self.vars[v[0]] = v[1];
+        if (v[2]) self.exported[v[0]] = true; else delete self.exported[v[0]];
+      });
+    }
+    // A command that read its input (cat, grep…) used all of it, so a loop
+    // reading the same input sees the end.
+    if (mark.used) stream.pos = stream.text.length;
+    if (res.clear) { this.screen = ""; this.cleared = true; }
+    // A command's errors usually come out before its last output, so err first.
+    io.err.write(res.err || "");
+    io.out.write(res.out || "");
+    return res.code;
+  };
+
+  Shell.prototype.runIf = function* (node, io) {
+    for (var i = 0; i < node.clauses.length; i++) {
+      yield* this.runList(node.clauses[i].cond, io);
+      if (this.exiting || this.breaking || this.continuing) return this.lastStatus;
+      if (this.lastStatus === 0) return yield* this.runList(node.clauses[i].body, io);
+    }
+    if (node.otherwise) return yield* this.runList(node.otherwise, io);
+    return 0;
+  };
+
+  // After a loop body: should the loop stop? break and continue take a count
+  // of loops to leave; each loop on the way out takes one off.
+  Shell.prototype.loopDone = function () {
+    if (this.exiting) return true;
+    if (this.breaking) { this.breaking -= 1; return true; }
+    if (this.continuing) { this.continuing -= 1; return this.continuing > 0; }
+    return false;
+  };
+
+  Shell.prototype.runWhile = function* (node, io) {
+    var status = 0;
+    this.loopDepth = (this.loopDepth || 0) + 1;
+    try {
+      for (;;) {
+        yield* this.runList(node.cond, io);
+        if (this.exiting || this.breaking || this.continuing) { if (this.loopDone()) break; continue; }
+        if ((this.lastStatus === 0) === node.until) break;
+        status = yield* this.runList(node.body, io);
+        if (this.loopDone()) break;
+      }
+    } finally {
+      this.loopDepth -= 1;
+    }
+    return status;
+  };
+
+  Shell.prototype.runFor = function* (node, io) {
+    var words;
+    if (node.words === null) words = (this.args || []).slice();
+    else {
+      words = [];
+      try {
+        for (var w = 0; w < node.words.length; w++) Array.prototype.push.apply(words, yield* this.expandFields(node.words[w], io));
+      } catch (e) {
+        if (!(e instanceof ExpansionError)) throw e;
+        io.err.write("bash: " + e.message + "\n");
+        return 1;
+      }
+    }
+    var status = 0;
+    this.loopDepth = (this.loopDepth || 0) + 1;
+    try {
+      for (var i = 0; i < words.length; i++) {
+        this.setVar(node.name, words[i]);
+        status = yield* this.runList(node.body, io);
+        if (this.loopDone()) break;
+      }
+    } finally {
+      this.loopDepth -= 1;
+    }
+    return status;
+  };
+
+  // case: the first clause with a matching pattern runs. Patterns are globs
+  // over the whole word, where * matches / too.
+  Shell.prototype.runCase = function* (node, io) {
+    var subject = yield* this.expandString(node.subject, io);
+    for (var i = 0; i < node.clauses.length; i++) {
+      var clause = node.clauses[i];
+      for (var k = 0; k < clause.patterns.length; k++) {
+        var p = yield* this.expandPattern(this.tilde(clause.patterns[k]), io);
+        if (globRegex(p.text, p.quoted, 0, true).test(subject)) {
+          return clause.body.length ? yield* this.runList(clause.body, io) : 0;
+        }
+      }
+    }
+    return 0;
+  };
+
+  Shell.prototype.saveState = function () {
+    return { vars: this.vars, exported: this.exported, cwd: this.cwd, oldpwd: this.oldpwd, args: this.args,
+      scriptName: this.scriptName, loopDepth: this.loopDepth, breaking: this.breaking, continuing: this.continuing,
+      exiting: this.exiting, exitCode: this.exitCode, home: this.home };
+  };
+  Shell.prototype.restoreState = function (saved) {
+    var self = this;
+    Object.keys(saved).forEach(function (k) { self[k] = saved[k]; });
   };
 
   Shell.prototype.setVar = function (name, value) {
@@ -633,26 +1519,26 @@
 
   // Start a pipeline in the background (`cmd &`). `sleep N` becomes a process
   // that lives N simulated seconds; anything else runs now and is done.
-  Shell.prototype.background = function (pipeline, text) {
+  Shell.prototype.background = function* (item, io) {
+    var node = item.node;
     var n = (this.jobs.length ? Math.max.apply(null, this.jobs.map(function (j) { return j.n; })) : 0) + 1;
     var pid = this.nextPid;
     this.nextPid += 1 + (pid % 3);
-    var job = { n: n, pid: pid, text: text, state: "Running" };
-    var argv = pipeline.length === 1 ? pipeline[0].argv : [];
-    var output = "[" + n + "] " + pid + "\n";
-    if (argv[0] === "sleep" && pipeline.length === 1 && /^\d+$/.test(argv[1] || "")) {
+    var job = { n: n, pid: pid, text: item.text, state: "Running" };
+    var cmd = node.cmds.length === 1 && node.cmds[0].t === "simple" ? node.cmds[0] : null;
+    var argv = cmd ? cmd.words.map(function (w) { return plain({ t: "word", atoms: w }); }) : [];
+    io.err.write("[" + n + "] " + pid + "\n");
+    if (argv.length === 2 && argv[0] === "sleep" && /^\d+$/.test(argv[1] || "")) {
       this.procs.push({ pid: pid, ppid: SHELL_PID, user: this.user, command: argv.join(" "), tty: "pts/0", cpu: 0, mem: 0.0,
         start: this.clock, end: this.clock + parseInt(argv[1], 10), alive: true, signals: [], ignores: [], job: job });
     } else {
-      var r = this.runPipeline(pipeline);
-      output += r.output;
+      yield* this.runPipeline(node, io);
       job.state = "Done";
       this.notices.push(job);
     }
     this.jobs.push(job);
     this.lastBg = String(pid);
     this.lastStatus = 0;
-    return { output: output };
   };
 
   // Let simulated time catch up: sleeps that have run their course finish.
@@ -735,10 +1621,12 @@
   // executable file in the filesystem, or one of the console's own commands,
   // which live in /usr/bin and /bin (and the admin tools in /usr/sbin).
   var BUILTINS = ["cd", "echo", "pwd", "export", "unset", "type", "source", ".", "jobs", "kill", "fg", "bg", "exit",
-    "help", "clear", "command", "true", "false"];
+    "help", "clear", "command", "true", "false", "test", "[", "read", "break", "continue", ":"];
+  var KEYWORDS = ["if", "then", "elif", "else", "fi", "for", "in", "do", "done", "while", "until", "case", "esac", "{", "}", "!", "[[", "]]"];
   var SBIN = ["usermod"];
 
-  var NO_BINARY = ["cd", "export", "unset", "type", "source", ".", "jobs", "fg", "bg", "exit", "help", "clear", "command"];
+  var NO_BINARY = ["cd", "export", "unset", "type", "source", ".", "jobs", "fg", "bg", "exit", "help", "clear", "command",
+    "read", "break", "continue", ":"];
 
   // Where `name` would be found on $PATH: every match, or the first.
   Shell.prototype.which = function (name, all) {
@@ -760,20 +1648,20 @@
   };
 
   // Run an executable file as a script, in a child shell.
-  Shell.prototype.runFile = function (path, display, args, stdin) {
+  Shell.prototype.runFile = function* (path, display, args, io) {
     var found = this.lookup(path);
     if (found.error) return { out: "", err: "bash: " + display + ": " + found.error + "\n", code: 127 };
     if (found.node.type === "dir") return { out: "", err: "bash: " + display + ": Is a directory\n", code: 126 };
     if (!this.can(found.node, 1) || !this.can(found.node, 4)) return { out: "", err: "bash: " + display + ": Permission denied\n", code: 126 };
-    return this.child(found.node.contents, display, args, stdin);
+    return yield* this.child(found.node.contents, display, args, io);
   };
 
   // A child shell: it inherits only the EXPORTED variables, and nothing it
-  // does to its variables or directory comes back to this shell.
-  Shell.prototype.child = function (script, name, args, stdin) {
+  // does to its variables or directory comes back to this shell. Like bash, it
+  // runs a script up to a line it can't read, then stops with status 2.
+  Shell.prototype.child = function* (script, name, args, io) {
     var self = this;
-    var saved = { vars: this.vars, exported: this.exported, cwd: this.cwd, oldpwd: this.oldpwd, args: this.args,
-      scriptName: this.scriptName, lastStatus: this.lastStatus, stdin: this.stdin };
+    var saved = this.saveState();
     var env = {};
     Object.keys(this.exported).forEach(function (k) { if (k in self.vars) env[k] = self.vars[k]; });
     var exported = {};
@@ -782,31 +1670,47 @@
     this.exported = exported;
     this.args = args;
     this.scriptName = name;
-    var out = "", err = "", code = 0;
+    this.loopDepth = 0;
+    this.breaking = this.continuing = 0;
+    this.exiting = false;
+    var code;
     this.depth = (this.depth || 0) + 1;
     try {
       if (this.depth > 20) return { out: "", err: "bash: maximum nesting depth exceeded\n", code: 1 };
-      var lines = script.split("\n");
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (!line.trim() || /^\s*#/.test(line)) continue;
-        var r = this.runParts(splitLists(line), 0, "");
-        out += r.out || "";
-        err += r.err || "";
-        code = this.lastStatus;
-        if (this.exiting) { code = this.exitCode; this.exiting = false; break; }
-      }
+      code = yield* this.runScript(script, name, io);
+      if (this.exiting) code = this.exitCode;
     } finally {
       this.depth -= 1;
-      Object.keys(saved).forEach(function (k) { self[k] = saved[k]; });
+      this.restoreState(saved);
     }
-    return { out: out, err: err, code: code };
+    return { out: "", err: "", code: code };
   };
 
-  Shell.prototype.exec = function (argv, stdin, io) {
+  // Run a script's text in this shell (child() and source call it).
+  Shell.prototype.runScript = function* (script, name, io) {
+    var prog = parseScript(script);
+    yield* this.runList(prog.items, io);
+    if (prog.error && !this.exiting) {
+      var e = prog.error;
+      if (e instanceof Unsupported) {
+        io.err.write(name + ": line " + this.lineOf(script, prog) + ": unsupported on the station console: " + e.message + "\n");
+      } else {
+        io.err.write(name + ": line " + e.line + ": " + e.message + "\n");
+        var text = script.split("\n")[e.line - 1];
+        if (e instanceof SyntaxErr && text !== undefined) io.err.write(name + ": line " + e.line + ": `" + text.trim() + "'\n");
+      }
+      this.lastStatus = 2;
+    }
+    return this.lastStatus;
+  };
+  Shell.prototype.lineOf = function (script, prog) {
+    return prog.error.line || script.split("\n").length;
+  };
+
+  Shell.prototype.exec = function* (argv, stdin, io) {
     var name = argv[0];
-    if (name.indexOf("/") !== -1) return this.runFile(name, name, argv.slice(1), stdin);
-    if (BUILTINS.indexOf(name) !== -1) return this.call(name, argv, stdin, io);
+    if (name.indexOf("/") !== -1) return yield* this.runFile(name, name, argv.slice(1), io);
+    if (BUILTINS.indexOf(name) !== -1) return yield* this.call(name, argv, stdin, io);
     var path = this.which(name)[0];
     if (!path) {
       return {
@@ -815,14 +1719,19 @@
         code: 127,
       };
     }
-    if (this.fs[path]) return this.runFile(path, name, argv.slice(1), stdin);
-    return this.call(name, argv, stdin, io);
+    if (this.fs[path]) return yield* this.runFile(path, name, argv.slice(1), io);
+    return yield* this.call(name, argv, stdin, io);
   };
 
-  Shell.prototype.call = function (name, argv, stdin, io) {
+  // A command is a function, or a generator function when it runs shell code
+  // or asks for input (sudo, read, bash, source).
+  Shell.prototype.call = function* (name, argv, stdin, io) {
     try {
-      return COMMANDS[name].call(this, argv.slice(1), stdin, io);
+      var r = COMMANDS[name].call(this, argv.slice(1), stdin, io);
+      if (r && typeof r.next === "function") r = yield* r;
+      return r;
     } catch (e) {
+      if (e instanceof Runaway) throw e;
       return { out: "", err: name + ": " + e.message + "\n", code: 1 };
     }
   };
@@ -861,7 +1770,7 @@
   };
 
   // Run argv as another user, as sudo does: only programs on the PATH, no builtins.
-  Shell.prototype.runAs = function (who, argv, stdin, io) {
+  Shell.prototype.runAs = function* (who, argv, stdin, io) {
     var name = argv[0];
     var path = name.indexOf("/") !== -1 ? name : this.which(name)[0];
     if (!path) return { out: "", err: "sudo: " + name + ": command not found\n", code: 1 };
@@ -871,8 +1780,8 @@
     if (!this.groups.length) this.groups = [who];
     this.group = this.groups[0];
     try {
-      if (this.fs[path] || name.indexOf("/") !== -1) return this.runFile(path, name, argv.slice(1), stdin);
-      return this.call(name, argv, stdin, io);
+      if (this.fs[path] || name.indexOf("/") !== -1) return yield* this.runFile(path, name, argv.slice(1), io);
+      return yield* this.call(name, argv, stdin, io);
     } finally {
       this.user = saved.user;
       this.group = saved.group;
@@ -966,7 +1875,10 @@
 
   // Read each operand (or stdin when there are none) for a text filter.
   function inputs(sh, cmd, args, stdin) {
-    if (!args.length || (args.length === 1 && args[0] === "-")) return { texts: [{ name: "", text: stdin }], err: "" };
+    if (!args.length || (args.length === 1 && args[0] === "-")) {
+      if (sh.reading) sh.reading.used = true;
+      return { texts: [{ name: "", text: stdin }], err: "" };
+    }
     var texts = [];
     var err = "";
     args.forEach(function (a) {
@@ -975,6 +1887,50 @@
       else texts.push({ name: a, text: r.text });
     });
     return { texts: texts, err: err };
+  }
+
+  function runTest(sh, name, args) {
+    try {
+      return { out: "", err: "", code: sh.testArgs(args) ? 0 : 1 };
+    } catch (e) {
+      if (!(e instanceof TestError)) throw e;
+      return { out: "", err: "bash: " + name + ": " + e.message + "\n", code: 2 };
+    }
+  }
+
+  function loopControl(sh, name, args) {
+    if (!sh.loopDepth) return { out: "", err: "bash: " + name + ": only meaningful in a `for', `while', or `until' loop\n", code: 0 };
+    var n = args.length ? args[0] : "1";
+    if (!/^\d+$/.test(n) || +n < 1) return { out: "", err: "bash: " + name + ": " + n + ": loop count out of range\n", code: 1 };
+    sh[name === "break" ? "breaking" : "continuing"] = Math.min(+n, sh.loopDepth);
+    return ok();
+  }
+
+  // read's splitting: $IFS whitespace at either end is dropped, and the last
+  // of `count` fields keeps the rest of the line, separators and all.
+  function splitForRead(text, ifs, count) {
+    var white = ifs.split("").filter(function (c) { return " \t\n".indexOf(c) !== -1; }).join("");
+    var isWhite = function (c) { return white.indexOf(c) !== -1; };
+    var isSep = function (c) { return ifs.indexOf(c) !== -1; };
+    var i = 0;
+    while (i < text.length && isWhite(text[i])) i++;
+    var end = text.length;
+    while (end > i && isWhite(text[end - 1])) end--;
+    text = text.slice(i, end);
+    var fields = [];
+    var at = 0;
+    while (fields.length < count - 1 && at < text.length) {
+      var k = at;
+      while (k < text.length && !isSep(text[k])) k++;
+      fields.push(text.slice(at, k));
+      // One separator: blanks, at most one other $IFS character, blanks.
+      while (k < text.length && isWhite(text[k])) k++;
+      if (k < text.length && isSep(text[k]) && !isWhite(text[k])) k++;
+      while (k < text.length && isWhite(text[k])) k++;
+      at = k;
+    }
+    if (at < text.length || fields.length < count) fields.push(text.slice(at));
+    return fields;
   }
 
   // --- the commands ---------------------------------------------------------------
@@ -988,7 +1944,8 @@
         "  env:       export unset env printenv type which command source bash\n" +
         "  processes: ps pgrep pkill kill sleep jobs fg bg\n" +
         "  console:   clear help exit\n" +
-        "Pipes (|), redirection (> >> < 2> 2>&1 &>), globs (* ? [...]), {a,b}, ; && || and $VARS work.\n" +
+        "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
+        "Pipes (|), redirection (> >> < 2> 2>&1 >&2 &>), globs (* ? [...]), {a,b}, ; && ||, $VARS, $(command) and $((1 + 2)) work.\n" +
         "Tab completes paths; ↑ and ↓ walk your history; Ctrl-C abandons a line.\n"
       );
     },
@@ -1062,7 +2019,7 @@
       node.mtime = new Date();
       return ok();
     },
-    sudo: function (rawArgs, stdin, io) {
+    sudo: function* (rawArgs, stdin, io) {
       var args = rawArgs.slice();
       var who = "root";
       var mode = "run";
@@ -1080,8 +2037,13 @@
       var sh = this;
       if (this.user !== "root" && this.clock >= this.sudoUntil) {
         if (!this.password) return { out: "", err: "sudo: there's no password for " + this.user + " on this console, so sudo can't be used here\n", code: 1 };
-        this.pending = { prompt: "[sudo] password for " + this.user + ": ", secret: true, tries: 0, ok: function () { return sh.isSudoer(); } };
-        return { pending: true };
+        for (var tries = 1; ; tries++) {
+          var answer = yield { prompt: "[sudo] password for " + this.user + ": ", secret: true };
+          if (answer === this.password) break;
+          if (tries === 3) return { out: "", err: "sudo: 3 incorrect password attempts\n", code: 1 };
+          this.tty.write("Sorry, try again.\n"); // sudo talks to the terminal, whatever 2> says
+        }
+        this.sudoUntil = this.clock + 15 * 60;
       }
       if (!this.isSudoer()) return { out: "", err: this.user + " is not in the sudoers file.\n", code: 1 };
       if (mode === "list") {
@@ -1102,7 +2064,7 @@
         this.vars = vars;
         return ok();
       }
-      return this.runAs(who, args, stdin, io);
+      return yield* this.runAs(who, args, stdin, io);
     },
     exit: function (args) {
       var code = args.length ? parseInt(args[0], 10) || 0 : this.lastStatus;
@@ -1117,6 +2079,53 @@
     },
     true: function () { return ok(); },
     false: function () { return { out: "", err: "", code: 1 }; },
+    ":": function () { return ok(); },
+    test: function (args) { return runTest(this, "test", args); },
+    "[": function (args) {
+      if (args[args.length - 1] !== "]") return { out: "", err: "bash: [: missing `]'\n", code: 2 };
+      return runTest(this, "[", args.slice(0, -1));
+    },
+    break: function (args) { return loopControl(this, "break", args); },
+    continue: function (args) { return loopControl(this, "continue", args); },
+    // read [-r] [-s] [-p prompt] [name…]: one line from standard input into
+    // variables, split on $IFS (the last name takes the rest of the line). At
+    // the console's own prompt the line comes from the keyboard.
+    read: function* (args, stdin, io) {
+      var raw = false, secret = false, prompt = "";
+      var names = [];
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (names.length || a[0] !== "-" || a === "-") { names.push(a); continue; }
+        for (var j = 1; j < a.length; j++) {
+          if (a[j] === "r") raw = true;
+          else if (a[j] === "s") secret = true;
+          else if (a[j] === "p") { prompt = a.slice(j + 1) || args[++i] || ""; break; }
+          else return { out: "", err: "bash: read: -" + a[j] + ": unsupported on the station console (read takes -r, -s and -p)\n", code: 2 };
+        }
+      }
+      for (var k = 0; k < names.length; k++) {
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(names[k])) return { out: "", err: "bash: read: `" + names[k] + "': not a valid identifier\n", code: 1 };
+      }
+      var stream = io.stdin;
+      var text, eof = false;
+      if (stream.tty) {
+        text = yield { prompt: prompt, secret: secret };
+      } else {
+        if (stream.pos >= stream.text.length) {
+          (names.length ? names : ["REPLY"]).forEach(function (n) { this.setVar(n, ""); }, this);
+          return { out: "", err: "", code: 1 };
+        }
+        var nl = stream.text.indexOf("\n", stream.pos);
+        if (nl === -1) { text = stream.text.slice(stream.pos); stream.pos = stream.text.length; eof = true; }
+        else { text = stream.text.slice(stream.pos, nl); stream.pos = nl + 1; }
+      }
+      if (!raw) text = text.replace(/\\(.)/g, "$1");
+      if (!names.length) { this.setVar("REPLY", text); return { out: "", err: "", code: eof ? 1 : 0 }; }
+      var ifs = this.vars.IFS === undefined ? " \t\n" : this.vars.IFS;
+      var fields = splitForRead(text, ifs, names.length);
+      names.forEach(function (n, idx) { this.setVar(n, fields[idx] || ""); }, this);
+      return { out: "", err: "", code: eof ? 1 : 0 };
+    },
     export: function (args) {
       var sh = this;
       if (!args.length || args[0] === "-p") {
@@ -1138,7 +2147,7 @@
       args.forEach(function (a) { delete sh.vars[a]; delete sh.exported[a]; });
       return ok();
     },
-    env: function (args, stdin, io) {
+    env: function* (args, stdin, io) {
       var sh = this;
       var i = 0;
       var extra = [];
@@ -1146,7 +2155,7 @@
       if (i < args.length) {
         var saved = {};
         extra.forEach(function (a) { var k = a.split("=")[0]; saved[k] = [sh.vars[k], sh.exported[k]]; sh.vars[k] = a.slice(k.length + 1); sh.exported[k] = true; });
-        try { return this.exec(args.slice(i), stdin, io); } finally {
+        try { return yield* this.exec(args.slice(i), stdin, io); } finally {
           Object.keys(saved).forEach(function (k) {
             if (saved[k][0] === undefined) delete sh.vars[k]; else sh.vars[k] = saved[k][0];
             if (saved[k][1]) sh.exported[k] = true; else delete sh.exported[k];
@@ -1168,7 +2177,8 @@
       var out = "", err = "";
       p.args.forEach(function (n) {
         var lines_ = [];
-        if (BUILTINS.indexOf(n) !== -1) lines_.push(p.opts.t ? "builtin" : n + " is a shell builtin");
+        if (KEYWORDS.indexOf(n) !== -1) lines_.push(p.opts.t ? "keyword" : n + " is a shell keyword");
+        else if (BUILTINS.indexOf(n) !== -1) lines_.push(p.opts.t ? "builtin" : n + " is a shell builtin");
         if (!lines_.length || p.opts.a) {
           sh.which(n, true).slice(0, p.opts.a ? 99 : 1).forEach(function (path) { lines_.push(p.opts.t ? "file" : n + " is " + path); });
         }
@@ -1189,43 +2199,35 @@
       });
       return { out: unlines(out), err: "", code: missing ? 1 : 0 };
     },
-    command: function (args, stdin, io) {
+    command: function* (args, stdin, io) {
       if (args[0] === "-v") {
         var n = args[1];
         if (BUILTINS.indexOf(n) !== -1) return ok(n + "\n");
         var found = this.which(n)[0];
         return found ? ok(found + "\n") : { out: "", err: "", code: 1 };
       }
-      return this.exec(args, stdin, io);
+      return yield* this.exec(args, stdin, io);
     },
-    source: function (args) {
+    source: function* (args, stdin, io) {
       if (!args.length) throw new Error("filename argument required");
       var r = this.readFile("bash", args[0]);
-      if (r.error) return { out: "", err: r.error.replace(/^bash: /, "bash: ") + "\n", code: 1 };
-      var out = "", err = "";
-      var sh = this;
-      lines(r.text).forEach(function (line) {
-        if (!line.trim() || /^\s*#/.test(line)) return;
-        var res = sh.runParts(splitLists(line), 0, "");
-        out += res.out || "";
-        err += res.err || "";
-      });
-      return { out: out, err: err, code: this.lastStatus };
+      if (r.error) return { out: "", err: r.error + "\n", code: 1 };
+      return { out: "", err: "", code: yield* this.runScript(r.text, args[0], io) };
     },
     ".": function (args, stdin, io) { return COMMANDS.source.call(this, args, stdin, io); },
-    bash: function (args, stdin) {
+    bash: function* (args, stdin, io) {
       if (args[0] === "-c") {
         if (args.length < 2) return { out: "", err: "bash: -c: option requires an argument\n", code: 2 };
-        return this.child(args[1], args[2] || "bash", args.slice(3), stdin);
+        return yield* this.child(args[1], args[2] || "bash", args.slice(3), io);
       }
       if (args.length) {
         var r = this.readFile("bash", args[0]);
         if (r.error) return { out: "", err: r.error + "\n", code: 127 };
-        return this.child(r.text, args[0], args.slice(1), stdin);
+        return yield* this.child(r.text, args[0], args.slice(1), io);
       }
       return { out: "", err: "bash: interactive shells inside the console aren't available; use bash -c '…' or bash script.sh\n", code: 1 };
     },
-    sh: function (args, stdin) { return COMMANDS.bash.call(this, args, stdin); },
+    sh: function (args, stdin, io) { return COMMANDS.bash.call(this, args, stdin, io); },
     // --- processes ---
     sleep: function (args) {
       var m = /^(\d+)(s?)$/.exec(args[0] || "");
@@ -1572,8 +2574,8 @@
       return { out: "", err: err, code: err ? 1 : 0 };
     },
     grep: function (rawArgs, stdin) {
-      var p = flags("grep", rawArgs, "ivncE");
-      if (!p.args.length) throw new Error("usage: grep [-ivnc] PATTERN [FILE]...");
+      var p = flags("grep", rawArgs, "ivncEq");
+      if (!p.args.length) throw new Error("usage: grep [-ivncq] PATTERN [FILE]...");
       var re;
       try { re = new RegExp(p.args[0], p.opts.i ? "i" : ""); } catch (e) { throw new Error("invalid pattern: " + p.args[0]); }
       var r = inputs(this, "grep", p.args.slice(1), stdin);
@@ -1591,6 +2593,9 @@
         if (p.opts.c) out.push((many ? t.name + ":" : "") + count);
         matched += count;
       });
+      // -q: say nothing, only succeed or fail (for `if grep -q …`). A match
+      // wins over an unreadable file, as in GNU grep.
+      if (p.opts.q) return { out: "", err: r.err, code: matched ? 0 : r.err ? 2 : 1 };
       return { out: unlines(out), err: r.err, code: r.err ? 2 : matched ? 0 : 1 };
     },
     wc: function (rawArgs, stdin) {
@@ -1648,6 +2653,7 @@
     },
     tee: function (rawArgs, stdin) {
       // A T-junction: stdin goes on to stdout and into every file named.
+      if (this.reading) this.reading.used = true;
       var p = flags("tee", rawArgs, "a");
       var sh = this;
       var err = "";
@@ -2189,5 +3195,5 @@
     return checks.every(function (c) { return passes(c, state, cwd, procs); });
   };
 
-  return { Shell: Shell, tokenize: tokenize, applyMode: applyMode, passes: passes };
+  return { Shell: Shell, parse: parse, applyMode: applyMode, passes: passes };
 });

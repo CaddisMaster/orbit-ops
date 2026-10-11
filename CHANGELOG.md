@@ -6,6 +6,22 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The station console runs real shell scripts (#64). It has `if`/`elif`/`else`, `for`,
+  `while` and `until` loops with `break` and `continue`, and `case` with glob patterns. Tests
+  are written with `test`, `[ ]` and `[[ ]]`, and fail with bash's own messages, including the
+  classic `unary operator expected` from an unquoted empty variable. `$(command)` substitutes a
+  command's output, `$(( ))` does integer arithmetic, `${file%.log}` and its relatives trim
+  names, and `read` takes input from a file, a pipe or the keyboard.
+  - Commands can span lines. At the prompt an unfinished `if` or `for` continues on a `> ` line,
+    as in bash, and so does a line ending in `|` or `&&`, or one with an open quote. Ctrl-C
+    abandons it.
+  - A script runs up to a line with a syntax error, then reports the line and stops with
+    status 2.
+  - sudo can ask for its password inside a loop or a script.
+  - A loop that never ends is stopped after 10,000 commands instead of freezing the page.
+  - `grep -q` answers yes or no without printing, for `if grep -q …`.
+
 ### Fixed
 - A release now reaches your browser straight away (#92). After an update, browsers could keep
   the old stylesheet, scripts and art for hours (Safari did, after the laptop arrived), so a new
