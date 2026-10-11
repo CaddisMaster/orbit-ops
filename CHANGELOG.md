@@ -67,6 +67,13 @@ and why it matters, not what the diff says.
     `bash script`, exit statuses, and where scripts live (`~/bin`, `/usr/local/bin`, the
     PATH). In the console you turn Okafor's sticky note into `/station/bin/shift-check`, make
     it executable, and run it by name.
+  - Module 04, "Variables and quoting" (#71): assignment, `$var` and `${var}`, single and
+    double quotes, why unquoted expansions split and glob, `$( )`, `$(( ))` and
+    `${VAR:-default}`. The console task fixes a cargo report that a manifest called
+    `Spare Parts.csv` broke, and gives it a total.
+  - Inside a script, the console's errors are bash's own, with the script and line
+    (`/station/bin/cargo-report: line 6: Parts.csv: command not found`), even inside `$( )`.
+    A redirect from an unquoted or empty variable fails with `ambiguous redirect`, as in bash.
   - A console task can check that a file is **executable** (`{executable: P}`): its owner's
     x bit, so `chmod +x`, `u+x` and `755` all pass.
   - A script on the PATH that isn't executable yet now gets bash's own
@@ -89,6 +96,9 @@ and why it matters, not what the diff says.
   Lessons also say when the console lacks something they mention (Ctrl-R, `tail -f`, `top`).
 
 ### Fixed
+- **A solved console task could go unlogged** if the learner had made any file with a space,
+  a comma or a `*` in its name: the server refused the whole report. File names may now hold
+  any printable character (#71).
 - **`rm -i` in the console asked nothing and deleted anyway.** Now `rm -i`, `mv -i` and
   `cp -i` ask first, in GNU's words, and the last of `-f` and `-i` wins (#101).
 - Moving several files into a directory that doesn't exist now says `No such file or

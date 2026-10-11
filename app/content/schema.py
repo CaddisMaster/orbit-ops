@@ -96,7 +96,9 @@ class Card(_Strict):
 # console (static/js/console.js) is a simulated shell over this filesystem;
 # the server re-runs the checks (app/terminal.py) on the state it is sent.
 # ---------------------------------------------------------------------------
-AbsPath = Annotated[str, Field(pattern=r"^/([A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)?$", max_length=200)]
+# A path in the simulated filesystem: any printable name (`Spare Parts.csv`, `*.nope`), never
+# touched on the server's disk, only compared. Control characters and empty segments are out (#71).
+AbsPath = Annotated[str, Field(pattern=r"^/([^/\x00-\x1f\x7f]+(/[^/\x00-\x1f\x7f]+)*)?$", max_length=200)]
 Octal = Annotated[str, Field(pattern=r"^0?[0-7]{3}$")]  # "600" or "0600"
 Account = Annotated[str, Field(pattern=r"^[a-z_][a-z0-9_-]{0,31}$")]
 
@@ -123,7 +125,7 @@ def size_bytes(size: int | str) -> int:
 # ages (find -mtime, the files_under check) are counted back from it.
 STATION_NOW = datetime(2026, 10, 8, 9, 0)  # noqa: DTZ001 (station wall-clock time, as the console shows it)
 Stamp = Annotated[str, Field(pattern=r"^\d{4}-\d\d-\d\d( \d\d:\d\d)?$")]  # "2026-09-20" or "2026-09-20 14:30"
-LinkTarget = Annotated[str, Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9._/-]+$")]
+LinkTarget = Annotated[str, Field(min_length=1, max_length=200, pattern=r"^[^\x00-\x1f\x7f]+$")]
 
 
 class FsEntry(_Strict):

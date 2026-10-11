@@ -250,3 +250,63 @@ def test_module_03s_figures_match_the_console():
     note = fs["/home/cadet/sticky-note.txt"]["contents"]
     scripted = [line.split("'")[1] for line in module.terminal.solution if line.endswith(">> /station/bin/shift-check")]
     assert scripted and all(command in note for command in scripted)  # the script runs what the note lists
+
+
+# --- 04: Variables and quoting (#71) --------------------------------------------------------
+CARGO = "/station/bin/cargo-report"
+CARGO_REPORT = "/station/cargo/report.txt"
+MANIFESTS = "/station/cargo/manifests"
+
+
+def _counts(exercise):
+    fs = client_spec(exercise)["fs"]
+    return {name: fs[f"{MANIFESTS}/{name}"]["contents"].count("\n") for name in ("Spare Parts.csv", "food.csv", "water.csv")}
+
+
+def _reported(start, *, total=True, arithmetic=True, spare_parts=True):
+    exercise = _module("variables-and-quoting").terminal
+    n = _counts(exercise)
+    lines = ["Cargo report", f"Spare Parts: {n['Spare Parts.csv'] if spare_parts else ''} items", f"Food: {n['food.csv']} items", f"Water: {n['water.csv']} items"]
+    if total:
+        lines.append(f"Total: {sum(n.values())} items")
+    script = start[CARGO].contents + ('echo "Total: $((p + f + w)) items" >> "$report"\n' if arithmetic else "")
+    return {
+        **start,
+        CARGO: start[CARGO].model_copy(update={"contents": script}),
+        CARGO_REPORT: Node(type="file", mode=0o664, owner="cadet", group="crew", contents="\n".join(lines) + "\n"),
+    }
+
+
+@pytest.mark.criterion(71, "Module 04 of Unit 1.2 is complete content")
+def test_module_04_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[3]
+    assert module.slug == "variables-and-quoting"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(71, "Module 04's console task can be done")
+def test_module_04s_end_state_passes_on_the_server():
+    exercise = _module("variables-and-quoting").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _reported(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut", [{"spare_parts": False}, {"total": False}, {"arithmetic": False}], ids=["spare-parts-blank", "no-total", "no-arithmetic"]
+)
+def test_module_04_refuses_the_shortcuts(shortcut):
+    exercise = _module("variables-and-quoting").terminal
+    assert not grade(exercise, _reported(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_04s_figures_match_the_console():
+    module = _module("variables-and-quoting")
+    exercise = module.terminal
+    n = _counts(exercise)
+    checks = " ".join(c.text for c in exercise.checks if hasattr(c, "text"))
+    assert f"Spare Parts: {n['Spare Parts.csv']} items" in checks and f"Total: {sum(n.values())} items" in checks
+    assert f"{len(n)} MANIFESTS · {sum(n.values())} ITEMS" in _said(module, "console_done")
+    assert f"Food: {n['food.csv']} items" in exercise.task  # the task's example line is a real one
+    # The starting script has the bug the story tells: an unquoted path with a space.
+    assert "parts=$dir/Spare Parts.csv" in _start(exercise)[CARGO].contents

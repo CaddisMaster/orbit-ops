@@ -1649,6 +1649,161 @@
    "user": "cadet"
   }
  },
+ "variables-and-quoting": {
+  "solution": [
+   "cargo-report",
+   "cat /station/cargo/report.txt",
+   "cat /station/bin/cargo-report",
+   "cat > /station/bin/cargo-report <<'EOF'\n#!/usr/bin/env bash\n# The cargo report: how many items are on each manifest.\ndir=${CARGO_DIR:-/station/cargo/manifests}\nreport=/station/cargo/report.txt\n\nparts=\"$dir/Spare Parts.csv\"\nfood=\"$dir/food.csv\"\nwater=\"$dir/water.csv\"\n\np=$(wc -l < \"$parts\")\nf=$(wc -l < \"$food\")\nw=$(wc -l < \"$water\")\n\necho \"Cargo report\" > \"$report\"\necho \"Spare Parts: $p items\" >> \"$report\"\necho \"Food: $f items\" >> \"$report\"\necho \"Water: $w items\" >> \"$report\"\necho \"Total: $((p + f + w)) items\" >> \"$report\"\nEOF",
+   "cargo-report",
+   "cat /station/cargo/report.txt"
+  ],
+  "source": "core/bash-scripting/04-variables-and-quoting.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/station/cargo/report.txt",
+     "text": "Spare Parts: 14 items"
+    },
+    {
+     "contains": "/station/cargo/report.txt",
+     "text": "Food: 22 items"
+    },
+    {
+     "contains": "/station/cargo/report.txt",
+     "text": "Water: 9 items"
+    },
+    {
+     "contains": "/station/cargo/report.txt",
+     "text": "Total: 45 items"
+    },
+    {
+     "contains": "/station/bin/cargo-report",
+     "text": "$(("
+    },
+    {
+     "executable": "/station/bin/cargo-report"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin/cargo-report": {
+     "contents": "#!/usr/bin/env bash\n# The cargo report: how many items are on each manifest.\ndir=${CARGO_DIR:-/station/cargo/manifests}\nreport=/station/cargo/report.txt\n\nparts=$dir/Spare Parts.csv\nfood=$dir/food.csv\nwater=$dir/water.csv\n\necho \"Cargo report\" > $report\necho \"Spare Parts: $(wc -l < $parts) items\" >> $report\necho \"Food: $(wc -l < $food) items\" >> $report\necho \"Water: $(wc -l < $water) items\" >> $report\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/cargo/manifests": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/cargo/manifests/Spare Parts.csv": {
+     "contents": "o2-sensor,4\nco2-sensor,4\nscrubber-bed,2\nvalve-seal,12\nfilter-mesh,30\npump-impeller,2\nfan-belt,6\npressure-gauge,3\ncircuit-board,5\nfuse-10a,40\ncoolant-hose,8\ngasket-kit,10\ndrive-motor,1\nbearing,24\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/manifests/food.csv": {
+     "contents": "ration-pack,400\ncoffee,60\ntea,40\nrice,25\noats,30\ndried-fruit,20\nprotein-bar,200\nsoup,80\npasta,25\nbeans,50\nlentils,30\nsugar,10\nsalt,5\nspice-kit,4\npowdered-milk,20\nhoney,6\npeanut-butter,12\ncrackers,40\nchocolate,30\nvitamin-pack,90\nflour,15\nyeast,4\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/cargo/manifests/water.csv": {
+     "contents": "potable-tank-a,1\npotable-tank-b,1\ngrey-tank,1\nfilter-cartridge,12\nuv-lamp,4\npurifier-kit,2\nhose-coupling,8\nvalve-assembly,3\ntest-strips,100\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor runs her finger down the report. \"Forty-five, and every one of them counted. The auditor can read that.\"",
+   "user": "cadet"
+  }
+ },
  "your-first-script": {
   "solution": [
    "cat sticky-note.txt",

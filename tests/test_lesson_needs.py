@@ -110,6 +110,15 @@ NEEDS = {
         "chmod +x adds it": "`chmod +x script.sh` adds the execute bit",
         "a script on the PATH runs by name": "To run a script **by name** from anywhere",
     },
+    "variables-and-quoting": {
+        "an assignment has no spaces around =": "**no spaces** around the `=`",
+        "a value with a space needs quotes when assigned": "Assignments need quotes too when the value has a space",
+        "unquoted expansions are split at spaces": "It **splits** it into separate words at every space",
+        "a redirect needs exactly one word": "fails with **`ambiguous redirect`**",
+        "quote every expansion": "put double quotes around every expansion",
+        "$( ) puts a command's output in a variable": "runs the command and puts its output in its place",
+        "$(( )) adds numbers, without $ inside": "variables don't need their `$`",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

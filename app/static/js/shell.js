@@ -635,7 +635,7 @@
       throw new SyntaxErr("syntax error near unexpected token `" + (target.t === "op" ? target.v : "newline") + "'", target.line);
     }
     this.next();
-    return { fd: spec.fd, append: !!spec.append, word: target.atoms };
+    return { fd: spec.fd, append: !!spec.append, word: target.atoms, text: target.text };
   };
 
   Parser.prototype.simple = function () {
@@ -1066,7 +1066,14 @@
     var prog = parseScript(src);
     if (prog.error) throw new ExpansionError("command substitution: " + prog.error.message);
     var buf = new Sink();
-    yield* this.subshell(prog.items, { stdin: io.stdin, out: buf, err: io.err }, true);
+    // Its lines are the script's: an error on line 11 inside $( ) says line 11.
+    var offset = this.lineOffset;
+    this.lineOffset = (this.lineNo || 1) - 1;
+    try {
+      yield* this.subshell(prog.items, { stdin: io.stdin, out: buf, err: io.err }, true);
+    } finally {
+      this.lineOffset = offset;
+    }
     this.substituted = true;
     return buf.text.replace(/\n+$/, "");
   };
@@ -1489,6 +1496,7 @@
   // copies wherever stdout points *at that moment*. Files are written when the
   // command finishes.
   Shell.prototype.runCommand = function* (node, io) {
+    if (node.line) this.lineNo = node.line + (this.lineOffset || 0); // a redirect's error names this line
     var cur = { stdin: io.stdin, out: io.out, err: io.err };
     var files = [];
     var opened = {};
@@ -1504,7 +1512,13 @@
         // A here-document or here-string is the command's input (#65).
         if (r.heredoc) { cur.stdin = { text: yield* this.expandString(r.heredoc, io), pos: 0 }; continue; }
         if (r.herestring) { cur.stdin = { text: (yield* this.expandString(r.herestring, io)) + "\n", pos: 0 }; continue; }
-        path = yield* this.expandString(r.word, io);
+        // Split and globbed like any word; it must come out as exactly one (#71).
+        var fields = yield* this.expandFields(r.word, io);
+        if (fields.length !== 1) {
+          io.err.write(this.where() + ": " + r.text + ": ambiguous redirect\n");
+          return (this.lastStatus = 1);
+        }
+        path = fields[0];
       } catch (e) {
         return (this.lastStatus = this.expansionFailed(e, io));
       }
@@ -1545,13 +1559,18 @@
     return code;
   };
 
+  // Who's complaining: in a script, bash says where ("check.sh: line 4"), and
+  // at the prompt it's just "bash".
+  Shell.prototype.where = function () {
+    return this.depth && this.scriptName && this.scriptName !== "bash" ? this.scriptName + ": line " + this.lineNo : "bash";
+  };
+
   // An expansion that went wrong: say so, and under set -u (an unbound
   // variable) a script stops there with status 1, as bash does.
   Shell.prototype.expansionFailed = function (e, io) {
     if (e instanceof Unsupported) { io.err.write("bash: unsupported on the station console: " + e.message + "\n"); return 2; }
     if (!(e instanceof ExpansionError)) throw e;
-    // In a script, bash says where: "check.sh: line 4: UNSET: unbound variable".
-    io.err.write((this.depth && this.scriptName && this.scriptName !== "bash" ? this.scriptName + ": line " + this.lineNo : "bash") + ": " + e.message + "\n");
+    io.err.write(this.where() + ": " + e.message + "\n");
     if (e.fatal && this.depth) { this.exiting = true; this.exitCode = 1; }
     return 1;
   };
@@ -1562,7 +1581,7 @@
 
   Shell.prototype.runSimple = function* (node, io) {
     if (++this.steps > STEP_LIMIT) throw new Runaway();
-    this.lineNo = node.line;
+    this.lineNo = node.line + (this.lineOffset || 0);
     var argv = [];
     var assigns = [];
     this.substituted = false;
@@ -1709,7 +1728,7 @@
       scriptName: this.scriptName, loopDepth: this.loopDepth, breaking: this.breaking, continuing: this.continuing,
       exiting: this.exiting, exitCode: this.exitCode, home: this.home, funcs: this.funcs, opts: this.opts,
       traps: this.traps, frames: this.frames, funcDepth: this.funcDepth, sourceDepth: this.sourceDepth,
-      returning: this.returning, returnCode: this.returnCode, noErrexit: this.noErrexit };
+      returning: this.returning, returnCode: this.returnCode, noErrexit: this.noErrexit, lineOffset: this.lineOffset };
   };
   Shell.prototype.restoreState = function (saved) {
     var self = this;
@@ -1881,6 +1900,7 @@
     this.exported = exported;
     this.args = args;
     this.scriptName = name;
+    this.lineOffset = 0;
     this.loopDepth = 0;
     this.breaking = this.continuing = 0;
     this.exiting = false;
@@ -1983,20 +2003,30 @@
     return { out: "", err: "", code: code };
   };
 
+  // A file called NAME on the PATH that isn't executable, which bash finds as a last resort.
+  Shell.prototype.plainOnPath = function (name) {
+    var sh = this;
+    return (this.vars.PATH || "").split(":").map(function (dir) { return dir && join(dir, name); }).filter(function (q) {
+      var f = q && sh.fs[q] && sh.lookup(q);
+      return f && f.node && f.node.type === "file";
+    })[0] || null;
+  };
+
   Shell.prototype.exec = function* (argv, stdin, io) {
     var name = argv[0];
     if (this.funcs[name]) return yield* this.callFunction(name, argv.slice(1), io);
     if (name.indexOf("/") !== -1) return yield* this.runFile(name, name, argv.slice(1), io);
     if (BUILTINS.indexOf(name) !== -1) return yield* this.call(name, argv, stdin, io);
     var path = this.which(name)[0];
+    if (!path && this.where() !== "bash") {
+      // In a script it's bash's own words, with the line: the station's voice
+      // would blame the console for what's usually a typo or a quoting bug (#71).
+      if (!this.plainOnPath(name)) return { out: "", err: this.where() + ": " + name + ": command not found\n", code: 127 };
+    }
     if (!path) {
       // bash's last resort: a file on the PATH that isn't executable is found, and
       // refused (`bash: /station/bin/x: Permission denied`, 126), not "not found".
-      var sh = this;
-      var plain = (this.vars.PATH || "").split(":").map(function (dir) { return dir && join(dir, name); }).filter(function (q) {
-        var f = q && sh.fs[q] && sh.lookup(q);
-        return f && f.node && f.node.type === "file";
-      })[0];
+      var plain = this.plainOnPath(name);
       if (plain) return yield* this.runFile(plain, plain, argv.slice(1), io);
       return {
         out: "",
@@ -2004,7 +2034,7 @@
         code: 127,
       };
     }
-    if (this.fs[path]) return yield* this.runFile(path, name, argv.slice(1), io);
+    if (this.fs[path]) return yield* this.runFile(path, path, argv.slice(1), io); // bash's $0 is the path it found
     return yield* this.call(name, argv, stdin, io);
   };
 

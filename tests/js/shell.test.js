@@ -302,3 +302,25 @@ test("A script on the PATH that isn't executable is refused, not \"not found\" (
   assert.equal(out(sh, "shift-check"), "checked\n");
   assert.equal(out(sh, "no-such-thing").split(":")[1], " command not found. The Meridian's console only knows the basics; type `help` to see them.\n");
 });
+
+// As bash 5.2 prints them (checked in ubuntu:24.04).
+test("Unquoted spaces fail as they do in bash: ambiguous redirects, and a script's errors say where (#71)", () => {
+  const sh = station({ "/station/Spare Parts.csv": { type: "file", mode: 0o644, owner: "cadet", group: "crew", contents: "valve\nseal\n" } });
+  sh.run("f='Spare Parts.csv'");
+  assert.equal(out(sh, "wc -l < $f"), "bash: $f: ambiguous redirect\n");
+  assert.equal(sh.lastStatus, 1);
+  assert.equal(out(sh, "wc -l < $nothing"), "bash: $nothing: ambiguous redirect\n"); // empty counts too
+  assert.equal(out(sh, 'wc -l < "$f"'), "2\n");
+  assert.equal(out(sh, "echo hi > *.nope; ls *.nope"), "*.nope\n"); // a glob matching nothing is one word
+  sh.run("echo 'parts=/station/Spare Parts.csv' > r.sh; echo 'wc -l < $parts' >> r.sh");
+  assert.equal(out(sh, "bash r.sh"), "r.sh: line 1: Parts.csv: command not found\nr.sh: line 2: $parts: ambiguous redirect\n");
+  assert.match(out(sh, "Parts.csv"), /^Parts\.csv: command not found\. The Meridian's console/); // at the prompt, the station's voice
+});
+
+test("A script's errors inside $( ) keep its line numbers, and a PATH script is named by its path (#71)", () => {
+  const sh = station({ "/station/bin": { type: "dir", mode: 0o755, owner: "cadet", group: "crew", contents: "" } });
+  sh.run("export PATH=/station/bin:$PATH");
+  sh.run("echo '#!/usr/bin/env bash' > /station/bin/r; echo 'x=' >> /station/bin/r; echo 'echo \"n=$(wc -l < $x)\"' >> /station/bin/r; echo 'echo $0' >> /station/bin/r; chmod +x /station/bin/r");
+  assert.equal(out(sh, "r"), "/station/bin/r: line 3: $x: ambiguous redirect\nn=\n/station/bin/r\n");
+  assert.equal(out(sh, "cd /station/bin; ./r").split("\n")[0], "./r: line 3: $x: ambiguous redirect");
+});
