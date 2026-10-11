@@ -21,10 +21,10 @@ PALETTE = {
     "lamp": (248, 204, 124), "lamp2": (200, 150, 80), "lampglow": (96, 78, 60), "metal": (70, 76, 96), "metal2": (110, 118, 140),
     "note": (240, 214, 120), "ink": (90, 70, 40),
     "screenback": (14, 16, 26),
-    # the computer: a gunmetal case, lit from the top left
+    # the laptop: a gunmetal case, lit from the top left
     "case": (58, 64, 84), "case2": (74, 81, 104), "case3": (96, 104, 130), "casehi": (128, 138, 166),
     "caselo": (40, 44, 60), "caseedge": (18, 20, 30), "lip": (12, 14, 22), "plate": (150, 158, 182), "platetext": (40, 44, 60),
-    "ledhouse": (26, 28, 40),
+    "ledhouse": (26, 28, 40), "shadow": (0, 0, 0, 110),
     # the shuttle
     "hull": (210, 214, 224), "hull2": (150, 156, 172), "hull3": (100, 106, 124), "glass": (90, 200, 220), "thrust": (255, 170, 80),
     # avatars

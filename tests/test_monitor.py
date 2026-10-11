@@ -1,5 +1,6 @@
-"""The desk's computer (#46): the case is pixel art, the glass is HTML, and
-the two must line up exactly; the glass effects must not cost readability."""
+"""The desk's computer (#46), now a laptop (#55): the case is pixel art, the
+glass is HTML, and the two must line up exactly; the glass effects must not
+cost readability."""
 
 import re
 from pathlib import Path
@@ -14,7 +15,7 @@ CSS = (ROOT / "app" / "static" / "css" / "style.css").read_text()
 
 
 def _rule(selector: str) -> str:
-    return re.search(re.escape(selector) + r" \{(.*?)\n\}", CSS, re.S).group(1)
+    return re.search(r"^" + re.escape(selector) + r" \{(.*?)\n\}", CSS, re.S | re.M).group(1)
 
 
 def _percent(rule: str, prop: str) -> float:
@@ -22,6 +23,7 @@ def _percent(rule: str, prop: str) -> float:
 
 
 @pytest.mark.criterion(46, "The screen is set in a drawn computer")
+@pytest.mark.criterion(55, "Every page sits on the laptop's screen")
 def test_the_glass_lines_up_with_the_drawn_bezel():
     x0, y0, x1, y1 = room.GLASS
     monitor = _rule(".monitor")
@@ -35,17 +37,43 @@ def test_the_glass_lines_up_with_the_drawn_bezel():
     assert _percent(light, "top") == pytest.approx(100 * ly / room.H, abs=0.001)
 
 
-def test_the_art_draws_a_computer_around_the_glass():
-    _, _, rows = png.decode((ROOT / "app/static/img/room.png").read_bytes())
+def _layer(name: str):
+    return png.decode((ROOT / "app/static/img" / name).read_bytes())[2]
+
+
+def test_the_art_draws_a_laptop_around_the_glass():
     colour = Canvas.colour
     x0, y0, x1, y1 = room.GLASS
-    cx0, cy0, cx1, cy1 = room.CASE
-    assert rows[y0][x0] == rows[y1][x1] == colour("screenback")  # the glass, under the HTML
-    assert rows[y0 - 1][x0] == colour("lip")  # the recess around it
-    assert rows[cy0 + 1][(cx0 + cx1) // 2] == colour("casehi")  # the bevel, lit from above
-    assert rows[cy0][cx0] == colour("caseedge")
-    assert rows[164][(cx0 + cx1) // 2] == colour("case")  # the foot on the desk
-    assert rows[room.POWER_LIGHT[1]][room.POWER_LIGHT[0]] == colour("ledhouse")
+    lx0, ly0, lx1, ly1 = room.LID
+    lid = _layer("laptop-lid.png")
+    assert lid[y0][x0] == lid[y1][x1] == colour("screenback")  # the glass, under the HTML
+    assert lid[y0 - 1][x0] == colour("lip")  # the recess around it
+    assert lid[ly0 + 1][(lx0 + lx1) // 2] == colour("casehi")  # the bevel, lit from above
+    assert lid[ly0][lx0] == colour("caseedge")
+    assert lid[room.POWER_LIGHT[1]][room.POWER_LIGHT[0]] == colour("ledhouse")
+    assert lid[ly1 + 3][lx0] == colour("clear")  # nothing below the hinge: the deck is its own layer
+    deck = _layer("laptop-deck.png")
+    assert deck[157][room.W // 2] in (colour("key"), colour("case2"))  # the keyboard
+    assert deck[room.HINGE_Y - 1][room.W // 2] == colour("clear")
+    shut = _layer("laptop-closed.png")
+    assert shut[room.SLEEP_LIGHT[1]][room.SLEEP_LIGHT[0]] == colour("ledhouse")
+    assert shut[room.HINGE_Y - 1][room.W // 2] == colour("clear")  # nothing above the hinge: the room shows
+    assert _layer("room.png")[(y0 + y1) // 2][(x0 + x1) // 2] != colour("screenback")  # behind the lid, the room
+
+
+def test_the_lid_and_its_controls_line_up_with_the_art():
+    lid = _rule(".lid")
+    assert re.search(r"transform-origin: 50% ([\d.]+)%;", lid).group(1) == f"{100 * room.HINGE_Y / room.H:.3f}"
+    tab = _rule(".lid-close")
+    tx0, ty0, tx1, ty1 = room.CLOSE_TAB
+    assert _percent(tab, "left") == pytest.approx(100 * tx0 / room.W, abs=0.001)
+    assert _percent(tab, "width") == pytest.approx(100 * (tx1 - tx0 + 1) / room.W, abs=0.001)
+    assert _percent(tab, "top") == pytest.approx(100 * ty0 / room.H, abs=0.001)
+    assert _percent(tab, "height") == pytest.approx(100 * (ty1 - ty0 + 1) / room.H, abs=0.001)
+    sleep = _rule(".sleep-light")
+    sx, sy = room.SLEEP_LIGHT
+    assert _percent(sleep, "left") == pytest.approx(100 * sx / room.W, abs=0.001)
+    assert _percent(sleep, "top") == pytest.approx(100 * sy / room.H, abs=0.001)
 
 
 def test_every_page_has_the_power_light(client):

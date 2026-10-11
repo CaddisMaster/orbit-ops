@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- The desk's computer is now a laptop, and you can close its lid to see the room (#55). The
+  screen is exactly where it was, so nothing in the app moves. "Close lid" on the bezel folds the
+  lid down onto the keyboard and shows the whole window: the Earth, the docking arm, and any
+  window event that's playing, which now shows in full (the aurora was mostly hidden behind the
+  old monitor). Click the shut laptop to open it. It's the same page, never reloaded, so your
+  scroll position and a half-typed console command are still there. Under reduced motion the
+  lid snaps instead of folding, and without JavaScript the laptop just stays open.
+
 ## [0.4.0] — 2026-10-09
 
 Hands-on and the desk: a station console task in nine of Unit 1.1's ten modules, with sudo,

@@ -93,6 +93,37 @@ def test_the_room_is_drawn_from_the_art(client):
     assert client.get("/static/img/room.png").headers["content-type"] == "image/png"
 
 
+# --- #55: the laptop and its lid ---------------------------------------------------------
+@pytest.mark.criterion(55, "Every page sits on the laptop's screen")
+@pytest.mark.parametrize("path", ["/", "/modules/the-filesystem"])
+def test_the_app_is_on_the_laptops_lid(logged_in, path):
+    page = logged_in.get(path).text
+    room_end = page.index('<div class="laptop" id="laptop">')
+    assert page.index('<div id="window-event"') < room_end  # events play behind the laptop, in the room
+    lid = page.index('<div class="lid">', room_end)
+    assert lid < page.index('<div class="monitor">', lid) < page.index('<main class="container">')
+
+
+@pytest.mark.criterion(55, "Without JavaScript the laptop stays open")
+def test_without_javascript_the_laptop_stays_open(client):
+    page = client.get("/login").text
+    assert '<button type="button" class="lid-close" hidden>' in page  # laptop.js unhides it
+    assert '<button type="button" class="laptop-open" aria-label="Open the laptop" hidden>' in page
+    assert "is-closed" not in page and " inert" not in page
+    assert re.search(r'<script src="[^"]*/static/js/laptop.js" defer></script>', page)
+    js = client.get("/static/js/laptop.js").text
+    assert "close.hidden = false;" in js and "lid.inert = true;" in js and "lid.inert = false;" in js
+
+
+@pytest.mark.criterion(55, "The lid respects reduced motion")
+def test_the_lid_respects_reduced_motion(client):
+    css = client.get("/static/css/style.css").text
+    assert re.search(r"\n\.laptop\.is-closed \.lid \{[^}]*transition: transform", css)  # it does animate
+    reduced = "".join(re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", css, re.S))
+    assert ".lid, .laptop.is-closed .lid, .laptop-shut, .laptop.is-closed .laptop-shut { transition: none; }" in reduced
+    assert ".sleep-light { animation: none; }" in reduced
+
+
 # --- comms ------------------------------------------------------------------------------
 @pytest.mark.criterion(38, "The briefing arrives as messages")
 def test_the_briefing_arrives_as_messages(logged_in, desk):
