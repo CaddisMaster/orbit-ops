@@ -70,7 +70,7 @@ tracks:
         emblem: antenna
         prerequisites: [linux-shell]
         briefing: >-
-          The comms array is up but nothing can find anything. Names don't
+          The relay network is up but nothing can find anything. Names don't
           resolve, connections hang, certificates fail. Time to learn what
           actually happens between "send" and "received".
       - slug: systemd
@@ -243,7 +243,7 @@ badges:
     emblem: life-support
     rule: {unit_complete: git}
   - slug: unit-networking
-    name: Comms Array Restored
+    name: Relays Restored
     description: "Complete the unit \"Networking: DNS, HTTP, TLS & SSH\"."
     emblem: life-support
     rule: {unit_complete: networking}

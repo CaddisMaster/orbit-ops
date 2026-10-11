@@ -34,6 +34,9 @@ and why it matters, not what the diff says.
   the lesson files (#51).
 
 ### Changed
+- The networking unit restores the station's **relay network**, not "the comms array" (#85), so
+  "Comms" means one place on the *Meridian*: the fourth deck, Comms, Sensors & Shields. Its badge
+  is now "Relays Restored". The relay is the one you met in Unit 1.1.
 - Flashcard review is now MERIDIAN's **watch drill** (#82). The station's readout heads each card
   ("WATCH DRILL · 6 ITEMS · FROM: LIFE SUPPORT"), and clearing the day's drill earns a line from
   the crew, rotating by the date. Code challenges now say who's asking: the text-tools one is

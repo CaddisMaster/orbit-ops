@@ -274,3 +274,18 @@ def test_the_tasks_say_to_read():
     first, second = load_catalog().unit_modules("linux-shell")[:2]
     assert "when did scrubber B go offline?" in " ".join(first.terminal.task.split())
     assert "read it (`cat` prints a file)" in " ".join(second.terminal.task.split())
+
+
+# --- #85: "comms" names one place on the station ------------------------------------------
+@pytest.mark.criterion(85, '"Comms" names one place on the station')
+def test_comms_names_one_place_on_the_station():
+    catalog = load_catalog()
+    for track in catalog.tracks:
+        if track.deck == "Comms, Sensors & Shields":
+            continue
+        for slug in track.units:
+            unit = catalog.units[slug]
+            assert "comms array" not in (unit.title + " " + unit.briefing_html).lower(), slug
+    badge = next(b for b in catalog.badges if b.slug == "unit-networking")  # a badge slug is permanent
+    assert badge.name == "Relays Restored" and "comms array" not in badge.name.lower()
+    assert "relay network" in catalog.units["networking"].briefing_html
