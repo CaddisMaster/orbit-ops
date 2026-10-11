@@ -111,6 +111,14 @@
     var sh = this;
     this.tty = { write: function (s) { sh.screen += s; } };
     this.loopDepth = 0;
+    // #65: functions, `set` options, traps, and the frames `local` saves variables in.
+    this.funcs = {};
+    this.opts = { e: false, u: false, x: false, pipefail: false };
+    this.traps = {};
+    this.frames = [];
+    this.funcDepth = 0;
+    this.sourceDepth = 0;
+    this.noErrexit = 0;
     this.logins = []; // shells stacked by `sudo -i`, popped by `exit`
   }
 
@@ -257,20 +265,27 @@
   function Incomplete(message, line) { this.message = message; this.line = line; } // ran out of input: the prompt asks for more
   function ExpansionError(message) { this.message = message; }
   function Runaway() {}
+  function Interrupt() {} // Ctrl-C, thrown into a command waiting for input
 
-  var OPS = ["&>>", "&&", "&>", "&", ";;", ";", "||", "|", ">>", ">&2", ">&1", ">", "<<<", "<<", "<", "(", ")"];
+  var OPS = ["&>>", "&&", "&>", "&", ";;", ";", "||", "|", ">>", ">&2", ">&1", ">", "<<<", "<<-", "<<", "<", "(", ")"];
   var FD_OPS = ["2>&1", "1>&2", "2>>", "1>>", "2>", "1>"];
   var REDIRECTS = {
     "<": { fd: 0 }, ">": { fd: 1 }, "1>": { fd: 1 }, ">>": { fd: 1, append: true }, "1>>": { fd: 1, append: true },
-    "2>": { fd: 2 }, "2>>": { fd: 2, append: true }, "&>": { fd: 3 }, "&>>": { fd: 3, append: true }, "<<<": {},
-    "2>&1": { fd: 2, dup: 1 }, ">&2": { fd: 1, dup: 2 }, "1>&2": { fd: 1, dup: 2 }, ">&1": { fd: 1, dup: 1 }, "<<": {},
+    "2>": { fd: 2 }, "2>>": { fd: 2, append: true }, "&>": { fd: 3 }, "&>>": { fd: 3, append: true }, "<<<": { fd: 0 }, "<<-": { fd: 0 },
+    "2>&1": { fd: 2, dup: 1 }, ">&2": { fd: 1, dup: 2 }, "1>&2": { fd: 1, dup: 2 }, ">&1": { fd: 1, dup: 1 }, "<<": { fd: 0 },
   };
 
-  // `oneWord`: read all of src as a single word (the inside of $(( )) and ${x:-…}).
-  function lex(src, oneWord) {
+  // `mode`: "word" reads all of src as a single word (the inside of $(( ))
+  // and ${x:-…}); "heredoc" reads a here-document's body, where quotes are
+  // just characters and only $, ` and \ are special (#65).
+  function lex(src, mode) {
+    var oneWord = mode === "word" || mode === true;
+    var heredoc = mode === "heredoc";
     var tokens = [];
     var i = 0, line = 1;
     var atoms = null, from = 0;
+    var heredocs = []; // << operators whose bodies start on the next line
+    var wantsDelimiter = null;
     function lit(text, q) {
       var last = atoms[atoms.length - 1];
       if (last && "c" in last && last.q === q && text) last.c += text;
@@ -280,7 +295,34 @@
     function end() {
       if (!atoms) return;
       tokens.push({ t: "word", atoms: atoms, text: src.slice(from, i), line: line, p: from, e: i });
+      if (wantsDelimiter) {
+        // The word after << ends the here-document; quoting any of it (<<'EOF')
+        // makes the body literal.
+        wantsDelimiter.heredoc.delimiter = atoms.map(function (a) { return "c" in a ? a.c : ""; }).join("");
+        wantsDelimiter.heredoc.quoted = /['"\\]/.test(src.slice(from, i));
+        heredocs.push(wantsDelimiter);
+        wantsDelimiter = null;
+      }
       atoms = null;
+    }
+    // At a newline: read the bodies of the here-documents opened on that line.
+    function readHeredocs() {
+      heredocs.forEach(function (tok) {
+        var h = tok.heredoc;
+        var body = [];
+        for (;;) {
+          if (i >= src.length) throw new Incomplete("here-document at line " + tok.line + " delimited by end-of-file (wanted `" + h.delimiter + "')", line);
+          var nl = src.indexOf("\n", i);
+          var text = nl === -1 ? src.slice(i) : src.slice(i, nl);
+          if (h.strip) text = text.replace(/^\t+/, "");
+          i = nl === -1 ? src.length : nl + 1;
+          line++;
+          if (text === h.delimiter) break;
+          body.push(text);
+        }
+        h.body = body.length ? body.join("\n") + "\n" : "";
+      });
+      heredocs = [];
     }
     function advance(to) {
       for (var k = i; k < to; k++) if (src[k] === "\n") line++;
@@ -331,8 +373,16 @@
       i += m[0].length;
     }
     try {
+      if (heredoc) start();
       while (i < src.length) {
         var c = src[i];
+        if (heredoc) {
+          if (c === "\\" && src[i + 1] === "\n") advance(i + 2);
+          else if (c === "\\" && "$`\\".indexOf(src[i + 1]) !== -1) { lit(src[i + 1], true); i += 2; }
+          else if (c === "$" || c === "`") dollar(true);
+          else { lit(c, true); advance(i + 1); }
+          continue;
+        }
         if (c === "\\" && src[i + 1] === "\n") { advance(i + 2); continue; }
         if (c === "\\") {
           if (i + 1 >= src.length) throw new Incomplete("unexpected end of file", line);
@@ -361,6 +411,7 @@
           end(); i++;
         } else if (c === "\n") {
           end(); tokens.push({ t: "nl", line: line }); advance(i + 1);
+          if (heredocs.length) readHeredocs();
         } else if (c === "#" && !atoms) {
           while (i < src.length && src[i] !== "\n") i++;
         } else if (!atoms && (c === "1" || c === "2") && src[i + 1] === ">") {
@@ -369,7 +420,9 @@
         } else if ("|&;<>()".indexOf(c) !== -1) {
           end();
           var op = OPS.filter(function (o) { return src.slice(i, i + o.length) === o; })[0];
-          tokens.push({ t: "op", v: op, line: line, p: i, e: i + op.length }); i += op.length;
+          var opTok = { t: "op", v: op, line: line, p: i, e: i + op.length };
+          tokens.push(opTok); i += op.length;
+          if (op === "<<" || op === "<<-") { opTok.heredoc = { strip: op === "<<-" }; wantsDelimiter = opTok; }
         } else {
           start(); lit(c, false); i++;
         }
@@ -383,6 +436,11 @@
       return tokens;
     }
     end();
+    if (heredocs.length && !heredoc) {
+      // The line with << was the last: the body hasn't been typed yet.
+      tokens.push({ t: "eof", line: line, error: new Incomplete("here-document at line " + heredocs[0].line + " delimited by end-of-file (wanted `" + heredocs[0].heredoc.delimiter + "')", line) });
+      return tokens;
+    }
     tokens.push({ t: "eof", line: line });
     return tokens;
   }
@@ -501,10 +559,32 @@
 
   var CLOSERS = ["then", "elif", "else", "fi", "do", "done", "esac", "}", "in", "]]"];
 
+  // name() compound, or function name [()] compound (#65). The body is
+  // usually { …; }; any redirects on it apply at each call.
+  Parser.prototype.funcDef = function (keyword) {
+    if (keyword) this.next();
+    var nameTok = this.next();
+    var name = plain(nameTok);
+    if (!name || !/^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(name)) this.fail(nameTok);
+    if (this.isOp("(")) {
+      this.next();
+      if (!this.isOp(")")) this.fail(this.peek());
+      this.next();
+    }
+    this.linebreak();
+    var start = this.peek();
+    var body = this.command();
+    if (body.t === "simple") this.fail(start);
+    return { t: "funcdef", name: name, body: body, redirects: [] };
+  };
+
   Parser.prototype.command = function () {
     var t = this.peek();
     var w = plain(t);
     var node = null;
+    var after = this.toks[this.at + 1], after2 = this.toks[this.at + 2];
+    if (w === "function") return this.funcDef(true);
+    if (w && CLOSERS.indexOf(w) === -1 && after && after.t === "op" && after.v === "(" && after2 && after2.t === "op" && after2.v === ")") return this.funcDef(false);
     if (w === "if") node = this.ifCmd();
     else if (w === "for") node = this.forCmd();
     else if (w === "while" || w === "until") node = this.whileCmd(w);
@@ -532,11 +612,23 @@
   };
 
   Parser.prototype.redirect = function () {
-    var op = this.next().v;
-    if (op === "<<") throw new Unsupported("here-documents (<<)");
-    if (op === "<<<") throw new Unsupported("here-strings (<<<); use echo \"…\" | command");
+    var opTok = this.next();
+    var op = opTok.v;
     var spec = REDIRECTS[op];
+    if (opTok.heredoc) {
+      var delim = this.next();
+      if (delim.t !== "word") this.fail(delim);
+      var h = opTok.heredoc;
+      if (h.body === undefined) throw new Incomplete("here-document delimited by end-of-file", opTok.line);
+      var tok = h.quoted ? null : lex(h.body, "heredoc")[0];
+      return { fd: 0, heredoc: h.quoted || tok.t !== "word" ? [{ c: h.body, q: true }] : tok.atoms };
+    }
     if (spec.dup) return { fd: spec.fd, dup: spec.dup };
+    if (op === "<<<") {
+      var word = this.next();
+      if (word.t !== "word") this.fail(word);
+      return { fd: 0, herestring: word.atoms };
+    }
     var target = this.peek();
     if (target.t !== "word") {
       if (target.t === "eof" && target.error) throw target.error;
@@ -547,7 +639,7 @@
   };
 
   Parser.prototype.simple = function () {
-    var cmd = { t: "simple", assigns: [], words: [], redirects: [] };
+    var cmd = { t: "simple", assigns: [], words: [], redirects: [], line: this.peek().line };
     for (;;) {
       var t = this.peek();
       if (t.t === "word") {
@@ -556,9 +648,6 @@
           var value = [{ c: t.atoms[0].c.slice(m[0].length), q: false }].concat(t.atoms.slice(1));
           cmd.assigns.push({ name: m[1], value: value });
         } else {
-          if (!cmd.words.length && this.toks[this.at + 1].t === "op" && this.toks[this.at + 1].v === "(") {
-            throw new Unsupported("functions (name() { … })");
-          }
           cmd.words.push(t.atoms);
         }
         this.next();
@@ -786,15 +875,26 @@
     return this.vars[name];
   };
 
+  // set -u: an unset variable is an error (not $@, and not ${x:-…}, which
+  // are how you ask for a default). A script stops; the prompt carries on.
+  Shell.prototype.unbound = function (name) {
+    if (!this.opts.u || name === "@" || name === "*") return;
+    var e = new ExpansionError((/^\d+$/.test(name) ? "$" : "") + name + ": unbound variable");
+    e.fatal = true;
+    throw e;
+  };
+
   // One expansion's value: a string, or a list for $@ / $*.
   Shell.prototype.expansion = function* (x, io) {
     var value;
     if (x.t === "var") {
       value = this.param(x.name);
+      if (value === undefined) this.unbound(x.name);
       return value === undefined ? "" : value;
     }
     if (x.t === "len") {
       value = this.param(x.name);
+      if (value === undefined) this.unbound(x.name);
       return String(Array.isArray(value) ? value.length : (value || "").length);
     }
     if (x.t === "cmd") return yield* this.substitute(x.src, io);
@@ -966,17 +1066,21 @@
     var prog = parseScript(src);
     if (prog.error) throw new ExpansionError("command substitution: " + prog.error.message);
     var buf = new Sink();
-    yield* this.subshell(prog.items, { stdin: io.stdin, out: buf, err: io.err });
+    yield* this.subshell(prog.items, { stdin: io.stdin, out: buf, err: io.err }, true);
     this.substituted = true;
     return buf.text.replace(/\n+$/, "");
   };
 
   // ( … ) and $(…) run in a subshell: a copy of everything (not only what's
   // exported), and nothing it changes (variables, cd, exit) comes back.
-  Shell.prototype.subshell = function* (items, io) {
+  Shell.prototype.subshell = function* (items, io, substitution) {
     var saved = this.saveState();
     this.vars = Object.assign({}, this.vars);
     this.exported = Object.assign({}, this.exported);
+    this.funcs = Object.assign({}, this.funcs);
+    this.opts = Object.assign({}, this.opts, substitution ? { e: false } : {});
+    this.traps = {}; // a subshell starts without the parent's traps
+    this.frames = [];
     this.depth = (this.depth || 0) + 1;
     this.loopDepth = 0;
     var code;
@@ -1013,6 +1117,7 @@
     }
     function value(name, depth) {
       var v = sh.param(name);
+      if (v === undefined) sh.unbound(name);
       if (v === undefined || v === "") return 0;
       v = String(v).trim();
       if (/^-?\d+$/.test(v)) return parseInt(v, 10);
@@ -1282,13 +1387,13 @@
   };
 
   // Run until the command finishes or asks for a line of input.
-  Shell.prototype.drive = function (gen, answer) {
+  Shell.prototype.drive = function (gen, answer, thrown) {
     var step;
     try {
-      step = gen.next(answer);
+      step = thrown ? gen.throw(thrown) : gen.next(answer);
     } catch (e) {
-      if (!(e instanceof Runaway)) throw e;
-      this.screen += "bash: stopped after " + STEP_LIMIT.toLocaleString("en-US") + " commands: is a loop running forever?\n";
+      if (e instanceof Runaway) this.screen += "bash: stopped after " + STEP_LIMIT.toLocaleString("en-US") + " commands: is a loop running forever?\n";
+      else if (!(e instanceof Interrupt)) throw e;
       this.lastStatus = 130;
       step = { done: true };
     }
@@ -1313,15 +1418,23 @@
     return this.drive(p.gen, line);
   };
 
-  // Ctrl-C abandons a prompt, or the lines of an unfinished command.
+  // Ctrl-C abandons a prompt, or the lines of an unfinished command. It's
+  // thrown into the waiting command, so a script's INT and EXIT traps run
+  // (their output is in the result) and everything unwinds as it goes.
+  // Returns a result like run()'s, or null when there's nothing to cancel.
   Shell.prototype.cancel = function () {
-    if (this.more !== null) { this.more = null; this.lastStatus = 130; return true; }
-    if (!this.pending) return false;
+    if (this.more !== null) { this.more = null; this.lastStatus = 130; return { output: "", clear: false }; }
+    if (!this.pending) return null;
     var gen = this.pending.gen;
     this.pending = null;
-    gen.return(); // unwinds: a script's variables, sudo's user, all restored
-    this.lastStatus = 1;
-    return true;
+    this.screen = "";
+    this.cleared = false;
+    return this.drive(gen, undefined, new Interrupt());
+  };
+
+  // Is a function, a loop or the script being left (return, break, continue, exit)?
+  Shell.prototype.unwinding = function () {
+    return this.exiting || this.returning || this.breaking || this.continuing;
   };
 
   Shell.prototype.runList = function* (items, io) {
@@ -1331,22 +1444,42 @@
       if (item.op === "||" && this.lastStatus === 0) continue;
       if (item.bg) yield* this.background(item, io);
       else yield* this.runPipeline(item.node, io);
-      if (this.exiting || this.breaking || this.continuing) break;
+      // set -e doesn't stop for a command left of && or || (#65).
+      var tested = i + 1 < items.length && (items[i + 1].op === "&&" || items[i + 1].op === "||");
+      if (tested && this.lastStatus !== 0) this.ignoredFail = true;
+      this.errexit(io);
+      if (this.unwinding()) break;
     }
     return this.lastStatus;
+  };
+
+  // set -e: a failure exits, except where bash ignores it: in an if, while or
+  // until test (noErrexit), left of && or ||, in a ! pipeline, or when a
+  // function or compound command failed only because of one of those
+  // (ignoredFail, which the last command run leaves behind).
+  Shell.prototype.errexit = function (io) {
+    if (!this.opts.e || this.noErrexit || this.lastStatus === 0 || this.ignoredFail || this.exiting) return;
+    this.exiting = true;
+    this.exitCode = this.lastStatus;
+    // At the prompt a real terminal would close; the console says so and carries on.
+    if (!this.depth && !this.funcDepth) io.err.write("logout\n(set -e ended the shell: a real terminal would close here. Type set +e to turn it off.)\n");
   };
 
   Shell.prototype.runPipeline = function* (node, io) {
     var stdin = io.stdin;
     var status = 0;
+    var failed = 0; // pipefail: the last stage that failed
+    this.ignoredFail = false;
     for (var k = 0; k < node.cmds.length; k++) {
       var last = k === node.cmds.length - 1;
       var out = last ? io.out : new Sink();
       status = yield* this.runCommand(node.cmds[k], { stdin: stdin, out: out, err: io.err });
+      if (status !== 0) failed = status;
       if (!last) stdin = { text: out.text, pos: 0 };
       if (this.exiting) break;
     }
-    if (node.negate) status = status === 0 ? 1 : 0;
+    if (this.opts.pipefail) status = failed;
+    if (node.negate) { status = status === 0 ? 1 : 0; this.ignoredFail = true; }
     this.lastStatus = status;
     return status;
   };
@@ -1368,11 +1501,12 @@
       }
       var path;
       try {
+        // A here-document or here-string is the command's input (#65).
+        if (r.heredoc) { cur.stdin = { text: yield* this.expandString(r.heredoc, io), pos: 0 }; continue; }
+        if (r.herestring) { cur.stdin = { text: (yield* this.expandString(r.herestring, io)) + "\n", pos: 0 }; continue; }
         path = yield* this.expandString(r.word, io);
       } catch (e) {
-        if (!(e instanceof ExpansionError)) throw e;
-        io.err.write("bash: " + e.message + "\n");
-        return (this.lastStatus = 1);
+        return (this.lastStatus = this.expansionFailed(e, io));
       }
       if (r.fd === 0) {
         var read = path === "/dev/null" ? { text: "" } : this.readFile("bash", path);
@@ -1389,6 +1523,7 @@
       case "simple": code = yield* this.runSimple(node, cur); break;
       case "group": code = yield* this.runList(node.body, cur); break;
       case "subshell": code = yield* this.subshell(node.body, cur); break;
+      case "funcdef": this.funcs[node.name] = node.body; code = 0; break;
       case "if": code = yield* this.runIf(node, cur); break;
       case "while": code = yield* this.runWhile(node, cur); break;
       case "for": code = yield* this.runFor(node, cur); break;
@@ -1397,9 +1532,7 @@
         try {
           code = (yield* this.cond(node.expr, cur)) ? 0 : 1;
         } catch (e) {
-          if (e instanceof ExpansionError) { cur.err.write("bash: " + e.message + "\n"); code = 1; }
-          else if (e instanceof Unsupported) { cur.err.write("bash: unsupported on the station console: " + e.message + "\n"); code = 2; }
-          else throw e;
+          code = this.expansionFailed(e, cur);
         }
         break;
     }
@@ -1412,20 +1545,40 @@
     return code;
   };
 
+  // An expansion that went wrong: say so, and under set -u (an unbound
+  // variable) a script stops there with status 1, as bash does.
+  Shell.prototype.expansionFailed = function (e, io) {
+    if (e instanceof Unsupported) { io.err.write("bash: unsupported on the station console: " + e.message + "\n"); return 2; }
+    if (!(e instanceof ExpansionError)) throw e;
+    // In a script, bash says where: "check.sh: line 4: UNSET: unbound variable".
+    io.err.write((this.depth && this.scriptName && this.scriptName !== "bash" ? this.scriptName + ": line " + this.lineNo : "bash") + ": " + e.message + "\n");
+    if (e.fatal && this.depth) { this.exiting = true; this.exitCode = 1; }
+    return 1;
+  };
+
+  // local, export and readonly take NAME=value words as assignments: not
+  // split, even unquoted (local name=$1 keeps "a b" whole).
+  var DECLARATIONS = ["local", "export", "readonly", "declare"];
+
   Shell.prototype.runSimple = function* (node, io) {
     if (++this.steps > STEP_LIMIT) throw new Runaway();
+    this.lineNo = node.line;
     var argv = [];
     var assigns = [];
     this.substituted = false;
+    var declares = node.words.length && DECLARATIONS.indexOf(plain({ t: "word", atoms: node.words[0] })) !== -1;
     try {
-      for (var w = 0; w < node.words.length; w++) Array.prototype.push.apply(argv, yield* this.expandFields(node.words[w], io));
+      for (var w = 0; w < node.words.length; w++) {
+        var word = node.words[w];
+        if (declares && w > 0 && "c" in word[0] && !word[0].q && /^[A-Za-z_][A-Za-z0-9_]*=/.test(word[0].c)) argv.push(yield* this.expandString(word, io));
+        else Array.prototype.push.apply(argv, yield* this.expandFields(word, io));
+      }
       for (var a = 0; a < node.assigns.length; a++) assigns.push([node.assigns[a].name, yield* this.expandString(node.assigns[a].value, io)]);
     } catch (e) {
-      if (e instanceof ExpansionError) { io.err.write("bash: " + e.message + "\n"); return 1; }
-      if (e instanceof Unsupported) { io.err.write("bash: unsupported on the station console: " + e.message + "\n"); return 2; }
-      throw e;
+      return this.expansionFailed(e, io);
     }
     var self = this;
+    if (this.opts.x) io.err.write(xtrace(assigns, argv));
     if (!argv.length) {
       // Assignments alone set shell variables (and update exported ones). The
       // status is the last $(…)'s, or 0.
@@ -1459,10 +1612,20 @@
     return res.code;
   };
 
+  // The test of an if, while or until runs with set -e ignored.
+  Shell.prototype.condition = function* (items, io) {
+    this.noErrexit += 1;
+    try {
+      return yield* this.runList(items, io);
+    } finally {
+      this.noErrexit -= 1;
+    }
+  };
+
   Shell.prototype.runIf = function* (node, io) {
     for (var i = 0; i < node.clauses.length; i++) {
-      yield* this.runList(node.clauses[i].cond, io);
-      if (this.exiting || this.breaking || this.continuing) return this.lastStatus;
+      yield* this.condition(node.clauses[i].cond, io);
+      if (this.unwinding()) return this.lastStatus;
       if (this.lastStatus === 0) return yield* this.runList(node.clauses[i].body, io);
     }
     if (node.otherwise) return yield* this.runList(node.otherwise, io);
@@ -1472,7 +1635,7 @@
   // After a loop body: should the loop stop? break and continue take a count
   // of loops to leave; each loop on the way out takes one off.
   Shell.prototype.loopDone = function () {
-    if (this.exiting) return true;
+    if (this.exiting || this.returning) return true;
     if (this.breaking) { this.breaking -= 1; return true; }
     if (this.continuing) { this.continuing -= 1; return this.continuing > 0; }
     return false;
@@ -1483,8 +1646,8 @@
     this.loopDepth = (this.loopDepth || 0) + 1;
     try {
       for (;;) {
-        yield* this.runList(node.cond, io);
-        if (this.exiting || this.breaking || this.continuing) { if (this.loopDone()) break; continue; }
+        yield* this.condition(node.cond, io);
+        if (this.unwinding()) { if (this.loopDone()) break; continue; }
         if ((this.lastStatus === 0) === node.until) break;
         status = yield* this.runList(node.body, io);
         if (this.loopDone()) break;
@@ -1503,9 +1666,7 @@
       try {
         for (var w = 0; w < node.words.length; w++) Array.prototype.push.apply(words, yield* this.expandFields(node.words[w], io));
       } catch (e) {
-        if (!(e instanceof ExpansionError)) throw e;
-        io.err.write("bash: " + e.message + "\n");
-        return 1;
+        return this.expansionFailed(e, io);
       }
     }
     var status = 0;
@@ -1525,7 +1686,12 @@
   // case: the first clause with a matching pattern runs. Patterns are globs
   // over the whole word, where * matches / too.
   Shell.prototype.runCase = function* (node, io) {
-    var subject = yield* this.expandString(node.subject, io);
+    var subject;
+    try {
+      subject = yield* this.expandString(node.subject, io);
+    } catch (e) {
+      return this.expansionFailed(e, io);
+    }
     for (var i = 0; i < node.clauses.length; i++) {
       var clause = node.clauses[i];
       for (var k = 0; k < clause.patterns.length; k++) {
@@ -1541,7 +1707,9 @@
   Shell.prototype.saveState = function () {
     return { vars: this.vars, exported: this.exported, cwd: this.cwd, oldpwd: this.oldpwd, args: this.args,
       scriptName: this.scriptName, loopDepth: this.loopDepth, breaking: this.breaking, continuing: this.continuing,
-      exiting: this.exiting, exitCode: this.exitCode, home: this.home };
+      exiting: this.exiting, exitCode: this.exitCode, home: this.home, funcs: this.funcs, opts: this.opts,
+      traps: this.traps, frames: this.frames, funcDepth: this.funcDepth, sourceDepth: this.sourceDepth,
+      returning: this.returning, returnCode: this.returnCode, noErrexit: this.noErrexit };
   };
   Shell.prototype.restoreState = function (saved) {
     var self = this;
@@ -1663,12 +1831,13 @@
   // executable file in the filesystem, or one of the console's own commands,
   // which live in /usr/bin and /bin (and the admin tools in /usr/sbin).
   var BUILTINS = ["cd", "echo", "pwd", "export", "unset", "type", "source", ".", "jobs", "kill", "fg", "bg", "exit",
-    "help", "clear", "command", "true", "false", "test", "[", "read", "break", "continue", ":"];
-  var KEYWORDS = ["if", "then", "elif", "else", "fi", "for", "in", "do", "done", "while", "until", "case", "esac", "{", "}", "!", "[[", "]]"];
+    "help", "clear", "command", "true", "false", "test", "[", "read", "break", "continue", ":",
+    "set", "local", "return", "shift", "trap"];
+  var KEYWORDS = ["if", "then", "elif", "else", "fi", "for", "in", "do", "done", "while", "until", "case", "esac", "{", "}", "!", "[[", "]]", "function"];
   var SBIN = ["usermod"];
 
   var NO_BINARY = ["cd", "export", "unset", "type", "source", ".", "jobs", "fg", "bg", "exit", "help", "clear", "command",
-    "read", "break", "continue", ":"];
+    "read", "break", "continue", ":", "set", "local", "return", "shift", "trap"];
 
   // Where `name` would be found on $PATH: every match, or the first.
   Shell.prototype.which = function (name, all) {
@@ -1715,12 +1884,29 @@
     this.loopDepth = 0;
     this.breaking = this.continuing = 0;
     this.exiting = false;
+    // A new bash: no functions, options or traps from its parent.
+    this.funcs = {};
+    this.opts = { e: false, u: false, x: false, pipefail: false };
+    this.traps = {};
+    this.frames = [];
+    this.funcDepth = this.sourceDepth = this.noErrexit = 0;
+    this.returning = false;
     var code;
     this.depth = (this.depth || 0) + 1;
     try {
       if (this.depth > 20) return { out: "", err: "bash: maximum nesting depth exceeded\n", code: 1 };
-      code = yield* this.runScript(script, name, io);
-      if (this.exiting) code = this.exitCode;
+      try {
+        code = yield* this.runScript(script, name, io);
+        if (this.exiting) code = this.exitCode;
+      } catch (e) {
+        // Ctrl-C while the script waited for input: its INT trap, then its
+        // EXIT trap, then it's gone.
+        if (!(e instanceof Interrupt)) throw e;
+        if (this.traps.INT) yield* this.runTrap("INT", 130, io);
+        yield* this.runTrap("EXIT", 130, io);
+        throw e;
+      }
+      code = yield* this.runTrap("EXIT", code, io);
     } finally {
       this.depth -= 1;
       this.restoreState(saved);
@@ -1745,12 +1931,61 @@
     }
     return this.lastStatus;
   };
+  // Run a trap's commands. $? in them is the status the shell is leaving
+  // with, and that status stands unless the trap itself exits. Each trap
+  // runs once.
+  Shell.prototype.runTrap = function* (sig, code, io) {
+    var text = this.traps[sig];
+    if (!text) return code;
+    delete this.traps[sig];
+    var prog = parseScript(text);
+    this.exiting = false;
+    this.returning = false;
+    this.lastStatus = code;
+    yield* this.runList(prog.items, io);
+    return this.exiting ? this.exitCode : code;
+  };
+
   Shell.prototype.lineOf = function (script, prog) {
     return prog.error.line || script.split("\n").length;
   };
 
+  // Call a shell function (#65): in this shell, with its own $1…, $# and "$@",
+  // and a frame for `local`, whose variables are put back on return.
+  Shell.prototype.callFunction = function* (name, args, io) {
+    if (this.funcDepth >= 100) return { out: "", err: "bash: " + name + ": maximum function nesting level exceeded (100)\n", code: 1 };
+    var savedArgs = this.args, savedLoops = this.loopDepth;
+    var frame = { FUNCNAME: [this.vars.FUNCNAME, this.exported.FUNCNAME] }; // $FUNCNAME is the function running
+    this.vars.FUNCNAME = name;
+    this.args = args;
+    this.loopDepth = 0;
+    this.funcDepth += 1;
+    this.frames.push(frame);
+    var code;
+    try {
+      code = yield* this.runCommand(this.funcs[name], io);
+      if (this.returning) code = this.returnCode;
+    } finally {
+      this.returning = false;
+      // A function call is a simple command: if it fails, set -e stops, even
+      // when what failed inside was a test it ignored (unlike { …; }).
+      this.ignoredFail = false;
+      this.frames.pop();
+      this.funcDepth -= 1;
+      this.args = savedArgs;
+      this.loopDepth = savedLoops;
+      var sh = this;
+      Object.keys(frame).forEach(function (k) {
+        if (frame[k][0] === undefined) delete sh.vars[k]; else sh.vars[k] = frame[k][0];
+        if (frame[k][1]) sh.exported[k] = true; else delete sh.exported[k];
+      });
+    }
+    return { out: "", err: "", code: code };
+  };
+
   Shell.prototype.exec = function* (argv, stdin, io) {
     var name = argv[0];
+    if (this.funcs[name]) return yield* this.callFunction(name, argv.slice(1), io);
     if (name.indexOf("/") !== -1) return yield* this.runFile(name, name, argv.slice(1), io);
     if (BUILTINS.indexOf(name) !== -1) return yield* this.call(name, argv, stdin, io);
     var path = this.which(name)[0];
@@ -1779,7 +2014,7 @@
       if (r && typeof r.next === "function") r = yield* r;
       return r;
     } catch (e) {
-      if (e instanceof Runaway) throw e;
+      if (e instanceof Runaway || e instanceof Interrupt) throw e;
       return { out: "", err: name + ": " + e.message + "\n", code: 1 };
     }
   };
@@ -1881,6 +2116,7 @@
     var s = node.type === "dir" ? "d" : node.type === "link" ? "l" : "-";
     var chars = "rwxrwxrwx";
     for (var i = 0; i < 9; i++) s += node.mode & (1 << (8 - i)) ? chars[i] : "-";
+    if (node.mode & 0o1000) s = s.slice(0, 9) + (node.mode & 1 ? "t" : "T"); // sticky, like /tmp's
     return s;
   }
   // A file's size: what the exercise says (a big log is sampled), or its contents.
@@ -1947,6 +2183,23 @@
       else texts.push({ name: a, text: r.text });
     });
     return { texts: texts, err: err };
+  }
+
+  function trapName(spec) {
+    var s = String(spec).toUpperCase().replace(/^SIG/, "");
+    if (s === "0" || s === "EXIT") return "EXIT";
+    if (s === "ERR") return "ERR";
+    return { 1: "HUP", 2: "INT", 15: "TERM", HUP: "HUP", INT: "INT", TERM: "TERM" }[s] || null;
+  }
+
+  // A word as bash shows it back (set -x, set, trap): quoted when it must be.
+  function quoteWord(w, always) {
+    if (!always && /^[A-Za-z0-9_@%+=:,.\/-]+$/.test(w)) return w;
+    return "'" + String(w).replace(/'/g, "'\\''") + "'";
+  }
+  function xtrace(assigns, argv) {
+    return assigns.map(function (a) { return "+ " + a[0] + "=" + quoteWord(a[1]) + "\n"; }).join("") +
+      (argv.length ? "+ " + argv.map(function (w) { return quoteWord(w); }).join(" ") + "\n" : "");
   }
 
   function runTest(sh, name, args) {
@@ -2643,6 +2896,7 @@
         "  disk:      find du df free tar gzip gunzip zcat ln readlink\n" +
         "  console:   clear help exit\n" +
         "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
+        "  robust:    name() { … }, local return shift, set -euo pipefail, trap, <<EOF, mktemp\n" +
         "Pipes (|), redirection (> >> < 2> 2>&1 >&2 &>), globs (* ? [...]), {a,b}, ; && ||, $VARS, $(command) and $((1 + 2)) work.\n" +
         "Tab completes paths; ↑ and ↓ walk your history; Ctrl-C abandons a line.\n" +
         "Read about a command with `man CMD` or `CMD --help`, and about a builtin with `help NAME`.\n"
@@ -3114,6 +3368,110 @@
     true: function () { return ok(); },
     false: function () { return { out: "", err: "", code: 1 }; },
     ":": function () { return ok(); },
+    // set: shell options (-e -u -x, -o pipefail and the long names), and
+    // `set -- args` for the positional parameters (#65).
+    set: function (args) {
+      var sh = this;
+      var NAMES = { errexit: "e", nounset: "u", xtrace: "x", pipefail: "pipefail" };
+      if (!args.length) {
+        return ok(unlines(Object.keys(this.vars).sort().map(function (k) { return k + "=" + quoteWord(sh.vars[k]); })));
+      }
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (a === "--" || a === "-") { this.args = args.slice(i + 1); return ok(); }
+        if (!/^[-+]./.test(a)) { this.args = args.slice(i); return ok(); }
+        var on = a[0] === "-";
+        for (var j = 1; j < a.length; j++) {
+          var c = a[j];
+          if (c === "o") {
+            var name = args[i + 1];
+            if (name === undefined) {
+              return ok(unlines(Object.keys(NAMES).sort().map(function (n) { return padRight(n, 15) + "\t" + (sh.opts[NAMES[n]] ? "on" : "off"); })));
+            }
+            i++;
+            if (!NAMES[name]) return { out: "", err: "bash: set: " + name + ": invalid option name\n", code: 2 };
+            this.opts[NAMES[name]] = on;
+          } else if ("eux".indexOf(c) !== -1) this.opts[c] = on;
+          else return { out: "", err: "bash: set: " + a[0] + c + ": invalid option\nset: usage: set [-abefhkmnptuvxBCEHPT] [-o option-name] [--] [-] [arg ...]\n", code: 2 };
+        }
+      }
+      return ok();
+    },
+    local: function (args) {
+      if (!this.frames.length) return { out: "", err: "bash: local: can only be used in a function\n", code: 1 };
+      var frame = this.frames[this.frames.length - 1];
+      var err = "";
+      var sh = this;
+      args.forEach(function (a) {
+        var m = /^([A-Za-z_][A-Za-z0-9_]*)(?:=([\s\S]*))?$/.exec(a);
+        if (!m) { err += "bash: local: `" + a + "': not a valid identifier\n"; return; }
+        if (!Object.prototype.hasOwnProperty.call(frame, m[1])) frame[m[1]] = [sh.vars[m[1]], sh.exported[m[1]]];
+        if (m[2] !== undefined) sh.setVar(m[1], m[2]);
+        else delete sh.vars[m[1]];
+      });
+      return { out: "", err: err, code: err ? 1 : 0 };
+    },
+    return: function (args) {
+      if (!this.funcDepth && !this.sourceDepth) return { out: "", err: "bash: return: can only `return' from a function or sourced script\n", code: 2 };
+      var n = args.length ? args[0] : String(this.lastStatus);
+      this.returning = true;
+      if (!/^-?\d+$/.test(n)) { this.returnCode = 2; return { out: "", err: "bash: return: " + n + ": numeric argument required\n", code: 2 }; }
+      this.returnCode = ((+n % 256) + 256) % 256;
+      return { out: "", err: "", code: this.returnCode };
+    },
+    shift: function (args) {
+      var n = args.length ? args[0] : "1";
+      if (!/^\d+$/.test(n)) return { out: "", err: "bash: shift: " + n + ": numeric argument required\n", code: 1 };
+      var list = this.args || [];
+      if (+n > list.length) return { out: "", err: "", code: 1 };
+      this.args = list.slice(+n);
+      return ok();
+    },
+    // trap 'commands' SIGNAL…: EXIT runs when a script ends, however it ends;
+    // INT when Ctrl-C interrupts it. trap - SIGNAL removes one; trap lists them.
+    trap: function (args) {
+      var sh = this;
+      var list = function (names) {
+        return ok(unlines(names.filter(function (n) { return sh.traps[n] !== undefined; }).map(function (n) {
+          return "trap -- " + quoteWord(sh.traps[n], true) + " " + n;
+        })));
+      };
+      if (!args.length || args[0] === "-p") return list(args.length > 1 ? args.slice(1).map(trapName) : ["EXIT", "HUP", "INT", "TERM"]);
+      if (args.length === 1) return { out: "", err: "trap: usage: trap [-lp] [[arg] signal_spec ...]\n", code: 2 };
+      var err = "";
+      args.slice(1).forEach(function (spec) {
+        var sig = trapName(spec);
+        if (sig === "ERR") { err += "bash: trap: unsupported on the station console: ERR traps\n"; return; }
+        if (!sig) { err += "bash: trap: " + spec + ": invalid signal specification\n"; return; }
+        if (args[0] === "-") delete sh.traps[sig];
+        else sh.traps[sig] = args[0];
+      });
+      return { out: "", err: err, code: err ? 1 : 0 };
+    },
+    // mktemp [-d] [TEMPLATE]: a new, private file (600) or directory (700),
+    // in /tmp by default; the X's become random characters.
+    mktemp: function (rawArgs) {
+      var p = flags("mktemp", rawArgs, "dt");
+      var template = p.args[0] || "tmp.XXXXXXXXXX";
+      if (!/XXX$/.test(template)) return { out: "", err: "mktemp: too few X's in template ‘" + template + "’\n", code: 1 };
+      var shown = !p.args.length || p.opts.t ? "/tmp/" + template : template;
+      if (!this.fs["/tmp"]) this.fs["/tmp"] = { type: "dir", mode: 0o1777, owner: "root", group: "root", contents: "", mtime: this.now() };
+      var CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      for (var tries = 0; tries < 100; tries++) {
+        var name = shown.replace(/X+$/, function (xs) {
+          var out = "";
+          for (var k = 0; k < xs.length; k++) out += CHARS[Math.floor(Math.random() * CHARS.length)];
+          return out;
+        });
+        var f = this.lookup(name, true);
+        if (f.node) continue;
+        var why = f.error === "No such file or directory" ? this.writableParent(f.path) : f.error;
+        if (why) return { out: "", err: "mktemp: failed to create " + (p.opts.d ? "directory" : "file") + " via template ‘" + shown + "’: " + why + "\n", code: 1 };
+        this.create(f.path, p.opts.d ? "dir" : "file").mode = p.opts.d ? 0o700 : 0o600;
+        return ok(name + "\n");
+      }
+      return { out: "", err: "mktemp: failed to create file via template ‘" + shown + "’: File exists\n", code: 1 };
+    },
     test: function (args) { return runTest(this, "test", args); },
     "[": function (args) {
       if (args[args.length - 1] !== "]") return { out: "", err: "bash: [: missing `]'\n", code: 2 };
@@ -3176,9 +3534,15 @@
       });
       return { out: "", err: err, code: err ? 1 : 0 };
     },
+    // unset NAME: the variable, or if there's none, the function (as bash);
+    // -v and -f choose.
     unset: function (args) {
       var sh = this;
-      args.forEach(function (a) { delete sh.vars[a]; delete sh.exported[a]; });
+      var only = args[0] === "-f" || args[0] === "-v" ? args.shift() : null;
+      args.forEach(function (a) {
+        if (only === "-f" || (!only && !(a in sh.vars) && sh.funcs[a])) delete sh.funcs[a];
+        else { delete sh.vars[a]; delete sh.exported[a]; }
+      });
       return ok();
     },
     env: function* (args, stdin, io) {
@@ -3211,15 +3575,16 @@
       var out = "", err = "";
       p.args.forEach(function (n) {
         var lines_ = [];
-        if (KEYWORDS.indexOf(n) !== -1) lines_.push(p.opts.t ? "keyword" : n + " is a shell keyword");
+        if (sh.funcs[n]) lines_.push(p.opts.t ? "function" : n + " is a function");
+        else if (KEYWORDS.indexOf(n) !== -1) lines_.push(p.opts.t ? "keyword" : n + " is a shell keyword");
         else if (BUILTINS.indexOf(n) !== -1) lines_.push(p.opts.t ? "builtin" : n + " is a shell builtin");
         if (!lines_.length || p.opts.a) {
           sh.which(n, true).slice(0, p.opts.a ? 99 : 1).forEach(function (path) { lines_.push(p.opts.t ? "file" : n + " is " + path); });
         }
-        if (!lines_.length) err += "bash: type: " + n + ": not found\n";
+        if (!lines_.length) err += p.opts.t ? "\0" : "bash: type: " + n + ": not found\n"; // -t: silent, just status 1
         else out += unlines(p.opts.a ? lines_ : lines_.slice(0, 1));
       });
-      return { out: out, err: err, code: err ? 1 : 0 };
+      return { out: out, err: err.replace(/\0/g, ""), code: err ? 1 : 0 };
     },
     which: function (rawArgs) {
       var p = flags("which", rawArgs, "a");
@@ -3246,7 +3611,15 @@
       if (!args.length) throw new Error("filename argument required");
       var r = this.readFile("bash", args[0]);
       if (r.error) return { out: "", err: r.error + "\n", code: 1 };
-      return { out: "", err: "", code: yield* this.runScript(r.text, args[0], io) };
+      // `return` leaves a sourced file, as it leaves a function.
+      this.sourceDepth += 1;
+      try {
+        var code = yield* this.runScript(r.text, args[0], io);
+        if (this.returning) { code = this.returnCode; this.returning = false; }
+        return { out: "", err: "", code: code };
+      } finally {
+        this.sourceDepth -= 1;
+      }
     },
     ".": function (args, stdin, io) { return COMMANDS.source.call(this, args, stdin, io); },
     bash: function* (args, stdin, io) {

@@ -21,6 +21,17 @@ and why it matters, not what the diff says.
   - sudo can ask for its password inside a loop or a script.
   - A loop that never ends is stopped after 10,000 commands instead of freezing the page.
   - `grep -q` answers yes or no without printing, for `if grep -q …`.
+- Console scripts can be robust (#65).
+  - **Functions** with `local`, `return` and their own arguments, and `source` loads a library
+    of them.
+  - **`set -euo pipefail`**, with bash's real exceptions for `-e`: not in an `if` test, not left
+    of `&&` or `||`, not after `!`. In a script, an unset variable is reported with the file and
+    line, as bash does.
+  - **`trap '…' EXIT`** cleans up however a script ends: normally, by `exit 2`, by a `set -e`
+    failure, or by Ctrl-C.
+  - **Here-documents** (`<<EOF`, `<<'EOF'`, `<<-EOF`) and here-strings (`<<<`) write files and
+    feed commands.
+  - **`mktemp`** makes private temporary files and directories.
 - The console has `find`, disk tools, archives and links (#67).
   - **`find`** searches by name, type, size and age, with `-delete` and `-exec`, and explains
     its mistakes as GNU find does.
