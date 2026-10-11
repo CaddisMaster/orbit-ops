@@ -7,6 +7,12 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Added
+- Flashcard review (#51). Every module you've completed adds its three cards to a review queue
+  at **Review** in the nav: one card at a time, "Show answer", then Again, Hard, Good or Easy.
+  Cards are scheduled with SM-2, so a card you know comes back after a day, then six, then
+  longer each time, and one you forget comes back tomorrow. Modules you finished before this
+  release count too, so their cards are waiting. Each card now has a permanent `id` in its
+  lesson file, so rewording a card keeps its schedule.
 - A database table for flashcard schedules: each learner's SM-2 state per card (ease, interval,
   due date, reviews in a row, lapses), one row per card per learner. The cards themselves stay in
   the lesson files (#51).

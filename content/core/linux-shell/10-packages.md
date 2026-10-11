@@ -58,11 +58,14 @@ comms:
     - {from: okafor, text: "Look out the window. You've earned that one."}
   window: {complete: aurora}
 cards:
-  - front: "`apt update` vs `apt upgrade`"
+  - id: update-vs-upgrade
+    front: "`apt update` vs `apt upgrade`"
     back: "`update` refreshes the package lists; `upgrade` installs newer versions of what's installed."
-  - front: Which package owns /usr/bin/curl?
+  - id: package-owner
+    front: Which package owns /usr/bin/curl?
     back: "`dpkg -S /usr/bin/curl`"
-  - front: See the installed and candidate versions of a package
+  - id: package-versions
+    front: See the installed and candidate versions of a package
     back: "`apt-cache policy nginx` (or `apt policy nginx`)."
 ---
 

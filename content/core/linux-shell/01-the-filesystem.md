@@ -80,11 +80,14 @@ comms:
   complete:
     - {from: okafor, text: "Day one done. Get some sleep. Tomorrow we find out who else is still out there."}
 cards:
-  - front: What lives in `/etc`?
+  - id: etc
+    front: What lives in `/etc`?
     back: System-wide configuration files (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/`).
-  - front: What lives in `/var`?
+  - id: var
+    front: What lives in `/var`?
     back: Variable data that changes while the system runs — logs (`/var/log`), caches, databases, mail.
-  - front: Absolute vs relative path?
+  - id: absolute-vs-relative
+    front: Absolute vs relative path?
     back: Absolute starts at `/` and means the same thing from anywhere. Relative is resolved from your current directory.
 ---
 

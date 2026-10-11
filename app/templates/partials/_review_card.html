@@ -1,0 +1,38 @@
+{# The review queue's one card (#51), swapped whole: "Show answer" and each
+   grade replace #review-card with what comes next. Plain links and forms
+   underneath, so it works without htmx too. #}
+{% if card %}
+<section class="card review-card deck--{{ catalog.modules[card.module].track }}" id="review-card" aria-live="polite">
+  <p class="eyebrow">Flashcard · {{ remaining }} due · from “{{ catalog.modules[card.module].title }}”</p>
+  <p class="review-front">{{ card.front_html }}</p>
+  {% if revealed %}
+  <p class="review-back">{{ card.back_html }}</p>
+  <form class="review-grades" method="post" action="/review"
+        hx-post="/review" hx-target="#review-card" hx-swap="outerHTML">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="hidden" name="card" value="{{ card.id }}">
+    <p class="muted">How well did you remember it?</p>
+    <button type="submit" name="grade" value="again" class="secondary">Again</button>
+    <button type="submit" name="grade" value="hard" class="secondary">Hard</button>
+    <button type="submit" name="grade" value="good" class="primary">Good</button>
+    <button type="submit" name="grade" value="easy" class="secondary">Easy</button>
+  </form>
+  {% else %}
+  <p><a class="button primary" href="/review/answer?card={{ card.id | urlencode }}"
+        hx-get="/review/answer?card={{ card.id | urlencode }}" hx-target="#review-card" hx-swap="outerHTML">Show answer</a></p>
+  {% endif %}
+</section>
+{% else %}
+<section class="card review-card" id="review-card" aria-live="polite">
+  <p class="eyebrow">Review queue</p>
+  <h1>Queue clear.</h1>
+  {% if next_due_on %}
+  {% set days = (next_due_on - today).days %}
+  <p class="muted">The next card is due {{ "tomorrow" if days == 1 else "in " ~ days ~ " days" }}, on
+     <time datetime="{{ next_due_on.isoformat() }}">{{ next_due_on.strftime("%A %-d %b") }}</time>.</p>
+  {% else %}
+  <p class="muted">Cards join the queue as you complete modules: three from each.</p>
+  {% endif %}
+  <p><a href="/">Back to the bridge →</a></p>
+</section>
+{% endif %}

@@ -95,8 +95,9 @@ quiz:                  # 1–8 questions; aim for 3–5
     q: An absolute path starts with which character?
     answer: ["/"]      # every accepted spelling
     explain: …
-cards:                 # optional flashcards for spaced repetition (v0.5.0)
-  - front: What lives in /etc?
+cards:                 # optional flashcards, reviewed on an SM-2 schedule (#51)
+  - id: etc            # a slug, unique in this module; PERMANENT (see below)
+    front: What lives in /etc?
     back: System-wide configuration.
 ---
 
@@ -105,6 +106,15 @@ cards:                 # optional flashcards for spaced repetition (v0.5.0)
 CommonMark plus tables. Fenced code blocks with a language (```bash, ```python,
 ```yaml, ```text …) are syntax-highlighted.
 ```
+
+### Flashcards
+
+A module's cards join the learner's review queue (`/review`) once the module is complete. The
+front and back are inline Markdown. Each review is scheduled with SM-2 and stored against
+`<module-slug>/<id>`. That makes the **`id` permanent, like a module's slug**: reword a card
+freely and its schedule carries on, but rename the `id` and the card starts again as new (the
+old schedule is ignored, not deleted). Aim for three cards a module, each one fact you'd want in
+a week's time, not a summary of the lesson.
 
 ### A terminal exercise (optional)
 

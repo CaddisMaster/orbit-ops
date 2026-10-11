@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.content import load_catalog
-from app.routers import auth, learn, main
+from app.routers import auth, learn, main, review
 from app.security import CSRFError, HeadAsGetMiddleware, LoginRequired, SecurityHeadersMiddleware, csrf_protect
 from app.templating import templates
 
@@ -63,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(main.router)
     app.include_router(auth.router)
     app.include_router(learn.router)
+    app.include_router(review.router)
 
     @app.exception_handler(LoginRequired)
     async def _login_required(request: Request, exc: LoginRequired) -> Response:

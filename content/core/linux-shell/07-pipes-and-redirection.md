@@ -84,11 +84,14 @@ comms:
     - {from: mission, text: "Report received. Coolant pump 2 matches what we saw in your crash dumps. Nice work."}
     - {from: okafor, text: "Now that the reactor's talking, let's find out who's been knocking on the front door all night."}
 cards:
-  - front: File descriptors 0, 1, 2
+  - id: file-descriptors
+    front: File descriptors 0, 1, 2
     back: "0 = stdin, 1 = stdout, 2 = stderr."
-  - front: "`>` vs `>>`"
+  - id: truncate-vs-append
+    front: "`>` vs `>>`"
     back: "`>` truncates then writes; `>>` appends."
-  - front: Save output to a file AND see it on screen
+  - id: tee
+    front: Save output to a file AND see it on screen
     back: "`cmd | tee out.log` (`tee -a` to append)."
 ---
 

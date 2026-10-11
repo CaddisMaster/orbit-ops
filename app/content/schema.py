@@ -77,6 +77,11 @@ Question = Annotated[ChoiceQuestion | MultiQuestion | FillQuestion, Field(discri
 
 
 class Card(_Strict):
+    """A flashcard (#51). Its id is permanent: review schedules are stored
+    against "<module-slug>/<id>", so rewording a card keeps its schedule and
+    renaming the id starts it over."""
+
+    id: Slug
     front: Text
     back: Text
 
@@ -338,6 +343,15 @@ class ModuleFile(_Strict):
     cards: list[Card] = []
     terminal: TerminalExercise | None = None  # a station-console task (#17)
     comms: Comms | None = None  # messages in the comms log (#38)
+
+    @model_validator(mode="after")
+    def _card_ids_unique(self) -> ModuleFile:
+        seen: set[str] = set()
+        for i, card in enumerate(self.cards):
+            if card.id in seen:
+                raise ValueError(f"cards.{i}.id: '{card.id}' is used by another card in this module")
+            seen.add(card.id)
+        return self
 
 
 # ---------------------------------------------------------------------------

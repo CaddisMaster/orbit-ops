@@ -75,11 +75,14 @@ comms:
     - {from: okafor, text: "The recycler's breathing easy again. So are we, literally."}
   window: {open: debris-drift}
 cards:
-  - front: SIGTERM vs SIGKILL
+  - id: term-vs-kill
+    front: SIGTERM vs SIGKILL
     back: "SIGTERM (15, kill's default) asks nicely and can be handled. SIGKILL (9) ends the process immediately and can't be caught."
-  - front: What does Ctrl-C send?
+  - id: ctrl-c
+    front: What does Ctrl-C send?
     back: "SIGINT (2) to the foreground process."
-  - front: Find a process by name
+  - id: find-a-process
+    front: Find a process by name
     back: "`pgrep -a nginx` (or `ps aux | grep nginx`)."
 ---
 
