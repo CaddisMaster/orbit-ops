@@ -783,6 +783,184 @@
    "user": "cadet"
   }
  },
+ "reading-and-editing": {
+  "solution": [
+   "man scrubberd | grep scrubber.conf",
+   "man 5 scrubber.conf | grep alarm",
+   "echo 'co2_alarm_ppm = 5000' | sudo tee -a /etc/scrubber/scrubber.conf",
+   "meridian",
+   "cat /etc/scrubber/scrubber.conf"
+  ],
+  "source": "core/bash-scripting/01-reading-and-editing.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/etc/scrubber/scrubber.conf",
+     "text": "co2_alarm_ppm = 5000"
+    },
+    {
+     "contains": "/etc/scrubber/scrubber.conf",
+     "text": "co2_warn_ppm = 4000"
+    },
+    {
+     "contains": "/etc/scrubber/scrubber.conf",
+     "text": "beds = 2"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/scrubber": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/scrubber/scrubber.conf": {
+     "contents": "# scrubberd settings. See scrubber.conf(5).\nbeds = 2\ncycle_minutes = 20\nco2_warn_ppm = 4000\nlog_level = info\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/share": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/share/man": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/share/man/man5": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/share/man/man5/scrubber.conf.5": {
+     "contents": "SCRUBBER.CONF(5)           File Formats Manual           SCRUBBER.CONF(5)\n\nNAME\n       scrubber.conf - settings for the CO2 scrubber daemon\n\nDESCRIPTION\n       scrubberd(8) reads /etc/scrubber/scrubber.conf when it starts and\n       whenever the file changes. Each line is one setting:\n\n           name = value\n\n       Lines starting with # are comments. A setting that isn't in the file\n       takes its default.\n\nSETTINGS\n       beds = N\n              How many scrubber beds run at once. Default: 2.\n\n       cycle_minutes = N\n              How long a bed absorbs CO2 before it's regenerated.\n              Default: 20.\n\n       co2_warn_ppm = N\n              Write a warning to the log when any compartment's CO2\n              reaches N parts per million. Nothing sounds: it's for\n              whoever reads the log. Default: 4000.\n\n       co2_alarm_ppm = N\n              Sound the cabin alarm when any compartment's CO2 reaches\n              N parts per million. Default: 8000.\n\n       log_level = debug|info|warn\n              How much to write to /var/log/scrubber/scrubberd.log.\n              Default: info.\n\nEXAMPLE\n       Run three beds, and sound the alarm at 6000 ppm:\n\n           beds = 3\n           co2_alarm_ppm = 6000\n\nSEE ALSO\n       scrubberd(8)\n\nMeridian station                 2026-03-14              SCRUBBER.CONF(5)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/share/man/man8": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/share/man/man8/scrubberd.8": {
+     "contents": "SCRUBBERD(8)             System Manager's Manual             SCRUBBERD(8)\n\nNAME\n       scrubberd - CO2 scrubber control daemon\n\nSYNOPSIS\n       scrubberd [-f] [-c FILE]\n\nDESCRIPTION\n       scrubberd runs the station's carbon dioxide scrubbers. It reads the\n       CO2 sensor in every compartment, cycles the scrubber beds, and decides\n       when the cabin alarm sounds.\n\n       It reads its settings from /etc/scrubber/scrubber.conf when it starts,\n       and again whenever the file changes. The settings, and what each one\n       does, are in scrubber.conf(5).\n\nOPTIONS\n       -c FILE\n              Read the settings from FILE instead of\n              /etc/scrubber/scrubber.conf.\n\n       -f     Stay in the foreground and log to the terminal.\n\nFILES\n       /etc/scrubber/scrubber.conf\n              The settings. See scrubber.conf(5).\n\n       /var/log/scrubber/scrubberd.log\n              What the daemon did, and when.\n\nSEE ALSO\n       scrubber.conf(5)\n\nMeridian station                 2026-03-14                  SCRUBBERD(8)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber/scrubberd.log": {
+     "contents": "2026-10-07 22:00:00 scrubberd started: 2 beds, 20-minute cycle\n2026-10-07 23:40:00 ring-b CO2 3100 ppm\n2026-10-08 00:20:00 ring-b CO2 3900 ppm\n2026-10-08 01:00:00 ring-b CO2 4600 ppm: over co2_warn_ppm (4000)\n2026-10-08 01:40:00 ring-b CO2 5400 ppm: over co2_warn_ppm (4000)\n2026-10-08 02:14:00 ring-b CO2 6200 ppm: over co2_warn_ppm (4000)\n2026-10-08 02:30:00 bed 2 regenerated, ring-b CO2 falling\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "password": "meridian",
+   "processes": [],
+   "success": "The daemon rereads its settings. \"Five thousand,\" Okafor says. \"If ring B gets there again, everyone on the station will know.\"",
+   "user": "cadet"
+  }
+ },
  "text-tools": {
   "solution": [
    "head -n 3 /var/log/docking/access.log",

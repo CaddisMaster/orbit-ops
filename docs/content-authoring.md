@@ -92,6 +92,14 @@ quiz:                  # 1–8 questions; aim for 3–5
     q: An absolute path starts with which character?
     answer: ["/"]      # every accepted spelling
     explain: …
+  - type: choice       # a scenario: something to read, then the question (#68)
+    q: Saving fails. What went wrong, and what now?
+    code: |-           # optional, any type: a block under `q`, as a fenced block renders
+      [ Error writing /etc/nginx/nginx.conf: Permission denied ]
+    lang: text         # optional, default text: bash, python, yaml … for highlighting
+    options: […]
+    answer: 0
+    explain: …
 cards:                 # optional flashcards, reviewed on an SM-2 schedule (#51)
   - id: etc            # a slug, unique in this module; PERMANENT (see below)
     front: What lives in /etc?
@@ -259,7 +267,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     pager (Space, b, j/k, g/G, /pattern, n/N, q); into a pipe they print plain text. `CMD --help`
     and `help BUILTIN` work too. Pages live in `app/static/js/manual.js`: **a command added to
     the console needs a page or a `help` entry** (a test checks every command `help` lists).
-    `vi`/`vim` point at nano. `crontab -l -e -r` and `crontab FILE|-` keep the table at
+    `vi`/`vim` point at nano. An exercise can give its own program a manual: a file at
+    `/usr/share/man/man8/scrubberd.8` (plain text, already laid out as man prints it) is what
+    `man scrubberd` shows. With no section, `man` searches 1, 8, 3, 2, 5, 4, 6, 7, as man-db
+    does, and the console's own page wins within a section. `crontab -l -e -r` and `crontab FILE|-` keep the table at
     `/var/spool/cron/crontabs/<user>` (root's spool, mode 1730: `cat` can't read it, as on a
     real system, but a task's `contains` check can). It's checked as cron loads it (`bad
     minute`, `bad day-of-week`, …) and refused if wrong. Nothing runs on a schedule.
@@ -375,6 +386,9 @@ Formatting inside a code block is literal, so `*word*` in a ```text diagram show
   replaces the technical content.
 - **Tie it to something real.** Point at Budget Buddy's or Orbit Ops's own setup when it
   illustrates the point (the RUNBOOKs are full of examples).
+- **Give each module a scenario question** from Unit 1.2 on: a script or output in `code:`, then
+  "what happens?" or "why does this fail?". `q` is inline Markdown, so a fenced block there
+  collapses into one line: put it in `code:`.
 - **Quiz the idea, not the trivia.** Every `explain` should teach something, including why the
   wrong options are wrong when that's useful.
 - **Fact-check AI drafts like code.** A drafted module is a starting point, not a source.

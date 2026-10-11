@@ -3,6 +3,7 @@
 {% set picked = attempt.submitted %}
 <div class="question answered {{ 'right' if attempt.correct else 'wrong' }}" id="q{{ index }}">
   <p class="legend"><span class="qnum">{{ index + 1 }}.</span> {{ question.q | md }}</p>
+  {% if question.code %}<div class="prose question-code">{{ question.code | codeblock(question.lang) }}</div>{% endif %}
   {% if question.type == "fill" %}
     <p class="option {{ 'is-right' if attempt.correct else 'is-wrong' }}">{{ picked[0] }}</p>
     {% if not attempt.correct %}<p class="muted">Accepted: {{ question.answer | join(", ") }}</p>{% endif %}
@@ -13,7 +14,7 @@
       {% set correct_option = loop.index0 in right %}
       <p class="option{% if correct_option %} is-right{% elif mine %} is-wrong{% endif %}">
         <span class="mark" aria-hidden="true">{% if correct_option %}✓{% elif mine %}✗{% endif %}</span>
-        {{ option | md }}{% if mine %} <span class="muted">(your answer)</span>{% endif %}
+        <span>{{ option | md }}{% if mine %} <span class="muted">(your answer)</span>{% endif %}</span>
       </p>
     {% endfor %}
   {% endif %}

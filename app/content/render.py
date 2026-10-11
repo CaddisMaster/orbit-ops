@@ -44,6 +44,12 @@ def render_inline(text: str) -> Markup:
     return Markup(_md.renderInline(text))
 
 
+def render_code(code: str, lang: str = "text") -> Markup:
+    """A highlighted block, as a fenced one in a lesson renders: for the
+    script or output a quiz question shows. Escaped by Pygments or `escape`."""
+    return Markup(_highlight(code, lang, None))
+
+
 def pygments_css() -> str:
     """The stylesheet for highlighted code. Regenerate app/static/css/pygments.css with
     `docker compose exec -T web python -c "from app.content.render import pygments_css; print(pygments_css())"`."""

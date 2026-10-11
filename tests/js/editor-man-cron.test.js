@@ -177,6 +177,28 @@ test("man pages, --help and help come from the same manual", () => {
   assert.match(out(sh, "help"), /editing: +nano less man crontab/);
 });
 
+test("man finds an exercise's own pages in /usr/share/man, section by section (#68)", () => {
+  const page = (title) => file(`${title}\n\nNAME\n       scrubberd - air scrubber daemon\n`, 0o644, "root");
+  const sh = station({
+    ...Object.fromEntries(["/usr", "/usr/share", "/usr/share/man", "/usr/share/man/man1", "/usr/share/man/man5", "/usr/share/man/man8"].map((d) => [d, dir("root")])),
+    "/usr/share/man/man8/scrubberd.8": page("SCRUBBERD(8)"),
+    "/usr/share/man/man5/scrubber.conf.5": page("SCRUBBER.CONF(5)"),
+    "/usr/share/man/man5/scrubberd.5": page("SCRUBBERD(5)"),
+    "/usr/share/man/man1/ls.1": page("NOT THE CONSOLE'S LS(1)"),
+  });
+  assert.equal(out(sh, "man scrubberd | head -1"), "SCRUBBERD(8)\n"); // 8 is searched before 5
+  assert.equal(out(sh, "man 5 scrubberd | head -1"), "SCRUBBERD(5)\n");
+  assert.equal(out(sh, "man scrubber.conf | head -1"), "SCRUBBER.CONF(5)\n");
+  assert.equal(out(sh, "man 1 scrubber.conf"), "No manual entry for scrubber.conf in section 1\n");
+  assert.match(out(sh, "man ls | head -1"), /^LS\(1\) +User Commands/); // the console's own page wins in its section
+
+  const opened = sh.run("man scrubberd");
+  assert.equal(opened.pending, true);
+  assert.equal(sh.pending.pager.status(), "Manual page scrubberd(8) line 1 (END) (press h for help or q to quit)");
+  sh.pending.pager.key("q");
+  sh.answer();
+});
+
 test("Every command the console has is in the manual, or has help", () => {
   const { PAGES, HELP } = require("../../app/static/js/manual.js");
   const sh = station();

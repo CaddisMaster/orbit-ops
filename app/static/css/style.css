@@ -168,6 +168,7 @@ h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; }
 /* --- Quiz interaction & progress ---------------------------------------- */
 .quiz .question { margin: 0 0 1.5rem; }
 .quiz .question fieldset { margin-bottom: 0.6rem; }
+.question-code pre { margin: 0.5rem 0 0.75rem; }
 .quiz .legend { font-weight: 600; margin: 0 0 0.5rem; }
 button.secondary {
   background: transparent;
