@@ -194,3 +194,59 @@ def test_module_02s_figures_match_the_console():
     assert "Half a gigabyte" in _said(module, "console_done") and start[f"{O2}/debug.log"].bytes() == 512 * 2**20
     old = [p for p, n in start.items() if p.startswith(O2 + "/") and n.type == "file" and n.age_days() > 30]
     assert sorted(old) == [f"{O2}/{d}.log" for d in OLD]
+
+
+# --- 03: Your first script (#70) -----------------------------------------------------------
+SCRIPT = "/station/bin/shift-check"
+REPORT = "/home/cadet/shift-report.txt"
+
+
+def _scripted(start, *, mode=0o775, shebang=True, report=True):
+    """What a learner leaves: the script written and chmod'd, and its output saved."""
+    exercise = _module("your-first-script").terminal
+    fs = client_spec(exercise)["fs"]
+    body = ("#!/usr/bin/env bash\n" if shebang else "") + "cat /station/sensors/o2\ntail -n 1 /var/log/scrubber/scrubberd.log\ndf -h /\n"
+    state = {**start, SCRIPT: Node(type="file", mode=mode, owner="cadet", group="crew", contents=body)}
+    if report:
+        printed = fs["/station/sensors/o2"]["contents"] + fs["/var/log/scrubber/scrubberd.log"]["contents"].splitlines()[-1] + "\n"
+        printed += "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda1        20G  4.2G   16G  21% /\n"
+        state[REPORT] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents=printed)
+    return state
+
+
+@pytest.mark.criterion(70, "Module 03 of Unit 1.2 is complete content")
+def test_module_03_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[2]
+    assert module.slug == "your-first-script"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(70, "Module 03's console task can be done")
+def test_module_03s_end_state_passes_on_the_server():
+    exercise = _module("your-first-script").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    for mode in (0o775, 0o764, 0o755, 0o700):  # chmod +x, u+x, 755 and 700 all make it executable
+        assert grade(exercise, _scripted(start, mode=mode), exercise.cwd), oct(mode)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [{"mode": 0o664}, {"mode": 0o675}, {"shebang": False}, {"report": False}],
+    ids=["not-executable", "executable-by-others-only", "no-shebang", "never-run"],
+)
+def test_module_03_refuses_the_shortcuts(shortcut):
+    exercise = _module("your-first-script").terminal
+    assert not grade(exercise, _scripted(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_03s_figures_match_the_console():
+    module = _module("your-first-script")
+    fs = client_spec(module.terminal)["fs"]
+    o2 = re.match(r"O2 ([\d.]+%)", fs["/station/sensors/o2"]["contents"]).group(1)
+    assert f"O2 {o2}" in _said(module, "console_done")
+    assert "scrubbers nominal" in fs["/var/log/scrubber/scrubberd.log"]["contents"].splitlines()[-1]
+    assert "/station/bin" in module.terminal.env["PATH"].split(":")
+    note = fs["/home/cadet/sticky-note.txt"]["contents"]
+    scripted = [line.split("'")[1] for line in module.terminal.solution if line.endswith(">> /station/bin/shift-check")]
+    assert scripted and all(command in note for command in scripted)  # the script runs what the note lists

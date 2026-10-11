@@ -274,6 +274,9 @@ def test_no_console_task_needs_an_untaught_command():
             continue
         password = module.terminal.password
         used = set().union(*(_commands(line) for line in module.terminal.solution if line != password))
+        # A script the learner writes is run by its name, which no lesson teaches (#70).
+        written = " ".join(module.terminal.solution)
+        used = {c for c in used if not re.search(rf"(?:>|>>)\s*\S*/{re.escape(c)}(?![\w.-])", written)}
         untaught = sorted(c for c in used if not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", taught))
         assert not untaught, f"{module.slug}'s console task uses {untaught}, which no lesson up to it teaches"
 

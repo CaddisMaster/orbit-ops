@@ -63,6 +63,14 @@ and why it matters, not what the diff says.
     instead of deleting it. The console task takes a full disk from 97% to under 70%: empty a
     runaway debug log, archive and delete the old logs, and repoint `current.log`. Doing
     only one of the first two steps isn't enough.
+  - Module 03, "Your first script" (#70): the shebang, comments, `chmod +x`, `./script` vs
+    `bash script`, exit statuses, and where scripts live (`~/bin`, `/usr/local/bin`, the
+    PATH). In the console you turn Okafor's sticky note into `/station/bin/shift-check`, make
+    it executable, and run it by name.
+  - A console task can check that a file is **executable** (`{executable: P}`): its owner's
+    x bit, so `chmod +x`, `u+x` and `755` all pass.
+  - A script on the PATH that isn't executable yet now gets bash's own
+    `bash: /station/bin/shift-check: Permission denied`, not "command not found".
   - `man` also finds the pages a program installs in `/usr/share/man`, searching the sections
     in man-db's order (1, 8, 3, 2, 5, …), so a module can give its own daemon a manual.
   - A quiz question can show a script or a command's output as a code block (`code:`), so

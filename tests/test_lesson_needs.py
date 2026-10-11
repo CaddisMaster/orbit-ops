@@ -102,6 +102,14 @@ NEEDS = {
         "sudo nano edits a root-owned file": "Open them with `sudo nano /etc/…`",
         "^O then Enter writes, ^X exits": "write the file",
     },
+    "your-first-script": {
+        "a script is a file of commands, run top to bottom": "Anything you can type at the prompt, you can put in a file",
+        "the shebang is the first line": "It has to be the very first line",
+        "#!/usr/bin/env bash is the one to use": "Use `#!/usr/bin/env bash`",
+        "a new file needs the execute bit": "A new file isn't executable",
+        "chmod +x adds it": "`chmod +x script.sh` adds the execute bit",
+        "a script on the PATH runs by name": "To run a script **by name** from anywhere",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
