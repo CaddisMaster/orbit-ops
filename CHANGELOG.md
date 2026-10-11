@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- A database table for flashcard schedules: each learner's SM-2 state per card (ease, interval,
+  due date, reviews in a row, lapses), one row per card per learner. The cards themselves stay in
+  the lesson files (#51).
+
 ### Changed
 - The desk's computer is now a laptop, and you can close its lid to see the room (#55). The
   screen is exactly where it was, so nothing in the app moves. "Close lid" on the bezel folds the

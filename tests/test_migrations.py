@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
-from app.models import ActivityDay, BadgeEarned, XpEvent
+from app.models import ActivityDay, BadgeEarned, CardState, XpEvent
 
 ROLE = "orbit_app"
 
@@ -20,10 +20,10 @@ def _tables() -> list[str]:
 
 
 def test_there_are_tables_to_check():
-    assert {"users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned"} <= set(_tables())
+    assert {"users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned", "card_state"} <= set(_tables())
 
 
-@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned"])
+@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned", "card_state"])
 def test_app_role_has_dml_but_not_truncate_on_every_table(table):
     # The later tables get their grants from 0002's ALTER DEFAULT PRIVILEGES,
     # not from a GRANT in their own migration. This is what proves that works.
@@ -44,7 +44,7 @@ def test_app_role_cannot_touch_alembic_version_or_create_tables():
 
 def test_app_role_can_use_the_new_sequences():
     with SessionLocal() as db:
-        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq", "activity_days_id_seq", "badges_earned_id_seq"):
+        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq", "activity_days_id_seq", "badges_earned_id_seq", "card_state_id_seq"):
             assert db.scalar(text("SELECT has_sequence_privilege(:r, :s, 'USAGE')"), {"r": ROLE, "s": seq})
 
 
@@ -94,5 +94,38 @@ def test_a_badge_is_earned_once_per_learner(make_user):
         db.commit()
         assert earned_at is not None
         db.add(BadgeEarned(user_id=user.id, badge_slug="streak-7"))
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+def _card(user_id, **overrides):
+    values = {"card_id": "the-filesystem/fhs", "ease": 2.5, "interval_days": 1, "due_on": date(2026, 10, 12), "last_reviewed_on": date(2026, 10, 11)}
+    return CardState(user_id=user_id, **(values | overrides))
+
+
+def test_a_card_has_one_schedule_per_learner(make_user):
+    user, other = make_user(), make_user()
+    with SessionLocal() as db:
+        # Raw SQL, so it is the columns' server defaults that fill reps and lapses.
+        reps, lapses = db.execute(
+            text(
+                "INSERT INTO card_state (user_id, card_id, ease, interval_days, due_on, last_reviewed_on)"
+                " VALUES (:u, 'the-filesystem/fhs', 2.5, 1, '2026-10-12', '2026-10-11') RETURNING reps, lapses"
+            ),
+            {"u": user.id},
+        ).one()
+        assert (reps, lapses) == (0, 0)
+        db.add(_card(other.id))  # the same card, another learner: fine
+        db.commit()
+        db.add(_card(user.id))
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+@pytest.mark.parametrize(("column", "value"), [("ease", 1.29), ("interval_days", 0), ("reps", -1), ("lapses", -1)])
+def test_a_schedule_sm2_could_not_produce_is_refused(make_user, column, value):
+    user = make_user()
+    with SessionLocal() as db:
+        db.add(_card(user.id, **{column: value}))
         with pytest.raises(IntegrityError):
             db.commit()
