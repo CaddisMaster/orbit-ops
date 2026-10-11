@@ -1,0 +1,7 @@
+{# The console readout: what's online, the streak and the cards due, on every
+   signed-in page. `oob` swaps it in out of band, after a flashcard grade (#52). #}
+<div class="readout" id="readout" role="status" aria-label="Station status"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <span>Systems online <strong>{{ console.online }}/{{ console.systems }}</strong></span>
+  <span>Streak <strong>{{ console.streak }}</strong></span>
+  {% if console.cards_due %}<a href="/review">Cards due <strong>{{ console.cards_due }}</strong></a>{% endif %}
+</div>

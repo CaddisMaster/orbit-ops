@@ -7,7 +7,8 @@ freeze_used rows the first time a request sees them. Because the rule is
 deterministic, it doesn't matter which request that is.
 
 Rules (docs/roadmap.md §5):
-- A day is ACTIVE when a module was completed on it, in APP_TIMEZONE.
+- A day is ACTIVE when a module was completed on it, in APP_TIMEZONE, or the
+  flashcards due that day were cleared (#52). A day with none due doesn't count.
 - The streak's length counts the active days in the current run. A frozen day
   keeps the run alive but does not add to it.
 - Every 7th active day in a run banks a freeze, up to MAX_FREEZES.
