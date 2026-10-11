@@ -82,11 +82,14 @@ comms:
     - {from: okafor, text: "Cargo's coming through. Least privilege: you get the airlock, not the whole station."}
     - {from: mission, text: "*Kestrel* reports cargo transfer complete. Thank you, *Meridian*."}
 cards:
-  - front: How do you see your user, UID and groups?
+  - id: id
+    front: How do you see your user, UID and groups?
     back: "`id` (or `whoami` for just the name, `groups` for just the groups)."
-  - front: Add an existing user to a group without removing their other groups
+  - id: usermod-append
+    front: Add an existing user to a group without removing their other groups
     back: "`sudo usermod -aG docker sean`. The `-a` (append) matters; they must log in again for it to apply."
-  - front: "`sudo` vs `su`"
+  - id: sudo-vs-su
+    front: "`sudo` vs `su`"
     back: "`sudo cmd` runs one command as root using YOUR password and is logged. `su` switches to another user and needs THEIR password."
 ---
 

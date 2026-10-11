@@ -87,11 +87,14 @@ comms:
     - {from: mission, text: "Dumps received. First look: something in life support has been readable by the whole crew."}
     - {from: okafor, text: "That's tomorrow's problem, then. And I have a feeling I know which file."}
 cards:
-  - front: How do you copy a whole directory?
+  - id: copy-directory
+    front: How do you copy a whole directory?
     back: "`cp -r src dest`. Without `-r`, `cp` skips directories."
-  - front: Who expands `*` in a command?
+  - id: who-expands-globs
+    front: Who expands `*` in a command?
     back: The shell, before the command runs. The command only sees the resulting file names.
-  - front: "`?` vs `*` in a glob"
+  - id: glob-wildcards
+    front: "`?` vs `*` in a glob"
     back: "`?` matches exactly one character; `*` matches any number (including none)."
 ---
 

@@ -20,7 +20,6 @@ from pydantic import ValidationError
 from app.content.render import render_inline, render_markdown
 from app.content.schema import (
     BadgeSpec,
-    Card,
     CastSpec,
     Comms,
     ModuleFile,
@@ -43,6 +42,14 @@ class ContentError(Exception):
 
 
 @dataclass(frozen=True)
+class FlashCard:
+    id: str  # "<module-slug>/<card id>": what review schedules are stored against
+    module: str
+    front_html: str
+    back_html: str
+
+
+@dataclass(frozen=True)
 class Module:
     slug: str
     title: str
@@ -51,7 +58,7 @@ class Module:
     story_html: str
     body_html: str
     quiz: tuple[Question, ...]
-    cards: tuple[Card, ...]
+    cards: tuple[FlashCard, ...]
     terminal: TerminalExercise | None
     terminal_task_html: str
     comms: Comms | None
@@ -98,6 +105,10 @@ class Catalog:
     def ordered_modules(self) -> list[Module]:
         """Every module in syllabus order: track, then unit, then position."""
         return [self.modules[m] for t in self.tracks for u in t.units for m in self.units[u].modules]
+
+    def cards(self) -> dict[str, FlashCard]:
+        """Every flashcard by id, in syllabus order."""
+        return {c.id: c for m in self.ordered_modules() for c in m.cards}
 
 
 def _split_front_matter(text: str) -> tuple[str, str] | None:
@@ -242,7 +253,7 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             story_html=render_markdown(data.story),
             body_html=render_markdown(body),
             quiz=tuple(data.quiz),
-            cards=tuple(data.cards),
+            cards=tuple(FlashCard(f"{slug}/{c.id}", slug, render_inline(c.front), render_inline(c.back)) for c in data.cards),
             terminal=data.terminal,
             terminal_task_html=render_markdown(data.terminal.task) if data.terminal else "",
             comms=data.comms,

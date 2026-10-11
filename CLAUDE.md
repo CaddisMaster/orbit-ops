@@ -42,11 +42,11 @@ app/security.py      argon2 hashing, session auth (require_user), CSRF, rate lim
 app/templating.py    the shared Jinja env (csrf_token, app_version globals)
 app/content/         schema.py, loader.py (load_catalog → Catalog), render.py (Markdown, Pygments)
 app/progress.py      lock rules + today's mission (pure), check_answer, record_answer
-app/game/            xp.py, streaks.py, badges.py (pure rules + their ledgers)
+app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their ledgers)
 app/station_map.py   the /map layout (pure); app/console.py: header readout + comms log (app/comms.py)
 app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js is the simulated shell
-app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz)
-alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0006 badges_earned)
+app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review)
+alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0007 card_state)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
 scripts/             create_user.py, install_compose.sh (deploy), check_criteria.py (CI)

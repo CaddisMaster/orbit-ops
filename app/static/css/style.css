@@ -388,6 +388,13 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
   .term { font-size: 0.78rem; }
 }
 
+/* --- Flashcard review (#51) ------------------------------------------------------ */
+.review-card { max-width: 640px; margin-left: auto; margin-right: auto; }
+.review-front { font-size: 1.35rem; font-weight: 600; margin: 0.75rem 0 1.25rem; }
+.review-back { padding: 0.9rem 1rem; border-left: 3px solid var(--accent); background: rgb(255 255 255 / 0.03); border-radius: 0 6px 6px 0; }
+.review-grades { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1.25rem; }
+.review-grades p { flex-basis: 100%; margin: 0 0 0.25rem; }
+
 /* --- The desk (#38) --------------------------------------------------------------
    A 16:9 scene, as large as the window allows and letterboxed in the wall's
    colour, holding the pixel-art room (art/room.py, 320x180) and a laptop

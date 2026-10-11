@@ -83,11 +83,14 @@ comms:
     - {from: meridian, text: "DOCKING ARM 2 · CLEAR · *KESTREL* CAPTURED"}
   window: {complete: shuttle-dock}
 cards:
-  - front: "Octal values of r, w, x"
+  - id: octal-bits
+    front: "Octal values of r, w, x"
     back: "r = 4, w = 2, x = 1. Add them per class: 7 = rwx, 6 = rw-, 5 = r-x, 4 = r--."
-  - front: What does `x` mean on a directory?
+  - id: directory-execute
+    front: What does `x` mean on a directory?
     back: Permission to enter/traverse it. Listing names needs `r`; creating or deleting entries needs `w`.
-  - front: Change a file's owner and group in one command
+  - id: chown
+    front: Change a file's owner and group in one command
     back: "`chown user:group file` (needs root, so usually `sudo chown …`)."
 ---
 

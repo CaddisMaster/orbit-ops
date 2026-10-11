@@ -79,11 +79,14 @@ comms:
     - {from: mission, text: "Correction burn confirmed. You're right where we want you."}
     - {from: okafor, text: "One more day. The console's missing half the tools it should have. We'll fix that next."}
 cards:
-  - front: Shell variable vs environment variable
+  - id: shell-vs-environment
+    front: Shell variable vs environment variable
     back: "`NAME=x` is visible only to this shell. `export NAME=x` is also inherited by every program started from it."
-  - front: How does the shell find a command?
+  - id: path-lookup
+    front: How does the shell find a command?
     back: "It searches the directories in `$PATH`, left to right, and runs the first match."
-  - front: Set a variable for one command only
+  - id: one-command-variable
+    front: Set a variable for one command only
     back: "`NAME=value command`, e.g. `DB_NAME=orbit_test pytest`."
 ---
 
