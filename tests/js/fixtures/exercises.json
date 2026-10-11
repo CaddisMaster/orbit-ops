@@ -321,6 +321,321 @@
    "user": "cadet"
   }
  },
+ "finding-things-and-disk-space": {
+  "solution": [
+   "df -h",
+   "du -sh /var/*",
+   "du -h -d 1 /var/log",
+   "find /var/log/o2 -size +100M",
+   "> /var/log/o2/debug.log",
+   "cd /var/log/o2",
+   "find . -name '*.log' -mtime +30",
+   "tar -czf /srv/archive/o2-logs.tar.gz 2026-07-*.log 2026-08-*.log 2026-09-03.log",
+   "tar -tzf /srv/archive/o2-logs.tar.gz",
+   "find . -name '*.log' -mtime +30 -delete",
+   "ln -sf /var/log/o2/2026-10-08.log current.log",
+   "readlink current.log",
+   "df -h"
+  ],
+  "source": "core/bash-scripting/02-finding-things-and-disk-space.md",
+  "spec": {
+   "checks": [
+    {
+     "exists": "/var/log/o2/debug.log",
+     "type": "file"
+    },
+    {
+     "files_under": "/var/log/o2",
+     "max_age": 30,
+     "max_size": "50M",
+     "name": null
+    },
+    {
+     "exists": "/var/log/o2/2026-09-10.log",
+     "type": "file"
+    },
+    {
+     "exists": "/var/log/o2/2026-10-08.log",
+     "type": "file"
+    },
+    {
+     "exists": "/srv/archive/o2-logs.tar.gz",
+     "type": "file"
+    },
+    {
+     "contains": "/srv/archive/o2-logs.tar.gz",
+     "text": "2026-07-23.log"
+    },
+    {
+     "contains": "/srv/archive/o2-logs.tar.gz",
+     "text": "2026-09-03.log"
+    },
+    {
+     "files_under": "/srv/archive",
+     "max_age": null,
+     "max_size": "200M",
+     "name": null
+    },
+    {
+     "symlink": "/var/log/o2/current.log",
+     "target": "/var/log/o2/2026-10-08.log"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "disk": {
+    "base": 708837376,
+    "size": 2147483648
+   },
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/srv": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/srv/archive": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/cache": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/cache/apt": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/cache/apt/pkgcache.bin": {
+     "contents": "(binary)\n",
+     "group": "root",
+     "mode": 420,
+     "mtime": "2026-09-30T06:12:00",
+     "owner": "root",
+     "size": 50331648,
+     "type": "file"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/o2": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/o2/2026-07-23.log": {
+     "contents": "2026-07-23 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-07-23T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-07-30.log": {
+     "contents": "2026-07-30 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-07-30T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-08-06.log": {
+     "contents": "2026-08-06 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-08-06T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-08-13.log": {
+     "contents": "2026-08-13 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-08-13T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-08-20.log": {
+     "contents": "2026-08-20 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-08-20T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-08-27.log": {
+     "contents": "2026-08-27 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-08-27T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-09-03.log": {
+     "contents": "2026-09-03 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-09-03T23:59:00",
+     "owner": "root",
+     "size": 95420416,
+     "type": "file"
+    },
+    "/var/log/o2/2026-09-10.log": {
+     "contents": "2026-09-10 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-09-10T23:59:00",
+     "owner": "root",
+     "size": 25165824,
+     "type": "file"
+    },
+    "/var/log/o2/2026-09-17.log": {
+     "contents": "2026-09-17 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-09-17T23:59:00",
+     "owner": "root",
+     "size": 25165824,
+     "type": "file"
+    },
+    "/var/log/o2/2026-09-24.log": {
+     "contents": "2026-09-24 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-09-24T23:59:00",
+     "owner": "root",
+     "size": 25165824,
+     "type": "file"
+    },
+    "/var/log/o2/2026-10-01.log": {
+     "contents": "2026-10-01 23:59 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-10-01T23:59:00",
+     "owner": "root",
+     "size": 25165824,
+     "type": "file"
+    },
+    "/var/log/o2/2026-10-08.log": {
+     "contents": "2026-10-08 08:59 write failed: No space left on device\n",
+     "group": "crew",
+     "mode": 436,
+     "mtime": "2026-10-08T08:59:00",
+     "owner": "root",
+     "size": 8388608,
+     "type": "file"
+    },
+    "/var/log/o2/current.log": {
+     "contents": "",
+     "group": "crew",
+     "mode": 511,
+     "owner": "root",
+     "target": "/var/log/o2/2026-10-01.log",
+     "type": "link"
+    },
+    "/var/log/o2/debug.log": {
+     "contents": "08:59:57.120 DEBUG bed 1 valve 0.4412 → 0.4413\n08:59:57.121 DEBUG bed 2 valve 0.3810 → 0.3810\n08:59:57.122 DEBUG sensor ring-a CO2 612.004 ppm\n",
+     "group": "crew",
+     "mode": 436,
+     "owner": "root",
+     "size": 536870912,
+     "type": "file"
+    },
+    "/var/log/syslog": {
+     "contents": "Oct  8 08:59:58 meridian scrubberd: write failed: No space left on device\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "size": 4194304,
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "The scrubbers start logging again. \"Under 70, and nothing lost,\" Okafor says. \"That's the difference between cleaning up and throwing away.\"",
+   "user": "cadet"
+  }
+ },
  "navigating": {
   "solution": [
    "cd /station/comms/relay",

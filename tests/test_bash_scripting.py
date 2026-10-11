@@ -114,3 +114,83 @@ def test_module_01s_figures_match_the_console():
     # The warning was logged, the alarm's default is above the peak, and the new threshold is below it.
     assert f"co2_warn_ppm = {default('co2_warn_ppm')}" in fs[CONF]["contents"]
     assert default("co2_warn_ppm") < int(wanted) < int(peak) < default("co2_alarm_ppm")
+
+
+# --- 02: Finding things and disk space (#69) ---------------------------------------------
+O2 = "/var/log/o2"
+ARCHIVE = "/srv/archive/o2-logs.tar.gz"
+OLD = ["2026-07-23", "2026-07-30", "2026-08-06", "2026-08-13", "2026-08-20", "2026-08-27", "2026-09-03"]
+
+
+def _disk_percent(exercise, state):
+    """df's Use%, as shell.js works it out: the system's base plus every file in 4K blocks."""
+    from math import ceil
+
+    from app.content.schema import size_bytes
+
+    used = size_bytes(exercise.disk.base) + sum(ceil(n.bytes() / 4096) * 4096 for n in state.values() if n.type == "file")
+    return ceil(min(used, size_bytes(exercise.disk.size)) * 100 / size_bytes(exercise.disk.size))
+
+
+def _cleaned(start, *, gzipped=True, keep_debug=True, delete_old=True, link="/var/log/o2/2026-10-08.log"):
+    """The state a learner leaves: debug.log emptied, the old logs archived and deleted, current.log repointed."""
+    state = dict(start)
+    old = sum(start[f"{O2}/{d}.log"].bytes() for d in OLD)
+    state[ARCHIVE] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents="tar\n" + "\n".join(f"{d}.log" for d in OLD), size=old // 4 if gzipped else old)
+    if delete_old:
+        for d in OLD:
+            del state[f"{O2}/{d}.log"]
+    if keep_debug:
+        state[f"{O2}/debug.log"] = start[f"{O2}/debug.log"].model_copy(update={"contents": "", "size": None})
+    else:
+        del state[f"{O2}/debug.log"]
+    state[f"{O2}/current.log"] = start[f"{O2}/current.log"].model_copy(update={"target": link})
+    return state
+
+
+@pytest.mark.criterion(69, "Module 02 of Unit 1.2 is complete content")
+def test_module_02_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[1]
+    assert module.slug == "finding-things-and-disk-space"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(69, "Module 02's console task can be done")
+def test_module_02s_end_state_passes_on_the_server():
+    exercise = _module("finding-things-and-disk-space").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    done = _cleaned(start)
+    assert grade(exercise, done, exercise.cwd)
+    assert _disk_percent(exercise, done) < 70
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [
+        {"gzipped": False},  # an archive that isn't compressed
+        {"keep_debug": False},  # deleting the log the daemon holds open
+        {"delete_old": False},  # archiving without deleting
+        {"link": "2026-10-08.log"},  # not the path the task asks for
+    ],
+    ids=["uncompressed", "deleted-debug-log", "originals-kept", "other-link-target"],
+)
+def test_module_02_refuses_the_shortcuts(shortcut):
+    exercise = _module("finding-things-and-disk-space").terminal
+    assert not grade(exercise, _cleaned(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_02s_figures_match_the_console():
+    module = _module("finding-things-and-disk-space")
+    exercise = module.terminal
+    start = _start(exercise)
+    before = _disk_percent(exercise, start)
+    assert f"DISK {before}%" in _said(module, "open") and f"**{before}% full**" in exercise.task
+    # Under 70% takes both: emptying the debug log alone isn't enough, and nor is archiving alone.
+    assert _disk_percent(exercise, _cleaned(start)) < 70
+    only_emptied = {**start, f"{O2}/debug.log": start[f"{O2}/debug.log"].model_copy(update={"size": 0})}
+    assert _disk_percent(exercise, only_emptied) >= 70
+    assert _disk_percent(exercise, {**_cleaned(start), f"{O2}/debug.log": start[f"{O2}/debug.log"]}) >= 70
+    assert "Half a gigabyte" in _said(module, "console_done") and start[f"{O2}/debug.log"].bytes() == 512 * 2**20
+    old = [p for p, n in start.items() if p.startswith(O2 + "/") and n.type == "file" and n.age_days() > 30]
+    assert sorted(old) == [f"{O2}/{d}.log" for d in OLD]
