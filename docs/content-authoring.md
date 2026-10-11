@@ -213,7 +213,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 - **What the console knows** (`help` lists it):
   - files: `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r) mv
     rm (-r -f) chmod (octal and symbolic, -R) chown`
-  - text: `grep (-i -v -n -c) wc sort uniq head tail cut tee`, and small `awk` and `sed`:
+  - text: `grep (-i -v -n -c -q) wc sort uniq head tail cut tee`, and small `awk` and `sed`:
     - awk: `-F SEP`; `pattern { print … }` rules with `BEGIN`/`END`; patterns of `/re/`,
       comparisons (numeric when both sides are numbers), `~ !~ ! && ||`; `print` of `$0`, `$N`,
       `$NF`, `NF`, `NR`, strings and concatenation. No variables, arithmetic, `printf` or arrays.
@@ -231,10 +231,25 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
     sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
     foreground `sleep N` jumps N.
-  - syntax: globs, `{a,b}`, `{1..9}`, pipes, `> >> < 2> 2>&1 &>` (applied left to right, as in
-    bash), `; && || &`, `$?`, `$1…$9`, `$#`, `$@`.
+  - syntax: globs, `{a,b}`, `{1..9}`, pipes, `> >> < 2> 2>&1 >&2 &>` (applied left to right,
+    as in bash), `; && || &`, `$?`, `$1…$9`, `$#`, `"$@"` (one word per argument), `$(cmd)` and
+    backticks (unquoted results are split on `$IFS`), `$((…))` (integers: `+ - * / % **`,
+    comparisons, `&& || !`, `?:`; a leading 0 is octal), `${x:-def} ${x:=def} ${x:+alt} ${x:?msg}
+    ${#x} ${x%pat} ${x%%pat} ${x#pat} ${x##pat}`.
+  - control flow (#64): `if/elif/else/fi`, `for x in …` (and `for x` over `"$@"`),
+    `while`/`until`, `break [n]`/`continue [n]`, `case … in pat|pat) … ;; esac` (glob
+    patterns), `{ …; }`, `( … )` subshells, `!`, and redirection on any of them (`done <
+    file`, `fi > out`, `… done | sort`). Tests: `test`/`[ ]` (strings, `-eq`… integers, `-e -f -d
+    -r -w -x -s -z -n`, `! -a -o ( )`, with bash's own error messages) and `[[ ]]` (`&& || ! ( )`,
+    `==` against a glob, no word splitting). `read [-r] [-s] [-p prompt] names…` reads standard
+    input, split on `$IFS` (`while IFS=, read -r a b`); at the prompt it reads the keyboard, and
+    so does a script started there. A command can span lines: at the prompt an unfinished one
+    continues on a `> ` line, so a multi-line `solution:` is typed a line at a time. A loop that
+    runs 10,000 commands is stopped. Refused with "unsupported on the station console": functions,
+    heredocs and `<<<` (#65), `(( ))`, `for ((…))`, `++`/assignment inside `$(( ))`, `[[ =~ ]]`,
+    arrays and `select`.
 
-  Anything else prints "command not found". Not yet: `find`, `tar`,
+  Anything else prints "command not found". Not yet: `set`, `printf`, `find`, `tar`,
   full-screen programs (`top`, `less`, `vim`). Don't set a task that needs more: add the
   command to `app/static/js/shell.js` first, with a test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows

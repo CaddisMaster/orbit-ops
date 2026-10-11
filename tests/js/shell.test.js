@@ -155,7 +155,9 @@ test("Quotes, variables, && and ||", () => {
   assert.equal(out(sh, 'echo "$USER lives in $HOME"'), "cadet lives in /station\n");
   assert.equal(out(sh, "echo '$USER'"), "$USER\n");
   assert.equal(out(sh, "cat nope && echo yes || echo no"), "cat: nope: No such file or directory\nno\n");
-  assert.equal(out(sh, "echo \"unclosed"), 'bash: unexpected EOF while looking for matching `"\'\n');
+  assert.equal(out(sh, "echo \"unclosed"), ""); // an open quote continues on the next line, as in bash (#64)
+  assert.equal(sh.prompt(), "> ");
+  assert.equal(out(sh, 'now"'), "unclosed\nnow\n");
   assert.equal(out(sh, "whoami; id"), "cadet\nuid=1000(cadet) gid=1000(crew) groups=1000(crew)\n");
 });
 
@@ -187,10 +189,12 @@ test("$? and syntax errors follow bash: expanded per command, and a bad line run
   const sh = station();
   assert.equal(out(sh, "cat nope 2> /dev/null; echo $?; echo $?"), "1\n0\n");
   assert.equal(out(sh, "touch made && ; echo x"), "bash: syntax error near unexpected token `;'\n");
-  assert.equal(out(sh, "touch made &&"), "bash: syntax error near unexpected token `&&'\n");
+  assert.equal(out(sh, "touch made &&"), ""); // unfinished: bash asks for more (#64)
+  assert.equal(sh.prompt(), "> ");
+  assert.equal(out(sh, "fi"), "bash: syntax error near unexpected token `fi'\n");
   assert.equal(out(sh, "echo ok; # a comment"), "ok\n");
   assert.equal(out(sh, "echo 'a;b' \"c&&d\""), "a;b c&&d\n");
-  assert.equal(out(sh, "ls | "), "bash: syntax error near unexpected token `newline'\n");
+  assert.equal(out(sh, "echo >"), "bash: syntax error near unexpected token `newline'\n");
   assert.equal(sh.state()["/station/made"], undefined);
 });
 
