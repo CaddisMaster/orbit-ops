@@ -19,8 +19,10 @@ from tests.test_xp import xp_curriculum  # noqa: F401  (fixture)
 
 # The policy as it stood before this issue, nonce aside. Any change to it is a
 # change to this line, made on purpose.
+# The one addition since #18 is 'wasm-unsafe-eval', for Pyodide (#53, CLAUDE.md
+# non-negotiable #3); tests/test_pyodide.py holds it to exactly that.
 POLICY = (
-    "default-src 'self'; script-src 'self' 'nonce-*'; style-src 'self'; img-src 'self' data:; "
+    "default-src 'self'; script-src 'self' 'nonce-*' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; "
     "connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 )
 PAGES = ["/", "/syllabus", "/map", "/badges", "/modules/the-filesystem"]

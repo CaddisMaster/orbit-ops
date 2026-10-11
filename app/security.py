@@ -176,7 +176,9 @@ def build_csp(nonce: str) -> str:
     return "; ".join(
         [
             "default-src 'self'",
-            f"script-src 'self' 'nonce-{nonce}'",
+            # 'wasm-unsafe-eval' lets Pyodide compile WebAssembly (#53). It is
+            # NOT 'unsafe-eval': JavaScript's eval and new Function stay blocked.
+            f"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval'",
             "style-src 'self'",
             "img-src 'self' data:",
             "connect-src 'self'",

@@ -20,6 +20,7 @@ from app.templating import templates
 log = logging.getLogger("orbit")
 
 SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days: a daily-habit app should not nag for a password
+PYODIDE_DIR = Path("/opt/pyodide")  # the Dockerfile's `pyodide` stage (#53)
 
 
 @asynccontextmanager
@@ -60,6 +61,10 @@ def create_app() -> FastAPI:
     app.add_middleware(HeadAsGetMiddleware)  # outermost: everything inside sees a GET
 
     app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+    # Pyodide (#53), put there by the Dockerfile's `pyodide` stage. check_dir is
+    # off because a bare checkout (CI's test job) doesn't have it, and nothing
+    # there asks for it.
+    app.mount("/pyodide", StaticFiles(directory=PYODIDE_DIR, check_dir=False), name="pyodide")
     app.include_router(main.router)
     app.include_router(auth.router)
     app.include_router(learn.router)

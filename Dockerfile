@@ -5,6 +5,14 @@
 # Base image pinned by digest (same reasoning as Budget Buddy #405): a tag is
 # movable, a digest is not. The tag names the Python PATCH so Dependabot's
 # docker updater always sees a name change.
+# Pyodide (#53): Python in the browser, fetched and checked by sha256 in a stage
+# of its own, so only the five files it keeps reach the image. It lands in
+# /opt/pyodide, not app/static/, because in development the source tree is
+# bind-mounted over /app and would hide it.
+FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS pyodide
+COPY scripts/fetch_pyodide.py /tmp/fetch_pyodide.py
+RUN python /tmp/fetch_pyodide.py /pyodide
+
 FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS base
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
@@ -15,6 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/*
 RUN useradd --create-home --uid 10001 appuser
 COPY --chown=appuser:appuser . .
+# Read-only to the app user: root owns it.
+COPY --from=pyodide /pyodide /opt/pyodide
 
 # The version this image WAS BUILT AS, so a deploy can be verified (BB #305).
 # A build arg, not a runtime env var: .env records what compose was told to

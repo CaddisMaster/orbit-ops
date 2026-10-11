@@ -49,7 +49,7 @@ app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healt
 alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0007 card_state)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
-scripts/             create_user.py, install_compose.sh (deploy), check_criteria.py (CI)
+scripts/             create_user.py, install_compose.sh (deploy), check_criteria.py (CI), fetch_pyodide.py (image)
 ```
 
 ## Non-negotiables

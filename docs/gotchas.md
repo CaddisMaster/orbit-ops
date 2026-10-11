@@ -43,6 +43,14 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 - **`.dockerignore` drops `**/*.md`** — except `content/**/*.md`, which the app needs. Keep the
   exception when touching that file.
 
+- **Pyodide lives in `/opt/pyodide`, not `app/static/`** (#53). In development `.:/app` is
+  bind-mounted over the image, so anything the Dockerfile puts under `/app` is hidden. A bare
+  checkout (CI's Tests job) has no `/opt/pyodide` at all: the `/pyodide` mount is
+  `check_dir=False`, and no test may request a file from it. After changing
+  `scripts/fetch_pyodide.py`, `docker compose build web`.
+- **Playwright's `waitForFunction` evaluates a string**, which the CSP blocks (`'unsafe-eval'`)
+  on our pages. Wait on a selector instead (`waitForSelector(…, { state: 'detached' })`).
+
 ## Migrations
 
 - **`alembic revision` fails with `PermissionError`** when run as the container user: it can't
