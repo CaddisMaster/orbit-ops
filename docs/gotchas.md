@@ -43,6 +43,12 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   revalidates on its own. A new Pyodide version means changing `PYODIDE_VERSION` in
   `app/static_files.py` along with `scripts/fetch_pyodide.py` (a test holds them equal).
 
+- **The console's clock is the station's, not the browser's** (#67). Files are dated on a fixed
+  clock that starts at 2026-10-08 09:00 and moves a second per command (`sh.now()`), so use it,
+  never `new Date()`, for anything a learner can see or a check can read. The server's
+  `STATION_NOW` is the same moment, and `test_the_station_clock_matches_the_console` keeps them
+  together.
+
 ## Containers
 
 - **The host `.env` is mode 600 and the container user is uid 10001.** The app does not read

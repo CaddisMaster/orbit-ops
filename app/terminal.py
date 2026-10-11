@@ -13,16 +13,21 @@ that's accepted (#17); replaying the commands server-side would mean a second
 shell implementation.
 """
 
+import fnmatch
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.content.schema import (
+    STATION_NOW,
     AbsPath,
     Account,
     ContainsCheck,
     CwdCheck,
     ExistsCheck,
+    FilesUnderCheck,
+    LinkTarget,
     MissingCheck,
     ModeCheck,
     OwnerCheck,
@@ -30,9 +35,11 @@ from app.content.schema import (
     Signal,
     SignalledCheck,
     StoppedCheck,
+    SymlinkCheck,
     TerminalCheck,
     TerminalExercise,
     proc_name,
+    size_bytes,
 )
 
 MAX_NODES = 500
@@ -43,11 +50,22 @@ MAX_CONTENTS = 20_000  # characters per file
 class Node(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    type: Literal["file", "dir"]
+    type: Literal["file", "dir", "link"]
     mode: Annotated[int, Field(ge=0, le=0o7777)]
     owner: Account
     group: Account
     contents: Annotated[str, Field(max_length=MAX_CONTENTS)] = ""
+    target: LinkTarget | None = None  # a link's
+    size: Annotated[int, Field(ge=0, le=2**40)] | None = None  # a sampled big file's (#67)
+    mtime: Annotated[str, Field(pattern=r"^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?$")] | None = None
+
+    def bytes(self) -> int:
+        return self.size if self.size is not None else len(self.contents.encode())
+
+    def age_days(self) -> int:
+        """Whole days since it changed, counted back from the station's clock, as find -mtime does."""
+        changed = datetime.fromisoformat(self.mtime) if self.mtime else STATION_NOW
+        return (STATION_NOW - changed).days
 
 
 class Process(BaseModel):
@@ -101,6 +119,24 @@ def passes(check: TerminalCheck, state: dict[str, Node], cwd: str, processes: li
         case ContainsCheck(contains=path, text=text):
             node = state.get(path)
             return node is not None and node.type == "file" and text in node.contents
+        case SymlinkCheck(symlink=path, target=target):
+            node = state.get(path)
+            return node is not None and node.type == "link" and node.target == target
+        case FilesUnderCheck(files_under=top, name=name, max_size=max_size, max_age=max_age):
+            if state.get(top) is None or state[top].type != "dir":
+                return False
+            prefix = "/" if top == "/" else top + "/"
+            limit = None if max_size is None else size_bytes(max_size)
+            for path, node in state.items():
+                if not path.startswith(prefix) or node.type != "file":
+                    continue
+                if name and not fnmatch.fnmatchcase(path.rsplit("/", 1)[1], name):
+                    continue
+                if limit is not None and node.bytes() > limit:
+                    return False
+                if max_age is not None and node.age_days() > max_age:
+                    return False
+            return True
     return False
 
 
@@ -120,6 +156,12 @@ def client_spec(exercise: TerminalExercise) -> dict:
         "password": exercise.password,
         "cwd": exercise.cwd,
         "env": exercise.env,
+        **({"disk": {"size": size_bytes(d.size), "base": size_bytes(d.base)}} if (d := exercise.disk) else {}),
+        **(
+            {"memory": {k: size_bytes(getattr(m, k)) for k in ("total", "used", "cache", "shared")}}
+            if (m := exercise.memory)
+            else {}
+        ),
         "fs": exercise.starting_fs(),
         "processes": [
             {"command": p.command, "user": p.user or exercise.user, "cpu": p.cpu, "mem": p.mem, "ignores": p.ignores}

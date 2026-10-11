@@ -35,6 +35,47 @@
    "owner": "root",
    "group": "root",
    "contents": ""
+  },
+  "/s/link": {
+   "type": "link",
+   "mode": 511,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "",
+   "target": "/s/f"
+  },
+  "/s/logs": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": ""
+  },
+  "/s/logs/big.log": {
+   "type": "file",
+   "mode": 420,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "sample\n",
+   "size": 62914560,
+   "mtime": "2026-10-07T09:00:00"
+  },
+  "/s/logs/old.gz": {
+   "type": "file",
+   "mode": 420,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "x",
+   "size": 1048576,
+   "mtime": "2026-08-01T00:00:00"
+  },
+  "/s/logs/edge.gz": {
+   "type": "file",
+   "mode": 420,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "x",
+   "mtime": "2026-09-08T09:00:00"
   }
  },
  "cwd": "/s",
@@ -271,6 +312,133 @@
    "check": {
     "signalled": "o2-diagnostics",
     "with": "HUP"
+   },
+   "expect": false
+  },
+  {
+   "name": "symlink pointing where asked",
+   "check": {
+    "symlink": "/s/link",
+    "target": "/s/f"
+   },
+   "expect": true
+  },
+  {
+   "name": "symlink pointing elsewhere",
+   "check": {
+    "symlink": "/s/link",
+    "target": "f"
+   },
+   "expect": false
+  },
+  {
+   "name": "symlink check on a regular file",
+   "check": {
+    "symlink": "/s/f",
+    "target": "/s/f"
+   },
+   "expect": false
+  },
+  {
+   "name": "symlink check on nothing",
+   "check": {
+    "symlink": "/s/nope",
+    "target": "/s/f"
+   },
+   "expect": false
+  },
+  {
+   "name": "files_under: a file over max_size",
+   "check": {
+    "files_under": "/s/logs",
+    "max_size": "50M"
+   },
+   "expect": false
+  },
+  {
+   "name": "files_under: all within max_size",
+   "check": {
+    "files_under": "/s/logs",
+    "max_size": "60M"
+   },
+   "expect": true
+  },
+  {
+   "name": "files_under: one byte over, in bytes",
+   "check": {
+    "files_under": "/s/logs",
+    "max_size": 62914559
+   },
+   "expect": false
+  },
+  {
+   "name": "files_under: name narrows it",
+   "check": {
+    "files_under": "/s/logs",
+    "name": "*.gz",
+    "max_size": "1M"
+   },
+   "expect": true
+  },
+  {
+   "name": "files_under: an old .gz is left",
+   "check": {
+    "files_under": "/s/logs",
+    "name": "*.gz",
+    "max_age": 30
+   },
+   "expect": false
+  },
+  {
+   "name": "files_under: exactly 30 days old is within 30",
+   "check": {
+    "files_under": "/s/logs",
+    "name": "edge.gz",
+    "max_age": 30
+   },
+   "expect": true
+  },
+  {
+   "name": "files_under: no mtime means the station's now",
+   "check": {
+    "files_under": "/s",
+    "name": "f",
+    "max_age": 0
+   },
+   "expect": true
+  },
+  {
+   "name": "files_under: size from contents",
+   "check": {
+    "files_under": "/s",
+    "name": "f",
+    "max_size": 10
+   },
+   "expect": false
+  },
+  {
+   "name": "files_under: nothing matches",
+   "check": {
+    "files_under": "/s/logs",
+    "name": "*.txt",
+    "max_age": 0
+   },
+   "expect": true
+  },
+  {
+   "name": "files_under: links aren't files",
+   "check": {
+    "files_under": "/s",
+    "name": "link",
+    "max_size": 0
+   },
+   "expect": true
+  },
+  {
+   "name": "files_under on a file",
+   "check": {
+    "files_under": "/s/f",
+    "max_size": "1G"
    },
    "expect": false
   }

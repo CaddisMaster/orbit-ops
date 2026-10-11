@@ -21,6 +21,18 @@ and why it matters, not what the diff says.
   - sudo can ask for its password inside a loop or a script.
   - A loop that never ends is stopped after 10,000 commands instead of freezing the page.
   - `grep -q` answers yes or no without printing, for `if grep -q …`.
+- The console has `find`, disk tools, archives and links (#67).
+  - **`find`** searches by name, type, size and age, with `-delete` and `-exec`, and explains
+    its mistakes as GNU find does.
+  - **`du`, `df` and `free`** report disk and memory use. Deleting files shows up as free space,
+    and so does emptying a big log with `> big.log`.
+  - **`tar`, `gzip`, `gunzip` and `zcat`** make, list and unpack archives. Archives are
+    simulated, but they round-trip exactly and shrink when compressed.
+  - **`ln -s` and `readlink`** make and read symbolic links, and every path resolves through
+    links.
+  - Tasks can now give files a real-looking size and date, and check that a link points the
+    right way or that nothing under `/var/log` is too big or too old. The server grades those
+    too.
 - The console has an editor, a manual and cron (#66).
   - **nano** opens in the console panel. `nano check.sh` lets you write a script right there:
     ^O then Enter saves, and ^X exits, asking first if there are unsaved changes. Saving
