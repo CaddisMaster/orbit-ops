@@ -85,6 +85,57 @@ terminal:
     - head -n 3 /var/log/docking/access.log
     - 'awk ''{print $1}'' /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt'
     - cat noisy.txt
+challenge:
+  task: |-
+    MERIDIAN reported **22 login attempts overnight, 14 failed**. Check its arithmetic in Python.
+
+    `log` holds `/var/log/docking/access.log`, the same file as the console's, as one string.
+    Finish `failed_logins(log)` so it returns how many lines are a `POST /login` that got a
+    `401`. In each line the request is between the double quotes, and the status code is the
+    first field after the closing quote:
+
+    ```text
+    10.4.7.3 - - [08/Oct/2026:02:17:49 +0000] "POST /login HTTP/1.1" 401 512
+    ```
+
+    `str.splitlines()` and `str.split()` are all you need. Run it to see what it prints, then
+    Submit to run the checks.
+  inputs: {log: /var/log/docking/access.log}
+  starter: |-
+    def failed_logins(log):
+        count = 0
+        for line in log.splitlines():
+            ...  # is this a POST /login whose status is 401?
+        return count
+
+
+    print(failed_logins(log))
+  checks:
+    - check: assert failed_logins(log) == 14
+      says: It finds MERIDIAN's 14 failed logins in the real log.
+    - check: assert failed_logins("") == 0
+      says: An empty log has no failed logins.
+    - check: 'assert failed_logins(''10.0.0.1 - - [08/Oct/2026:03:00:00 +0000] "GET /login HTTP/1.1" 401 0'') == 0'
+      says: Only a POST counts, not a GET of the login page.
+    - check: 'assert failed_logins(''10.0.0.1 - - [08/Oct/2026:03:00:00 +0000] "POST /login HTTP/1.1" 200 4012'') == 0'
+      says: The 401 has to be the status code, not digits in some other number on the line.
+    - check: 'assert failed_logins(''10.0.0.1 - - [08/Oct/2026:03:00:00 +0000] "POST /login/reset HTTP/1.1" 401 0'') == 0'
+      says: It's the /login path exactly, not one that only starts with it.
+  solution: |-
+    def failed_logins(log):
+        count = 0
+        for line in log.splitlines():
+            parts = line.split('"')
+            if len(parts) < 3:
+                continue
+            request = parts[1].split()
+            status = parts[2].split()[0]
+            if request[:2] == ["POST", "/login"] and status == "401":
+                count += 1
+        return count
+
+
+    print(failed_logins(log))
 comms:
   open:
     - {from: meridian, text: "DOCKING PORT · 22 LOGIN ATTEMPTS OVERNIGHT · 14 FAILED"}

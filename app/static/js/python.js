@@ -2,7 +2,10 @@
 // the first run: then a worker (pyodide-worker.js) loads Pyodide, which takes
 // a few seconds once and is cached by the browser after that.
 //
-//   OrbitPython.run(code) → Promise<{ stdout, stderr, error, timedOut }>
+//   OrbitPython.run(code, { inputs, checks }) → Promise<{ stdout, stderr, error, checks, timedOut }>
+//
+// inputs: variables to preset ({name: string}); checks: Python statements run
+// after the code, each reported as passed or not (#54). Both optional.
 //
 // A run that takes longer than RUN_TIMEOUT_MS is stopped by terminating the
 // worker (an infinite loop can't be interrupted any other way); the next run
@@ -39,7 +42,8 @@
     return ready;
   }
 
-  function run(code) {
+  function run(code, options) {
+    var opts = options || {};
     if (busy) return Promise.reject(new Error("Python is already running."));
     busy = true;
     var loading = ready || start();
@@ -50,16 +54,19 @@
         var timer = setTimeout(function () {
           w.removeEventListener("message", onResult);
           stop();
-          resolve({ stdout: "", stderr: "", error: null, timedOut: true });
+          resolve({ stdout: "", stderr: "", error: null, checks: [], timedOut: true });
         }, RUN_TIMEOUT_MS);
         function onResult(event) {
           if (event.data.type !== "result" || event.data.id !== id) return;
           clearTimeout(timer);
           w.removeEventListener("message", onResult);
-          resolve({ stdout: event.data.stdout, stderr: event.data.stderr, error: event.data.error, timedOut: false });
+          resolve({
+            stdout: event.data.stdout, stderr: event.data.stderr, error: event.data.error,
+            checks: event.data.checks, timedOut: false,
+          });
         }
         w.addEventListener("message", onResult);
-        w.postMessage({ id: id, code: code });
+        w.postMessage({ id: id, code: code, inputs: opts.inputs || {}, checks: opts.checks || [] });
       });
     }).finally(function () { busy = false; });
   }

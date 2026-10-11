@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from app import comms, progress, station_map, terminal
+from app import challenge, comms, progress, station_map, terminal
 from app.console import Readout, console_readout
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
@@ -81,6 +81,7 @@ def module_page(
     first_visit = progress.get_progress(db, user.id, slug) is None
     record = progress.start_module(db, user.id, slug)
     db.commit()
+    challenge_code, challenge_passed = challenge.editor_state(db, user.id, module) if module.challenge else ("", False)
     unit = catalog.units[module.unit]
     return templates.TemplateResponse(
         request,
@@ -95,6 +96,10 @@ def module_page(
             "record": record,
             "next": progress.next_module(catalog, slug, completed) if record.status == "complete" else None,
             "terminal_spec": terminal.client_spec(module.terminal) if module.terminal else None,
+            "challenge_spec": challenge.client_spec(module) if module.challenge else None,
+            "challenge_code": challenge_code,
+            "challenge_passed": challenge_passed,
+            "challenge_xp": challenge.XP,
             # A window event at the `open` beat plays on the first visit only (#45).
             "window_event": module.comms.window.get("open") if module.comms and first_visit else None,
         },
@@ -146,6 +151,34 @@ def terminal_report(
             event=event, oob=False, request=request
         )
     return JSONResponse(body)
+
+
+@router.post("/modules/{slug}/challenge")
+def challenge_report(
+    slug: str,
+    report: challenge.Report,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    """The page reporting a Submit: the code, and which checks passed in the
+    browser. Recorded as the browser's verdict; the server never runs learner
+    code (app/challenge.py). The first pass earns challenge.XP, once."""
+    module = _module_or_404(catalog, slug)
+    if module.challenge is None:
+        raise HTTPException(status_code=404)
+    if not progress.module_available(catalog, slug, progress.completed_slugs(db, user.id)):
+        return JSONResponse({"error": "locked"}, status_code=403)
+    correct = challenge.passed(module, report.results)
+    db.add(
+        ExerciseAttempt(
+            user_id=user.id, module_slug=slug, kind="challenge", item=0,
+            submitted={"code": report.code, "results": report.results}, correct=correct,
+        )
+    )
+    xp_gained = xp.award(db, user.id, xp.Award(challenge.XP, "challenge", slug)) if correct else 0
+    db.commit()
+    return JSONResponse({"correct": correct, "xp_gained": xp_gained})
 
 
 @router.post("/modules/{slug}/quiz/{index}", response_class=HTMLResponse)
