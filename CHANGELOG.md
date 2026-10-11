@@ -6,8 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-10
+
+Practice: flashcards on an SM-2 schedule as MERIDIAN's watch drill, Python in the browser with
+the first code challenge, a laptop you can close to see the room, and the station map drawn as
+the *Meridian* itself, with every unit's story now on show.
+
 ### Added
-- Flashcard review (#51). Every module you've completed adds its three cards to a review queue
+- Flashcard review (#51). Every module you've completed adds its cards to a review queue
   at **Review** in the nav: one card at a time, "Show answer", then Again, Hard, Good or Easy.
   Cards are scheduled with SM-2, so a card you know comes back after a day, then six, then
   longer each time, and one you forget comes back tomorrow. Modules you finished before this
