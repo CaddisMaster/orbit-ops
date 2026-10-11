@@ -112,6 +112,17 @@ grep sean /etc/passwd
 # name:pw:UID:GID:comment:home:shell        (the password hash lives in /etc/shadow)
 ```
 
+To pull out one field, cut the line at each `:` and keep the one you want. Field 7 is the shell:
+
+```bash
+grep sean /etc/passwd | cut -d: -f7              # /bin/bash
+grep sean /etc/passwd | cut -d: -f7 > shell.txt  # the same, written to a file
+```
+
+The `|` hands one command's output to the next, and `>` writes output to a file. Both get a
+module of their own soon (pipes and redirection), and `cut` gets one after that (text tools).
+For now, this one line is enough.
+
 ## root
 
 `root` is UID 0, and permission checks don't apply to it. That's why you don't work as root day

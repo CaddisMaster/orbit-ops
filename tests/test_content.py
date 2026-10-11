@@ -216,3 +216,61 @@ def test_real_modules_follow_the_authoring_guidelines(module):
     assert 3 <= len(module.quiz) <= 5, "quiz: 3–5 questions"
     assert len(module.cards) >= 2, "at least two flashcards"
     assert "<h2>Try it</h2>" in module.body_html, "every module ends with something to run"
+
+
+# --- #80: nothing the console asks for goes untaught ------------------------------------
+def _taught_text(module) -> str:
+    import html
+    import re
+
+    return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", module.body_html)).split())
+
+
+def _commands(line: str) -> set[str]:
+    """The command names on a solution line: the first word of each stage of
+    every pipeline, past any `VAR=x` assignments and `sudo`."""
+    import re
+
+    names = set()
+    for stage in re.split(r"\|\||&&|\||;", line):
+        words = stage.split()
+        while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
+            words = words[1:]
+        if words and words[0] == "sudo":
+            words = words[1:]
+        if words:
+            names.add(words[0])
+    return names
+
+
+@pytest.mark.criterion(80, "No console task needs an untaught command")
+def test_no_console_task_needs_an_untaught_command():
+    import re
+
+    taught = ""
+    for module in load_catalog().unit_modules("linux-shell"):
+        taught += " " + _taught_text(module)  # this module's lesson, and every earlier one
+        if not module.terminal:
+            continue
+        password = module.terminal.password
+        used = set().union(*(_commands(line) for line in module.terminal.solution if line != password))
+        untaught = sorted(c for c in used if not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", taught))
+        assert not untaught, f"{module.slug}'s console task uses {untaught}, which no lesson up to it teaches"
+
+
+@pytest.mark.criterion(80, "Reading a file is taught before it's needed")
+def test_reading_a_file_is_taught_in_module_01():
+    first = load_catalog().unit_modules("linux-shell")[0]
+    text = _taught_text(first)
+    reading = text.index("Moving and reading")
+    assert reading < text.index("Try it")
+    for command in ("cat ", "less ", "head -n", "tail -n", "nano"):
+        assert command in text[reading:], command
+    assert first.cards[0].id == "the-filesystem/reading-files"
+
+
+@pytest.mark.criterion(80, "The tasks say to read")
+def test_the_tasks_say_to_read():
+    first, second = load_catalog().unit_modules("linux-shell")[:2]
+    assert "when did scrubber B go offline?" in " ".join(first.terminal.task.split())
+    assert "read it (`cat` prints a file)" in " ".join(second.terminal.task.split())
