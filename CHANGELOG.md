@@ -58,6 +58,11 @@ and why it matters, not what the diff says.
   `--help`, `help`, `man` and its sections, `less`, `tail -f`, nano, and enough vim to get out
   of it. In the console you read the scrubber daemon's manual to find the setting that sounds
   the CO2 alarm, past a warning setting that looks like it, and set it with `sudo nano`.
+  - Module 02, "Finding things and disk space" (#69): `df`, `du`, `find` by name, size and
+    age, `tar` and gzip, symlinks, and why you empty a log a program still holds open
+    instead of deleting it. The console task takes a full disk from 97% to under 70%: empty a
+    runaway debug log, archive and delete the old logs, and repoint `current.log`. Doing
+    only one of the first two steps isn't enough.
   - `man` also finds the pages a program installs in `/usr/share/man`, searching the sections
     in man-db's order (1, 8, 3, 2, 5, …), so a module can give its own daemon a manual.
   - A quiz question can show a script or a command's output as a code block (`code:`), so
