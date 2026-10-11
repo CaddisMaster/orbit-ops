@@ -242,36 +242,40 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .badge.locked .emblem { color: var(--muted); }
 .recent-badges { margin: 0.75rem 0; }
 
-/* --- Station map ------------------------------------------------------------
-   Lit and available nodes take their deck's colour (--deck, set by
-   `.deck--<track>` under "Decks" below). */
-:root { --map-locked: var(--border); }
+/* --- Station map (#24, as the Meridian since #78) ---------------------------------
+   The ship is pixel art (art/ship.py, 320x150) as the background of .ship, and
+   the SVG over it uses the same pixel coordinates, so compartments sit exactly
+   on the drawn windows. Each deck's colour comes from `.deck--<track>` (under
+   "Decks" below). */
 .station-map { margin: 1rem 0 1.5rem; }
-.station-map svg { display: block; width: 100%; height: auto; max-width: 560px; margin: 0 auto; }
-.deck-band { fill: var(--bg-elev); stroke: var(--border); }
-.edges { opacity: 0.85; }
-.deck-name { fill: var(--deck); font: 700 13px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
-.deck-track { fill: var(--muted); font: 12px var(--font); }
-.edge { stroke: var(--map-locked); stroke-width: 2; }
-.edge.is-lit { stroke: var(--text); opacity: 0.45; }
-.node .hit { fill: transparent; }
-.node circle { fill: var(--bg); stroke: var(--map-locked); stroke-width: 2.5; }
-.node-code { fill: var(--muted); font: 600 11px var(--mono); }
-.node-label { fill: var(--muted); font: 11px var(--font); }
-/* A halo in the band's colour, so an edge passing behind text never cuts it. */
-.node-label, .node-code, .deck-name, .deck-track { paint-order: stroke; stroke: var(--bg-elev); stroke-width: 4px; stroke-linejoin: round; }
-.node.complete .node-code { stroke: none; }
-.node.complete circle { fill: var(--deck); stroke: var(--deck); }
+.ship {
+  position: relative;
+  aspect-ratio: 320 / 150;
+  background: url("../img/ship.png") 0 0 / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.ship svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.deck-name { fill: var(--deck); font: 700 5px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.deck-count { fill: var(--muted); font-weight: 400; }
+.node .room { fill: transparent; stroke: none; }
+.node-code { fill: var(--muted); font: 600 4.2px var(--mono); pointer-events: none; }
+.node.locked .node-code { fill: #4a5470; }
+.node.soon .room { fill: rgb(40 46 70 / 0.85); }
+.node.soon .node-code { fill: #4a5470; }
+.node.available .room { stroke: var(--deck); stroke-width: 0.9; animation: map-pulse 2.4s ease-in-out infinite; }
+.node.available .node-code { fill: var(--text); }
+.node.complete .room { fill: var(--deck); filter: drop-shadow(0 0 1.5px var(--deck)); }
 .node.complete .node-code { fill: var(--deck-ink); }
-.node.complete .node-label { fill: var(--text); }
-.node.available circle { stroke: var(--deck); stroke-dasharray: 5 3; animation: map-pulse 2.4s ease-in-out infinite; }
-.node.available .node-code, .node.available .node-label { fill: var(--text); }
-.node.locked { opacity: 0.55; }
-.node:hover circle, .node:focus-visible circle { stroke: var(--text); }
+.node:hover .room, .node:focus-visible .room { stroke: var(--text); stroke-width: 0.9; }
 .node:focus-visible { outline: none; }
-.node:focus-visible .hit { stroke: var(--accent); stroke-width: 2; }
-@keyframes map-pulse { 50% { stroke-opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .node.available circle { animation: none; } }
+.conduits { opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.node:hover .conduits, .node:focus-visible .conduits { opacity: 1; }
+.conduit { fill: none; stroke: var(--muted); stroke-width: 0.8; stroke-dasharray: 2 1.5; }
+.conduit.is-lit { stroke: var(--deck); stroke-dasharray: none; }
+@keyframes map-pulse { 50% { stroke-opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .node.available .room { animation: none; } .conduits { transition: none; } }
 .map-list h3 { margin-top: 1rem; }
 .map-list .complete a { color: var(--accent); }
 .unit:target { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 4px; }
