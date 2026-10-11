@@ -3,6 +3,7 @@
 {% block title %}{{ module.title }} · Orbit Ops{% endblock %}
 {% block body_class %}deck--{{ track.slug }}{% endblock %}
 {% block scripts %}{% if terminal_spec %}
+  <script src="{{ static_url('js/manual.js') }}" defer></script>
   <script src="{{ static_url('js/shell.js') }}" defer></script>
   <script src="{{ static_url('js/console.js') }}" defer></script>
 {% endif %}{% if challenge_spec %}

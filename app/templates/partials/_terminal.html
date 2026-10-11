@@ -15,8 +15,32 @@
       <input class="term-input" id="term-input" type="text" autocomplete="off" autocapitalize="off"
              autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Command">
     </form>
+    {# nano and the pager (#66) take over the panel while they're open; shell.js's
+       Nano and Pager decide what each key does, and console.js draws them. #}
+    <div class="term-editor" hidden>
+      <div class="nano-bar"><span>GNU nano 7.2</span><span class="nano-name"></span><span class="nano-flag"></span></div>
+      <textarea class="nano-text" rows="14" spellcheck="false" autocapitalize="off" autocomplete="off"
+                autocorrect="off" wrap="off" aria-label="nano editor"></textarea>
+      <div class="nano-message" role="status"></div>
+      <div class="nano-keys">
+        <span><kbd>^O</kbd> Write Out</span><span><kbd>^X</kbd> Exit</span>
+        <span><kbd>^K</kbd> Cut</span><span><kbd>^U</kbd> Paste</span>
+        <span class="nano-leave">Esc then Tab leaves the editor</span>
+      </div>
+    </div>
+    <div class="term-pager" hidden tabindex="0" role="document"
+         aria-label="Pager. Space: next screen, b: back, slash: search, q: quit">
+      <pre class="pager-text"></pre>
+      <div class="pager-foot">
+        <span class="pager-status"></span>
+        <form class="pager-find" hidden>
+          <label for="pager-input">/</label>
+          <input class="pager-input" id="pager-input" type="text" autocomplete="off" spellcheck="false" aria-label="Search for">
+        </form>
+      </div>
+    </div>
   </div>
-  <div class="term-keys" data-needs-js hidden>
+  <div class="term-keys" data-needs-js data-shell-only hidden>
     <button type="button" class="term-key" data-key="Tab">Tab</button>
     <button type="button" class="term-key" data-key="Ctrl-C">Ctrl-C</button>
     <button type="button" class="term-key" data-key="Up" aria-label="Previous command">↑</button>

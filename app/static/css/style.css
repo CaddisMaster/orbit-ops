@@ -393,6 +393,38 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
   color: var(--text);
 }
 .term-reset { margin-left: auto; color: var(--muted); }
+/* nano and the pager (#66), inside the console panel. */
+.nano-bar, .pager-status, .nano-keys kbd { background: #d7e0f0; color: #05080f; }
+.nano-bar { display: flex; justify-content: space-between; gap: 2ch; padding: 0 0.85rem; border-radius: 6px 6px 0 0; }
+.nano-text {
+  display: block;
+  width: 100%;
+  height: 21rem;
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  resize: none;
+  tab-size: 8;
+  caret-color: var(--accent);
+}
+.nano-text:focus-visible { outline: none; }
+.nano-message { min-height: 1.5em; text-align: center; }
+.nano-message span { padding: 0 1ch; color: #05080f; background: #d7e0f0; }
+.nano-message.is-prompt { text-align: left; padding: 0 0.85rem; color: #05080f; background: #d7e0f0; }
+.nano-keys { display: flex; flex-wrap: wrap; gap: 0 2.5ch; padding: 0.15rem 0.85rem 0.6rem; }
+.nano-keys kbd { font: inherit; padding: 0 0.15ch; }
+.nano-leave { margin-left: auto; color: var(--muted); }
+.term-pager:focus-visible { outline: none; }
+.pager-text { margin: 0; padding: 0.75rem 0.85rem 0; min-height: 24rem; white-space: pre; overflow-x: auto; font: inherit; }
+.pager-text mark { background: var(--accent); color: #05080f; }
+.pager-tilde { color: var(--muted); }
+.pager-foot { display: flex; padding: 0 0.85rem 0.6rem; min-height: 1.5em; }
+.pager-find { display: flex; flex: 1; gap: 0.5ch; }
+.pager-find label { font-size: inherit; }
+.pager-input { flex: 1; padding: 0; border: 0; background: transparent; color: #ffffff; font: inherit; caret-color: var(--accent); }
+.pager-input:focus-visible { outline: none; }
 .term-status { margin: 0.5rem 0 0; min-height: 1.6em; font-size: 0.9rem; }
 @media (max-width: 480px) {
   .term { font-size: 0.78rem; }
