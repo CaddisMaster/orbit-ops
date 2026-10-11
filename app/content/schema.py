@@ -25,6 +25,8 @@ class _Strict(BaseModel):
 # ---------------------------------------------------------------------------
 class _Question(_Strict):
     q: Text
+    code: Text | None = None  # a script or output to read, shown as a block under `q` (#68)
+    lang: Annotated[str, Field(pattern=r"^[a-z0-9+-]+$")] = "text"  # how `code` is highlighted
     explain: Text  # shown after answering, right or wrong
 
 

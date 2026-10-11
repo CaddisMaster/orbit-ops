@@ -109,6 +109,7 @@ def test_question_without_an_answer_is_rejected(tmp_path):
         ("title: A module\n", "title: A module\ntitel: typo\n", "titel"),  # unknown keys are errors
         ("type: choice", "type: essay", "quiz.0"),
         ("options: [a, b]", "options: [a, a]", "options must be distinct"),
+        ("    q: Pick one\n", "    q: Pick one\n    code: ls\n    lang: Bash Shell\n", "quiz.0.choice.lang"),
     ],
 )
 def test_bad_front_matter_is_reported(tmp_path, replace, with_, expect):
@@ -202,6 +203,13 @@ def test_code_blocks_are_highlighted_with_classes_not_inline_styles(tmp_path):
     assert "&lt;x&gt;" in body  # unknown language: escaped, not dropped
 
 
+def test_a_questions_code_renders_as_a_highlighted_block():
+    from app.content.render import render_code
+
+    assert str(render_code("$ ls <dir>")) == '<pre class="highlight" data-lang="text"><code>$ ls &lt;dir&gt;\n</code></pre>\n'
+    assert '<span class="nb">echo</span>' in str(render_code("echo hi", "bash"))
+
+
 def test_inline_markdown_renders_code_and_escapes_html():
     from app.content.render import render_inline
 
@@ -228,17 +236,20 @@ def _taught_text(module) -> str:
 
 def _commands(line: str) -> set[str]:
     """The command names on a solution line: the first word of each stage of
-    every pipeline, past any `VAR=x` assignments and `sudo`."""
+    every pipeline, past any `VAR=x` assignments, `sudo` and shell keywords."""
     import re
 
+    keywords = {"if", "then", "elif", "else", "fi", "while", "until", "do", "done", "esac", "!", "{", "}"}
     names = set()
     for stage in re.split(r"\|\||&&|\||;", line):
         words = stage.split()
-        while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
+        if words and words[0] in ("for", "case"):  # `for f in *.log`, `case $x in`: no command
+            continue
+        while words and (words[0] in keywords or re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0])):
             words = words[1:]
         if words and words[0] == "sudo":
             words = words[1:]
-        if words:
+        if words and not re.match(r"^\d*[<>]", words[0]):  # `done < in.txt` runs nothing new
             names.add(words[0])
     return names
 
@@ -248,7 +259,8 @@ def test_no_console_task_needs_an_untaught_command():
     import re
 
     taught = ""
-    for module in load_catalog().unit_modules("linux-shell"):
+    catalog = load_catalog()
+    for module in catalog.unit_modules("linux-shell") + catalog.unit_modules("bash-scripting"):
         taught += " " + _taught_text(module)  # this module's lesson, and every earlier one
         if not module.terminal:
             continue
@@ -256,6 +268,12 @@ def test_no_console_task_needs_an_untaught_command():
         used = set().union(*(_commands(line) for line in module.terminal.solution if line != password))
         untaught = sorted(c for c in used if not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", taught))
         assert not untaught, f"{module.slug}'s console task uses {untaught}, which no lesson up to it teaches"
+
+
+def test_shell_keywords_are_not_commands():
+    assert _commands("for f in *.log; do gzip $f; done") == {"gzip"}
+    assert _commands("if [ -f x ]; then sudo rm x; fi") == {"[", "rm"}
+    assert _commands("while read -r line; do echo $line; done < in.txt") == {"read", "echo"}
 
 
 @pytest.mark.criterion(80, "Reading a file is taught before it's needed")

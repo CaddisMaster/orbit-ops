@@ -305,7 +305,7 @@
     man: {
       summary: "an interface to the system reference manuals",
       synopsis: ["man [SECTION] PAGE"],
-      description: "Show the manual page for PAGE in a pager: Space for the next screen, b to go back, /text to search (n for the next match), q to quit. Sections: 1 is commands, 5 is file formats (`man 5 crontab`). Shell builtins like cd have no page of their own: use `help cd`, or `cd --help`.",
+      description: "Show the manual page for PAGE in a pager: Space for the next screen, b to go back, /text to search (n for the next match), q to quit. Sections: 1 is commands, 5 is file formats (`man 5 crontab`), 8 is system administration commands and daemons. Without a SECTION, man searches 1, 8, 3, 2, 5, 4, 6, 7 and shows the first page it finds. Programs installed on the station keep their pages in /usr/share/man/manN. Shell builtins like cd have no page of their own: use `help cd`, or `cd --help`.",
     },
     less: {
       summary: "opposite of more",

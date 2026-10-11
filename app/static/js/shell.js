@@ -2387,6 +2387,21 @@
     })[0] || null;
   }
 
+  // An exercise's own page (#68): /usr/share/man/man8/scrubberd.8, as plain
+  // text, already laid out. Sections are searched in man-db's order, and the
+  // console's own pages come first within a section.
+  var MAN_ORDER = ["1", "8", "3", "2", "5", "4", "6", "7"];
+  function manFile(fs, name, section) {
+    var found = null;
+    (section ? [section] : MAN_ORDER).some(function (s) {
+      var key = manKey(name, s);
+      if (key) found = { key: key };
+      else if (fs["/usr/share/man/man" + s + "/" + name + "." + s]) found = { path: "/usr/share/man/man" + s + "/" + name + "." + s, title: name + "(" + s + ")" };
+      return found;
+    });
+    return found;
+  }
+
   // An option's flag, then its text wrapped at `at` columns (on a line of its
   // own if the flag is too long to share one).
   function optionLines(flag, text, at) {
@@ -3173,12 +3188,21 @@
       if (!args.length) return { out: "", err: "What manual page do you want?\nFor example, try 'man man'.\n", code: 1 };
       var out = "", err = "";
       for (var i = 0; i < args.length; i++) {
-        var key = manKey(args[i], section);
-        if (!key) { err += "No manual entry for " + args[i] + (section ? " in section " + section : "") + "\n"; continue; }
-        var text = renderMan(key);
+        var found = manFile(this.fs, args[i], section);
+        if (!found) { err += "No manual entry for " + args[i] + (section ? " in section " + section : "") + "\n"; continue; }
+        var text, title;
+        if (found.key) {
+          var page = MANUAL.PAGES[found.key];
+          text = renderMan(found.key);
+          title = (page.name || found.key) + "(" + (page.section || 1) + ")";
+        } else {
+          var r = this.readFile("man", found.path);
+          if (r.error) { err += r.error + "\n"; continue; }
+          text = r.text;
+          title = found.title;
+        }
         if (!io.tty) { out += text; continue; }
-        var page = MANUAL.PAGES[key];
-        yield { pager: new Pager({ text: text, name: (page.name || key) + "(" + (page.section || 1) + ")", man: true }) };
+        yield { pager: new Pager({ text: text, name: title, man: true }) };
       }
       return { out: out, err: err, code: err ? 16 : 0 };
     },

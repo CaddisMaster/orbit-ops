@@ -54,6 +54,15 @@ and why it matters, not what the diff says.
     with cron's own error messages if a line is wrong. `crontab -l` lists it. Nothing actually
     runs on a schedule.
 
+- **Unit 1.2, Bash scripting, opens** with module 01, "Reading and editing on a server" (#68):
+  `--help`, `help`, `man` and its sections, `less`, `tail -f`, nano, and enough vim to get out
+  of it. In the console you read the scrubber daemon's manual to find the setting that sounds
+  the CO2 alarm, past a warning setting that looks like it, and set it with `sudo nano`.
+  - `man` also finds the pages a program installs in `/usr/share/man`, searching the sections
+    in man-db's order (1, 8, 3, 2, 5, …), so a module can give its own daemon a manual.
+  - A quiz question can show a script or a command's output as a code block (`code:`), so
+    Unit 1.2's "what happens here?" questions read like a terminal, not one run-on line.
+
 ### Fixed
 - A release now reaches your browser straight away (#92). After an update, browsers could keep
   the old stylesheet, scripts and art for hours (Safari did, after the laptop arrived), so a new

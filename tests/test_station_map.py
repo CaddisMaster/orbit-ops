@@ -246,7 +246,7 @@ def test_the_syllabus_tells_each_units_story(logged_in):
 def test_the_map_says_why_a_system_matters(logged_in):
     page = logged_in.get("/map").text
     tooltip = re.search(r'data-unit="bash-scripting">\s*<title>([^<]*)</title>', page).group(1)
-    assert tooltip.startswith("1.2 Bash scripting · coming soon")
+    assert tooltip.startswith("1.2 Bash scripting · ")  # then its progress, which changes as modules are written
     assert tooltip.endswith("\nTyping the same twelve commands every shift is how mistakes happen.")
     assert '<span class="unit-brief">Typing the same twelve commands every shift is how mistakes happen.</span>' in page
 

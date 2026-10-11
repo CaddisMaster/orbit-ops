@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.comms import WINDOW_SPRITES
 from app.config import get_settings
-from app.content.render import render_inline
+from app.content.render import render_code, render_inline
 from app.flash import pop_flash
 from app.security import csrf_token
 from app.static_files import PYODIDE_URL, static_url
@@ -18,6 +18,7 @@ templates.env.globals["csrf_token"] = csrf_token
 templates.env.globals["pop_flash"] = pop_flash
 templates.env.globals["app_version"] = get_settings().app_version
 templates.env.filters["md"] = render_inline
+templates.env.filters["codeblock"] = render_code
 templates.env.globals["window_sprites"] = WINDOW_SPRITES
 templates.env.globals["static_url"] = static_url
 templates.env.globals["pyodide_url"] = PYODIDE_URL
