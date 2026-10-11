@@ -17,6 +17,12 @@ and why it matters, not what the diff says.
   card that's due files today's streak entry, just as finishing a module does. A day with no
   cards due doesn't count by itself. The dashboard says how many cards are due, with a button
   to review them, and the header readout shows "Cards due" on every page, updating as you grade.
+- Python can run in the browser (#53), ready for code challenges (#54). Pyodide 314.0.7
+  (CPython 3.14, like the server) is served from the app itself, so it adds no third-party
+  origin. The image fetches that exact release and refuses it if its sha256 doesn't match, which
+  adds about 13.5 MB. It loads only when a program is first run, runs in a Web Worker so the page
+  never freezes, and a program still running after 5 seconds is stopped. The CSP gains
+  `'wasm-unsafe-eval'` and nothing else.
 - A database table for flashcard schedules: each learner's SM-2 state per card (ease, interval,
   due date, reviews in a row, lapses), one row per card per learner. The cards themselves stay in
   the lesson files (#51).
