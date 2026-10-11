@@ -3,7 +3,7 @@
    CastSpec, `html` the line (or none, for just the name), `lead` an optional
    word before it ("asks:"). #}
 <div class="comms-line crew-line from-{{ who.slug }}">
-  <img class="avatar" src="{{ url_for('static', path='img/avatar-' ~ who.avatar ~ '.png') }}" alt="" width="32" height="32">
+  <img class="avatar" src="{{ static_url('img/avatar-' ~ who.avatar ~ '.png') }}" alt="" width="32" height="32">
   <div class="bubble">
     <p class="who">{{ who.name }} <span class="role">· {{ who.role }}</span>{% if who.delay %} <span class="delay">+{{ who.delay }} light-delay</span>{% endif %}{% if lead %} <span class="crew-lead">{{ lead }}</span>{% endif %}</p>
     {% if html %}<p class="said">{{ html }}</p>{% endif %}

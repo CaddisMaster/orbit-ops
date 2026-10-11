@@ -3,11 +3,11 @@
 {% block title %}{{ module.title }} · Orbit Ops{% endblock %}
 {% block body_class %}deck--{{ track.slug }}{% endblock %}
 {% block scripts %}{% if terminal_spec %}
-  <script src="{{ url_for('static', path='js/shell.js') }}" defer></script>
-  <script src="{{ url_for('static', path='js/console.js') }}" defer></script>
+  <script src="{{ static_url('js/shell.js') }}" defer></script>
+  <script src="{{ static_url('js/console.js') }}" defer></script>
 {% endif %}{% if challenge_spec %}
-  <script src="{{ url_for('static', path='js/python.js') }}" defer></script>
-  <script src="{{ url_for('static', path='js/challenge.js') }}" defer></script>
+  <script src="{{ static_url('js/python.js') }}" data-pyodide="{{ pyodide_url }}" defer></script>
+  <script src="{{ static_url('js/challenge.js') }}" defer></script>
 {% endif %}{% endblock %}
 {% block content %}
 <nav class="crumbs muted" aria-label="Breadcrumb">

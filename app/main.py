@@ -3,11 +3,9 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -15,12 +13,12 @@ from app.config import get_settings
 from app.content import load_catalog
 from app.routers import auth, learn, main, review
 from app.security import CSRFError, HeadAsGetMiddleware, LoginRequired, SecurityHeadersMiddleware, csrf_protect
+from app.static_files import PYODIDE_DIR, PYODIDE_URL, STATIC_DIR, CachedStaticFiles
 from app.templating import templates
 
 log = logging.getLogger("orbit")
 
 SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 days: a daily-habit app should not nag for a password
-PYODIDE_DIR = Path("/opt/pyodide")  # the Dockerfile's `pyodide` stage (#53)
 
 
 @asynccontextmanager
@@ -60,11 +58,12 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(HeadAsGetMiddleware)  # outermost: everything inside sees a GET
 
-    app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
-    # Pyodide (#53), put there by the Dockerfile's `pyodide` stage. check_dir is
+    app.mount("/static", CachedStaticFiles(directory=STATIC_DIR), name="static")
+    # Pyodide (#53), put there by the Dockerfile's `pyodide` stage, under a path
+    # that names its version so it can be cached for good (#92). check_dir is
     # off because a bare checkout (CI's test job) doesn't have it, and nothing
     # there asks for it.
-    app.mount("/pyodide", StaticFiles(directory=PYODIDE_DIR, check_dir=False), name="pyodide")
+    app.mount(PYODIDE_URL.rstrip("/"), CachedStaticFiles(directory=PYODIDE_DIR, check_dir=False, immutable=True), name="pyodide")
     app.include_router(main.router)
     app.include_router(auth.router)
     app.include_router(learn.router)

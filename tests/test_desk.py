@@ -110,7 +110,7 @@ def test_without_javascript_the_laptop_stays_open(client):
     assert '<button type="button" class="lid-close" hidden>' in page  # laptop.js unhides it
     assert '<button type="button" class="laptop-open" aria-label="Open the laptop" hidden>' in page
     assert "is-closed" not in page and " inert" not in page
-    assert re.search(r'<script src="[^"]*/static/js/laptop.js" defer></script>', page)
+    assert re.search(r'<script src="[^"]*/static/js/laptop.js\?v=[^"]+"[^>]* defer></script>', page)
     js = client.get("/static/js/laptop.js").text
     assert "close.hidden = false;" in js and "lid.inert = true;" in js and "lid.inert = false;" in js
 
@@ -132,7 +132,7 @@ def test_the_briefing_arrives_as_messages(logged_in, desk):
     assert _lines(first)[-2:] == [("open", "Okafor", True), ("open", "Mission Control", True)]
     assert '<span class="delay">+1.3 s light-delay</span>' in first
     assert "Briefing incoming on comms" in first and "data-transmission" not in first
-    assert re.search(r'<script src="[^"]*/static/js/comms.js" defer></script>', first)
+    assert re.search(r'<script src="[^"]*/static/js/comms.js\?v=[^"]+"[^>]* defer></script>', first)
     again = logged_in.get("/modules/two").text
     assert not any(new for _, _, new in _lines(again))  # a briefing arrives once
 
@@ -293,7 +293,7 @@ def test_the_units_end_is_marked_outside_the_window(logged_in, user):
         values = [str(q.answer)] if q.type == "choice" else [str(a) for a in q.answer] if q.type == "multi" else [q.answer[0]]
         response = answer(logged_in, last.slug, i, *values)
     assert '<div id="window-event" class="window-event aurora" hx-swap-oob="true" data-event="aurora">' in response.text
-    assert 'src="http://testserver/static/img/aurora.png"' in response.text
+    assert 'src="/static/img/aurora.png?v=' in response.text
     assert "aurora" not in logged_in.get(f"/modules/{last.slug}").text.split('id="window-event"')[1][:80]  # once
 
 

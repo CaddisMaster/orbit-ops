@@ -37,6 +37,12 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   `el.style.x` from a served JS file is fine: CSSOM writes aren't inline styles to the CSP.
   `tests/test_immersion.py` greps the main pages for `style=`.
 
+- **Link static files with `static_url('css/x.css')`, never `url_for('static', …)` or a bare
+  `/static/…`** (#92). An unversioned URL is served `no-cache` and won't change when a release
+  does. `tests/test_static.py` checks the main pages. CSS `url(...)` stays relative and
+  revalidates on its own. A new Pyodide version means changing `PYODIDE_VERSION` in
+  `app/static_files.py` along with `scripts/fetch_pyodide.py` (a test holds them equal).
+
 ## Containers
 
 - **The host `.env` is mode 600 and the container user is uid 10001.** The app does not read

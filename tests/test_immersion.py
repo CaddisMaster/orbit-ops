@@ -85,7 +85,7 @@ def test_the_csp_is_unchanged_and_nothing_inline_needs_it(logged_in, path):
     assert "style=" not in html  # inline style attributes would need 'unsafe-inline'
     for tag in re.findall(r"<script\b[^>]*>", html):
         assert "src=" in tag or "nonce=" in tag, tag
-    assert re.search(r'<script src="[^"]*/static/js/briefing.js" defer></script>', html)  # served, not inline
+    assert re.search(r'<script src="[^"]*/static/js/briefing.js\?v=[^"]+"[^>]* defer></script>', html)  # served, not inline
 
 
 def test_the_briefing_is_served_in_full_without_javascript(logged_in, xp_curriculum):  # noqa: F811

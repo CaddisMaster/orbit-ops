@@ -39,7 +39,8 @@ app/config.py        Settings — every env var, typed. Add new ones here AND .e
 app/db.py            engine, SessionLocal, get_db dependency, Base
 app/models.py        ORM models (learner state only; lesson content lives in content/)
 app/security.py      argon2 hashing, session auth (require_user), CSRF, rate limiter, CSP headers
-app/templating.py    the shared Jinja env (csrf_token, app_version globals)
+app/templating.py    the shared Jinja env (csrf_token, app_version, static_url globals)
+app/static_files.py  static_url (?v= per release), Cache-Control on /static and /pyodide/<version>
 app/content/         schema.py, loader.py (load_catalog → Catalog), render.py (Markdown, Pygments)
 app/progress.py      lock rules + today's mission (pure), check_answer, record_answer
 app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their ledgers)

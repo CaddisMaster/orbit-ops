@@ -218,7 +218,7 @@ def test_the_nav_links_to_the_review_queue(logged_in):
 def test_the_review_queue_is_a_watch_drill(logged_in, user):
     _complete(user.id, "navigating", "text-tools")
     page = logged_in.get("/review").text
-    assert '<p class="drill-readout"><img class="avatar" src="http://testserver/static/img/avatar-meridian.png"' in page
+    assert '<p class="drill-readout"><img class="avatar" src="/static/img/avatar-meridian.png?v=' in page
     assert "<span>Watch drill · 6 items · from: Life Support</span>" in page
     assert 'Card from “Finding your way around”' in page
 
