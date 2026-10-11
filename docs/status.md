@@ -16,17 +16,81 @@ A per-session log, standing decisions and a release ledger. Newest first.
   elements that `style-src 'self'` blocks (#17).
 - **The art is code** (`art/`, stdlib Python → `app/static/img/`), checked by redrawing it.
 - **Comms, locks and streaks are derived from progress**, never stored.
+- **Learner code never runs on the server.** The console is `shell.js` and Python is Pyodide, both
+  in the browser. Challenge verdicts are the browser's, and the server only records them
+  (trust-the-client, #54).
+- **Pyodide is self-hosted** in `/opt/pyodide` (the dev bind mount hides `/app`). It is fetched at
+  build by `scripts/fetch_pyodide.py`, pinned by sha256, and the CSP's only addition is
+  `'wasm-unsafe-eval'` (#53).
+- **The map's layout is the art's** (`art/ship.py` SLOTS). Units fill their deck's compartments in
+  order, and `map:` is gone from the syllabus (#78).
+- **No console task may need an untaught command.** `test_content.py` enforces it for Unit 1.1
+  (#80). Extend it to each new unit.
+- **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
+  the Release, and Sean approves `production`.
 
 ## Release ledger
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.5.0 | 2026-10-10 | SM-2 flashcards as MERIDIAN's watch drill (XP, streak, dashboard); self-hosted Pyodide and the first code challenge; the laptop with a closing lid; the map as the *Meridian*; unit briefings shown; migration `0007` |
 | 0.4.0 | 2026-10-09 | Console tasks in 9/10 Unit 1.1 modules (sudo, processes, env, awk/sed); the pixel-art desk, its computer and the comms log; Unit 1.1 told as one story |
 | 0.3.0 | 2026-10-09 | XP/ranks, streaks + freezes, badges, station map, deck colours, the station console; migrations `0004`–`0006` |
 | 0.2.0 | 2026-10-08 | Learn loop: syllabus, Unit 1.1 (10 modules), quizzes, completion, locking; migration `0003` |
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-10 — v0.5.0 shipped, Unit 1.2 planned
+
+- **Opened v0.5.0** with #51–#54, built all of it, added #55, #80, #82, #85 and #88 along the way,
+  and **released v0.5.0**. Release run `38103035747`; `/healthz` 0.5.0 / `8246e28`.
+  - Production checks: Pyodide files are served, and Python ran on prod (`45`, 3.14.2) with no CSP
+    errors. Budget Buddy stayed green.
+  - Migration `0007` ran in smoke. On prod it shows only through Review working, so Sean's
+    first visit confirms it.
+- **What shipped, by PR:**
+  - #57: the laptop and its lid (#55).
+  - #58: the reduced-motion fix for window events (#56).
+  - #59 `0007 card_state` and #60 SM-2 review (#51). #61: review XP, the streak and the
+    dashboard (#52).
+  - #62: Pyodide (#53). #63: code challenges (#54), the first a bonus on text-tools.
+  - #79: the map as a ship (#78).
+  - #81: teaching `cat` before the console needs it (#80).
+  - #86: the watch drill and the challenge asker (#82).
+  - #87: relay network (#85).
+  - #89: unit briefings (#88).
+  - #91: the README and the roadmap re-sequence.
+- **Decided this session:**
+  - The monitor became a laptop whose lid closes (mock-ups of a smaller monitor cramped the app).
+  - The first challenge is a bonus in Unit 1.1 (option 1 of 3).
+  - Again lowers the ease, and the interval uses the ease from before the grade.
+  - Pyodide 314.x runs CPython 3.14, the same as the server.
+  - **Roadmap re-sequenced:** v0.6.0 is Bash scripting, v0.7.0 Labs and AI.
+- **Content review:** 10 of about 170 modules are written. They're beginner level, the quizzes are
+  mostly recall, and there's one scenario question each from Unit 1.2 on. Gaps found and planned
+  into 1.2: `man`/`less`, an editor, `find`/`tar`, disk usage, links, quoting.
+- **Filed:**
+  - v0.6.0 (open): #64–#67 console capabilities, #68–#77 Unit 1.2's ten modules, #92 static
+    cache-busting.
+  - No milestone: #83 crew notices promotions and badges, #84 the outage mystery thread.
+- **Process notes:**
+  - Sean found the untaught `cat` by playing the module. A test that walks every console solution
+    against the lessons so far found two more gaps.
+  - Static files have no cache-busting, so Safari kept old CSS after a change. The fix is a hard
+    reload (Cmd+Option+R; Cmd+Shift+R is Reader). Filed as #92.
+  - `art/` changes need `docker compose restart web`, because the map imports `art.ship` (now in
+    gotchas). `art/` must stay in the image, never in `.dockerignore`.
+  - Playwright's `waitForFunction` uses eval, which our CSP blocks. Wait on a selector instead.
+  - `gh release create --target` needs a full SHA or a branch name.
+  - Two tests had passed for the wrong reason: #54's challenge fixture named a missing file, and
+    two review tests assumed three cards per module. Both were fixed when a new test exposed them.
+  - Stacked PRs: after the base squash-merges, `gh pr update-branch` may conflict on
+    CHANGELOG. Merge `main` into the branch locally (force-push is denied).
+- **Next:**
+  1. #64, the console's control flow. Everything in Unit 1.2 builds on it.
+  2. Then #66 (nano, so learners can write scripts), #67, #65, and the modules in order.
+  3. #92 is small and worth doing early in v0.6.0, before the next release.
 
 ### 2026-10-09 — v0.3.0 and v0.4.0 shipped
 
