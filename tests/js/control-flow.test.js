@@ -185,11 +185,12 @@ test("sudo can ask for its password inside a loop", () => {
 test("Ctrl-C abandons an unfinished command or a prompt", () => {
   const sh = station();
   sh.run("if true; then");
-  assert.equal(sh.cancel(), true);
+  assert.deepEqual(sh.cancel(), { output: "", clear: false });
   assert.equal(sh.prompt(), "cadet@meridian:/station$ ");
   assert.equal(out(sh, "echo fresh"), "fresh\n");
   sh.run('bash -c \'X=1; read -r y\'');
-  assert.equal(sh.cancel(), true);
+  assert.ok(sh.cancel());
+  assert.equal(sh.lastStatus, 130); // as bash: 128 + SIGINT
   assert.equal(sh.pending, null);
   assert.equal(out(sh, 'echo "X=$X"'), "X=\n"); // the child's variables went with it
 });
@@ -236,11 +237,10 @@ test("break outside a loop and keywords are explained, as bash does", () => {
 test("What the console doesn't do, it says so", () => {
   const sh = station();
   const refused = (line) => out(sh, line).replace(/^bash: unsupported on the station console: /, "");
-  assert.match(refused("f() { echo hi; }"), /^functions/);
   assert.match(refused("for ((i = 0; i < 3; i++)); do echo $i; done"), /^for \(\( … \)\) loops/);
   assert.match(refused("(( i++ ))"), /^\(\( \)\) arithmetic commands/);
   assert.match(refused("echo $((i++))"), /^\+\+ and --/);
-  assert.match(refused("cat <<EOF"), /^here-documents/);
+  assert.match(refused("trap 'echo x' ERR"), /^bash: trap: unsupported on the station console: ERR traps/);
   assert.match(refused("[[ abc =~ b ]]"), /^\[\[ =~ \]\] regular expressions/);
   assert.equal(sh.lastStatus, 2);
 });

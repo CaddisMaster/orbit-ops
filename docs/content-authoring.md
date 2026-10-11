@@ -289,9 +289,19 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     input, split on `$IFS` (`while IFS=, read -r a b`); at the prompt it reads the keyboard, and
     so does a script started there. A command can span lines: at the prompt an unfinished one
     continues on a `> ` line, so a multi-line `solution:` is typed a line at a time. A loop that
-    runs 10,000 commands is stopped. Refused with "unsupported on the station console": functions,
-    heredocs and `<<<` (#65), `(( ))`, `for ((…))`, `++`/assignment inside `$(( ))`, `[[ =~ ]]`,
-    arrays and `select`.
+    runs 10,000 commands is stopped. Refused with "unsupported on the station console": `(( ))`,
+    `for ((…))`, `++`/assignment inside `$(( ))`, `[[ =~ ]]`, `ERR` traps, arrays and `select`.
+  - robust scripts (#65): functions (`name() { …; }`, `function name { …; }`) with `local`,
+    `return N`, their own `$1… $# "$@"`, `shift` and `$FUNCNAME`; a child script doesn't see
+    its parent's, and `source lib.sh` brings a library's in. `set -e -u -x -o pipefail` (and
+    `set -euo pipefail`, `set --`, `set -o`), with bash's `-e` exceptions: not in an
+    if/while/until test, not left of `&&`/`||`, not after `!`, not for `{ …; }` whose failure was
+    one of those (but a *function* that fails does stop it), and `$( )` doesn't inherit it. In a
+    script, `set -u` errors name the file and line (`./s.sh: line 4: X: unbound variable`). `trap
+    'cmds' EXIT` runs on a normal end, `exit N`, a `set -e` failure and an unbound variable; Ctrl-C
+    runs INT then EXIT. Here-documents `<<EOF`, `<<'EOF'` (literal) and `<<-EOF` (tabs
+    stripped), here-strings `<<<`, and `mktemp [-d] [TEMPLATE]` (600 / 700, in `/tmp`). At the
+    prompt a `set -e` failure prints `logout` and a note, since the console can't close.
 
   Anything else prints "command not found". Not yet: `set`, `printf`, `stat`, `top`. Don't set a task that needs more: add the
   command to `app/static/js/shell.js` first, with a test in `tests/js/`.

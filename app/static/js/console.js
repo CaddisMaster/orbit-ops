@@ -279,10 +279,11 @@
     function interrupt() {
       var secret = !!(sh.pending && sh.pending.secret);
       print(sh.prompt() + (secret ? "" : input.value) + "^C", "term-echo");
-      sh.cancel();
+      var result = sh.cancel(); // a script's INT and EXIT traps may print
       input.value = "";
       at = history.length;
-      setPrompt();
+      if (result) settle(result);
+      else setPrompt();
     }
 
     function recall(step) {

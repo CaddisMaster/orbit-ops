@@ -134,7 +134,7 @@ test("sudo -l, sudo -i and exit", () => {
 test("Ctrl-C at the password prompt abandons the line", () => {
   const sh = station();
   sh.run("sudo whoami; echo after");
-  assert.equal(sh.cancel(), true);
+  assert.equal(sh.cancel().output, ""); // the rest of the line doesn't run
   assert.equal(sh.pending, null);
   assert.equal(out(sh, "echo next"), "next\n");
 });
