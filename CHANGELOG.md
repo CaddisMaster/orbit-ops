@@ -17,6 +17,12 @@ and why it matters, not what the diff says.
   card that's due files today's streak entry, just as finishing a module does. A day with no
   cards due doesn't count by itself. The dashboard says how many cards are due, with a button
   to review them, and the header readout shows "Cards due" on every page, updating as you grade.
+- Python code challenges (#54), and the first one: a bonus on Unit 1.1's text-tools module.
+  MERIDIAN reports 14 failed logins on the docking port; prove it in Python, against the same
+  log you plumbed with `awk`. Write in the editor (Tab indents), **Run** to see what it prints,
+  **Submit** to run the checks. A failed check tells you what it was checking, never its code,
+  and the first pass is worth 30 XP. Your last attempt is still in the editor when you come
+  back. Your code runs only in your browser, never on the server.
 - Python can run in the browser (#53), ready for code challenges (#54). Pyodide 314.0.7
   (CPython 3.14, like the server) is served from the app itself, so it adds no third-party
   origin. The image fetches that exact release and refuses it if its sha256 doesn't match, which

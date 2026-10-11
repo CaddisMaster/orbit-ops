@@ -1,0 +1,25 @@
+{# A module's bonus Python challenge (#54). static/js/challenge.js runs it in
+   the browser with Pyodide (static/js/python.js); without JavaScript only the
+   task and a note show. The spec rides in a data attribute: |tojson escapes
+   < > & and ', so it is safe in single quotes. It holds the checks' code,
+   which is never shown (app/challenge.py says why it's sent at all). #}
+<section class="card challenge" aria-labelledby="challenge-heading"
+         data-challenge='{{ challenge_spec | tojson }}' data-report="/modules/{{ module.slug }}/challenge">
+  <p class="eyebrow">Bonus · Python · {{ challenge_xp }} XP</p>
+  <h2 id="challenge-heading">Script it</h2>
+  <div class="task prose">{{ module.challenge_task_html | safe }}</div>
+  <p class="challenge-nojs muted">Python challenges run in your browser and need JavaScript. The lesson and the quiz work without it.</p>
+  <div class="challenge-ui" hidden>
+    <label class="challenge-label muted" for="challenge-code">Your Python <span class="challenge-keys">· Tab indents · Esc then Tab leaves the editor · Ctrl/⌘+Enter runs</span></label>
+    <textarea class="code-editor" id="challenge-code" rows="14" spellcheck="false" autocapitalize="off"
+              autocomplete="off" autocorrect="off" wrap="off">{{ challenge_code }}</textarea>
+    <div class="challenge-actions">
+      <button type="button" class="secondary" data-run>Run</button>
+      <button type="button" class="primary" data-submit>Submit</button>
+      <button type="button" class="link challenge-reset" data-reset>Reset to the starter</button>
+    </div>
+    <pre class="challenge-output" role="log" aria-live="polite" aria-label="Output" hidden></pre>
+    <ul class="challenge-checks" aria-label="Checks" hidden></ul>
+  </div>
+  <p class="challenge-status" role="status">{% if challenge_passed %}<span class="challenge-passed">✓ Passed</span>: the {{ challenge_xp }} XP is yours. Improve it as much as you like.{% endif %}</p>
+</section>

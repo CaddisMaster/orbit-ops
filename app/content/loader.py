@@ -21,6 +21,7 @@ from app.content.render import render_inline, render_markdown
 from app.content.schema import (
     BadgeSpec,
     CastSpec,
+    Challenge,
     Comms,
     ModuleFile,
     Question,
@@ -61,6 +62,9 @@ class Module:
     cards: tuple[FlashCard, ...]
     terminal: TerminalExercise | None
     terminal_task_html: str
+    challenge: Challenge | None
+    challenge_task_html: str
+    challenge_inputs: dict  # {variable: the console file's contents}, resolved once at startup
     comms: Comms | None
     comms_html: dict  # {beat: ((cast slug, message html), ...)}, rendered once at startup
     unit: str
@@ -256,6 +260,14 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             cards=tuple(FlashCard(f"{slug}/{c.id}", slug, render_inline(c.front), render_inline(c.back)) for c in data.cards),
             terminal=data.terminal,
             terminal_task_html=render_markdown(data.terminal.task) if data.terminal else "",
+            challenge=data.challenge,
+            challenge_task_html=render_markdown(data.challenge.task) if data.challenge else "",
+            challenge_inputs={
+                name: next(f.contents for f in data.terminal.files if f.path == path)
+                for name, path in data.challenge.inputs.items()
+            }
+            if data.challenge and data.terminal
+            else {},
             comms=data.comms,
             comms_html={
                 beat: tuple((m.from_, render_inline(m.text)) for m in getattr(data.comms, beat))

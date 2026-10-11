@@ -107,6 +107,35 @@ CommonMark plus tables. Fenced code blocks with a language (```bash, ```python,
 ```yaml, ```text …) are syntax-highlighted.
 ```
 
+### A code challenge (optional)
+
+A bonus Python exercise, run in the learner's browser by Pyodide (CPython 3.14). It's worth
+30 XP the first time it passes, and doesn't gate completion: the quiz does that.
+
+```yaml
+challenge:
+  task: |-               # Markdown: what to write, and what it's given
+    `log` holds the docking log. Finish `failed_logins(log)` …
+  inputs: {log: /var/log/docking/access.log}   # optional: variables preset from THIS
+                                               # module's console files, so the data is the same
+  starter: |-            # what the editor opens with; it must FAIL a check
+    def failed_logins(log):
+        ...
+  checks:                # run after the learner's code, in the same namespace
+    - check: assert failed_logins(log) == 14   # a statement; passes if it raises nothing
+      says: It finds MERIDIAN's 14 failed logins in the real log.   # shown on failure, never the code
+  solution: |-           # CI runs it in CPython and requires every check to pass; never sent to the page
+    …
+```
+
+- **Write a check for the shortcut, not just the answer.** A naive solution should fail at least
+  one check, and its `says` should teach why (the text-tools challenge catches `'401' in line`).
+- **`says` is the hint.** It's all a learner sees of a failed check, so say what's being checked.
+- **Numbers the crew quotes must be true.** If a check or the task repeats a comms figure, a test
+  should hold them together (`tests/test_challenge.py` does it for text-tools).
+- The checks reach the page (the browser runs them), so a determined learner can read them.
+  That's the trade for never running learner code on the server.
+
 ### Flashcards
 
 A module's cards join the learner's review queue (`/review`) once the module is complete. The

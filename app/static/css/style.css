@@ -390,6 +390,44 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
   .term { font-size: 0.78rem; }
 }
 
+/* --- Code challenges (#54) -------------------------------------------------------- */
+.challenge { margin-top: 1.25rem; }
+.challenge-label { display: block; margin: 0.75rem 0 0.35rem; font-size: 0.85rem; }
+.challenge-keys { font-size: 0.78rem; }
+.code-editor {
+  width: 100%;
+  min-height: 14rem;
+  resize: vertical;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #070b16;
+  color: var(--text);
+  font: 0.9rem/1.5 var(--mono);
+  tab-size: 4;
+  white-space: pre;
+}
+.code-editor:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.challenge-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.challenge-reset { margin-left: auto; color: var(--muted); }
+.challenge-output {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.8rem;
+  max-height: 14rem;
+  overflow: auto;
+  border-left: 3px solid var(--accent);
+  background: rgb(255 255 255 / 0.03);
+  font: 0.85rem/1.5 var(--mono);
+  white-space: pre-wrap;
+}
+.challenge-output.is-error { border-left-color: var(--danger); }
+.challenge-checks { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+.challenge-checks li { margin: 0 0 0.3rem; }
+.challenge-checks .is-right { color: var(--ok); }
+.challenge-checks .is-wrong { color: var(--danger); }
+.challenge-status { min-height: 1.6em; margin: 0.6rem 0 0; }
+.challenge-passed { color: var(--ok); font-weight: 700; }
+
 /* --- Flashcard review (#51) ------------------------------------------------------ */
 .review-card { max-width: 640px; margin-left: auto; margin-right: auto; }
 .review-front { font-size: 1.35rem; font-weight: 600; margin: 0.75rem 0 1.25rem; }

@@ -5,6 +5,9 @@
 {% block scripts %}{% if terminal_spec %}
   <script src="{{ url_for('static', path='js/shell.js') }}" defer></script>
   <script src="{{ url_for('static', path='js/console.js') }}" defer></script>
+{% endif %}{% if challenge_spec %}
+  <script src="{{ url_for('static', path='js/python.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/challenge.js') }}" defer></script>
 {% endif %}{% endblock %}
 {% block content %}
 <nav class="crumbs muted" aria-label="Breadcrumb">
@@ -38,6 +41,7 @@
   <section class="lesson prose">{{ module.body_html | safe }}</section>
 
   {% if terminal_spec %}{% include "partials/_terminal.html" %}{% endif %}
+  {% if challenge_spec %}{% include "partials/_challenge.html" %}{% endif %}
 
   <section class="card quiz" aria-labelledby="quiz-heading">
     <p class="eyebrow">Systems check</p>
