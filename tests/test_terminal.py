@@ -390,3 +390,98 @@ def test_the_sudo_password_is_sent_only_for_exercises_that_set_one(tmp_path):
     _write(tmp_path)
     assert client_spec(load_catalog(tmp_path).modules["two"].terminal)["password"] is None
     assert client_spec(load_catalog().modules["users-and-sudo"].terminal)["password"] == "meridian"
+
+
+# --- #67: sizes, ages and symlinks ---------------------------------------------------------
+DISK = """terminal:
+  task: Tidy the logs.
+  cwd: /station
+  disk: {size: 2G, base: "1.5G"}
+  memory: {total: 1G, used: 300M, cache: 200M}
+  files:
+    - {path: /station, type: dir}
+    - {path: /station/scrubber.conf, contents: "override=7731\\n"}
+    - {path: /var/log/o2/big.log, contents: "sample\\n", size: 12M, mtime: "2026-09-20 14:30"}
+    - {path: /var/log/o2/today.log, contents: "ok\\n"}
+    - {path: /station/current.log, type: link, target: /var/log/o2/today.log}
+  checks:
+    - {symlink: /station/latest.log, target: /var/log/o2/big.log}
+    - {files_under: /var/log, name: "*.log", max_size: 10M}
+  success: Tidy.
+  solution:
+    - ln -s /var/log/o2/big.log latest.log
+    - "> /var/log/o2/big.log"
+"""
+
+
+def test_files_carry_size_mtime_and_link_targets_to_the_console(tmp_path):
+    from app.terminal import client_spec
+
+    _write(tmp_path, DISK)
+    exercise = load_catalog(tmp_path).modules["two"].terminal
+    fs = exercise.starting_fs()
+    assert fs["/var/log/o2/big.log"] == {
+        "type": "file", "mode": 0o644, "owner": "cadet", "group": "crew", "contents": "sample\n",
+        "size": 12 * 1024 * 1024, "mtime": "2026-09-20T14:30:00",
+    }
+    assert fs["/station/current.log"] == {
+        "type": "link", "mode": 0o777, "owner": "cadet", "group": "crew", "contents": "", "target": "/var/log/o2/today.log",
+    }
+    assert "size" not in fs["/station/scrubber.conf"] and "mtime" not in fs["/station/scrubber.conf"]  # unchanged when unset
+    spec = client_spec(exercise)
+    assert spec["disk"] == {"size": 2 * 1024**3, "base": round(1.5 * 1024**3)}
+    assert spec["memory"] == {"total": 1024**3, "used": 300 * 1024**2, "cache": 200 * 1024**2, "shared": 12 * 1024**2}
+    (tmp_path / "plain").mkdir()
+    _write(tmp_path / "plain", TERMINAL)
+    assert "disk" not in client_spec(load_catalog(tmp_path / "plain").modules["two"].terminal)
+
+
+@pytest.mark.parametrize(
+    ("replace", "with_", "expect"),
+    [
+        ("type: link, target: /var/log/o2/today.log", "type: link", "a link, and only a link, has a target"),
+        ('contents: "ok\\n"}', 'contents: "ok\\n", target: x}', "a link, and only a link, has a target"),
+        ("{path: /station, type: dir}", "{path: /station, type: dir, size: 1M}", "only a file has a size"),
+        ('mtime: "2026-09-20 14:30"', 'mtime: "2026-11-01"', "is after the station's clock"),
+        ('mtime: "2026-09-20 14:30"', 'mtime: "20 Sep"', "terminal.files.2.mtime"),
+        ("size: 12M", "size: 12MB", "terminal.files.2.size"),
+        ('base: "1.5G"', "base: 3G", "disk: base must be smaller than size"),
+        ("used: 300M", "used: 900M", "used + cache can't be more than total"),
+        ("{files_under: /var/log, name: \"*.log\", max_size: 10M}", "{files_under: /var/log}", "needs max_size, max_age or both"),
+        ("{files_under: /var/log,", "{files_under: /var/nothing,", "/var/nothing is not a directory"),
+    ],
+)
+def test_bad_sizes_dates_and_links_are_reported(tmp_path, replace, with_, expect):
+    assert replace in DISK
+    _write(tmp_path, DISK.replace(replace, with_))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert expect in str(exc.value)
+
+
+@pytest.mark.criterion(67, "Symlinks resolve and are graded")
+def test_symlink_and_size_checks_are_graded_on_the_server(logged_in, tmp_path, user):
+    _write(tmp_path, DISK)
+    app.dependency_overrides[get_catalog] = lambda: load_catalog(tmp_path)
+    try:
+        complete(logged_in, "one")
+        fs = load_catalog(tmp_path).modules["two"].terminal.starting_fs()
+        assert _report(logged_in, "two", fs).json() == {"correct": False}
+        # What the console's state() sends after the solution: the link, and the log emptied.
+        link = {"type": "link", "mode": 0o777, "owner": "cadet", "group": "crew", "contents": "", "target": "/var/log/o2/big.log",
+                "mtime": "2026-10-08T09:00:01"}
+        emptied = {**fs["/var/log/o2/big.log"], "contents": "", "mtime": "2026-10-08T09:00:02"}
+        del emptied["size"]
+        assert _report(logged_in, "two", {**fs, "/station/latest.log": link}).json() == {"correct": False}  # the log's still 12M
+        assert _report(logged_in, "two", {**fs, "/station/latest.log": link, "/var/log/o2/big.log": emptied}).json() == {"correct": True}
+        wrong = {**link, "target": "../var/log/o2/big.log"}  # the same file, but not what was asked for
+        assert _report(logged_in, "two", {**fs, "/station/latest.log": wrong, "/var/log/o2/big.log": emptied}).json() == {"correct": False}
+    finally:
+        app.dependency_overrides.pop(get_catalog, None)
+
+
+def test_the_station_clock_matches_the_console():
+    from app.content.schema import STATION_NOW
+
+    shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
+    assert f"var START_TIME = new Date({STATION_NOW.year}, {STATION_NOW.month - 1}, {STATION_NOW.day}, {STATION_NOW.hour}, {STATION_NOW.minute});" in shell

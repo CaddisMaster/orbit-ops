@@ -14,8 +14,21 @@
   "use strict";
 
   var UMASK = 0o002;
+  var KiB = 1024, MiB = 1024 * 1024, GiB = 1024 * 1024 * 1024;
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  var START_TIME = new Date(2026, 9, 8, 9, 0); // when the station's files were last touched
+  // The station's "now" when the console starts (#67): files are dated from it
+  // and it moves on with the console's clock, so find -mtime and the server's
+  // age checks (app/terminal.py STATION_NOW) agree whatever today's date is.
+  var START_TIME = new Date(2026, 9, 8, 9, 0);
+  // "2026-09-20T14:30:00", local time, as the exercise and the server write them.
+  function parseStamp(text) {
+    var m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)(?::(\d\d))?$/.exec(text || "");
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : START_TIME;
+  }
+  function isoStamp(d) {
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
 
   // --- paths -----------------------------------------------------------------
   function normalize(path) {
@@ -57,8 +70,12 @@
     var self = this;
     Object.keys(spec.fs).forEach(function (path) {
       var n = spec.fs[path];
-      self.fs[path] = { type: n.type, mode: n.mode, owner: n.owner, group: n.group, contents: n.contents || "", mtime: START_TIME };
+      self.fs[path] = { type: n.type, mode: n.mode, owner: n.owner, group: n.group, contents: n.contents || "", mtime: parseStamp(n.mtime) };
+      if (n.size !== undefined && n.size !== null) self.fs[path].size = n.size; // a big file, sampled (#67)
+      if (n.type === "link") self.fs[path].target = n.target;
     });
+    this.disk = spec.disk || { size: 20 * GiB, base: Math.round(4.2 * GiB) }; // for df: the drive, and what the OS uses
+    this.memory = spec.memory || { total: 2 * GiB, used: 820 * MiB, cache: 640 * MiB, shared: 12 * MiB };
     // The environment: shell variables, and which of them are exported.
     this.vars = {
       HOME: this.home, USER: this.user, LOGNAME: this.user, SHELL: "/bin/bash", HOSTNAME: "meridian",
@@ -108,6 +125,8 @@
     return this.user + "@meridian:" + where + (this.user === "root" ? "# " : "$ ");
   };
 
+  Shell.prototype.now = function () { return new Date(START_TIME.getTime() + this.clock * 1000); };
+
   Shell.prototype.resolve = function (path) {
     if (path === "~" || path.indexOf("~/") === 0) path = this.home + path.slice(1);
     return normalize(path.charAt(0) === "/" ? path : this.cwd + "/" + path);
@@ -125,21 +144,35 @@
   };
 
   // Look a path up the way the kernel does: every directory on the way must be
-  // searchable (x). Returns {node} or {error} ("No such file or directory",
-  // "Not a directory" or "Permission denied").
-  Shell.prototype.lookup = function (path) {
-    var abs = this.resolve(path);
-    if (abs === "/") return { path: abs, node: this.fs["/"] };
-    var parts = abs.split("/").slice(1);
+  // searchable (x), and symbolic links are followed, the last one too unless
+  // `nofollow` (for rm, mv, ls -l, readlink and find, which act on the link).
+  // Returns {path, node}, where path is the real one, or {path, error}:
+  // "No such file or directory", "Not a directory", "Permission denied" or
+  // "Too many levels of symbolic links". For a missing file, path is where it
+  // would be created.
+  Shell.prototype.lookup = function (path, nofollow) {
+    var parts = this.resolve(path).split("/").filter(Boolean);
     var at = "/";
+    var hops = 0;
     for (var i = 0; i < parts.length; i++) {
+      var rest = join(at, parts.slice(i).join("/"));
       var dir = this.fs[at];
-      if (dir.type !== "dir") return { path: abs, error: "Not a directory" };
-      if (!this.can(dir, 1)) return { path: abs, error: "Permission denied" };
-      at = join(at, parts[i]);
-      if (!this.fs[at]) return { path: abs, error: "No such file or directory" };
+      if (dir.type !== "dir") return { path: rest, error: "Not a directory" };
+      if (!this.can(dir, 1)) return { path: rest, error: "Permission denied" };
+      var next = join(at, parts[i]);
+      var node = this.fs[next];
+      if (!node) return { path: rest, error: "No such file or directory" };
+      if (node.type === "link" && (i < parts.length - 1 || !nofollow)) {
+        if (++hops > 40) return { path: rest, error: "Too many levels of symbolic links" };
+        var target = node.target.charAt(0) === "/" ? node.target : at + "/" + node.target;
+        parts = normalize(target).split("/").filter(Boolean).concat(parts.slice(i + 1));
+        at = "/";
+        i = -1;
+        continue;
+      }
+      at = next;
     }
-    return { path: abs, node: this.fs[at] };
+    return { path: at, node: this.fs[at] };
   };
 
   Shell.prototype.children = function (dir) {
@@ -166,7 +199,7 @@
       owner: this.user,
       group: this.group,
       contents: contents || "",
-      mtime: new Date(),
+      mtime: this.now(),
     };
     return this.fs[abs];
   };
@@ -186,7 +219,13 @@
       if (found.node.type === "dir") return path + ": Is a directory";
       if (!this.can(found.node, 2)) return path + ": Permission denied";
       found.node.contents = append ? found.node.contents + text : text;
-      found.node.mtime = new Date();
+      found.node.mtime = this.now();
+      // A sampled big file grows by what's appended, and is only its contents
+      // once overwritten (so `> big.log` frees its space, as on a real disk).
+      if (found.node.size !== undefined) {
+        if (append) found.node.size += new TextEncoder().encode(text).length;
+        else delete found.node.size;
+      }
       return null;
     }
     if (found.error !== "No such file or directory") return path + ": " + found.error;
@@ -899,18 +938,19 @@
       var next = [];
       results.forEach(function (r) {
         var shownPrefix = r.shown === null ? "" : r.shown + "/";
-        var dirNode = self.fs[r.abs];
+        var real = self.lookup(r.abs);
+        var dirNode = real.node;
         if (!dirNode || dirNode.type !== "dir") return;
         var sub = { text: part, quoted: word.quoted.slice(offsets[idx], offsets[idx] + part.length) };
         if (!hasGlob(sub)) {
           var p = r.abs === "/" ? "/" + part : normalize(r.abs + "/" + part);
           if (part === "." || part === "..") p = normalize(r.abs + "/" + part);
-          if (self.fs[p]) next.push({ shown: shownPrefix + part, abs: p });
+          if (!self.lookup(p, true).error) next.push({ shown: shownPrefix + part, abs: p });
           return;
         }
         if (!self.can(dirNode, 4)) return;
         var re = globRegex(part, word.quoted, offsets[idx]);
-        self.children(r.abs).sort(compareNames).forEach(function (name) {
+        self.children(real.path).sort(compareNames).forEach(function (name) {
           if (name.charAt(0) === "." && part.charAt(0) !== ".") return;
           if (re.test(name)) next.push({ shown: shownPrefix + name, abs: join(r.abs, name) });
         });
@@ -1065,7 +1105,7 @@
   Shell.prototype.unaryTest = function (op, arg) {
     if (op === "-z") return arg === "";
     if (op === "-n") return arg !== "";
-    if (op === "-L" || op === "-h") return false; // no symbolic links on the console yet
+    if (op === "-L" || op === "-h") { var l = arg === "" ? {} : this.lookup(arg, true); return !!l.node && l.node.type === "link"; }
     var found = arg === "" ? { error: true } : this.lookup(arg);
     if (found.error) return false;
     var n = found.node;
@@ -1638,9 +1678,9 @@
     (this.vars.PATH || "").split(":").forEach(function (dir) {
       if (!dir) return;
       var path = join(dir, name);
-      var node = self.fs[path];
-      if (node) {
-        if (node.type === "file" && node.mode & 0o111) found.push(path);
+      var node = self.fs[path] && self.lookup(path).node;
+      if (self.fs[path]) {
+        if (node && node.type === "file" && node.mode & 0o111) found.push(path);
       } else if (COMMANDS[name] && NO_BINARY.indexOf(name) === -1) {
         var home = sbin ? ["/usr/sbin", "/sbin"] : ["/usr/bin", "/bin"];
         if (home.indexOf(dir) !== -1) found.push(path);
@@ -1838,12 +1878,22 @@
     return ka < kb ? -1 : ka > kb ? 1 : a < b ? -1 : a > b ? 1 : 0;
   }
   function modeString(node) {
-    var s = node.type === "dir" ? "d" : "-";
+    var s = node.type === "dir" ? "d" : node.type === "link" ? "l" : "-";
     var chars = "rwxrwxrwx";
     for (var i = 0; i < 9; i++) s += node.mode & (1 << (8 - i)) ? chars[i] : "-";
     return s;
   }
-  function size(node) { return node.type === "dir" ? 4096 : new TextEncoder().encode(node.contents).length; }
+  // A file's size: what the exercise says (a big log is sampled), or its contents.
+  function size(node) {
+    if (node.type === "dir") return 4096;
+    if (node.type === "link") return node.target.length;
+    return node.size !== undefined ? node.size : new TextEncoder().encode(node.contents).length;
+  }
+  // What it takes on disk: whole 4K blocks (a link takes none), as du counts.
+  function usage(node) {
+    if (node.type === "link") return 0;
+    return Math.ceil(size(node) / 4096) * 4096;
+  }
   function human(n) {
     if (n < 1024) return String(n);
     var units = ["K", "M", "G"];
@@ -1853,10 +1903,12 @@
       if (v < 1024 || i === units.length - 1) return v < 10 ? (Math.ceil(v * 10) / 10).toFixed(1) + units[i] : Math.ceil(v) + units[i];
     }
   }
-  function stamp(d) {
+  // ls's date: the time for the last six months, the year before that.
+  function stamp(d, now) {
     var pad = function (n) { return (n < 10 ? "0" : "") + n; };
     var day = d.getDate();
-    return MONTHS[d.getMonth()] + " " + (day < 10 ? " " : "") + day + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+    var old = now && (now - d > 182.5 * 86400000 || d - now > 3600000);
+    return MONTHS[d.getMonth()] + " " + (day < 10 ? " " : "") + day + " " + (old ? " " + d.getFullYear() : pad(d.getHours()) + ":" + pad(d.getMinutes()));
   }
   function padLeft(s, n) { s = String(s); while (s.length < n) s = " " + s; return s; }
   function padRight(s, n) { s = String(s); while (s.length < n) s += " "; return s; }
@@ -2239,12 +2291,335 @@
   // (setgid crontab on a real system) is the way in and out.
   Shell.prototype.installCrontab = function (text) {
     var fs = this.fs;
+    var now = this.now();
     var dirs = [["/var", 0o755, "root"], ["/var/spool", 0o755, "root"], ["/var/spool/cron", 0o755, "root"], [CRON_SPOOL, 0o1730, "crontab"]];
     dirs.forEach(function (d) {
-      if (!fs[d[0]]) fs[d[0]] = { type: "dir", mode: d[1], owner: "root", group: d[2], contents: "", mtime: new Date() };
+      if (!fs[d[0]]) fs[d[0]] = { type: "dir", mode: d[1], owner: "root", group: d[2], contents: "", mtime: now };
     });
-    fs[CRON_SPOOL + "/" + this.user] = { type: "file", mode: 0o600, owner: this.user, group: "crontab", contents: text, mtime: new Date() };
+    fs[CRON_SPOOL + "/" + this.user] = { type: "file", mode: 0o600, owner: this.user, group: "crontab", contents: text, mtime: this.now() };
   };
+
+  // --- find, archives and memory (#67) ------------------------------------------------
+  function FindError(message) { this.message = message; }
+
+  // find's expression → a tree: or, and (implied between tests), not, tests
+  // and actions. With no action, -print is added, as GNU find does.
+  function parseFind(toks, opts, sh) {
+    var i = 0;
+    function need(name) {
+      if (i >= toks.length) throw new FindError("missing argument to `" + name + "'");
+      return toks[i++];
+    }
+    function number(name, v) {
+      var m = /^([+-]?)(\d+)$/.exec(v);
+      if (!m) throw new FindError("invalid argument `" + v + "' to `" + name + "'");
+      return { cmp: m[1], n: +m[2] };
+    }
+    function primary() {
+      var t = toks[i++];
+      var v, m;
+      if (t === "(") {
+        var e = or();
+        if (toks[i++] !== ")") throw new FindError("invalid expression; I was expecting to find a ')' somewhere but did not see one.");
+        return e;
+      }
+      switch (t) {
+        case "-maxdepth": case "-mindepth":
+          v = need(t);
+          if (!/^\d+$/.test(v)) throw new FindError("Expected a positive decimal integer argument to " + t + ", but got ‘" + v + "’");
+          opts[t.slice(1)] = +v; // global: it applies to the whole search, wherever it's written
+          return { t: "true" };
+        case "-depth": opts.depth = true; return { t: "true" };
+        case "-name": case "-iname": case "-path":
+          var re = globRegex(need(t), [], 0, true);
+          return { t: t === "-path" ? "path" : "name", re: t === "-iname" ? new RegExp(re.source, "i") : re };
+        case "-type":
+          v = need(t);
+          if (!/^[fdl]$/.test(v)) throw new FindError("Unknown argument to -type: " + v);
+          return { t: "type", v: { f: "file", d: "dir", l: "link" }[v] };
+        case "-size":
+          v = need(t);
+          m = /^([+-]?)(\d+)([bcwkMG]?)$/.exec(v);
+          if (!m) throw new FindError("invalid argument `" + v + "' to `-size'");
+          return { t: "size", cmp: m[1], n: +m[2], unit: { "": 512, b: 512, c: 1, w: 2, k: KiB, M: MiB, G: GiB }[m[3]] };
+        case "-mtime": case "-mmin":
+          var age = number(t, need(t));
+          return { t: "age", cmp: age.cmp, n: age.n, unit: t === "-mtime" ? 86400000 : 60000 };
+        case "-newer":
+          v = need(t);
+          var ref = sh.lookup(v);
+          if (ref.error) throw new FindError("‘" + v + "’: " + ref.error);
+          return { t: "newer", mtime: ref.node.mtime };
+        case "-empty": return { t: "empty" };
+        case "-user": return { t: "user", v: need(t) };
+        case "-true": return { t: "true" };
+        case "-false": return { t: "false" };
+        case "-print": opts.hasAction = true; return { t: "print" };
+        case "-delete": opts.hasAction = true; opts.depth = true; return { t: "delete" };
+        case "-exec": {
+          opts.hasAction = true;
+          var argv = [];
+          while (i < toks.length && toks[i] !== ";" && !(toks[i] === "+" && argv[argv.length - 1] === "{}")) argv.push(toks[i++]);
+          if (i >= toks.length || !argv.length) throw new FindError("missing argument to `-exec'");
+          if (toks[i++] === ";") return { t: "exec", argv: argv };
+          var batch = { argv: argv, paths: [] };
+          opts.batches.push(batch);
+          return { t: "batch", batch: batch };
+        }
+      }
+      if (t === undefined) throw new FindError("invalid expression");
+      if (t[0] === "-") throw new FindError("unknown predicate `" + t + "'");
+      throw new FindError("paths must precede expression: `" + t + "'");
+    }
+    function not() {
+      if (toks[i] === "!" || toks[i] === "-not") { i++; return { t: "not", e: not() }; }
+      return primary();
+    }
+    function and() {
+      var l = not();
+      while (i < toks.length && ["-o", "-or", ")"].indexOf(toks[i]) === -1) {
+        if (toks[i] === "-a" || toks[i] === "-and") i++;
+        l = { t: "and", l: l, r: not() };
+      }
+      return l;
+    }
+    function or() {
+      var l = and();
+      while (toks[i] === "-o" || toks[i] === "-or") { i++; l = { t: "or", l: l, r: and() }; }
+      return l;
+    }
+    var expr = toks.length ? or() : { t: "true" };
+    if (i < toks.length) throw new FindError(toks[i] === ")" ? "invalid expression; you have too many ')'" : "unexpected extra predicate '" + toks[i] + "'");
+    return opts.hasAction ? expr : { t: "and", l: expr, r: { t: "print" } };
+  }
+
+  function compare(value, test) {
+    return test.cmp === "+" ? value > test.n : test.cmp === "-" ? value < test.n : value === test.n;
+  }
+
+  // One file against find's expression. -size rounds up to its unit, so
+  // -size -1M matches only empty files, as in GNU find.
+  function* evalFind(e, f, sh, io, opts) {
+    switch (e.t) {
+      case "true": return true;
+      case "false": return false;
+      case "and": return (yield* evalFind(e.l, f, sh, io, opts)) && (yield* evalFind(e.r, f, sh, io, opts));
+      case "or": return (yield* evalFind(e.l, f, sh, io, opts)) || (yield* evalFind(e.r, f, sh, io, opts));
+      case "not": return !(yield* evalFind(e.e, f, sh, io, opts));
+      case "name": return e.re.test(baseName(f.shown.replace(/(.)\/+$/, "$1")));
+      case "path": return e.re.test(f.shown);
+      case "type": return f.node.type === e.v;
+      case "size": return compare(Math.ceil(size(f.node) / e.unit), e);
+      case "age": return compare(Math.floor((f.now - f.node.mtime) / e.unit), e);
+      case "newer": return f.node.mtime > e.mtime;
+      case "empty": return f.node.type === "dir" ? !sh.children(f.path).length : f.node.type === "file" && size(f.node) === 0;
+      case "user": return f.node.owner === e.v;
+      case "print": io.out.write(f.shown + "\n"); return true;
+      case "batch": e.batch.paths.push(f.shown); return true;
+      case "delete": {
+        var why = f.node.type === "dir" && sh.children(f.path).length ? "Directory not empty" : sh.writableParent(f.path);
+        if (why) { io.err.write("find: cannot delete ‘" + f.shown + "’: " + why + "\n"); opts.failed = true; return false; }
+        sh.removeTree(f.path);
+        return true;
+      }
+      case "exec": {
+        var argv = e.argv.map(function (a) { return a.split("{}").join(f.shown); });
+        var r = yield* sh.exec(argv, "", { tty: io.tty, stdin: { text: "", pos: 0 }, out: io.out, err: io.err });
+        io.err.write(r.err || "");
+        io.out.write(r.out || "");
+        return r.code === 0;
+      }
+    }
+    return false;
+  }
+
+  // free -h: 1.9Gi, 812Mi, 0B.
+  function memHuman(n) {
+    if (n < 1024) return n + "B";
+    var units = ["Ki", "Mi", "Gi", "Ti"];
+    var v = n;
+    for (var i = 0; i < units.length; i++) {
+      v /= 1024;
+      if (v < 1024 || i === units.length - 1) return (v < 10 ? (Math.round(v * 10) / 10).toFixed(1) : String(Math.round(v))) + units[i];
+    }
+  }
+
+  // Simulated archives: a text file, a header line and then JSON, so a
+  // round trip is exact and `cat` shows honestly what it is. Sizes are
+  // recorded: tar's 512-byte blocks, and gzip shrinking text to about a
+  // quarter, with tar's padding almost free (real ratios vary; this is a
+  // teaching model).
+  var PACKS = { tar: "ORBIT-TAR 1 (a simulated tar archive: list it with tar -tf)\n", gzip: "ORBIT-GZIP 1 (simulated gzip data: read it with zcat)\n" };
+  var MAX_ARCHIVE = 20000; // characters: the most a file can hold and still reach the server
+  function pack(kind, data) { return PACKS[kind] + JSON.stringify(data) + "\n"; }
+  function unpack(text, kind) {
+    if (text.indexOf(PACKS[kind]) !== 0) return null;
+    try { return JSON.parse(text.slice(PACKS[kind].length)); } catch (e) { return null; }
+  }
+  function tarSize(entries) {
+    var bytes = 1024;
+    entries.forEach(function (e) { bytes += 512 + (e.type === "file" ? Math.ceil(entrySize(e) / 512) * 512 : 0); });
+    return Math.ceil(bytes / 10240) * 10240;
+  }
+  function gzSize(bytes) { return 30 + Math.ceil(bytes / 4); }
+  function tgzSize(entries) {
+    var data = 0;
+    entries.forEach(function (e) { if (e.type === "file") data += entrySize(e); });
+    return 30 + 50 * entries.length + Math.ceil(data / 4);
+  }
+  function entrySize(e) { return e.size !== undefined ? e.size : new TextEncoder().encode(e.contents || "").length; }
+
+  // Write an archive file, recording its size.
+  function writeArchive(sh, path, text, bytes) {
+    if (text.length > MAX_ARCHIVE) return path + ": too big for the station console's simulated archives (keep under 20 KB of text)";
+    var why = sh.writeFile(path, text, false);
+    if (why) return why;
+    if (path !== "/dev/null") sh.lookup(path).node.size = bytes;
+    return null;
+  }
+
+  function tarCreate(sh, o) {
+    if (!o.names.length) return { out: "", err: "tar: Cowardly refusing to create an empty archive\nTry 'tar --help' or 'tar --usage' for more information.\n", code: 2 };
+    var entries = [];
+    var out = "", err = "", failed = false, warned = false;
+    function add(name, path) {
+      var f = sh.lookup(path, true);
+      if (f.error) { err += "tar: " + name + ": Cannot stat: " + f.error + "\n"; failed = true; return; }
+      var n = f.node;
+      if (n.type === "file" && !sh.can(n, 4)) { err += "tar: " + name + ": Cannot open: Permission denied\n"; failed = true; return; }
+      var e = { name: n.type === "dir" ? name.replace(/\/*$/, "/") : name, type: n.type, mode: n.mode, owner: n.owner, group: n.group, mtime: isoStamp(n.mtime) };
+      if (n.type === "link") e.target = n.target;
+      if (n.type === "file") { e.contents = n.contents; if (n.size !== undefined) e.size = n.size; }
+      entries.push(e);
+      if (o.verbose) out += e.name + "\n";
+      if (n.type !== "dir") return;
+      if (!sh.can(n, 4) || !sh.can(n, 1)) { err += "tar: " + name + ": Cannot open: Permission denied\n"; failed = true; return; }
+      sh.children(f.path).sort(compareNames).forEach(function (c) { add(name.replace(/\/+$/, "") + "/" + c, join(f.path, c)); });
+    }
+    o.names.forEach(function (name) {
+      var member = name;
+      if (member.charAt(0) === "/") {
+        if (!warned) { err += "tar: Removing leading `/' from member names\n"; warned = true; }
+        member = member.replace(/^\/+/, "") || ".";
+      }
+      add(member, o.dir && name.charAt(0) !== "/" ? o.dir.replace(/\/+$/, "") + "/" + name : name);
+    });
+    var text = pack("tar", { entries: entries });
+    var bytes = tarSize(entries);
+    if (o.gzip) {
+      text = pack("gzip", { name: baseName(o.file).replace(/\.gz$/, "").replace(/\.tgz$/, ".tar"), mode: 0o664, mtime: isoStamp(sh.now()), size: bytes, contents: text });
+      bytes = tgzSize(entries);
+    }
+    var why = writeArchive(sh, o.file, text, bytes);
+    if (why) return { out: out, err: err + "tar: " + why + "\ntar: Error is not recoverable: exiting now\n", code: 2 };
+    if (failed) err += "tar: Exiting with failure status due to previous errors\n";
+    return { out: out, err: err, code: failed ? 2 : 0 };
+  }
+
+  function tarRead(sh, o, mode) {
+    var r = sh.readFile("tar", o.file);
+    if (r.error) {
+      var why = o.file + ": Cannot open: " + r.error.slice(r.error.lastIndexOf(": ") + 2) + "\n";
+      // With -z, gzip runs as tar's child, and says so.
+      if (o.gzip) return { out: "", err: "tar (child): " + why + "tar (child): Error is not recoverable: exiting now\ntar: Child returned status 2\ntar: Error is not recoverable: exiting now\n", code: 2 };
+      return { out: "", err: "tar: " + why + "tar: Error is not recoverable: exiting now\n", code: 2 };
+    }
+    var gz = unpack(r.text, "gzip");
+    if (o.gzip && !gz) return { out: "", err: "gzip: stdin: not in gzip format\ntar: Child returned status 1\ntar: Error is not recoverable: exiting now\n", code: 2 };
+    var tar = unpack(gz ? gz.contents : r.text, "tar");
+    if (!tar) return { out: "", err: "tar: This does not look like a tar archive\ntar: Exiting with failure status due to previous errors\n", code: 2 };
+    var wanted = o.names.map(function (n) { return n.replace(/\/+$/, ""); });
+    var found = {};
+    var picked = tar.entries.filter(function (e) {
+      if (!wanted.length) return true;
+      var name = e.name.replace(/\/+$/, "");
+      return wanted.some(function (w) { var hit = name === w || name.indexOf(w + "/") === 0; if (hit) found[w] = true; return hit; });
+    });
+    var out = "", err = "", failed = false;
+    if (mode === "t") {
+      picked.forEach(function (e) {
+        if (!o.verbose) { out += e.name + "\n"; return; }
+        var ug = e.owner + "/" + e.group;
+        var bytes = e.type === "file" ? entrySize(e) : 0;
+        out += modeString(e) + " " + ug + " " + padLeft(bytes, Math.max(1, 19 - ug.length)) + " " + isoStamp(parseStamp(e.mtime)).replace("T", " ").slice(0, 16) +
+          " " + e.name + (e.type === "link" ? " -> " + e.target : "") + "\n";
+      });
+    } else {
+      var base = o.dir ? sh.lookup(o.dir) : { path: sh.cwd, node: sh.fs[sh.cwd] };
+      if (!base.node || base.node.type !== "dir") return { out: "", err: "tar: " + o.dir + ": Cannot open: No such file or directory\ntar: Error is not recoverable: exiting now\n", code: 2 };
+      picked.forEach(function (e) {
+        var name = e.name.replace(/\/+$/, "");
+        var path = normalize(base.path + "/" + name);
+        // Directories on the way that the archive doesn't list are made too.
+        for (var dir = parentOf(path), chain = []; !sh.fs[dir]; dir = parentOf(dir)) chain.unshift(dir);
+        for (var c = 0; c < chain.length; c++) {
+          var whyDir = sh.writableParent(chain[c]);
+          if (whyDir) { err += "tar: " + name + ": Cannot mkdir: " + whyDir + "\n"; failed = true; return; }
+          sh.create(chain[c], "dir");
+        }
+        var existing = sh.lookup(path, true);
+        if (e.type === "dir" && existing.node && existing.node.type === "dir") return;
+        var why = sh.writableParent(path);
+        if (why) { err += "tar: " + name + ": Cannot open: " + why + "\n"; failed = true; return; }
+        if (existing.node && existing.node.type === "dir") { err += "tar: " + name + ": Cannot open: Is a directory\n"; failed = true; return; }
+        if (existing.node) delete sh.fs[path];
+        var node = sh.create(path, e.type === "dir" ? "dir" : "file", e.contents || "");
+        node.mode = sh.user === "root" ? e.mode : e.mode & ~UMASK; // tar applies your umask, unless you're root
+        node.mtime = parseStamp(e.mtime); // and puts the time back
+        if (e.size !== undefined) node.size = e.size;
+        if (e.type === "link") { node.type = "link"; node.target = e.target; node.mode = 0o777; }
+        if (o.verbose) out += e.name + "\n";
+      });
+    }
+    wanted.forEach(function (w) { if (!found[w]) { err += "tar: " + w + ": Not found in archive\n"; failed = true; } });
+    if (failed) err += "tar: Exiting with failure status due to previous errors\n";
+    return { out: out, err: err, code: failed ? 2 : 0 };
+  }
+
+  function gzipFiles(sh, p) {
+    var err = "", code = 0;
+    p.args.forEach(function (a) {
+      var f = sh.lookup(a, true);
+      if (f.error) { err += "gzip: " + a + ": " + f.error + "\n"; code = 1; return; }
+      if (f.node.type !== "file") { err += "gzip: " + a + (f.node.type === "dir" ? " is a directory -- ignored\n" : ": Too many levels of symbolic links\n"); code = code || 2; return; }
+      if (/\.gz$/.test(a)) { err += "gzip: " + a + " already has .gz suffix -- unchanged\n"; code = code || 2; return; }
+      if (!sh.can(f.node, 4)) { err += "gzip: " + a + ": Permission denied\n"; code = 1; return; }
+      if (!sh.lookup(a + ".gz", true).error) { err += "gzip: " + a + ".gz already exists; not overwritten\n"; code = code || 2; return; }
+      var why = sh.writableParent(f.path);
+      if (why) { err += "gzip: " + a + ".gz: " + why + "\n"; code = 1; return; }
+      var n = f.node;
+      var bytes = size(n);
+      why = writeArchive(sh, a + ".gz", pack("gzip", { name: baseName(f.path), mode: n.mode, mtime: isoStamp(n.mtime), size: bytes, contents: n.contents }), gzSize(bytes));
+      if (why) { err += "gzip: " + why + "\n"; code = 1; return; }
+      var gz = sh.lookup(a + ".gz").node;
+      gz.mode = n.mode; // gzip keeps the mode and the time
+      gz.mtime = n.mtime;
+      if (!p.opts.k) delete sh.fs[f.path];
+    });
+    return { out: "", err: err, code: code };
+  }
+
+  function gunzipFiles(sh, cmd, p) {
+    var err = "", code = 0;
+    p.args.forEach(function (a) {
+      var m = /^(.*)\.(gz|tgz)$/.exec(a);
+      if (!m) { err += "gzip: " + a + ": unknown suffix -- ignored\n"; code = code || 2; return; }
+      var r = sh.readFile("gzip", a);
+      if (r.error) { err += r.error + "\n"; code = 1; return; }
+      var data = unpack(r.text, "gzip");
+      if (!data) { err += "gzip: " + a + ": not in gzip format\n"; code = 1; return; }
+      var to = m[2] === "tgz" ? m[1] + ".tar" : m[1];
+      if (!sh.lookup(to, true).error) { err += "gzip: " + to + " already exists; not overwritten\n"; code = code || 2; return; }
+      var why = sh.writeFile(to, data.contents, false);
+      if (why) { err += "gzip: " + why + "\n"; code = 1; return; }
+      var node = sh.lookup(to).node;
+      node.mode = data.mode;
+      node.mtime = parseStamp(data.mtime);
+      if (data.size !== new TextEncoder().encode(data.contents).length) node.size = data.size;
+      if (!p.opts.k) delete sh.fs[sh.lookup(a, true).path];
+    });
+    return { out: "", err: err, code: code };
+  }
 
   // --- the commands ---------------------------------------------------------------
   var COMMANDS = {
@@ -2265,6 +2640,7 @@
         "  env:       export unset env printenv type which command source bash\n" +
         "  processes: ps pgrep pkill kill sleep jobs fg bg\n" +
         "  editing:   nano less man crontab\n" +
+        "  disk:      find du df free tar gzip gunzip zcat ln readlink\n" +
         "  console:   clear help exit\n" +
         "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
         "Pipes (|), redirection (> >> < 2> 2>&1 >&2 &>), globs (* ? [...]), {a,b}, ; && ||, $VARS, $(command) and $((1 + 2)) work.\n" +
@@ -2298,6 +2674,240 @@
       });
       yield { editor: editor };
       return ok();
+    },
+    // find PATH... [EXPRESSION] (#67): tests -name -iname -path -type -size
+    // -mtime -mmin -newer -empty -user, operators ! -not -a -o ( ), actions
+    // -print -delete -exec, and -maxdepth/-mindepth. Like GNU find (-P), it
+    // never follows links. Output is written as it goes, so -exec's output
+    // lands in order.
+    find: function* (args, stdin, io) {
+      var sh = this;
+      var paths = [];
+      var i = 0;
+      while (i < args.length && args[i][0] !== "-" && args[i] !== "(" && args[i] !== "!") paths.push(args[i++]);
+      if (!paths.length) paths = ["."];
+      var expr;
+      var opts = { maxdepth: Infinity, mindepth: 0, depth: false, hasAction: false, batches: [] };
+      try {
+        expr = parseFind(args.slice(i), opts, this);
+      } catch (e) {
+        if (!(e instanceof FindError)) throw e;
+        return { out: "", err: "find: " + e.message + "\n", code: 1 };
+      }
+      var failed = false;
+      var now = this.now();
+      function* visit(shown, path, node, depth) {
+        var here = depth >= opts.mindepth ? function* () { return yield* evalFind(expr, { shown: shown, path: path, node: node, now: now }, sh, io, opts); } : null;
+        if (!opts.depth && here) yield* here(); // a directory is listed before find finds it can't be read
+        var kids = [];
+        if (node.type === "dir" && depth < opts.maxdepth) {
+          if (!sh.can(node, 4) || !sh.can(node, 1)) { io.err.write("find: ‘" + shown + "’: Permission denied\n"); failed = true; }
+          else kids = sh.children(path).sort(compareNames);
+        }
+        for (var k = 0; k < kids.length; k++) {
+          var childPath = join(path, kids[k]);
+          if (!sh.fs[childPath]) continue; // gone already (-delete, -exec rm)
+          yield* visit(shown === "/" ? "/" + kids[k] : shown.replace(/\/+$/, "") + "/" + kids[k], childPath, sh.fs[childPath], depth + 1);
+        }
+        if (opts.depth && here && sh.fs[path]) yield* here();
+      }
+      for (var p = 0; p < paths.length; p++) {
+        var start = this.lookup(paths[p], true);
+        if (start.error) { io.err.write("find: ‘" + paths[p] + "’: " + start.error + "\n"); failed = true; continue; }
+        yield* visit(paths[p], start.path, start.node, 0);
+      }
+      // -exec … {} + runs once, at the end, with every path.
+      for (var b = 0; b < opts.batches.length; b++) {
+        var batch = opts.batches[b];
+        if (!batch.paths.length) continue;
+        var argv = [];
+        batch.argv.forEach(function (a) { if (a === "{}") Array.prototype.push.apply(argv, batch.paths); else argv.push(a); });
+        var r = yield* sh.exec(argv, "", { tty: io.tty, stdin: { text: "", pos: 0 }, out: io.out, err: io.err });
+        io.err.write(r.err || "");
+        io.out.write(r.out || "");
+        if (r.code) failed = true;
+      }
+      if (opts.failed) failed = true;
+      return { out: "", err: "", code: failed ? 1 : 0 };
+    },
+
+    // du [-s] [-h] [-a] [-c] [-d N | --max-depth=N] [PATH]...: disk usage in
+    // whole 4K blocks, counted in 1K units, deepest directories first.
+    du: function (rawArgs) {
+      var args = [];
+      var depthArg = null;
+      for (var k = 0; k < rawArgs.length; k++) {
+        var m = /^--max-depth=(\d+)$/.exec(rawArgs[k]);
+        if (m) depthArg = +m[1];
+        else if (rawArgs[k] === "-d") depthArg = +rawArgs[++k];
+        else args.push(rawArgs[k]);
+      }
+      var p = flags("du", args, "shac");
+      var o = p.opts;
+      var maxDepth = o.s ? 0 : depthArg === null ? Infinity : depthArg;
+      if (isNaN(maxDepth)) throw new Error("invalid maximum depth");
+      var sh = this;
+      var out = "", err = "", grand = 0;
+      var fmt = function (bytes) { return o.h ? (bytes ? human(bytes) : "0") : String(Math.ceil(bytes / 1024)); };
+      function walk(shown, path, node, depth) {
+        var total = usage(node);
+        if (node.type === "dir") {
+          if (!sh.can(node, 4) || !sh.can(node, 1)) err += "du: cannot read directory '" + shown + "': Permission denied\n";
+          else {
+            sh.children(path).sort(compareNames).forEach(function (n) {
+              var childPath = join(path, n);
+              total += walk(shown.replace(/\/+$/, "") + "/" + n, childPath, sh.fs[childPath], depth + 1);
+            });
+          }
+        }
+        if (depth <= maxDepth && (node.type === "dir" || o.a || depth === 0)) out += fmt(total) + "\t" + shown + "\n";
+        return total;
+      }
+      (p.args.length ? p.args : ["."]).forEach(function (a) {
+        var f = sh.lookup(a, true);
+        if (f.error) { err += "du: cannot access '" + a + "': " + f.error + "\n"; return; }
+        grand += walk(a, f.path, f.node, 0);
+      });
+      if (o.c) out += fmt(grand) + "\ttotal\n";
+      return { out: out, err: err, code: err ? 1 : 0 };
+    },
+
+    // df [-h] [PATH]: one drive, the exercise's size; used is what the
+    // system takes plus every file on it, so deleting files frees space.
+    df: function (rawArgs) {
+      var p = flags("df", rawArgs, "hT");
+      var sh = this;
+      var bad = p.args.filter(function (a) { return sh.lookup(a).error; });
+      if (bad.length) return { out: "", err: bad.map(function (a) { return "df: " + a + ": No such file or directory\n"; }).join(""), code: 1 };
+      var used = this.disk.base;
+      Object.keys(this.fs).forEach(function (q) { used += usage(sh.fs[q]); });
+      used = Math.min(used, this.disk.size);
+      var avail = this.disk.size - used;
+      var pct = Math.ceil((used / this.disk.size) * 100) + "%";
+      if (p.opts.h) {
+        return ok("Filesystem      Size  Used Avail Use% Mounted on\n" +
+          padRight("/dev/vda1", 15) + padLeft(human(this.disk.size), 5) + padLeft(human(used), 6) + padLeft(human(avail), 6) + padLeft(pct, 5) + " /\n");
+      }
+      var k = function (n) { return String(Math.ceil(n / 1024)); };
+      return ok("Filesystem     1K-blocks    Used Available Use% Mounted on\n" +
+        padRight("/dev/vda1", 14) + padLeft(k(this.disk.size), 10) + padLeft(k(used), 8) + padLeft(k(avail), 10) + padLeft(pct, 5) + " /\n");
+    },
+
+    // free [-h|-m]: the exercise's memory.
+    free: function (rawArgs) {
+      var p = flags("free", rawArgs, "hmk");
+      var m = this.memory;
+      var free = Math.max(0, m.total - m.used - m.cache);
+      var available = Math.min(m.total, free + m.cache);
+      var show = function (n) {
+        if (p.opts.h) return memHuman(n);
+        return String(Math.round(n / (p.opts.m ? MiB : KiB)));
+      };
+      var row = function (label, values) {
+        return label + values.map(function (v, k) { return padLeft(show(v), k ? 12 : 20 - label.length); }).join("") + "\n";
+      };
+      return ok("               total        used        free      shared  buff/cache   available\n" +
+        row("Mem:", [m.total, m.used, free, m.shared || 0, m.cache, available]) + row("Swap:", [0, 0, 0]));
+    },
+
+    // tar -c|-x|-t [-z] [-v] -f ARCHIVE [-C DIR] [PATH]...: archives are
+    // simulated (a file recording what's in it), so they round-trip exactly.
+    tar: function (rawArgs) {
+      var o = { names: [] };
+      var letters = [];
+      var rest = [];
+      rawArgs.forEach(function (a, k) {
+        if (k === 0 && /^[a-zA-Z]+$/.test(a)) letters.push.apply(letters, a.split("")); // old style: tar czf …
+        else if (/^-[a-zA-Z]+$/.test(a)) letters.push.apply(letters, a.slice(1).split(""));
+        else if (/^--/.test(a)) letters.push("--" + a);
+        else rest.push(a);
+      });
+      var mode = null;
+      for (var k = 0; k < letters.length; k++) {
+        var l = letters[k];
+        if (l === "c" || l === "x" || l === "t") {
+          if (mode && mode !== l) return { out: "", err: "tar: You may not specify more than one '-Acdtrux', '--delete' or  '--test-label' option\nTry 'tar --help' or 'tar --usage' for more information.\n", code: 2 };
+          mode = l;
+        } else if (l === "z") o.gzip = true;
+        else if (l === "v") o.verbose = true;
+        else if (l === "f") { if (!rest.length) return { out: "", err: "tar: option requires an argument -- 'f'\n", code: 2 }; o.file = rest.shift(); }
+        else if (l === "C") { if (!rest.length) return { out: "", err: "tar: option requires an argument -- 'C'\n", code: 2 }; o.dir = rest.shift(); }
+        else return { out: "", err: "tar: unsupported on the station console: " + (l.indexOf("--") === 0 ? l.slice(2) : "-" + l) + " (it knows -c -x -t -z -v -f -C)\n", code: 2 };
+      }
+      o.names = rest;
+      if (!mode) return { out: "", err: "tar: You must specify one of the '-Acdtrux', '--delete' or '--test-label' options\nTry 'tar --help' or 'tar --usage' for more information.\n", code: 2 };
+      if (!o.file) return { out: "", err: "tar: Refusing to " + (mode === "c" ? "write archive contents to" : "read archive contents from") + " terminal (missing -f option?)\ntar: Error is not recoverable: exiting now\n", code: 2 };
+      return mode === "c" ? tarCreate(this, o) : tarRead(this, o, mode);
+    },
+    gzip: function (rawArgs) {
+      var p = flags("gzip", rawArgs, "dk");
+      return p.opts.d ? gunzipFiles(this, "gzip", p) : gzipFiles(this, p);
+    },
+    gunzip: function (rawArgs) { return gunzipFiles(this, "gunzip", flags("gunzip", rawArgs, "k")); },
+    zcat: function (args) {
+      var sh = this;
+      var out = "", err = "";
+      args.forEach(function (a) {
+        var r = sh.readFile("zcat", a);
+        if (r.error) { err += r.error.replace(/^zcat: /, "gzip: ") + "\n"; return; }
+        var inner = unpack(r.text, "gzip");
+        if (!inner) { err += "gzip: " + a + ": not in gzip format\n"; return; }
+        out += inner.contents;
+      });
+      return { out: out, err: err, code: err ? 1 : 0 };
+    },
+
+    // ln -s [-f] TARGET [LINK], or ln -s TARGET... DIR. Only symbolic links:
+    // the console's files have no inodes to share.
+    ln: function (rawArgs) {
+      var p = flags("ln", rawArgs, "sfnv");
+      if (!p.opts.s) return { out: "", err: "ln: hard links aren't on the station console; make a symbolic one with ln -s TARGET NAME\n", code: 1 };
+      if (!p.args.length) throw new Error("missing file operand");
+      var sh = this;
+      var targets = p.args.length === 1 ? p.args : p.args.slice(0, -1);
+      var where = p.args.length === 1 ? "." : p.args[p.args.length - 1];
+      var dest = this.lookup(where);
+      var intoDir = dest.node && dest.node.type === "dir" && !(p.opts.n && this.lookup(where, true).node.type === "link");
+      if (targets.length > 1 && !intoDir) return { out: "", err: "ln: target '" + where + "': Not a directory\n", code: 1 };
+      var err = "", out = "";
+      targets.forEach(function (target) {
+        var name = intoDir ? join(dest.path, baseName(target.replace(/\/+$/, "")) || target) : sh.lookup(where, true).path;
+        var shown = intoDir ? (where === "." ? baseName(name) : where.replace(/\/+$/, "") + "/" + baseName(name)) : where;
+        var existing = sh.lookup(name, true);
+        if (existing.node) {
+          if (!p.opts.f) { err += "ln: failed to create symbolic link '" + shown + "': File exists\n"; return; }
+          if (existing.node.type === "dir") { err += "ln: " + shown + ": cannot overwrite directory\n"; return; }
+        }
+        var why = sh.writableParent(existing.path);
+        if (why) { err += "ln: failed to create symbolic link '" + shown + "': " + why + "\n"; return; }
+        if (existing.node) delete sh.fs[existing.path];
+        var link = sh.create(existing.path, "file");
+        link.type = "link";
+        link.target = target;
+        link.mode = 0o777;
+        link.contents = "";
+        if (p.opts.v) out += "'" + shown + "' -> '" + target + "'\n";
+      });
+      return { out: out, err: err, code: err ? 1 : 0 };
+    },
+    // readlink LINK: where it points. -f: the real path, every link followed.
+    readlink: function (rawArgs) {
+      var p = flags("readlink", rawArgs, "fe");
+      if (!p.args.length) throw new Error("missing operand");
+      var sh = this;
+      var out = "";
+      var code = 0;
+      p.args.forEach(function (a) {
+        if (p.opts.f || p.opts.e) {
+          var f = sh.lookup(a);
+          var ok_ = f.node || (!p.opts.e && f.error === "No such file or directory" && sh.lookup(parentOf(f.path)).node);
+          if (ok_) out += f.path + "\n"; else code = 1;
+          return;
+        }
+        var l = sh.lookup(a, true);
+        if (l.node && l.node.type === "link") out += l.node.target + "\n"; else code = 1;
+      });
+      return { out: out, err: "", code: code };
     },
     vi: function () { return { out: "", err: "vi: not on this console. Use nano FILE instead: ^O saves, ^X exits.\n", code: 127 }; },
     vim: function () { return { out: "", err: "vim: not on this console. Use nano FILE instead: ^O saves, ^X exits.\n", code: 127 }; },
@@ -2440,7 +3050,7 @@
         while (r.length < 4) r.push("");
       });
       node.contents = unlines(rows.map(function (r) { return r.join(":"); }));
-      node.mtime = new Date();
+      node.mtime = this.now();
       return ok();
     },
     sudo: function* (rawArgs, stdin, io) {
@@ -2809,7 +3419,12 @@
       var files = [];
       var dirs = [];
       operands.forEach(function (a) {
-        var f = sh.lookup(a);
+        // ls -l shows a link itself; plain ls follows a link to a directory.
+        var f = sh.lookup(a, true);
+        if (f.node && f.node.type === "link" && !o.l && !o.d) {
+          var to = sh.lookup(a);
+          if (to.node && to.node.type === "dir") f = to;
+        }
         if (f.error) { err += "ls: cannot access '" + a + "': " + f.error + "\n"; return; }
         if (f.node.type === "dir" && !o.d) dirs.push({ name: a, path: f.path, node: f.node });
         else files.push({ name: a, path: f.path, node: f.node });
@@ -2838,7 +3453,8 @@
         var rows = list.map(function (e) {
           var path = e.path || (dirPath ? (e.name === "." ? dirPath : e.name === ".." ? parentOf(dirPath) : join(dirPath, e.name)) : e.name);
           var bytes = size(e.node);
-          return [modeString(e.node), links(e.node, path), e.node.owner, e.node.group, o.h ? human(bytes) : bytes, stamp(e.node.mtime), e.name];
+          var name = e.node.type === "link" ? e.name + " -> " + e.node.target : e.name;
+          return [modeString(e.node), links(e.node, path), e.node.owner, e.node.group, o.h ? human(bytes) : bytes, stamp(e.node.mtime, sh.now()), name];
         });
         var w = [0, 0, 0, 0, 0];
         rows.forEach(function (r) { for (var k = 0; k < 5; k++) w[k] = Math.max(w[k], String(r[k]).length); });
@@ -2848,7 +3464,7 @@
       }
       function total(list) {
         var blocks = 0;
-        list.forEach(function (e) { var b = size(e.node); blocks += e.node.type === "dir" ? 4 : b ? Math.ceil(b / 4096) * 4 : 0; });
+        list.forEach(function (e) { blocks += usage(e.node) / 1024; });
         return "total " + (o.h && blocks >= 1024 ? human(blocks * 1024) : blocks) + "\n";
       }
       var out = "";
@@ -2878,7 +3494,7 @@
         var f = sh.lookup(a);
         if (f.node) {
           if (!sh.can(f.node, 2) && f.node.owner !== sh.user) err += "touch: cannot touch '" + a + "': Permission denied\n";
-          else f.node.mtime = new Date();
+          else f.node.mtime = sh.now();
           return;
         }
         var why = f.error === "No such file or directory" ? sh.writableParent(f.path) : f.error;
@@ -2914,7 +3530,7 @@
       var err = "";
       var sh = this;
       args.forEach(function (a) {
-        var f = sh.lookup(a);
+        var f = sh.lookup(a, true);
         if (f.error) { err += "rmdir: failed to remove '" + a + "': " + f.error + "\n"; return; }
         if (f.node.type !== "dir") { err += "rmdir: failed to remove '" + a + "': Not a directory\n"; return; }
         if (sh.children(f.path).length) { err += "rmdir: failed to remove '" + a + "': Directory not empty\n"; return; }
@@ -2931,7 +3547,7 @@
       var err = "";
       var sh = this;
       p.args.forEach(function (a) {
-        var f = sh.lookup(a);
+        var f = sh.lookup(a, true);
         if (f.error) { if (!p.opts.f || f.error !== "No such file or directory") err += "rm: cannot remove '" + a + "': " + f.error + "\n"; return; }
         if (f.path === "/") { err += "rm: it is dangerous to operate recursively on '/'\n"; return; }
         if (f.node.type === "dir" && !recursive) { err += "rm: cannot remove '" + a + "': Is a directory\n"; return; }
@@ -3462,7 +4078,7 @@
         if (backup) { err += "sed: " + backup + "\n"; return; }
       }
       found.node.contents = edit(read.text, true);
-      found.node.mtime = new Date();
+      found.node.mtime = sh.now();
     });
     return { out: "", err: err, code: err ? 4 : 0 };
   }
@@ -3509,7 +4125,7 @@
     if (sources.length > 1 && !intoDir) return { out: "", err: cmd + ": target '" + dest + "': Not a directory\n", code: 1 };
     var err = "";
     sources.forEach(function (src) {
-      var s = sh.lookup(src);
+      var s = sh.lookup(src, move); // mv moves a link; cp copies what it points to
       if (s.error) { err += cmd + ": cannot stat '" + src + "': " + s.error + "\n"; return; }
       if (s.node.type === "dir" && !recursive) { err += "cp: -r not specified; omitting directory '" + src + "'\n"; return; }
       if (!move && !sh.can(s.node, 4)) { err += "cp: cannot open '" + src + "' for reading: Permission denied\n"; return; }
@@ -3526,7 +4142,9 @@
         var from = sh.fs[q];
         var copy = move
           ? from
-          : { type: from.type, mode: from.mode & ~UMASK, owner: sh.user, group: sh.group, contents: from.contents, mtime: new Date() };
+          : { type: from.type, mode: from.mode & ~UMASK, owner: sh.user, group: sh.group, contents: from.contents, mtime: sh.now() };
+        if (!move && from.size !== undefined) copy.size = from.size;
+        if (!move && from.type === "link") copy.target = from.target;
         sh.fs[target + q.slice(s.path.length)] = copy;
       });
       if (move) paths.forEach(function (q) { delete sh.fs[q]; });
@@ -3579,7 +4197,10 @@
     var fs = this.fs;
     Object.keys(fs).sort().forEach(function (p) {
       var n = fs[p];
-      out[p] = { type: n.type, mode: n.mode, owner: n.owner, group: n.group, contents: n.type === "file" ? n.contents : "" };
+      var node = { type: n.type, mode: n.mode, owner: n.owner, group: n.group, contents: n.type === "file" ? n.contents : "", mtime: isoStamp(n.mtime) };
+      if (n.type === "file" && n.size !== undefined) node.size = n.size;
+      if (n.type === "link") node.target = n.target;
+      out[p] = node;
     });
     return out;
   };
@@ -3603,7 +4224,33 @@
       var f = state[check.contains];
       return !!f && f.type === "file" && f.contents.indexOf(check.text) !== -1;
     }
+    if ("symlink" in check) {
+      var l = state[check.symlink];
+      return !!l && l.type === "link" && l.target === check.target;
+    }
+    if ("files_under" in check) {
+      var top = state[check.files_under];
+      if (!top || top.type !== "dir") return false;
+      var re = check.name ? globRegex(check.name, [], 0, true) : null;
+      var limit = check.max_size !== undefined && check.max_size !== null ? parseSize(check.max_size) : null;
+      return Object.keys(state).every(function (path) {
+        var node = state[path];
+        if (path.indexOf(check.files_under === "/" ? "/" : check.files_under + "/") !== 0 || node.type !== "file") return true;
+        if (re && !re.test(baseName(path))) return true;
+        var bytes = node.size !== undefined && node.size !== null ? node.size : new TextEncoder().encode(node.contents).length;
+        if (limit !== null && bytes > limit) return false;
+        var age = Math.floor((START_TIME - parseStamp(node.mtime)) / 86400000);
+        return check.max_age === undefined || check.max_age === null || age <= check.max_age;
+      });
+    }
     return false;
+  }
+
+  // "50M" → bytes (K, M, G are powers of 1024, as in the exercise files).
+  function parseSize(text) {
+    var m = /^(\d+(?:\.\d+)?)([KMG]?)$/.exec(String(text));
+    if (!m) return null;
+    return Math.round(parseFloat(m[1]) * { "": 1, K: KiB, M: MiB, G: GiB }[m[2]]);
   }
   // The process table as plain data, the shape the server grades.
   Shell.prototype.processes = function () {

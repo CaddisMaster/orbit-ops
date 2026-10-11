@@ -6,6 +6,8 @@ forbids unknown keys, so a typo'd field name is an error rather than a field
 that silently does nothing.
 """
 
+import re
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -101,21 +103,58 @@ def _parent(path: str) -> str:
     return path.rsplit("/", 1)[0] or "/"
 
 
+# Sizes (#67): bytes, or a number with K, M or G, which are powers of 1024 ("12M").
+SizeText = Annotated[str, Field(pattern=r"^\d+(\.\d+)?[KMG]?$")]
+Size = Annotated[int, Field(ge=0, le=2**40)] | SizeText
+_UNITS = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3}
+
+
+def size_bytes(size: int | str) -> int:
+    if isinstance(size, int):
+        return size
+    number, unit = re.fullmatch(r"(\d+(?:\.\d+)?)([KMG]?)", size).groups()
+    return round(float(number) * _UNITS[unit])
+
+
+# The station's clock when the console starts: shell.js's START_TIME, which
+# moves on a second per command from here. Files are dated before it, and
+# ages (find -mtime, the files_under check) are counted back from it.
+STATION_NOW = datetime(2026, 10, 8, 9, 0)  # noqa: DTZ001 (station wall-clock time, as the console shows it)
+Stamp = Annotated[str, Field(pattern=r"^\d{4}-\d\d-\d\d( \d\d:\d\d)?$")]  # "2026-09-20" or "2026-09-20 14:30"
+LinkTarget = Annotated[str, Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9._/-]+$")]
+
+
 class FsEntry(_Strict):
     path: AbsPath
-    type: Literal["file", "dir"] = "file"
+    type: Literal["file", "dir", "link"] = "file"
     contents: str = ""
-    mode: Octal | None = None  # default 644 for a file, 755 for a directory
+    mode: Octal | None = None  # default 644 for a file, 755 for a directory (a link is always 777)
     owner: Account | None = None  # default: the exercise's user
     group: Account | None = None  # default: the exercise's group
+    target: LinkTarget | None = None  # a link's target, as `ln -s` would store it
+    # A big file is sampled: `contents` is what cat shows, `size` what ls, du,
+    # df and find see. Writing to the file replaces it (appending adds to it).
+    size: Size | None = None
+    mtime: Stamp | None = None  # when it was last changed; default: STATION_NOW
 
     @model_validator(mode="after")
-    def _dirs_have_no_contents(self):
+    def _consistent(self):
         if self.type == "dir" and self.contents:
             raise ValueError(f"{self.path}: a directory has no contents")
         if self.path == "/":
             raise ValueError("/ always exists; don't list it")
+        if (self.type == "link") != (self.target is not None):
+            raise ValueError(f"{self.path}: a link, and only a link, has a target")
+        if self.type == "link" and (self.contents or self.mode):
+            raise ValueError(f"{self.path}: a link has no contents or mode of its own")
+        if self.size is not None and self.type != "file":
+            raise ValueError(f"{self.path}: only a file has a size")
+        if self.mtime and self.modified() > STATION_NOW:
+            raise ValueError(f"{self.path}: mtime {self.mtime} is after the station's clock ({STATION_NOW:%Y-%m-%d %H:%M})")
         return self
+
+    def modified(self) -> datetime:
+        return datetime.fromisoformat(self.mtime) if self.mtime else STATION_NOW
 
 
 class ModeCheck(_Strict):
@@ -147,6 +186,28 @@ class CwdCheck(_Strict):
     cwd: AbsPath  # the console ends in this directory (for navigation tasks)
 
 
+class SymlinkCheck(_Strict):
+    symlink: AbsPath  # a symbolic link is here
+    target: LinkTarget  # and points at this, exactly as written
+
+
+class FilesUnderCheck(_Strict):
+    """Every file below a directory (whose name matches `name`, if given) is at
+    most `max_size` and was changed at most `max_age` days ago. Passes when
+    nothing matches: "nothing in /var/log is over 50M". (#67)"""
+
+    files_under: AbsPath
+    name: Annotated[str, Field(min_length=1, max_length=64)] | None = None  # a glob, like "*.gz"
+    max_size: Size | None = None
+    max_age: Annotated[int, Field(ge=0, le=36500)] | None = None  # days, as find -mtime counts them
+
+    @model_validator(mode="after")
+    def _limits(self):
+        if self.max_size is None and self.max_age is None:
+            raise ValueError("files_under needs max_size, max_age or both")
+        return self
+
+
 ProcName = Annotated[str, Field(pattern=r"^[A-Za-z0-9._-]+$", max_length=64)]
 Signal = Literal["HUP", "INT", "KILL", "TERM"]
 
@@ -168,7 +229,7 @@ class SignalledCheck(_Strict):
 
 TerminalCheck = (
     ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck | CwdCheck
-    | RunningCheck | StoppedCheck | SignalledCheck
+    | RunningCheck | StoppedCheck | SignalledCheck | SymlinkCheck | FilesUnderCheck
 )
 
 
@@ -200,6 +261,34 @@ class ProcessSpec(_Strict):
     ignores: list[Literal["HUP", "INT", "TERM"]] = []  # signals it handles and survives (never KILL)
 
 
+class DiskSpec(_Strict):
+    """The drive df reports (#67). Used space is `base` plus every file."""
+
+    size: SizeText = "20G"
+    base: SizeText = "4.2G"  # what the system takes outside the exercise's files
+
+    @model_validator(mode="after")
+    def _fits(self):
+        if size_bytes(self.base) >= size_bytes(self.size):
+            raise ValueError("disk: base must be smaller than size")
+        return self
+
+
+class MemorySpec(_Strict):
+    """What free reports (#67)."""
+
+    total: SizeText = "2G"
+    used: SizeText = "820M"
+    cache: SizeText = "640M"  # buff/cache
+    shared: SizeText = "12M"
+
+    @model_validator(mode="after")
+    def _fits(self):
+        if size_bytes(self.used) + size_bytes(self.cache) > size_bytes(self.total):
+            raise ValueError("memory: used + cache can't be more than total")
+        return self
+
+
 KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
 
 
@@ -207,7 +296,7 @@ def check_path(check: TerminalCheck) -> str:
     match check:
         case ModeCheck(mode=p) | OwnerCheck(owner=p) | ExistsCheck(exists=p) | MissingCheck(missing=p):
             return p
-        case ContainsCheck(contains=p) | CwdCheck(cwd=p):
+        case ContainsCheck(contains=p) | CwdCheck(cwd=p) | SymlinkCheck(symlink=p) | FilesUnderCheck(files_under=p):
             return p
         case RunningCheck(running=p) | StoppedCheck(stopped=p) | SignalledCheck(signalled=p):
             return p
@@ -231,6 +320,8 @@ class TerminalExercise(_Strict):
     processes: Annotated[list[ProcessSpec], Field(max_length=20)] = []
     env: dict[Annotated[str, Field(pattern=r"^[A-Z_][A-Z0-9_]*$")], str] = {}  # extra exported variables, e.g. PATH
     cwd: AbsPath = "/station"
+    disk: DiskSpec | None = None
+    memory: MemorySpec | None = None
     files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
     checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
     success: Text = "Okafor's voice crackles over the comm: \"Confirmed. Nice work, cadet.\""
@@ -254,13 +345,22 @@ class TerminalExercise(_Strict):
             while parent not in fs:
                 fs[parent] = {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}
                 parent = _parent(parent)
-            fs[entry.path] = {
+            mode = "777" if entry.type == "link" else entry.mode or ("755" if entry.type == "dir" else "644")
+            node = {
                 "type": entry.type,
-                "mode": int(entry.mode or ("755" if entry.type == "dir" else "644"), 8),
+                "mode": int(mode, 8),
                 "owner": entry.owner or self.user,
                 "group": entry.group or self.group,
                 "contents": entry.contents,
             }
+            # Only when set, so exercises without them keep their exact shape.
+            if entry.target is not None:
+                node["target"] = entry.target
+            if entry.size is not None:
+                node["size"] = size_bytes(entry.size)
+            if entry.mtime:
+                node["mtime"] = entry.modified().isoformat()
+            fs[entry.path] = node
         return dict(sorted(fs.items()))
 
     def gids(self) -> dict[str, int]:
@@ -322,9 +422,11 @@ class TerminalExercise(_Strict):
             # there; exists and contains may name what the learner creates.
             if isinstance(check, CwdCheck) and fs.get(check.cwd, {}).get("type") != "dir":
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.cwd} is not a directory in the starting filesystem")
+            if isinstance(check, FilesUnderCheck) and fs.get(check.files_under, {}).get("type") != "dir":
+                raise ValueError(f"checks.{i} ({describe(check)}): {check.files_under} is not a directory in the starting filesystem")
             if isinstance(check, RunningCheck | StoppedCheck | SignalledCheck):
                 continue
-            if not isinstance(check, ExistsCheck | ContainsCheck | CwdCheck) and check_path(check) not in fs:
+            if not isinstance(check, ExistsCheck | ContainsCheck | CwdCheck | SymlinkCheck | FilesUnderCheck) and check_path(check) not in fs:
                 raise ValueError(
                     f"checks.{i} ({describe(check)}): {check_path(check)} is not in the starting filesystem"
                 )

@@ -191,6 +191,26 @@ Optional fields for users, processes and the environment (#37):
   env: {EDITOR: nano}         # extra exported variables (PATH may be overridden here)
 ```
 
+Sizes, dates, links, the disk and memory (#67):
+
+```yaml
+  disk: {size: 2G, base: "1.5G"}   # for df; base is what the OS uses outside your files (default 20G / 4.2G)
+  memory: {total: 1G, used: 300M, cache: 200M}   # for free (default 2G / 820M / 640M, shared 12M)
+  files:
+    - {path: /var/log/o2/scrubber.log, contents: "sample\n", size: 48M, mtime: "2026-09-20 03:00"}
+    - {path: /station/current.log, type: link, target: /var/log/o2/2026-10-10.log}
+```
+
+- **`size`** (bytes, or `K`/`M`/`G`, powers of 1024) makes a big file without writing it out:
+  `contents` is a sample for `cat`, and `ls`, `du`, `df`, `find -size` and `tar` see the size.
+  Writing over the file replaces it (so `> big.log` frees the space), and appending adds to it.
+- **`mtime`** dates a file on the **station's clock**, which starts at 2026-10-08 09:00
+  (`STATION_NOW` in `app/content/schema.py`, `START_TIME` in `shell.js`; a test holds them
+  equal). It can't be later. Ages for `find -mtime` and `max_age` count back from it, so a file
+  dated 2026-09-20 is 18 days old for every learner, whatever today's date.
+- **`type: link`** with a `target` (stored as written, so a relative target is relative to the
+  link's directory). Dangling targets are allowed.
+
 `/etc/passwd`, `/etc/group` and `/root` are generated from these unless you list them yourself.
 Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group is 1000.
 
@@ -202,9 +222,14 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   `{missing: P}`, `{contains: P, text: "…"}`, `{cwd: P}` (the console must end in directory
   P, for navigation tasks), and for processes `{running: NAME}`, `{stopped: NAME}` and
   `{signalled: NAME, with: TERM}` (NAME is the program's file name, as `ps` shows it; `stopped`
-  and `signalled` must name a starting process). `mode`, `owner` and `missing` must name a path in the starting
+  and `signalled` must name a starting process). For files on disk (#67): `{symlink: P, target:
+  T}` (a link at P pointing at exactly T, as written) and `{files_under: DIR, name: "*.gz",
+  max_size: 50M, max_age: 30}` (every file below DIR whose name matches, if `name` is given, is at
+  most that big and changed at most that many days ago; it needs `max_size`, `max_age` or both,
+  and passes when nothing matches, so it reads "nothing in /var/log is over 50M"). `mode`, `owner` and `missing` must name a path in the starting
   filesystem, and `cwd` a directory in it, or validation fails naming the check; `exists` and
-  `contains` may name something the learner creates.
+  `contains` may name something the learner creates, and so may `symlink`. `files_under` must
+  name a starting directory.
 - **The `solution` is proven in CI.** `tests/js/solutions.test.js` runs it through the real
   shell and requires the task unsolved before and solved after, with no step needing an unknown
   command (a step may fail on purpose). Node can't read YAML, so after changing any `terminal:`
@@ -238,6 +263,15 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     `/var/spool/cron/crontabs/<user>` (root's spool, mode 1730: `cat` can't read it, as on a
     real system, but a task's `contains` check can). It's checked as cron loads it (`bad
     minute`, `bad day-of-week`, …) and refused if wrong. Nothing runs on a schedule.
+  - disk (#67): `find PATH… [EXPR]` (`-name -iname -path -type f|d|l -size [+-]N[ckMG] -mtime
+    -mmin -newer -empty -user`, `! -not -a -o ( )`, `-maxdepth -mindepth`, `-print -delete -exec
+    cmd {} \;` and `+`; sorted output, never following links), `du (-s -h -a -c -d N
+    --max-depth=N)` in whole 4K blocks, `df (-h)` (one drive, `/dev/vda1` on `/`), `free (-h -m)`,
+    `tar` (`-c -x -t -z -v -f -C`, bundled or not: archives are simulated, a text file recording
+    what's in it, capped at 20 KB of text so the state still reaches the server), `gzip (-d -k)`,
+    `gunzip (-k)`, `zcat`, `ln -s (-f -n -v)` (no hard links), `readlink (-f)`. Paths resolve
+    through symlinks everywhere; `rm`, `mv`, `ls -l`, `find` and `test -L` act on the link
+    itself, and `cd` through a link lands in the real directory (as `cd -P`).
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
     sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
     foreground `sleep N` jumps N.
@@ -259,8 +293,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     heredocs and `<<<` (#65), `(( ))`, `for ((…))`, `++`/assignment inside `$(( ))`, `[[ =~ ]]`,
     arrays and `select`.
 
-  Anything else prints "command not found". Not yet: `set`, `printf`, `find`, `tar`,
-  `top`. Don't set a task that needs more: add the
+  Anything else prints "command not found". Not yet: `set`, `printf`, `stat`, `top`. Don't set a task that needs more: add the
   command to `app/static/js/shell.js` first, with a test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
   the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a
