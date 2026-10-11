@@ -76,6 +76,20 @@
    "group": "crew",
    "contents": "x",
    "mtime": "2026-09-08T09:00:00"
+  },
+  "/s/run.sh": {
+   "type": "file",
+   "mode": 500,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "#!/usr/bin/env bash\necho ok\n"
+  },
+  "/s/others.sh": {
+   "type": "file",
+   "mode": 429,
+   "owner": "cadet",
+   "group": "crew",
+   "contents": "echo ok\n"
   }
  },
  "cwd": "/s",
@@ -439,6 +453,41 @@
    "check": {
     "files_under": "/s/f",
     "max_size": "1G"
+   },
+   "expect": false
+  },
+  {
+   "name": "executable: the owner's x bit is set",
+   "check": {
+    "executable": "/s/run.sh"
+   },
+   "expect": true
+  },
+  {
+   "name": "executable: x for group and others only isn't enough",
+   "check": {
+    "executable": "/s/others.sh"
+   },
+   "expect": false
+  },
+  {
+   "name": "executable: no x at all",
+   "check": {
+    "executable": "/s/f"
+   },
+   "expect": false
+  },
+  {
+   "name": "executable: a directory doesn't count",
+   "check": {
+    "executable": "/s/d"
+   },
+   "expect": false
+  },
+  {
+   "name": "executable: a missing file",
+   "check": {
+    "executable": "/s/nope.sh"
    },
    "expect": false
   }

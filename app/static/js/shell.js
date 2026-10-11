@@ -1990,6 +1990,14 @@
     if (BUILTINS.indexOf(name) !== -1) return yield* this.call(name, argv, stdin, io);
     var path = this.which(name)[0];
     if (!path) {
+      // bash's last resort: a file on the PATH that isn't executable is found, and
+      // refused (`bash: /station/bin/x: Permission denied`, 126), not "not found".
+      var sh = this;
+      var plain = (this.vars.PATH || "").split(":").map(function (dir) { return dir && join(dir, name); }).filter(function (q) {
+        var f = q && sh.fs[q] && sh.lookup(q);
+        return f && f.node && f.node.type === "file";
+      })[0];
+      if (plain) return yield* this.runFile(plain, plain, argv.slice(1), io);
       return {
         out: "",
         err: name + ": command not found. The Meridian's console only knows the basics; type `help` to see them.\n",
@@ -4667,6 +4675,10 @@
     }
     if ("exists" in check) return !!state[check.exists] && (!check.type || state[check.exists].type === check.type);
     if ("missing" in check) return !state[check.missing];
+    if ("executable" in check) {
+      var x = state[check.executable];
+      return !!x && x.type === "file" && (x.mode & 0o100) !== 0;
+    }
     if ("contains" in check) {
       var f = state[check.contains];
       return !!f && f.type === "file" && f.contents.indexOf(check.text) !== -1;

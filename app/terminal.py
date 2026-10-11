@@ -25,6 +25,7 @@ from app.content.schema import (
     Account,
     ContainsCheck,
     CwdCheck,
+    ExecutableCheck,
     ExistsCheck,
     FilesUnderCheck,
     LinkTarget,
@@ -114,6 +115,9 @@ def passes(check: TerminalCheck, state: dict[str, Node], cwd: str, processes: li
             return node is not None and node.owner == user and (group is None or node.group == group)
         case ExistsCheck(exists=path, type=kind):
             return path in state and (kind is None or state[path].type == kind)
+        case ExecutableCheck(executable=path):
+            node = state.get(path)
+            return node is not None and node.type == "file" and bool(node.mode & 0o100)
         case MissingCheck(missing=path):
             return path not in state
         case ContainsCheck(contains=path, text=text):

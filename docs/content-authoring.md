@@ -227,7 +227,8 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   mode `755`, so the learner can't create files in it. List every directory they need to write
   to.
 - **Checks:** `{mode: P, equals: "600"}`, `{owner: P, user: u, group: g}`, `{exists: P, type: file|dir}`,
-  `{missing: P}`, `{contains: P, text: "…"}`, `{cwd: P}` (the console must end in directory
+  `{missing: P}`, `{executable: P}` (a file its owner can run: the owner's x bit, whatever
+  the rest of the mode, so `chmod +x`, `u+x` and `755` all pass; #70), `{contains: P, text: "…"}`, `{cwd: P}` (the console must end in directory
   P, for navigation tasks), and for processes `{running: NAME}`, `{stopped: NAME}` and
   `{signalled: NAME, with: TERM}` (NAME is the program's file name, as `ps` shows it; `stopped`
   and `signalled` must name a starting process). For files on disk (#67): `{symlink: P, target:
@@ -236,7 +237,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   most that big and changed at most that many days ago; it needs `max_size`, `max_age` or both,
   and passes when nothing matches, so it reads "nothing in /var/log is over 50M"). `mode`, `owner` and `missing` must name a path in the starting
   filesystem, and `cwd` a directory in it, or validation fails naming the check; `exists` and
-  `contains` may name something the learner creates, and so may `symlink`. `files_under` must
+  `contains` may name something the learner creates, and so may `symlink` and `executable`. `files_under` must
   name a starting directory.
 - **The `solution` is proven in CI.** `tests/js/solutions.test.js` runs it through the real
   shell and requires the task unsolved before and solved after, with no step needing an unknown

@@ -290,3 +290,15 @@ test("rm -i, mv -i and cp -i ask first, and only y means yes (#101)", () => {
   assert.equal(out(sh, "echo n | rm -i notes.txt"), "rm: remove regular file 'notes.txt'? "); // the answer read from a pipe
   assert.equal(out(sh, "ls notes.txt"), "notes.txt\n");
 });
+
+test("A script on the PATH that isn't executable is refused, not \"not found\" (#70)", () => {
+  const sh = station({ "/station/bin": { type: "dir", mode: 0o755, owner: "cadet", group: "crew", contents: "" } });
+  sh.run("export PATH=/station/bin:$PATH");
+  sh.run("echo 'echo checked' > /station/bin/shift-check");
+  assert.equal(out(sh, "shift-check"), "bash: /station/bin/shift-check: Permission denied\n");
+  assert.equal(sh.lastStatus, 126);
+  assert.equal(out(sh, "bash /station/bin/shift-check"), "checked\n"); // bash reads it: no x needed
+  sh.run("chmod +x /station/bin/shift-check");
+  assert.equal(out(sh, "shift-check"), "checked\n");
+  assert.equal(out(sh, "no-such-thing").split(":")[1], " command not found. The Meridian's console only knows the basics; type `help` to see them.\n");
+});

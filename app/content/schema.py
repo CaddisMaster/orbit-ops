@@ -179,6 +179,13 @@ class MissingCheck(_Strict):
     missing: AbsPath
 
 
+class ExecutableCheck(_Strict):
+    """A file its owner can run: the owner's x bit is set, whatever the rest of the
+    mode is (chmod +x, u+x and 755 all pass). #70."""
+
+    executable: AbsPath
+
+
 class ContainsCheck(_Strict):
     contains: AbsPath
     text: Text
@@ -230,7 +237,7 @@ class SignalledCheck(_Strict):
 
 
 TerminalCheck = (
-    ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ContainsCheck | CwdCheck
+    ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ExecutableCheck | ContainsCheck | CwdCheck
     | RunningCheck | StoppedCheck | SignalledCheck | SymlinkCheck | FilesUnderCheck
 )
 
@@ -297,6 +304,8 @@ KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
 def check_path(check: TerminalCheck) -> str:
     match check:
         case ModeCheck(mode=p) | OwnerCheck(owner=p) | ExistsCheck(exists=p) | MissingCheck(missing=p):
+            return p
+        case ExecutableCheck(executable=p):
             return p
         case ContainsCheck(contains=p) | CwdCheck(cwd=p) | SymlinkCheck(symlink=p) | FilesUnderCheck(files_under=p):
             return p
@@ -428,7 +437,8 @@ class TerminalExercise(_Strict):
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.files_under} is not a directory in the starting filesystem")
             if isinstance(check, RunningCheck | StoppedCheck | SignalledCheck):
                 continue
-            if not isinstance(check, ExistsCheck | ContainsCheck | CwdCheck | SymlinkCheck | FilesUnderCheck) and check_path(check) not in fs:
+            creatable = ExistsCheck | ExecutableCheck | ContainsCheck | CwdCheck | SymlinkCheck | FilesUnderCheck
+            if not isinstance(check, creatable) and check_path(check) not in fs:
                 raise ValueError(
                     f"checks.{i} ({describe(check)}): {check_path(check)} is not in the starting filesystem"
                 )

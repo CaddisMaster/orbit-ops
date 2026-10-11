@@ -1648,5 +1648,171 @@
    "success": "\"Welcome to the airlock group,\" Okafor says. \"It takes effect at your next login, so I'll sign you in fresh at the start of your next shift.\"",
    "user": "cadet"
   }
+ },
+ "your-first-script": {
+  "solution": [
+   "cat sticky-note.txt",
+   "echo '#!/usr/bin/env bash' > /station/bin/shift-check",
+   "echo 'cat /station/sensors/o2' >> /station/bin/shift-check",
+   "echo 'tail -n 1 /var/log/scrubber/scrubberd.log' >> /station/bin/shift-check",
+   "echo 'df -h /' >> /station/bin/shift-check",
+   "shift-check",
+   "chmod +x /station/bin/shift-check",
+   "shift-check",
+   "shift-check > shift-report.txt",
+   "cat shift-report.txt"
+  ],
+  "source": "core/bash-scripting/03-your-first-script.md",
+  "spec": {
+   "checks": [
+    {
+     "exists": "/station/bin/shift-check",
+     "type": "file"
+    },
+    {
+     "contains": "/station/bin/shift-check",
+     "text": "#!/usr/bin/env bash"
+    },
+    {
+     "executable": "/station/bin/shift-check"
+    },
+    {
+     "contains": "/home/cadet/shift-report.txt",
+     "text": "O2 20.6%"
+    },
+    {
+     "contains": "/home/cadet/shift-report.txt",
+     "text": "ring-b CO2 3400 ppm"
+    },
+    {
+     "contains": "/home/cadet/shift-report.txt",
+     "text": "/dev/vda1"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/home/cadet/sticky-note.txt": {
+     "contents": "START OF SHIFT (every. single. shift.)\n\ncat /station/sensors/o2\ntail -n 1 /var/log/scrubber/scrubberd.log\ndf -h /\n\n- O. (the other nine can wait)\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/sensors": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/sensors/o2": {
+     "contents": "O2 20.6% (ring A 20.8 · ring B 20.4)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber/scrubberd.log": {
+     "contents": "2026-10-08 07:55:00 scrubbers nominal: 2 beds, ring-b CO2 3500 ppm\n2026-10-08 08:25:00 scrubbers nominal: 2 beds, ring-b CO2 3450 ppm\n2026-10-08 08:55:00 scrubbers nominal: 2 beds, ring-b CO2 3400 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor reads the report over your shoulder, coffee in hand. \"Three commands, one word. Now do that for the other nine.\"",
+   "user": "cadet"
+  }
  }
 }
