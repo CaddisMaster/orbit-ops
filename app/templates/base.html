@@ -8,12 +8,12 @@
      (style-src 'self') would block it and log a violation on every page. #}
   <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
   <title>{% block title %}Orbit Ops{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', path='css/pygments.css') }}">
-  <script src="{{ url_for('static', path='htmx.min.js') }}" defer></script>
-  <script src="{{ url_for('static', path='js/briefing.js') }}" defer></script>
-  <script src="{{ url_for('static', path='js/comms.js') }}" defer></script>
-  <script src="{{ url_for('static', path='js/laptop.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
+  <link rel="stylesheet" href="{{ static_url('css/pygments.css') }}">
+  <script src="{{ static_url('htmx.min.js') }}" defer></script>
+  <script src="{{ static_url('js/briefing.js') }}" defer></script>
+  <script src="{{ static_url('js/comms.js') }}" defer></script>
+  <script src="{{ static_url('js/laptop.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRF-Token": "{{ csrf_token(request) }}"}'>

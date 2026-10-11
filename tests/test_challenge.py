@@ -122,8 +122,8 @@ def test_the_page_never_gets_the_solution():
 def test_the_module_page_has_the_challenge(logged_in, at_text_tools):
     page = logged_in.get("/modules/text-tools").text
     assert '<section class="card challenge" aria-labelledby="challenge-heading"' in page
-    assert re.search(r'<script src="[^"]*/static/js/python.js" defer></script>', page)
-    assert re.search(r'<script src="[^"]*/static/js/challenge.js" defer></script>', page)
+    assert re.search(r'<script src="[^"]*/static/js/python.js\?v=[^"]+"[^>]* defer></script>', page)
+    assert re.search(r'<script src="[^"]*/static/js/challenge.js\?v=[^"]+"[^>]* defer></script>', page)
     assert "def failed_logins(log):" in page and "parts = line.split" not in page
     assert "Bonus · Python · 30 XP" in page and "✓ Passed" not in page
     assert "python.js" not in logged_in.get("/modules/the-filesystem").text  # only where there's a challenge

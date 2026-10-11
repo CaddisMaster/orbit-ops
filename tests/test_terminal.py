@@ -154,8 +154,8 @@ def test_the_module_page_carries_the_console_and_its_starting_filesystem(logged_
     }
     assert spec["checks"] == [{"mode": "/station/scrubber.conf", "equals": "600"}]
     assert 'data-report="/modules/two/terminal"' in page
-    assert re.search(r'<script src="[^"]*/static/js/shell.js" defer></script>', page)
-    assert re.search(r'<script src="[^"]*/static/js/console.js" defer></script>', page)
+    assert re.search(r'<script src="[^"]*/static/js/shell.js\?v=[^"]+"[^>]* defer></script>', page)
+    assert re.search(r'<script src="[^"]*/static/js/console.js\?v=[^"]+"[^>]* defer></script>', page)
     assert "readable by its owner only" in page
     assert "solution" not in spec
 

@@ -4,7 +4,7 @@
    watch drill (#82): a readout heads it, and a crew line clears it. #}
 {% if card %}
 <section class="card review-card deck--{{ catalog.modules[card.module].track }}" id="review-card" aria-live="polite">
-  <p class="drill-readout">{% if meridian %}<img class="avatar" src="{{ url_for('static', path='img/avatar-' ~ meridian.avatar ~ '.png') }}" alt="" width="20" height="20"> {% endif %}<span>Watch drill · {{ remaining }} item{{ '' if remaining == 1 else 's' }} · from: {{ drill_decks | join(" · ") }}</span></p>
+  <p class="drill-readout">{% if meridian %}<img class="avatar" src="{{ static_url('img/avatar-' ~ meridian.avatar ~ '.png') }}" alt="" width="20" height="20"> {% endif %}<span>Watch drill · {{ remaining }} item{{ '' if remaining == 1 else 's' }} · from: {{ drill_decks | join(" · ") }}</span></p>
   <p class="eyebrow">Card from “{{ catalog.modules[card.module].title }}”{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
   <p class="review-front">{{ card.front_html }}</p>
   {% if revealed %}

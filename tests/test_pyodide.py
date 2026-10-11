@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from app import main
+from app import main, static_files
 from scripts import fetch_pyodide
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +48,7 @@ def test_pyodide_is_pinned_by_hash():
     assert re.search(r"^FROM python:[\d.]+-slim@sha256:[0-9a-f]{64} AS pyodide$", dockerfile, re.M)
     assert "RUN python /tmp/fetch_pyodide.py /pyodide\n" in dockerfile
     assert "COPY --from=pyodide /pyodide /opt/pyodide\n" in dockerfile and main.PYODIDE_DIR == Path("/opt/pyodide")
+    assert static_files.PYODIDE_VERSION == fetch_pyodide.VERSION  # the URL names what the image holds (#92)
 
 
 def test_a_download_that_doesnt_match_its_hash_is_refused():
@@ -72,7 +73,9 @@ def test_the_runner_starts_the_worker_only_on_the_first_run():
     assert runner.index("function start()") < runner.index("new Worker(") < runner.index("function run(")
     assert re.findall(r"\bstart\(\)", runner) == ["start()", "start()"]  # its definition, and `ready || start()`
     worker = (JS / "pyodide-worker.js").read_text()
-    assert 'import { loadPyodide } from "/pyodide/pyodide.mjs";' in worker and 'indexURL: "/pyodide/"' in worker
+    # Pyodide is imported from the versioned path python.js passes along (#92), and nowhere else
+    assert 'await import(indexURL + "pyodide.mjs")' in worker and "indexURL," in worker
+    assert 'workerUrl.searchParams.set("pyodide", script.dataset.pyodide);' in runner
 
 
 def test_a_runaway_run_is_stopped_by_terminating_the_worker():

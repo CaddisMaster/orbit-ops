@@ -15,7 +15,13 @@
 
   var RUN_TIMEOUT_MS = 5000;
   var LOAD_TIMEOUT_MS = 60000;
-  var workerUrl = new URL("pyodide-worker.js", document.currentScript.src).href;
+  // The worker is versioned like this script (#92), and told where Pyodide is:
+  // its path names the Pyodide version, which only the server knows.
+  var script = document.currentScript;
+  var workerUrl = new URL("pyodide-worker.js", script.src);
+  workerUrl.search = new URL(script.src).search;
+  workerUrl.searchParams.set("pyodide", script.dataset.pyodide);
+  workerUrl = workerUrl.href;
   var worker = null;
   var ready = null;  // a Promise, resolved when Pyodide has loaded in `worker`
   var busy = false;

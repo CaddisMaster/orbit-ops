@@ -1,5 +1,6 @@
 // Python in the browser (#53): a module worker that loads Pyodide from
-// /pyodide/ (self-hosted, app/main.py) and runs code sent by python.js.
+// /pyodide/<version>/ (self-hosted, app/main.py; python.js passes the path as
+// ?pyodide=, #92) and runs code sent by python.js.
 // It's a worker so a long-running program can't freeze the page, and so the
 // page can stop one by terminating it. Every run gets fresh globals, preset
 // with `inputs` (#54). After the code, each of `checks` runs in the same
@@ -10,14 +11,15 @@
 //                  { type: "load-error", message }
 //                  { type: "result", id, stdout, stderr, error, checks: [bool] }
 //                  error: the traceback, or null; checks: all false if the code raised
-import { loadPyodide } from "/pyodide/pyodide.mjs";
-
 let stdout = [];
 let stderr = [];
 
 try {
+  const indexURL = new URL(self.location.href).searchParams.get("pyodide") || "";
+  if (!/^\/pyodide\/[\d.]+\/$/.test(indexURL)) throw new Error("No Pyodide path given.");
+  const { loadPyodide } = await import(indexURL + "pyodide.mjs");
   const pyodide = await loadPyodide({
-    indexURL: "/pyodide/",
+    indexURL,
     stdout: (line) => stdout.push(line),
     stderr: (line) => stderr.push(line),
   });

@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Fixed
+- A release now reaches your browser straight away (#92). After an update, browsers could keep
+  the old stylesheet, scripts and art for hours (Safari did, after the laptop arrived), so a new
+  page could be drawn with last release's CSS until a hard reload. Every stylesheet, script and
+  image the app links to now carries the release version (`?v=0.6.0`), is cached for a year
+  under that address, and changes address with each release. Anything fetched without a version
+  checks with the server first. Pyodide's files sit under a path naming their version
+  (`/pyodide/314.0.7/`), so Python loads from the browser's cache after the first time.
+
 ## [0.5.0] — 2026-10-10
 
 Practice: flashcards on an SM-2 schedule as MERIDIAN's watch drill, Python in the browser with
