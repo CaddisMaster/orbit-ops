@@ -67,7 +67,7 @@ scripts/             create_user.py, install_compose.sh (deploy), check_criteria
    code stopped using it. One Alembic revision per PR, nothing else in it.
 6. **Dependencies are pinned exactly, transitive included**; actions are pinned by SHA; the base
    image by digest. `tests/test_repo_hardening.py` enforces all three.
-7. **AI never reveals quiz answers and never runs without the monthly budget check** (v0.6.0).
+7. **AI never reveals quiz answers and never runs without the monthly budget check** (v0.7.0).
 
 ## Testing
 
@@ -85,7 +85,7 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.4.0** is in production; the next milestone is **v0.5.0 — Practice**.
+See `docs/status.md`. **v0.5.0** is in production; the next milestone is **v0.6.0 — Bash scripting**.
 
 ## Maintainer notes (local only)
 
