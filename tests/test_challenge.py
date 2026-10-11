@@ -87,7 +87,7 @@ def _write(root, challenge_yaml, terminal=TERMINAL):
 
 CHALLENGE = """challenge:
   task: Do it.
-  inputs: {data: /station/secret.txt}
+  inputs: {data: /station/scrubber.conf}
   starter: x = 0
   checks:
     - {check: assert x == 1, says: x is one.}
@@ -98,8 +98,8 @@ CHALLENGE = """challenge:
 @pytest.mark.parametrize(
     ("challenge_yaml", "terminal", "expect"),
     [
-        (CHALLENGE.replace("/station/secret.txt", "/station/nope.txt"), TERMINAL, "challenge.inputs.data: /station/nope.txt is not a file in this module's console"),
-        (CHALLENGE, "", "challenge.inputs.data: /station/secret.txt is not a file in this module's console"),
+        (CHALLENGE.replace("/station/scrubber.conf", "/station/nope.txt"), TERMINAL, "challenge.inputs.data: /station/nope.txt is not a file in this module's console"),
+        (CHALLENGE, "", "challenge.inputs.data: /station/scrubber.conf is not a file in this module's console"),
         (CHALLENGE.replace("  checks:\n    - {check: assert x == 1, says: x is one.}\n", "  checks: []\n"), TERMINAL, "challenge.checks"),
         (CHALLENGE.replace("{data:", "{Data:"), TERMINAL, "challenge.inputs.Data"),
     ],

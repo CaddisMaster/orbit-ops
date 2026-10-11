@@ -344,6 +344,9 @@ class ChallengeCheck(_Strict):
 
 
 class Challenge(_Strict):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    from_: Slug | None = Field(default=None, alias="from")  # the cast member asking (#82)
     task: Text  # what to write (Markdown)
     # Variables set before the learner's code runs, each holding the contents
     # of a file from this module's console, e.g. {log: /var/log/docking/access.log}.
@@ -480,9 +483,18 @@ class Comms(_Strict):
     window: dict[Beat, WindowEvent] = {}  # a window event that plays at a beat
 
 
+class Drill(_Strict):
+    """Flashcard review as MERIDIAN's watch drill (#82): the lines the crew may
+    say when the day's drill is cleared. One is picked by the date, so they
+    rotate rather than repeat."""
+
+    cleared: Annotated[list[Message], Field(min_length=1)]
+
+
 class Syllabus(_Strict):
     tracks: Annotated[list[TrackSpec], Field(min_length=1)]
     cast: list[CastSpec] = []  # who can send messages
+    drill: Drill | None = None  # the review queue's lines (#82)
     ranks: list[RankSpec] = []  # rank titles by level band, lowest first
     badges: list[BadgeSpec] = []  # in the order the badges page shows them
 

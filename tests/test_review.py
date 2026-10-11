@@ -130,7 +130,7 @@ def test_a_completed_modules_cards_join_the_queue(logged_in, user):
     _complete(user.id, "navigating")
     page = logged_in.get("/review").text
     assert _shown(page) == "navigating/ls-lah"
-    assert "Flashcard · 3 due · from “" in page
+    assert "<span>Watch drill · 3 items · from: Life Support</span>" in page
     catalog = load_catalog()
     with SessionLocal() as db:
         due = srs.queue(db, user.id, catalog, {"navigating"}, TODAY).due
@@ -155,7 +155,7 @@ def test_grading_records_the_schedule_and_shows_the_next_card(logged_in, user):
     part = _grade(logged_in, "navigating/ls-lah", "good").text
     state = _state(user.id, "navigating/ls-lah")
     assert (state.interval_days, state.due_on, state.reps, state.last_reviewed_on) == (1, days(1), 1, TODAY)
-    assert _shown(part) == "navigating/cd-dash" and "2 due" in part
+    assert _shown(part) == "navigating/cd-dash" and "Watch drill · 2 items" in part
     _grade(logged_in, "navigating/ls-lah", "again")  # a double submit, or an old tab: the card isn't due
     assert _state(user.id, "navigating/ls-lah").reps == 1
 
@@ -206,8 +206,74 @@ def test_another_users_cards_are_not_mine(logged_in, user, make_user):
         db.commit()
     assert _state(user.id, "navigating/ls-lah") is None
     assert _shown(logged_in.get("/review").text) == "navigating/ls-lah"  # still new, still mine to see
-    assert "3 due" in logged_in.get("/review").text
+    assert "Watch drill · 3 items" in logged_in.get("/review").text
 
 
 def test_the_nav_links_to_the_review_queue(logged_in):
     assert '<a href="/review">Review</a>' in logged_in.get("/").text
+
+
+# --- #82: the watch drill --------------------------------------------------------------------
+@pytest.mark.criterion(82, "The review queue is a watch drill")
+def test_the_review_queue_is_a_watch_drill(logged_in, user):
+    _complete(user.id, "navigating", "text-tools")
+    page = logged_in.get("/review").text
+    assert '<p class="drill-readout"><img class="avatar" src="http://testserver/static/img/avatar-meridian.png"' in page
+    assert "<span>Watch drill · 6 items · from: Life Support</span>" in page
+    assert 'Card from “Finding your way around”' in page
+
+
+@pytest.mark.criterion(82, "Clearing the drill gets a word from the crew")
+def test_clearing_the_drill_gets_a_word_from_the_crew(logged_in, user):
+    catalog = load_catalog()
+    slug, html = catalog.drill_cleared[TODAY.toordinal() % len(catalog.drill_cleared)]  # picked by the date
+    _complete(user.id, "navigating")
+    for card in ("navigating/ls-lah", "navigating/cd-dash"):
+        assert "crew-line" not in _grade(logged_in, card, "good").text  # only the grade that clears it
+    last = _grade(logged_in, "navigating/hidden-files", "good").text
+    assert f'<div class="comms-line crew-line from-{slug}">' in last and str(html) in last
+    assert "crew-line" not in logged_in.get("/review").text  # said once, as the drill is cleared
+
+
+def test_the_drill_lines_rotate_by_date():
+    from datetime import timedelta
+
+    from app.routers.review import _cleared_line
+
+    catalog = load_catalog()
+    lines = {_cleared_line(catalog, TODAY + timedelta(days=n))["html"] for n in range(len(catalog.drill_cleared))}
+    assert len(lines) == len(catalog.drill_cleared) >= 3
+
+
+@pytest.mark.criterion(82, "A challenge says who's asking")
+def test_a_challenge_says_whos_asking(logged_in, user):
+    from tests.test_challenge import BEFORE_TEXT_TOOLS
+
+    _complete(user.id, *BEFORE_TEXT_TOOLS)
+    page = logged_in.get("/modules/text-tools").text
+    challenge = page[page.index('<section class="card challenge"') :]
+    assert '<div class="comms-line crew-line from-okafor">' in challenge[: challenge.index("</section>")]
+    assert '<span class="crew-lead">asks:</span>' in challenge
+
+
+@pytest.mark.parametrize(
+    ("where", "expect"),
+    [
+        ("drill", "drill.cleared.0.from: 'okafr' is not in the cast"),
+        ("challenge", "challenge.from: 'okafr' is not in the cast"),
+    ],
+)
+def test_drill_and_challenge_speakers_must_be_in_the_cast(tmp_path, where, expect):
+    from tests.test_challenge import CHALLENGE
+    from tests.test_terminal import TERMINAL
+
+    cast = "cast:\n  - {slug: okafor, name: Okafor, role: Chief Engineer, avatar: okafor}\n"
+    drill = "drill:\n  cleared:\n    - {from: okafr, text: Done.}\n" if where == "drill" else ""
+    (tmp_path / "syllabus.yml").write_text(textwrap.dedent(SYLLABUS) + cast + drill)
+    (tmp_path / "core/shell").mkdir(parents=True)
+    challenge = CHALLENGE.replace("challenge:\n", "challenge:\n  from: okafr\n") if where == "challenge" else ""
+    text = MODULE.format(title="One", xp=50).replace("---\nLesson.", TERMINAL + challenge + "---\nLesson.", 1)
+    (tmp_path / "core/shell/01-one.md").write_text(text)
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert expect in str(exc.value)

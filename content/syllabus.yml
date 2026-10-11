@@ -24,6 +24,16 @@ cast:
   - {slug: meridian, name: MERIDIAN, role: Station systems, avatar: meridian}
   - {slug: mission, name: Mission Control, role: Earth, avatar: mission, delay: "1.3 s"}
 
+# Flashcard review is MERIDIAN's watch drill (#82). One of these lines, picked
+# by the date, is said when the day's drill is cleared. Quote text with commas.
+drill:
+  cleared:
+    - {from: meridian, text: "WATCH DRILL COMPLETE · RECALL WITHIN TOLERANCE"}
+    - {from: okafor, text: "Drill's done. That's the stuff you'll need at 3 a.m. when nobody's awake to ask."}
+    - {from: meridian, text: "WATCH DRILL COMPLETE · CREW MEMBER CLEARED FOR NEXT SHIFT"}
+    - {from: okafor, text: "Good. Knowing it once is luck; knowing it a week later is engineering."}
+    - {from: mission, text: "*Meridian*, Mission Control. We logged your drill. Nice and steady."}
+
 tracks:
   - slug: core
     title: Core Systems

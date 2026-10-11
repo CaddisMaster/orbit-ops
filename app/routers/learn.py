@@ -100,6 +100,7 @@ def module_page(
             "challenge_code": challenge_code,
             "challenge_passed": challenge_passed,
             "challenge_xp": challenge.XP,
+            "challenge_from": catalog.cast.get(module.challenge.from_) if module.challenge and module.challenge.from_ else None,
             # A window event at the `open` beat plays on the first visit only (#45).
             "window_event": module.comms.window.get("open") if module.comms and first_visit else None,
         },

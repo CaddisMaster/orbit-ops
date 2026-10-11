@@ -1,9 +1,11 @@
 {# The review queue's one card (#51), swapped whole: "Show answer" and each
    grade replace #review-card with what comes next. Plain links and forms
-   underneath, so it works without htmx too. #}
+   underneath, so it works without htmx too. In the story it's MERIDIAN's
+   watch drill (#82): a readout heads it, and a crew line clears it. #}
 {% if card %}
 <section class="card review-card deck--{{ catalog.modules[card.module].track }}" id="review-card" aria-live="polite">
-  <p class="eyebrow">Flashcard · {{ remaining }} due · from “{{ catalog.modules[card.module].title }}”{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
+  <p class="drill-readout">{% if meridian %}<img class="avatar" src="{{ url_for('static', path='img/avatar-' ~ meridian.avatar ~ '.png') }}" alt="" width="20" height="20"> {% endif %}<span>Watch drill · {{ remaining }} item{{ '' if remaining == 1 else 's' }} · from: {{ drill_decks | join(" · ") }}</span></p>
+  <p class="eyebrow">Card from “{{ catalog.modules[card.module].title }}”{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
   <p class="review-front">{{ card.front_html }}</p>
   {% if revealed %}
   <p class="review-back">{{ card.back_html }}</p>
@@ -24,8 +26,9 @@
 </section>
 {% else %}
 <section class="card review-card" id="review-card" aria-live="polite">
-  <p class="eyebrow">Review queue{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
+  <p class="eyebrow">Watch drill{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
   <h1>Queue clear.</h1>
+  {% if cleared_line %}{% with who = cleared_line.who, html = cleared_line.html, lead = none %}{% include "partials/_crew_line.html" %}{% endwith %}{% endif %}
   {% if cleared %}<p>Today's log entry: <span class="filed">filed</span>. Clearing the queue keeps your streak.</p>{% endif %}
   {% if next_due_on %}
   {% set days = (next_due_on - today).days %}

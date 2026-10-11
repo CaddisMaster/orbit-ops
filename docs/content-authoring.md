@@ -111,6 +111,7 @@ A bonus Python exercise, run in the learner's browser by Pyodide (CPython 3.14).
 
 ```yaml
 challenge:
+  from: okafor           # optional: the cast member asking, shown as "Okafor asks:" (#82)
   task: |-               # Markdown: what to write, and what it's given
     `log` holds the docking log. Finish `failed_logins(log)` …
   inputs: {log: /var/log/docking/access.log}   # optional: variables preset from THIS
@@ -127,6 +128,9 @@ challenge:
 
 - **Write a check for the shortcut, not just the answer.** A naive solution should fail at least
   one check, and its `says` should teach why (the text-tools challenge catches `'401' in line`).
+- **Give it someone who wants it done.** A challenge is a job a crew member would rather have
+  scripted than done by hand, so name them with `from:` and write the task in that spirit. The
+  text-tools one, "check MERIDIAN's arithmetic", is the model.
 - **`says` is the hint.** It's all a learner sees of a failed check, so say what's being checked.
 - **Numbers the crew quotes must be true.** If a check or the task repeats a comms figure, a test
   should hold them together (`tests/test_challenge.py` does it for text-tools).
@@ -134,6 +138,10 @@ challenge:
   That's the trade for never running learner code on the server.
 
 ### Flashcards
+
+In the story, review is **MERIDIAN's watch drill** (#82). MERIDIAN's readout heads it, and when
+the day's drill is cleared, one line from `drill.cleared` in `syllabus.yml` is said. It's picked
+by the date, so add lines freely: more lines, less repetition.
 
 A module's cards join the learner's review queue (`/review`) once the module is complete. The
 front and back are inline Markdown. Each review is scheduled with SM-2 and stored against

@@ -7,6 +7,7 @@
          data-challenge='{{ challenge_spec | tojson }}' data-report="/modules/{{ module.slug }}/challenge">
   <p class="eyebrow">Bonus · Python · {{ challenge_xp }} XP</p>
   <h2 id="challenge-heading">Script it</h2>
+  {% if challenge_from %}{% with who = challenge_from, html = none, lead = "asks:" %}{% include "partials/_crew_line.html" %}{% endwith %}{% endif %}
   <div class="task prose">{{ module.challenge_task_html | safe }}</div>
   <p class="challenge-nojs muted">Python challenges run in your browser and need JavaScript. The lesson and the quiz work without it.</p>
   <div class="challenge-ui" hidden>
