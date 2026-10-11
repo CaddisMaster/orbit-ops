@@ -202,13 +202,25 @@ def test_a_module_without_an_exercise_has_no_report_route(logged_in, terminal_cu
         {"/x": {"type": "file", "mode": 0o600, "owner": "Robert'); DROP", "group": "crew"}},
         {"/x": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew", "contents": "x" * 20_001}},
         {f"/f{i}": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew"} for i in range(501)},
+        {"/x\ny": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew"}},
+        {"/x//y": {"type": "file", "mode": 0o600, "owner": "cadet", "group": "crew"}},
     ],
-    ids=["relative-path", "bad-type", "bad-owner", "huge-file", "too-many-paths"],
+    ids=["relative-path", "bad-type", "bad-owner", "huge-file", "too-many-paths", "control-character", "empty-segment"],
 )
 def test_malformed_or_oversized_reports_are_refused(logged_in, terminal_curriculum, user, state):
     complete(logged_in, "one")
     assert _report(logged_in, "two", state).status_code == 422
     assert _attempts(user.id) == []
+
+
+def test_a_report_may_hold_any_name_a_learner_can_make(logged_in, terminal_curriculum, user):
+    # #71: a file called "Spare Parts.csv", or "*.nope" from a redirect, used to get the whole
+    # report refused, so a solved task went unlogged.
+    complete(logged_in, "one")
+    learner_made = {"type": "file", "mode": 0o664, "owner": "cadet", "group": "crew", "contents": ""}
+    state = {**_state(0o600), "/station/Spare Parts.csv": learner_made, "/station/*.nope": learner_made, "/station/naïve,v2 (1)": learner_made}
+    response = _report(logged_in, "two", state)
+    assert response.status_code == 200 and response.json() == {"correct": True}
 
 
 def test_reports_need_the_csrf_token(logged_in, terminal_curriculum):
