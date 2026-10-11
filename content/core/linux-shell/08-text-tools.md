@@ -86,6 +86,7 @@ terminal:
     - 'awk ''{print $1}'' /var/log/docking/access.log | sort | uniq -c | sort -rn | head -n 3 > noisy.txt'
     - cat noisy.txt
 challenge:
+  from: okafor
   task: |-
     MERIDIAN reported **22 login attempts overnight, 14 failed**. Check its arithmetic in Python.
 

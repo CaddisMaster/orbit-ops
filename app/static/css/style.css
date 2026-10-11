@@ -439,6 +439,22 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .review-grades { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1.25rem; }
 .review-grades p { flex-basis: 100%; margin: 0 0 0.25rem; }
 .review-xp { margin-left: 0.5rem; color: var(--warn); }
+/* MERIDIAN's readout heading the watch drill (#82), in the console's voice. */
+.drill-readout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.9rem;
+  color: var(--warn);
+  font: 600 0.72rem/1.4 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.drill-readout .avatar { image-rendering: pixelated; border-radius: 3px; border: 1px solid var(--border); }
+/* A crew line outside the comms log: a drill's sign-off, a challenge's asker. */
+.crew-line { margin: 0.75rem 0; }
+.crew-line .said { margin: 0.15rem 0 0; }
+.crew-lead { color: var(--muted); font-weight: 400; }
 
 /* --- The desk (#38) --------------------------------------------------------------
    A 16:9 scene, as large as the window allows and letterboxed in the wall's

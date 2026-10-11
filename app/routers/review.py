@@ -31,12 +31,29 @@ def _card_in_deck(db: Session, user: User, catalog: Catalog, card_id: str) -> Fl
     return card
 
 
+def _drill_decks(catalog: Catalog, cards) -> list[str]:
+    """The decks the due cards come from, in syllabus order: MERIDIAN's "FROM:"."""
+    tracks = {catalog.modules[c.module].track for c in cards}
+    return [t.deck for t in catalog.tracks if t.slug in tracks]
+
+
+def _cleared_line(catalog: Catalog, today) -> dict | None:
+    """Who says what when the drill is cleared: one of the syllabus's lines,
+    picked by the date so they rotate (#82)."""
+    if not catalog.drill_cleared:
+        return None
+    slug, html = catalog.drill_cleared[today.toordinal() % len(catalog.drill_cleared)]
+    return {"who": catalog.cast[slug], "html": html}
+
+
 def _context(db: Session, user: User, catalog: Catalog) -> dict:
     today = streaks.today()
     q = srs.queue(db, user.id, catalog, progress.completed_slugs(db, user.id), today)
     return {
         "card": q.due[0] if q.due else None,
         "remaining": len(q.due),
+        "drill_decks": _drill_decks(catalog, q.due),
+        "meridian": catalog.cast.get("meridian"),
         "next_due_on": q.next_due_on,
         "today": today,
         "catalog": catalog,
@@ -109,6 +126,7 @@ def grade(
         {
             **_context(db, user, catalog),
             "revealed": False, "xp_gained": xp_gained, "cleared": cleared,
+            "cleared_line": _cleared_line(catalog, today) if cleared else None,
             "console": console_readout(request, user, catalog, db),  # after the commit: the new streak and count
         },
     )

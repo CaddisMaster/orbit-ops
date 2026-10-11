@@ -34,6 +34,10 @@ and why it matters, not what the diff says.
   the lesson files (#51).
 
 ### Changed
+- Flashcard review is now MERIDIAN's **watch drill** (#82). The station's readout heads each card
+  ("WATCH DRILL · 6 ITEMS · FROM: LIFE SUPPORT"), and clearing the day's drill earns a line from
+  the crew, rotating by the date. Code challenges now say who's asking: the text-tools one is
+  Okafor's.
 - The station map is the *Meridian* itself (#78): a pixel-art ship, side on, with each track's
   deck as a section. Life Support is the hull and habitat ring, Cargo & Fabrication the container
   bay, Comms, Sensors & Shields the mast and dish, and Fleet Command the bow. Every unit is a

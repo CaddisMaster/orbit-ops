@@ -100,6 +100,7 @@ class Catalog:
     ranks: tuple[RankSpec, ...] = ()  # ascending by level
     badges: tuple[BadgeSpec, ...] = ()  # in syllabus order
     cast: dict[str, CastSpec] = field(default_factory=dict)
+    drill_cleared: tuple = ()  # ((cast slug, line html), ...): said when the watch drill is cleared (#82)
 
     def unit_modules(self, unit_slug: str) -> list[Module]:
         return [self.modules[s] for s in self.units[unit_slug].modules]
@@ -275,6 +276,12 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
     if len(cast) != len(syllabus.cast):
         problems.append("syllabus.yml: cast: a slug is used twice")
     for module in modules.values():
+        if module.challenge and module.challenge.from_ and module.challenge.from_ not in cast:
+            problems.append(f"{module.source}: challenge.from: '{module.challenge.from_}' is not in the cast")
+    for i, message in enumerate(syllabus.drill.cleared if syllabus.drill else ()):
+        if message.from_ not in cast:
+            problems.append(f"syllabus.yml: drill.cleared.{i}.from: '{message.from_}' is not in the cast")
+    for module in modules.values():
         if not module.comms:
             continue
         for beat in ("open", "console_done", "complete"):
@@ -307,4 +314,5 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
     return Catalog(
         tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks), badges=tuple(syllabus.badges),
         cast=cast,
+        drill_cleared=tuple((m.from_, render_inline(m.text)) for m in syllabus.drill.cleared) if syllabus.drill else (),
     )
