@@ -30,6 +30,10 @@ A per-session log, standing decisions and a release ledger. Newest first.
   revalidated when unversioned. Pyodide's path carries its version (#92).
 - **The console's clock is the station's** (2026-10-08 09:00 plus a second per command), never
   the browser's, so ages and dates are the same for every learner and on the server (#67).
+- **Lessons say plainly what their task needs** (#101). Every command a solution uses is in the
+  lesson's prose or a table (not only a code comment or Try it), and the ideas behind each task
+  are listed per module in `NEEDS` (`tests/test_lesson_needs.py`). A section that mentions
+  something the console lacks says so. Tasks stay hard; the help is findable.
 - **The console checks itself against the real tools.** Each new capability was compared
   snippet by snippet with bash 5.2 and GNU find/du/tar in a scratch harness. Differences are
   either fixed or deliberate (sorted `find` output, simulated archives, no hard links).
@@ -48,7 +52,53 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 ## Sessions
 
-### 2026-10-11 — v0.6.0's console built
+### 2026-10-11 (evening) — Unit 1.2 modules 01–04, and the lesson audit
+
+> 🚀 **START THE NEXT SESSION BY CUTTING A RELEASE**, before any more modules (Sean's call,
+> 2026-10-11). Production 0.5.0 has a live bug that #108 fixes: the server refuses a console
+> report holding any file name with a space, a comma or a `*`, so a solved task goes unlogged.
+> The release bundles everything since 0.5.0: the v0.6.0 console (#64–#67, #92), modules
+> 01–04, the audit (#101) and that fix. No migrations and no new env vars since 0.5.0, but run
+> `release-prep` to confirm. Remove this note once it's released.
+
+- **Merged:** #100 module 01 reading and editing (#68), #102 module 02 finding things and disk
+  space (#69), #106 the lesson audit (#101), #107 module 03 your first script (#70), #108 module
+  04 variables and quoting (#71).
+- **Console and app, beyond the content:**
+  - `man` reads an exercise's own pages in `/usr/share/man/manN/`, in man-db's section order.
+  - Quiz questions take a `code:` block (the scenario questions need one). Answer options are
+    one flex item, so inline code wraps with its sentence.
+  - New check `{executable: P}`: the owner's x bit, in both graders and the parity cases.
+  - `rm -i`/`mv -i`/`cp -i` ask in GNU's words; the last of `-f`/`-i` wins. `rm -i` used to
+    delete without asking.
+  - Matched to bash: a non-executable script on PATH is `Permission denied` (126); in a script,
+    errors are `script: line N: …` (path as `$0`, lines kept inside `$( )`); `ambiguous
+    redirect`; several files into a missing directory is `No such file or directory`.
+  - **Server:** report paths may hold any printable character (they're only compared). A space,
+    a comma or a `*` used to get the whole report refused.
+- **Decided this session:**
+  - Module 02's sizes are set so getting under 70% needs both emptying the log and archiving.
+  - `cp -n` isn't taught (coreutils 9.4 warns it's non-portable).
+  - Console home stays the task's start directory, and lesson 02 now says so; the prompt shows
+    `~` only for `/home/cadet`.
+  - Lesson examples use different names from the task's, so they never hand over the answer.
+- **Filed:** #103 change a wrong quiz answer, #104 typed flashcards with their source, #105 the
+  desk on a 2K monitor. **#105 needs a screenshot, the browser, its zoom and the display scaling
+  from Sean.** The cut-off didn't reproduce headless; the app also doesn't scale up with the
+  screen.
+- **Process notes:**
+  - Sean played module 03 as a learner and got stuck. What he needed was only in comments and
+    Try it, which led to #101. Playing the modules is the best review we have.
+  - Every new console message was checked in `ubuntu:24.04` before it was written. That caught
+    `dir` being a real command, the blank-line shebang fallback and `cp -n`'s warning.
+  - `man` in a Docker `ubuntu` image is a stub: the Try it check removes the dpkg excludes and
+    the `/usr/bin/man` diversion first.
+- **Next:**
+  1. **Cut the release** (see the note at the top).
+  2. Then #72 → #77, Unit 1.2 modules 05–10, each with its `NEEDS` entry.
+  3. #103–#105 when Sean picks them. #105 waits on his screenshot.
+
+### 2026-10-11 (morning) — v0.6.0's console built
 
 - **Merged:** #94 cache-busting (#92), and the four console issues: #95 control flow (#64),
   #96 nano/man/cron (#66), #97 find/du/df/tar/links (#67), #98 functions and safe scripting
