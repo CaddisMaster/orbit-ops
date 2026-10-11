@@ -42,7 +42,8 @@
   <ul class="modules">
     {% for node in deck.nodes %}
     <li class="{{ node.state }}"><a href="{{ node.href }}">{{ node.code }} {{ node.title }}</a>
-      <span class="muted">· {{ node.state }}{% if node.total %} · {{ node.done }}/{{ node.total }}{% else %} · coming soon{% endif %}{% if node.waiting_on %} · waiting on {{ node.waiting_on | join(", ") }}{% endif %}</span></li>
+      <span class="muted">· {{ node.state }}{% if node.total %} · {{ node.done }}/{{ node.total }}{% else %} · coming soon{% endif %}{% if node.waiting_on %} · waiting on {{ node.waiting_on | join(", ") }}{% endif %}</span>
+      {% if node.brief %}<br><span class="unit-brief">{{ node.brief }}</span>{% endif %}</li>
     {% endfor %}
   </ul>
   {% endfor %}

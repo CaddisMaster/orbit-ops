@@ -57,6 +57,10 @@ and why it matters, not what the diff says.
   lid snaps instead of folding, and without JavaScript the laptop just stays open.
 
 ### Fixed
+- Every unit's story briefing is now shown (#88). All nineteen were written in `syllabus.yml` and
+  loaded, but no page ever displayed them. The syllabus shows each one under its unit as a
+  transmission in the deck's colour; the station map's tooltips and unit list open with its first
+  sentence; and a unit's first module opens with it when the crew isn't briefing you on comms.
 - The console no longer asks you to do something no lesson has shown you (#80). The filesystem
   module now teaches reading a file (`cat`, `less`, `head`, `tail`) and moving into a directory,
   both of which its console task already needed. Its task now asks you to read the log, the
