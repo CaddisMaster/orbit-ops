@@ -227,3 +227,47 @@ def test_the_real_map_renders(logged_in):
 def test_pulsing_respects_reduced_motion(client):
     css = client.get("/static/css/style.css").text
     assert "@media (prefers-reduced-motion: reduce) { .node.available .room { animation: none; }" in css
+
+
+# --- #88: each unit's briefing, shown ---------------------------------------------------------
+@pytest.mark.criterion(88, "The syllabus tells each unit's story")
+def test_the_syllabus_tells_each_units_story(logged_in):
+    page = logged_in.get("/syllabus").text
+    catalog = load_catalog()
+    for unit in catalog.units.values():
+        if unit.briefing_html:
+            block = page[page.index(f'<div class="unit" id="unit-{unit.slug}">') :]
+            block = block[: block.index("</h3>") + 200]
+            assert '<div class="unit-briefing transmission">' in block, unit.slug
+    assert "Chief Okafor wants the routine checks written down as scripts" in page
+
+
+@pytest.mark.criterion(88, "The map says why a system matters")
+def test_the_map_says_why_a_system_matters(logged_in):
+    page = logged_in.get("/map").text
+    tooltip = re.search(r'data-unit="bash-scripting">\s*<title>([^<]*)</title>', page).group(1)
+    assert tooltip.startswith("1.2 Bash scripting · coming soon")
+    assert tooltip.endswith("\nTyping the same twelve commands every shift is how mistakes happen.")
+    assert '<span class="unit-brief">Typing the same twelve commands every shift is how mistakes happen.</span>' in page
+
+
+def test_first_sentence_is_plain_text():
+    from app.station_map import first_sentence
+
+    assert first_sentence("<p>The <em>Meridian</em>'s air is bad. Fix it.</p>") == "The Meridian's air is bad."
+    assert first_sentence("<p>Is it on? Check.</p>") == "Is it on?"
+    assert first_sentence("") == ""
+
+
+def test_a_units_first_module_opens_with_its_briefing(logged_in, tmp_path):
+    syllabus = SYLLABUS.replace("        title: \"Linux & the shell: the basics\"\n",
+                                "        title: \"Linux & the shell: the basics\"\n        briefing: The scrubbers need you.\n")
+    _write(tmp_path, syllabus)
+    app.dependency_overrides[get_catalog] = lambda: load_catalog(tmp_path)
+    try:
+        first = logged_in.get("/modules/one").text
+        assert '<div class="unit-briefing transmission"><p>The scrubbers need you.</p>' in first
+        complete(logged_in, "one")
+        assert "unit-briefing" not in logged_in.get("/modules/two").text  # only the first module
+    finally:
+        app.dependency_overrides.pop(get_catalog, None)

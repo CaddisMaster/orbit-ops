@@ -24,6 +24,10 @@
         <h1>{{ module.title }}</h1>
       </div>
     </div>
+    {% if module.position == 1 and unit.briefing_html and not (module.comms and module.comms.open) %}
+    {# A unit's first module opens with the unit's story (#88), unless its comms brief it. #}
+    <div class="unit-briefing transmission">{{ unit.briefing_html | safe }}</div>
+    {% endif %}
     {% if module.comms and module.comms.open %}
     {# This module's briefing comes in on the comms log beside the page (#38). #}
     <p class="comm-from comms-pointer">▸ Briefing incoming on comms</p>

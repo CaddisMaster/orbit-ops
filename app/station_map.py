@@ -13,6 +13,8 @@ sections where the syllabus does; the map shows a compartment's conduits when
 it's hovered or focused.
 """
 
+import html
+import re
 import textwrap
 from dataclasses import dataclass
 
@@ -42,6 +44,7 @@ class Node:
     total: int
     waiting_on: tuple[str, ...]  # titles of unfinished prerequisite units
     conduits: tuple[Conduit, ...]
+    brief: str = ""  # the first sentence of the unit's briefing, as plain text (#88)
 
     @property
     def href(self) -> str:
@@ -57,7 +60,7 @@ class Node:
         parts = [f"{self.code} {self.title}", f"{self.done}/{self.total} modules" if self.total else "coming soon"]
         if self.waiting_on:
             parts.append("waiting on " + ", ".join(self.waiting_on))
-        return " · ".join(parts)
+        return " · ".join(parts) + (f"\n{self.brief}" if self.brief else "")
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,12 @@ def unit_state(catalog: Catalog, slug: str, completed: set[str]) -> str:
 def wrap(title: str) -> tuple[str, ...]:
     """A unit's name in short lines, without a subtitle after a colon."""
     return tuple(textwrap.wrap(title.split(":")[0], LABEL_WIDTH, break_long_words=False))
+
+
+def first_sentence(briefing_html: str) -> str:
+    """A briefing's opening sentence as plain text: what the map says about a unit."""
+    text = " ".join(html.unescape(re.sub(r"<[^>]+>", "", briefing_html)).split())
+    return re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0] if text else ""
 
 
 SPINE_Y = (ship.SPINE[1] + ship.SPINE[3]) / 2
@@ -143,6 +152,7 @@ def layout(catalog: Catalog, completed: set[str]) -> StationMap:
                         Conduit(_conduit(where[p], where[slug]), unit_complete(catalog, p, completed), p)
                         for p in unit.prerequisites
                     ),
+                    brief=first_sentence(unit.briefing_html),
                 )
             )
         decks.append(

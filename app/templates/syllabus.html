@@ -14,6 +14,8 @@
     {% set unit = catalog.units[unit_slug] %}
     <div class="unit" id="unit-{{ unit.slug }}">
       <div class="unit-head">{{ unit_emblem(unit.emblem, 40) }}<h3>{{ unit.title }}</h3></div>
+      {# The unit's story (#88): why this system matters to the station. #}
+      {% if unit.briefing_html %}<div class="unit-briefing transmission">{{ unit.briefing_html | safe }}</div>{% endif %}
       {% if unit.modules %}
       <ul class="modules">
         {% for module in catalog.unit_modules(unit_slug) %}
