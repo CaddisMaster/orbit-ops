@@ -40,7 +40,8 @@ terminal:
   task: |
     Configuration lives under `/etc` and logs live under `/var/log`. Find the directory that
     holds the **life-support logs** and go there, so you're standing in it when Okafor checks
-    in. Look before you move: `ls` takes a path too.
+    in. Look before you move: `ls` takes a path too. Then read the scrubbers' log with `cat`:
+    when did scrubber B go offline?
   cwd: /home/cadet
   files:
     - {path: /home/cadet, type: dir}
@@ -80,6 +81,9 @@ comms:
   complete:
     - {from: okafor, text: "Day one done. Get some sleep. Tomorrow we find out who else is still out there."}
 cards:
+  - id: reading-files
+    front: Read a short file, and page through a long one
+    back: "`cat file` prints all of it. `less file` pages: Space and b to move, `/word` to search, q to quit."
   - id: etc
     front: What lives in `/etc`?
     back: System-wide configuration files (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/`).
@@ -152,6 +156,22 @@ Three shortcuts work in any path:
 So from `/var/log`, the path `../lib` is `/var/lib`, and `~/notes.txt` is
 `/home/sean/notes.txt` wherever you are.
 
+## Moving and reading
+
+Two more commands get you through this module's console task. The next modules go deeper.
+
+```bash
+cd /var/log             # move into a directory (module 02 covers cd fully)
+cat /etc/hostname       # print a whole file: right for anything short
+less /var/log/syslog    # page through a long one: Space and b to move, /word to search, q to quit
+head -n 5 /etc/passwd   # just the first 5 lines
+tail -n 5 /etc/passwd   # just the last 5: in a log, that's where the newest entries are
+```
+
+These are how you **read** a file. **nano** is for *editing* one, and it comes in Unit 1.2 along
+with the scripts you'll write. The station console doesn't have `less` yet, so use `cat` and
+`head` there.
+
 ## Try it
 
 On any Linux machine (or the `jupiter` VM), run:
@@ -160,7 +180,10 @@ On any Linux machine (or the `jupiter` VM), run:
 ls /
 ls /etc | head
 ls -l /var/log | head
+cat /etc/hostname
+head -n 3 /etc/os-release
 ```
 
 The first shows the top of the tree. The second lists the first few config files. The third
-shows log files with their sizes and dates. You'll meet `ls -l` properly later in this unit.
+shows log files with their sizes and dates. You'll meet `ls -l` properly later in this unit. The
+last two read files: the machine's name, and the first lines describing which Linux it is.

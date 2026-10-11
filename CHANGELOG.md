@@ -50,6 +50,12 @@ and why it matters, not what the diff says.
   lid snaps instead of folding, and without JavaScript the laptop just stays open.
 
 ### Fixed
+- The console no longer asks you to do something no lesson has shown you (#80). The filesystem
+  module now teaches reading a file (`cat`, `less`, `head`, `tail`) and moving into a directory,
+  both of which its console task already needed. Its task now asks you to read the log, the
+  navigating task says how to read Okafor's note, and the users module shows the one-line
+  `grep … | cut -d: -f7 > file` its task asks for, ahead of the modules that teach pipes and
+  `cut`. A test now fails if any console task needs a command no lesson up to it has taught.
 - With your system set to reduce motion, the relay satellite, the debris field and the aurora
   now appear as stills (#56). Since 0.4.0 they kept animating anyway, and the aurora faded in
   and out, so a still never appeared. Only the shuttle was right.

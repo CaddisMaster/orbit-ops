@@ -34,7 +34,8 @@ quiz:
 terminal:
   task: |
     Okafor left you a message in a **hidden** file somewhere in `/station/comms/relay`. Find
-    it, read it, and go where it says. Try getting there with a **relative** path.
+    it, read it (`cat` prints a file), and go where it says. Try getting there with a
+    **relative** path.
   cwd: /home/cadet
   files:
     - {path: /home/cadet, type: dir}

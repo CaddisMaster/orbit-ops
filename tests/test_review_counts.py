@@ -18,7 +18,7 @@ from tests.test_streaks import TODAY, clock  # noqa: F401  (fixture)
 
 pytestmark = pytest.mark.usefixtures("clock")
 
-FOUR_MODULES = ("the-filesystem", "navigating", "files-and-globs", "permissions")  # 12 cards
+FOUR_MODULES = ("the-filesystem", "navigating", "files-and-globs", "permissions")  # 12 cards or more
 
 
 def _review_xp(user_id) -> list[tuple[str, int]]:
@@ -43,7 +43,7 @@ def _card_ids(*modules):
 @pytest.mark.criterion(52, "Reviews earn capped XP")
 def test_reviews_earn_capped_xp(logged_in, user):
     _complete(user.id, *FOUR_MODULES)
-    parts = [_grade(logged_in, card, "good").text for card in _card_ids(*FOUR_MODULES)]
+    parts = [_grade(logged_in, card, "good").text for card in _card_ids(*FOUR_MODULES)[:12]]
     assert len(parts) == 12
     paid = _review_xp(user.id)
     assert len(paid) == 10 and {amount for _, amount in paid} == {2} and sum(a for _, a in paid) == 20
@@ -94,9 +94,9 @@ def test_an_empty_queue_is_not_activity(logged_in, user):
 
 @pytest.mark.criterion(52, "The dashboard shows what is due")
 def test_the_dashboard_shows_what_is_due(logged_in, user):
-    _complete(user.id, "the-filesystem", "navigating")
-    _grade(logged_in, "the-filesystem/etc", "good")
-    _grade(logged_in, "the-filesystem/var", "good")
+    _complete(user.id, "navigating", "files-and-globs")  # 3 cards each
+    _grade(logged_in, "navigating/ls-lah", "good")
+    _grade(logged_in, "navigating/cd-dash", "good")
     page = logged_in.get("/").text
     assert "<strong>4 cards due</strong>" in page
     assert re.search(r'<a class="button primary" href="/review">Review cards</a>', page)
