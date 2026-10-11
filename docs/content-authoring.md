@@ -201,7 +201,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 
 ### Comms: the crew's messages (optional)
 
-A module can send messages to the comms log on the desk's monitor, at three beats: `open`
+A module can send messages to the comms log on the desk's laptop, at three beats: `open`
 (the briefing, on the first visit; it replaces the italic `story` on the page), `console_done`
 (the first time its console task passes) and `complete` (the debrief). A beat can also play a
 window event outside the desk's window.

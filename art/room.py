@@ -1,12 +1,11 @@
 """The desk on the Meridian, first person: a big port window with the Earth's
-limb and a docking arm, and a desk with a keyboard, a lamp and a coffee mug.
+limb and a docking arm, a desk with a lamp and a coffee mug, and a laptop.
 
-320x180, drawn for a 16:9 scene. The computer is drawn here, but not its
-screen: the glass is HTML, laid into the bezel at fixed percentages
-(app/static/css/style.css, "The desk"), so GLASS below and the CSS must
-agree. Everything else worth seeing lives around the computer: the window
-across the top, the Earth down the right, the lamp on the left, and the
-keyboard and mug on the desk.
+320x180, drawn for a 16:9 scene, in layers that stack exactly (#55): the room,
+the laptop's open deck, its lid, and the laptop shut. The lid folds down in CSS
+to show the room. The laptop's screen is not drawn: the glass is HTML, laid
+into the bezel at fixed percentages (app/static/css/style.css, "The desk"),
+so GLASS below and the CSS must agree.
 """
 
 import math
@@ -17,19 +16,22 @@ W, H = 320, 180
 WINDOW = (6, 3, 313, 128)  # x0, y0, x1, y1, inside the frame
 DESK_Y = 150
 DOCK_PORT = (74, 11)  # where the shuttle's nose meets the arm (app/static/css: .window-event)
-CASE = (22, 17, 297, 157)  # the monitor's outer edge
+LID = (24, 18, 295, 153)  # the lid's outer edge; it hinges along its bottom
 GLASS = (30, 24, 289, 144)  # the screen, inclusive: CSS left/right 9.375%, top 13.333%, bottom 19.444%
-POWER_LIGHT = (282, 151)  # centre of the power light (CSS .power-light: left 88.125%, top 83.889%)
+POWER_LIGHT = (284, 150)  # centre of the power light (CSS .power-light: left 88.75%, top 83.333%)
+CLOSE_TAB = (34, 147, 61, 152)  # where the "Close lid" button sits on the bezel (CSS .lid-close)
+HINGE_Y = 154
+DECK_FRONT = 177  # the deck's front edge starts here and runs off the bottom
+SLEEP_LIGHT = (262, 178)  # the closed laptop's breathing light (CSS .is-closed .power-light)
 
 
 def render() -> Canvas:
+    """The room alone: what you see with the laptop shut."""
     c = Canvas(W, H, "wall", seed=38)
     wall(c)
     window(c)
     desk(c)
     lamp(c)
-    computer(c)
-    keyboard(c)
     mug(c)
     return c
 
@@ -131,15 +133,6 @@ def lamp(c: Canvas) -> None:
     c.rect(10, DESK_Y - 3, 20, DESK_Y - 1, "metal")
 
 
-def keyboard(c: Canvas) -> None:
-    x0, y0, x1, y1 = 108, 169, 212, 179
-    c.rect(x0, y0, x1, y1, "key3")
-    c.rect(x0 + 1, y0, x1 - 1, y1 - 1, "key")
-    for row, y in enumerate((y0 + 2, y0 + 5, y0 + 8)):
-        for x in range(x0 + 3 + row, x1 - 3, 5):
-            c.rect(x, y, x + 3, y + 1, "key2")
-
-
 def mug(c: Canvas) -> None:
     x0, y0 = 301, 140
     c.rect(x0, y0, x0 + 11, y0 + 15, "mug")
@@ -176,48 +169,88 @@ def text_width(word: str) -> int:
     return sum(len(FONT[ch][0]) + 1 for ch in word) - 1
 
 
-def computer(c: Canvas) -> None:
-    """A chunky gunmetal monitor on a neck and foot, its glass left for the HTML."""
-    x0, y0, x1, y1 = CASE
+def _deck_edges(y: int) -> tuple[int, int]:
+    """The deck's left and right edge at row y: it widens towards you."""
+    spread = (y - HINGE_Y) * 16 // 25
+    return LID[0] - 2 - spread, LID[2] + 2 + spread
+
+
+def _deck_shape(c: Canvas, top: str) -> None:
+    for y in range(HINGE_Y, H):
+        x0, x1 = _deck_edges(y)
+        c.hline(x0, x1, y, top if y < DECK_FRONT else "caselo")
+        c.px(x0, y, "caseedge")
+        c.px(x1, y, "caseedge")
+    x0, x1 = _deck_edges(DECK_FRONT)
+    c.hline(x0, x1, DECK_FRONT, "case3")  # the front edge catches the light
+
+
+def deck() -> Canvas:
+    """The laptop open: the base, with its keyboard and trackpad, seen from above."""
+    c = Canvas(W, H)
+    _deck_shape(c, "case2")
+    c.hline(GLASS[0], GLASS[2], HINGE_Y, "caseedge")  # the hinge barrel, under the lid
+    for row, y in enumerate((157, 160, 163, 166)):
+        x0, x1 = _deck_edges(y)
+        left, right = x0 + 20 - row, x1 - 20 + row
+        keys = 15
+        pitch = (right - left) / keys
+        for k in range(keys):
+            kx = round(left + k * pitch)
+            c.rect(kx, y, round(kx + pitch) - 2, y + 1, "key")
+            c.hline(kx, round(kx + pitch) - 2, y + 1, "key3")
+    cx = W // 2
+    c.rect(cx - 48, 169, cx + 48, 170, "key")  # the space bar
+    c.hline(cx - 48, cx + 48, 170, "key3")
+    c.rect(cx - 30, 172, cx + 30, DECK_FRONT - 2, "case")  # the trackpad
+    c.hline(cx - 30, cx + 30, 172, "caselo")
+    return c
+
+
+def lid() -> Canvas:
+    """The lid, open: a slim gunmetal bezel round the glass, lit from the top left."""
+    c = Canvas(W, H)
+    x0, y0, x1, y1 = LID
     gx0, gy0, gx1, gy1 = GLASS
-    # its shadow on the window and wall behind, to the lower right
-    c.shade(x1 + 1, y0 + 3, x1 + 3, y1 + 2, 0.55)
-    c.shade(x0 + 4, y1 + 1, x1 + 3, y1 + 2, 0.55)
-    # the foot and neck, behind the case's chin
-    cx = (x0 + x1) // 2
-    c.rect(cx - 9, y1 + 1, cx + 9, 162, "case2")
-    c.vline(cx - 9, y1 + 1, 162, "case3")
-    c.vline(cx + 9, y1 + 1, 162, "caselo")
-    c.shade(cx - 8, y1 + 1, cx + 8, y1 + 2, 0.7)  # under the case's lip
-    c.rect(cx - 32, 162, cx + 32, 166, "case")
-    c.hline(cx - 32, cx + 32, 162, "case3")
-    c.hline(cx - 32, cx + 32, 166, "caselo")
-    c.hline(cx - 33, cx + 33, 167, "caseedge")
-    # the case: an outline, then bevels lit from the top left
+    c.rect(x1 + 1, y0 + 3, x1 + 3, y1, "shadow")  # on the window and wall behind
     c.rect(x0, y0, x1, y1, "caseedge")
     c.rect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, "case")
     c.hline(x0 + 1, x1 - 1, y0 + 1, "casehi")
     c.vline(x0 + 1, y0 + 1, y1 - 1, "case3")
-    c.hline(x0 + 2, x1 - 2, y0 + 2, "case3")
     c.hline(x0 + 1, x1 - 1, y1 - 1, "caselo")
     c.vline(x1 - 1, y0 + 1, y1 - 1, "caselo")
-    # a faint panel seam above the chin
-    c.hline(x0 + 3, x1 - 3, gy1 + 3, "caselo")
-    c.hline(x0 + 3, x1 - 3, gy1 + 4, "case2")
     # the recessed lip around the glass: dark, with the light catching its lower edge
     c.rect(gx0 - 2, gy0 - 2, gx1 + 2, gy1 + 2, "lip")
     c.hline(gx0 - 2, gx1 + 2, gy1 + 2, "case2")
     c.vline(gx1 + 2, gy0 - 2, gy1 + 2, "case2")
     c.rect(gx0, gy0, gx1, gy1, "screenback")
-    # the chin: a maker's plate in the middle, the power light's housing on the right
-    plate_w = text_width("MERIDIAN") + 4
-    px0 = cx - plate_w // 2
-    c.rect(px0, gy1 + 5, px0 + plate_w - 1, gy1 + 11, "plate")
-    c.hline(px0, px0 + plate_w - 1, gy1 + 11, "case3")
-    text(c, px0 + 2, gy1 + 6, "MERIDIAN", "platetext")
+    cx = (x0 + x1) // 2
+    c.rect(cx - 1, y0 + 2, cx, y0 + 3, "lip")  # the camera
+    text(c, cx - text_width("MERIDIAN") // 2, gy1 + 4, "MERIDIAN", "case3")
+    tx0, ty0, tx1, ty1 = CLOSE_TAB  # a recessed tab for the close button
+    c.rect(tx0, ty0, tx1, ty1, "case2")
+    c.hline(tx0, tx1, ty1, "caselo")
     lx, ly = POWER_LIGHT
     c.rect(lx - 2, ly - 2, lx + 2, ly + 2, "ledhouse")
-    c.hline(lx - 2, lx + 2, ly + 2, "case3")
-    for bx in (lx - 12, lx - 8):  # two small buttons beside it
-        c.rect(bx, ly - 1, bx + 2, ly + 1, "caselo")
-        c.hline(bx, bx + 2, ly - 1, "case3")
+    return c
+
+
+def closed() -> Canvas:
+    """The laptop shut: the lid's back lying on the deck, the deck's edge in front."""
+    c = Canvas(W, H)
+    _deck_shape(c, "case")
+    c.hline(*_deck_edges(HINGE_Y), HINGE_Y, "caseedge")  # the hinge, at the back
+    c.hline(_deck_edges(HINGE_Y + 1)[0] + 1, _deck_edges(HINGE_Y + 1)[1] - 1, HINGE_Y + 1, "casehi")
+    for y in range(HINGE_Y + 4, DECK_FRONT - 2, 4):  # brushed metal
+        x0, x1 = _deck_edges(y)
+        c.hline(x0 + 3, x1 - 3, y, "case2")
+    x0, x1 = _deck_edges(DECK_FRONT - 1)
+    c.hline(x0 + 1, x1 - 1, DECK_FRONT - 1, "casehi")  # the lid's front lip
+    plate_w = text_width("MERIDIAN") + 4
+    px0 = W // 2 - plate_w // 2
+    c.rect(px0, 163, px0 + plate_w - 1, 169, "plate")
+    c.hline(px0, px0 + plate_w - 1, 169, "case3")
+    text(c, px0 + 2, 164, "MERIDIAN", "platetext")
+    sx, sy = SLEEP_LIGHT
+    c.rect(sx - 2, sy - 1, sx + 2, sy + 1, "ledhouse")
+    return c

@@ -127,20 +127,17 @@ def debris() -> Canvas:
 
 def aurora() -> Canvas:
     """Curtains of light over the Earth, just inside its limb, as you see an
-    aurora from orbit. Transparent over the drawn computer (and its shadow),
-    so the event never paints on the case."""
+    aurora from orbit. The laptop is a layer above the window (#55), so the
+    whole aurora shows when its lid is shut."""
     w, h = AURORA_SIZE
     ox, oy = AURORA_AT
     c = Canvas(w, h)
     cx, cy, r = 372, 60, 82  # the Earth in art/room.py
     wx0, wy0, wx1, wy1 = room.WINDOW
-    cx0, cy0, cx1, _ = room.CASE
     for y in range(h):
         for x in range(w):
             X, Y = ox + x, oy + y
             if not (wx0 <= X <= wx1 and wy0 <= Y <= wy1):
-                continue
-            if cx0 - 1 <= X <= cx1 + 3 and Y >= cy0 - 1:  # the computer (and its shadow) is in front
                 continue
             depth = r - math.hypot(X - cx, Y - cy)  # how far inside the limb
             if not 2 <= depth <= 17:
