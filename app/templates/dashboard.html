@@ -19,6 +19,15 @@
 </section>
 {% endif %}
 
+{% if cards_due %}
+<section class="card review-due">
+  <p class="eyebrow">Flashcards</p>
+  <p><strong>{{ cards_due }} card{{ '' if cards_due == 1 else 's' }} due</strong>
+     <span class="muted">· clearing them keeps your streak</span></p>
+  <p><a class="button primary" href="/review">Review cards</a></p>
+</section>
+{% endif %}
+
 <section class="card progress-summary">
   <p class="eyebrow">Station status</p>
   {% if done == 0 %}

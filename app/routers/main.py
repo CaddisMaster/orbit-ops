@@ -57,6 +57,7 @@ def dashboard(
             "streak": streak,
             "max_freezes": streaks.MAX_FREEZES,
             "recent_badges": badges.recent(catalog, badges.earned(db, user.id), get_settings().tz),
+            "cards_due": console.cards_due,
         },
     )
 

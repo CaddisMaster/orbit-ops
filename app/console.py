@@ -1,5 +1,5 @@
 """The console readout in the header of every signed-in page,
-"SYSTEMS ONLINE 3/170 · STREAK 5", and the comms log beside it (#38).
+"SYSTEMS ONLINE 3/170 · STREAK 5 · CARDS DUE 4", and the comms log beside it (#38).
 
 A FastAPI dependency, so a page opts in with `console: Readout =
 Depends(console_readout)` and passes it to its template. It shares the
@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app import comms, progress
 from app.content import Catalog, get_catalog
 from app.db import get_db
-from app.game import streaks
+from app.game import srs, streaks
 from app.models import User
 from app.security import require_user
 
@@ -27,6 +27,7 @@ class Readout:
     systems: int  # modules in the curriculum
     streak: int
     comms: tuple[comms.Line, ...] = ()  # the comms log beside the page (#38)
+    cards_due: int = 0  # flashcards in the review queue (#52)
 
 
 def console_readout(
@@ -36,10 +37,12 @@ def console_readout(
     db: Session = Depends(get_db),
 ) -> Readout:
     completed = progress.completed_slugs(db, user.id)
+    today = streaks.today()
     return Readout(
         online=len(completed & catalog.modules.keys()),
         systems=len(catalog.modules),
-        streak=streaks.peek(db, user.id, streaks.today()).length,
+        streak=streaks.peek(db, user.id, today).length,
+        cards_due=len(srs.queue(db, user.id, catalog, completed, today).due),
         # On a module page, the module being worked on adds its briefing.
         comms=tuple(comms.history(db, user.id, catalog, request.path_params.get("slug"))),
     )
