@@ -6,7 +6,7 @@
 import sys
 from pathlib import Path
 
-from art import room, sprites
+from art import room, ship, sprites
 
 OUT = Path(__file__).resolve().parents[1] / "app" / "static" / "img"
 
@@ -18,6 +18,7 @@ def scenes():
         "laptop-deck.png": room.deck,
         "laptop-lid.png": room.lid,
         "laptop-closed.png": room.closed,
+        "ship.png": ship.render,
         "shuttle.png": sprites.shuttle,
         "satellite.png": sprites.satellite,
         "debris.png": sprites.debris,

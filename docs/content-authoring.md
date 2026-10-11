@@ -35,7 +35,6 @@ tracks:
         title: Linux & the shell
         briefing: Story text for the unit (Markdown).
         prerequisites: []      # unit slugs that must be finished first; no cycles
-        map: {x: 50, y: 10}    # optional: where it sits on its deck of /map, 0–100 each way
         emblem: scrubber       # optional: scrubber | script | branch | antenna | reactor
 badges:                        # in the order the badges page shows them
   - slug: unit-linux-shell     # permanent ID, stored when earned: never rename an earned badge
@@ -45,11 +44,9 @@ badges:                        # in the order the badges page shows them
     rule: {unit_complete: linux-shell}
 ```
 
-`map` positions a unit within its track's deck on the station map, as percentages of the
-deck's drawing area (`x` left to right, `y` top to bottom). Anything outside 0–100 fails
-validation, naming the unit. Leave it out and the unit goes on an automatic three-column grid,
-so a new unit always appears. Labels under the nodes drop any subtitle after a colon and wrap
-at about 16 characters, so place nodes about 25 apart across a row.
+On the station map each track is a section of the *Meridian* (`art/ship.py`), and its units
+fill that section's compartments in syllabus order. Each section has five. A sixth unit in a
+track fails `tests/test_station_map.py` until the art gains a compartment for it.
 
 `emblem` is a line-art illustration drawn in the deck's colour on the syllabus and on the unit's
 module pages. The set is fixed (`UnitEmblem` in `app/content/schema.py`, drawn in

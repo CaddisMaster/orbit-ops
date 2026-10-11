@@ -34,6 +34,13 @@ and why it matters, not what the diff says.
   the lesson files (#51).
 
 ### Changed
+- The station map is the *Meridian* itself (#78): a pixel-art ship, side on, with each track's
+  deck as a section. Life Support is the hull and habitat ring, Cargo & Fabrication the container
+  bay, Comms, Sensors & Shields the mast and dish, and Fleet Command the bow. Every unit is a
+  compartment that lights up in its deck's colour when complete, pulses when it's ready to
+  start, and is shuttered until it has modules. Each section shows its progress. Point at a
+  compartment to see conduits from the units that feed it. Units no longer need a `map:`
+  position in `syllabus.yml`: they fill their section's compartments in order.
 - The desk's computer is now a laptop, and you can close its lid to see the room (#55). The
   screen is exactly where it was, so nothing in the app moves. "Close lid" on the bezel folds the
   lid down onto the keyboard and shows the whole window: the Earth, the docking arm, and any

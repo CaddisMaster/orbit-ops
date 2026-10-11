@@ -17,6 +17,9 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   set of content files and exit with `ContentError`; it restarts on the next file change.
 - **A module's slug is its permanent ID.** Progress is stored against it, so renaming a
   published module's file orphans that progress.
+- **`art/` edits don't reload the dev server either.** The map imports `art.ship`'s compartment
+  positions, and uvicorn only watches `app/` and `content/`: after changing `art/ship.py`, run
+  `python -m art.build` and `docker compose restart web`.
 - **Content edits don't reload the dev server.** `--reload-dir content` is set, but uvicorn
   without `watchfiles` reloads on `*.py` only, so a `syllabus.yml` or lesson change needs
   `docker compose restart web` (templates and CSS are picked up without it).

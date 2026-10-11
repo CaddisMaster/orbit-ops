@@ -32,7 +32,6 @@ from app.content.schema import (
 )
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
-MAP_MAX = 100  # unit map positions are percentages of their deck's drawing area
 _MODULE_FILENAME = re.compile(r"^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
 
 
@@ -81,7 +80,6 @@ class Unit:
     briefing_html: str
     prerequisites: tuple[str, ...]
     modules: tuple[str, ...]  # module slugs, in order
-    map: tuple[int, int] | None = None  # (x, y) on its deck, 0–100; None = automatic
     emblem: str | None = None  # a name from templates/partials/_unit_emblem.html
 
 
@@ -190,14 +188,6 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
     if cycle := _find_cycle({u: tuple(n for n in needs if n != u) for u, needs in prereqs.items()}):
         problems.append(f"syllabus.yml: prerequisite cycle: {' → '.join(cycle)}")
 
-    for track in syllabus.tracks:
-        for unit in track.units:
-            if unit.map and not (0 <= unit.map.x <= MAP_MAX and 0 <= unit.map.y <= MAP_MAX):
-                problems.append(
-                    f"syllabus.yml: unit '{unit.slug}' map position ({unit.map.x}, {unit.map.y}) is outside "
-                    f"the drawing area (0–{MAP_MAX} each way)"
-                )
-
     seen_badges: set[str] = set()
     for badge in syllabus.badges:
         if badge.slug in seen_badges:
@@ -305,7 +295,6 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             briefing_html=render_markdown(u.briefing) if u.briefing else "",
             prerequisites=tuple(u.prerequisites),
             modules=tuple(unit_module_slugs[u.slug]),
-            map=(u.map.x, u.map.y) if u.map else None,
             emblem=u.emblem,
         )
         for t in syllabus.tracks

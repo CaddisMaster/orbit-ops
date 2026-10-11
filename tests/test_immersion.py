@@ -58,7 +58,7 @@ def test_syllabus_sections_and_the_mission_card_carry_their_deck(logged_in):
 def test_a_unit_emblem_must_be_one_that_exists(tmp_path):
     from tests.test_station_map import SYLLABUS, _write
 
-    _write(tmp_path, SYLLABUS.replace("        map: {x: 10, y: 90}", "        map: {x: 10, y: 90}\n        emblem: warp-core"))
+    _write(tmp_path, SYLLABUS.replace("        title: Git\n", "        title: Git\n        emblem: warp-core\n"))
     with pytest.raises(ContentError) as exc:
         load_catalog(tmp_path)
     assert "units.1.emblem" in str(exc.value)
