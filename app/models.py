@@ -4,7 +4,7 @@ stores only the learner's state, keyed by stable content slugs."""
 import secrets
 from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, String, UniqueConstraint, false, func
+from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Index, String, UniqueConstraint, false, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -115,3 +115,28 @@ class BadgeEarned(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     badge_slug: Mapped[str] = mapped_column(String(64))
     earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CardState(Base):
+    """A learner's SM-2 schedule for one flashcard (#51). Cards live in content,
+    so this stores only the card's id, "<module-slug>/<card-id>". A card with no
+    row is new and due today; the first review creates the row. Rows for cards
+    that have left the curriculum are ignored, never deleted."""
+
+    __tablename__ = "card_state"
+    __table_args__ = (
+        UniqueConstraint("user_id", "card_id"),
+        CheckConstraint("ease >= 1.3", name="card_state_ease_floor"),
+        CheckConstraint("interval_days >= 1", name="card_state_interval_positive"),
+        CheckConstraint("reps >= 0 AND lapses >= 0", name="card_state_counts"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    card_id: Mapped[str] = mapped_column(String(160))
+    ease: Mapped[float] = mapped_column(Float)  # SM-2's easiness factor: 2.5 to start, never below 1.3
+    interval_days: Mapped[int]
+    due_on: Mapped[date] = mapped_column(Date)  # in APP_TIMEZONE, like activity_days
+    reps: Mapped[int] = mapped_column(default=0, server_default="0")  # successful reviews in a row
+    lapses: Mapped[int] = mapped_column(default=0, server_default="0")  # times it was forgotten
+    last_reviewed_on: Mapped[date] = mapped_column(Date)
