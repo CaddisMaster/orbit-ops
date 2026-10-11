@@ -20,6 +20,11 @@ and why it matters, not what the diff says.
   scroll position and a half-typed console command are still there. Under reduced motion the
   lid snaps instead of folding, and without JavaScript the laptop just stays open.
 
+### Fixed
+- With your system set to reduce motion, the relay satellite, the debris field and the aurora
+  now appear as stills (#56). Since 0.4.0 they kept animating anyway, and the aurora faded in
+  and out, so a still never appeared. Only the shuttle was right.
+
 ## [0.4.0] — 2026-10-09
 
 Hands-on and the desk: a station console task in nine of Unit 1.1's ten modules, with sudo,
