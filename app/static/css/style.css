@@ -642,9 +642,15 @@ html, body { height: 100%; }
   100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .window-event img { animation: none; }  /* every event is a still */
+  /* Every event is a still, at the left/top its own rule gives. Each needs its
+     own line: `.window-event img` alone loses to `.window-event.<event> img`
+     on specificity, so the events kept animating (#56). */
+  .window-event img { animation: none; }
   .lid, .laptop.is-closed .lid, .laptop-shut, .laptop.is-closed .laptop-shut { transition: none; }  /* the lid snaps */
   .sleep-light { animation: none; }
   .window-event.shuttle-dock img { animation: none; }  /* docked */
+  .window-event.relay-pass img { animation: none; }
+  .window-event.debris-drift img { animation: none; }
+  .window-event.aurora img { animation: none; }  /* at full brightness */
   .comms-line.is-new.shown { animation: none; }
 }

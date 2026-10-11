@@ -322,10 +322,11 @@ def test_new_window_events_respect_reduced_motion(client):
 
     css = client.get("/static/css/style.css").text
     reduced = "".join(re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}", css, re.S))
-    assert ".window-event img { animation: none; }" in reduced
     for event in WINDOW_SPRITES:  # each event is animated, and each has a still position to fall back to
         rule = re.search(rf"\.window-event\.{event} img \{{(.*?)\}}", css, re.S).group(1)
         assert "animation:" in rule and "left:" in rule and "top:" in rule, event
+        # and its own override: `.window-event img` alone loses to the event's rule on specificity (#56)
+        assert f".window-event.{event} img {{ animation: none; }}" in reduced, event
 
 
 def test_every_window_event_has_a_sprite_drawn_as_code():
