@@ -3,7 +3,7 @@
    underneath, so it works without htmx too. #}
 {% if card %}
 <section class="card review-card deck--{{ catalog.modules[card.module].track }}" id="review-card" aria-live="polite">
-  <p class="eyebrow">Flashcard · {{ remaining }} due · from “{{ catalog.modules[card.module].title }}”</p>
+  <p class="eyebrow">Flashcard · {{ remaining }} due · from “{{ catalog.modules[card.module].title }}”{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
   <p class="review-front">{{ card.front_html }}</p>
   {% if revealed %}
   <p class="review-back">{{ card.back_html }}</p>
@@ -24,8 +24,9 @@
 </section>
 {% else %}
 <section class="card review-card" id="review-card" aria-live="polite">
-  <p class="eyebrow">Review queue</p>
+  <p class="eyebrow">Review queue{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
   <h1>Queue clear.</h1>
+  {% if cleared %}<p>Today's log entry: <span class="filed">filed</span>. Clearing the queue keeps your streak.</p>{% endif %}
   {% if next_due_on %}
   {% set days = (next_due_on - today).days %}
   <p class="muted">The next card is due {{ "tomorrow" if days == 1 else "in " ~ days ~ " days" }}, on

@@ -52,11 +52,7 @@
                 {% endif %}
               </header>
               {% if console %}
-              {# The console readout: what's online and the streak, on every signed-in page. #}
-              <div class="readout" role="status" aria-label="Station status">
-                <span>Systems online <strong>{{ console.online }}/{{ console.systems }}</strong></span>
-                <span>Streak <strong>{{ console.streak }}</strong></span>
-              </div>
+              {% with oob = false %}{% include "partials/_readout.html" %}{% endwith %}
               {% endif %}
               <main class="container">
                 {% block content %}{% endblock %}

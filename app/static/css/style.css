@@ -224,7 +224,7 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .streak p { margin: 0.25rem 0; }
 .streak .flame { display: inline-block; width: 1.4em; text-align: center; color: var(--muted); }
 .streak.is-lit strong { color: var(--warn); }
-.streak .filed { color: var(--accent); }
+.streak .filed, .review-card .filed { color: var(--accent); }
 .streak + .standing { margin-top: 0.75rem; }
 
 .badge-grid, .badge-list { list-style: none; padding: 0; margin: 0.75rem 0 0; }
@@ -312,6 +312,8 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
   text-transform: uppercase;
 }
 .readout strong { color: var(--accent); font-weight: 600; }
+.readout a { color: inherit; text-decoration: none; }
+.readout a:hover strong, .readout a:focus-visible strong { text-decoration: underline; }
 
 /* Transmission briefings (static/js/briefing.js types them out). */
 .transmission { border-left: 2px solid var(--accent); padding-left: 0.9rem; }
@@ -394,6 +396,7 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .review-back { padding: 0.9rem 1rem; border-left: 3px solid var(--accent); background: rgb(255 255 255 / 0.03); border-radius: 0 6px 6px 0; }
 .review-grades { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1.25rem; }
 .review-grades p { flex-basis: 100%; margin: 0 0 0.25rem; }
+.review-xp { margin-left: 0.5rem; color: var(--warn); }
 
 /* --- The desk (#38) --------------------------------------------------------------
    A 16:9 scene, as large as the window allows and letterboxed in the wall's

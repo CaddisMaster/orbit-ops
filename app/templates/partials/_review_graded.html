@@ -1,0 +1,4 @@
+{# After a grade (htmx): the next card, and the header readout out of band,
+   so the streak and the cards due keep up (#52). #}
+{% include "partials/_review_card.html" %}
+{% with oob = true %}{% include "partials/_readout.html" %}{% endwith %}

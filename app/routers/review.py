@@ -1,6 +1,9 @@
 """The flashcard review queue (#51): one due card at a time, front first, then
 the answer and four grades. Graded over htmx, the next card swaps in; as a
-plain form, the grade redirects back to /review."""
+plain form, the grade redirects back to /review.
+
+A review pays XP, up to a daily cap, and the grade that clears the queue files
+today's streak entry, as completing a module does (#52)."""
 
 from typing import Annotated
 
@@ -12,7 +15,7 @@ from app import progress
 from app.console import Readout, console_readout
 from app.content import Catalog, FlashCard, get_catalog
 from app.db import get_db
-from app.game import srs, streaks
+from app.game import badges, srs, streaks, xp
 from app.models import User
 from app.security import require_user
 from app.templating import templates
@@ -82,10 +85,30 @@ def grade(
     db: Session = Depends(get_db),
 ):
     _card_in_deck(db, user, catalog, card)
-    srs.record(db, user.id, card, grade, streaks.today())
+    today = streaks.today()
+    xp_gained, cleared = 0, False
+    if srs.record(db, user.id, card, grade, today):
+        xp_gained = xp.review_award(db, user.id, card, today)
+        completed = progress.completed_slugs(db, user.id)
+        if not srs.queue(db, user.id, catalog, completed, today).due:
+            # This grade cleared the queue: today counts (same transaction as the review).
+            cleared = True
+            streaks.mark_active(db, user.id, today)
+            facts = badges.Facts(
+                completed=completed,
+                streak=streaks.current_streak(db, user.id, today).length,
+                perfect_quiz=badges.has_perfect_quiz(db, user.id),
+            )
+            badges.award(db, user.id, catalog, facts)  # a streak badge can be earned here too
     db.commit()
     if not request.headers.get("HX-Request"):
         return RedirectResponse("/review", status_code=303)
     return templates.TemplateResponse(
-        request, "partials/_review_card.html", {**_context(db, user, catalog), "revealed": False}
+        request,
+        "partials/_review_graded.html",
+        {
+            **_context(db, user, catalog),
+            "revealed": False, "xp_gained": xp_gained, "cleared": cleared,
+            "console": console_readout(request, user, catalog, db),  # after the commit: the new streak and count
+        },
     )

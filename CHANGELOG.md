@@ -13,6 +13,10 @@ and why it matters, not what the diff says.
   longer each time, and one you forget comes back tomorrow. Modules you finished before this
   release count too, so their cards are waiting. Each card now has a permanent `id` in its
   lesson file, so rewording a card keeps its schedule.
+- Flashcard reviews count (#52). Each review earns 2 XP, up to 20 a day, and clearing every
+  card that's due files today's streak entry, just as finishing a module does. A day with no
+  cards due doesn't count by itself. The dashboard says how many cards are due, with a button
+  to review them, and the header readout shows "Cards due" on every page, updating as you grade.
 - A database table for flashcard schedules: each learner's SM-2 state per card (ease, interval,
   due date, reviews in a row, lapses), one row per card per learner. The cards themselves stay in
   the lesson files (#51).
