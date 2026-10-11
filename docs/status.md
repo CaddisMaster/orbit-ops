@@ -26,6 +26,13 @@ A per-session log, standing decisions and a release ledger. Newest first.
   order, and `map:` is gone from the syllabus (#78).
 - **No console task may need an untaught command.** `test_content.py` enforces it for Unit 1.1
   (#80). Extend it to each new unit.
+- **Static files are versioned by the release** (`static_url()`, `?v=`), cached immutably, and
+  revalidated when unversioned. Pyodide's path carries its version (#92).
+- **The console's clock is the station's** (2026-10-08 09:00 plus a second per command), never
+  the browser's, so ages and dates are the same for every learner and on the server (#67).
+- **The console checks itself against the real tools.** Each new capability was compared
+  snippet by snippet with bash 5.2 and GNU find/du/tar in a scratch harness. Differences are
+  either fixed or deliberate (sorted `find` output, simulated archives, no hard links).
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -40,6 +47,46 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-11 — v0.6.0's console built
+
+- **Merged:** #94 cache-busting (#92), and the four console issues: #95 control flow (#64),
+  #96 nano/man/cron (#66), #97 find/du/df/tar/links (#67), #98 functions and safe scripting
+  (#65). Nothing released: production is still 0.5.0.
+- **What the console became:**
+  - A real parser and an executor made of generators, so any command can pause for input:
+    `read`, sudo's password inside a loop or a script, nano and the pager, and Ctrl-C delivered
+    as an interrupt that runs a script's INT and EXIT traps.
+  - Output goes through sinks (terminal, pipe, file, `$( )`), so redirects and pipes work on
+    whole loops.
+  - An unfinished command continues on a `> ` line, as in bash. That changed three old
+    assertions: an open quote, a trailing `&&` and a trailing `|` used to be errors.
+  - Files can carry a `size` and an `mtime`, and links are real. The server grades two new
+    checks: `symlink` and `files_under`.
+  - Every command has a man page or `help` text (`app/static/js/manual.js`), and a test keeps
+    it that way.
+- **Decided this session:**
+  - nano's Write Out needs Enter after ^O, as real nano does (the issue's scenario said just ^O).
+  - `set -e` at the prompt prints `logout` and a note instead of closing the console.
+  - `cd` through a link lands in the real directory (`cd -P`).
+  - Hard links are refused, with a hint to use `ln -s`.
+- **Process notes:**
+  - The comparison harness (same files, same commands, real bash vs `shell.js`) caught about 15
+    real bugs that unit tests written from memory had passed. Three of my own test
+    expectations were wrong, and the real tools corrected them.
+  - ⚠️ A snippet file containing `EOF` lines, written through a shell heredoc, ended that
+    heredoc early and ran the rest of the snippets in the repo directory. It made two stray
+    files and two `/tmp` entries, which were removed. Write snippet files with the file tool,
+    never a shell heredoc.
+  - `test.sh`'s ruff runs with `--no-cache`. A plain `docker compose exec web ruff check` fails
+    on the cache directory's permissions.
+  - The console report now carries `mtime`, `size` and `target`. An older server would reject
+    them, so the server and the console must ship together (they do: one image).
+- **Next:**
+  1. The Unit 1.2 modules, in order: #68 → #77. Each needs a "Try it" run in `ubuntu:24.04`.
+  2. When #68 adds Unit 1.2 to the #80 untaught-command check, `_commands()` in
+     `tests/test_content.py` must skip shell keywords (`if`, `do`, `done`…).
+  3. Release v0.6.0 when Sean says, after the modules.
 
 ### 2026-10-10 — v0.5.0 shipped, Unit 1.2 planned
 
