@@ -250,3 +250,43 @@ test("The prompt shows ~ only for a real home directory", () => {
   sh.run("cd /");
   assert.equal(sh.prompt(), "cadet@meridian:/$ ");
 });
+
+test("Several files into a missing or non-directory target fail as GNU's do (#101)", () => {
+  const sh = station();
+  sh.run("touch a b");
+  assert.equal(out(sh, "mv a b archive/"), "mv: target 'archive/': No such file or directory\n");
+  assert.equal(out(sh, "cp a b archive/"), "cp: target 'archive/': No such file or directory\n");
+  assert.equal(out(sh, "ln -s a b nowhere"), "ln: target 'nowhere': No such file or directory\n");
+  assert.equal(out(sh, "mv a b scrubber.conf"), "mv: target 'scrubber.conf': Not a directory\n");
+  assert.equal(out(sh, "ln -s a b scrubber.conf"), "ln: target 'scrubber.conf': Not a directory\n");
+  sh.run("mkdir archive");
+  assert.equal(out(sh, "mv a b archive/"), "");
+  assert.equal(out(sh, "ls archive"), "a  b\n");
+});
+
+// Prompts and answers as GNU coreutils 9.4 gives them (checked in ubuntu:24.04).
+test("rm -i, mv -i and cp -i ask first, and only y means yes (#101)", () => {
+  const sh = station({ "/station/empty": { type: "file", mode: 0o644, owner: "cadet", group: "crew", contents: "" } });
+  const asks = (line, ...answers) => {
+    const prompts = [];
+    let r = sh.run(line);
+    for (const a of answers) { prompts.push(sh.pending.prompt); r = sh.answer(a); }
+    assert.equal(sh.pending, null, `${line} asked more than ${answers.length} times`);
+    return prompts;
+  };
+  assert.deepEqual(asks("rm -i empty notes.txt", "y", "n"), ["rm: remove regular empty file 'empty'? ", "rm: remove regular file 'notes.txt'? "]);
+  assert.equal(out(sh, "ls"), "logs  notes.txt  scrubber.conf\n");
+  assert.deepEqual(asks("rm -ri logs", "y", "y", "n"), ["rm: descend into directory 'logs'? ", "rm: remove regular file 'logs/a.log'? ", "rm: remove regular file 'logs/b.log'? "]);
+  assert.equal(out(sh, "ls logs"), "b.log\n"); // a file was kept, so the directory isn't offered
+  assert.deepEqual(asks("mv -i notes.txt scrubber.conf", "n"), ["mv: overwrite 'scrubber.conf'? "]);
+  assert.equal(sh.lastStatus, 1);
+  assert.equal(out(sh, "cat scrubber.conf"), "override=7731\n");
+  assert.deepEqual(asks("cp -i notes.txt scrubber.conf", "yes"), ["cp: overwrite 'scrubber.conf'? "]);
+  assert.equal(out(sh, "cat scrubber.conf"), "b\na\nb\nc\n");
+  assert.deepEqual(asks("cp -i notes.txt new.txt"), []); // nothing to overwrite: nothing to ask
+  assert.deepEqual(asks("rm -if new.txt"), []); // whichever of -f and -i comes last wins
+  sh.run("touch new.txt");
+  assert.deepEqual(asks("rm -f -i new.txt", "n"), ["rm: remove regular empty file 'new.txt'? "]);
+  assert.equal(out(sh, "echo n | rm -i notes.txt"), "rm: remove regular file 'notes.txt'? "); // the answer read from a pipe
+  assert.equal(out(sh, "ls notes.txt"), "notes.txt\n");
+});

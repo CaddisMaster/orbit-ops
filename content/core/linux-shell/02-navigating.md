@@ -85,21 +85,27 @@ cards:
 ## Where am I?
 
 The shell always has a **current working directory**. Every relative path you type is resolved
-from there.
-
-```bash
-pwd          # print it: /home/sean
-```
+from there. `pwd` (**p**rint **w**orking **d**irectory) prints it as a full path, and the
+prompt shows it too.
 
 ## Moving: `cd`
 
-```bash
-cd /var/log      # absolute path: works from anywhere
-cd nginx         # relative: now in /var/log/nginx
-cd ..            # up one level: /var/log
-cd -             # back to where you just were: /var/log/nginx
-cd               # home: /home/sean (same as cd ~)
-```
+| Command | Takes you to | From `/var/log/nginx`, that's |
+|---|---|---|
+| `cd /var/log` | an absolute path: the same place from anywhere | `/var/log` |
+| `cd nginx` | a relative path: a directory inside where you are | (from `/var/log`) `/var/log/nginx` |
+| `cd ..` | up one level | `/var/log` |
+| `cd ../..` | up two levels: each `..` is one step up | `/var` |
+| `cd ../../lib/apt` | up two, then down into `lib/apt` | `/var/lib/apt` |
+| `cd -` | back to where you just were | wherever you came from |
+| `cd` | home (the same as `cd ~`) | `/home/sean` |
+
+A path is a list of steps separated by `/`. `..` is a step like any other directory name, so it
+needs its slash too: `../archive`, never `..archive`.
+
+**In the station console,** home is the directory the task starts in, so a bare `cd` takes you
+back to the start. The prompt shows `~` only when that's `/home/cadet`; anywhere else it shows
+the full path.
 
 ## Looking: `ls`
 
@@ -110,7 +116,7 @@ On its own `ls` lists names. Its flags are where it gets useful:
 | `ls -l` | long format: permissions, owner, size, date |
 | `ls -a` | **all** entries, including hidden dotfiles |
 | `ls -h` | with `-l`, sizes like `4.0K` and `12M` instead of bytes |
-| `ls -t` | newest first (add `-r` to reverse) |
+| `ls -t` | newest first (add `-r` to reverse; not on the station console) |
 | `ls -d dir` | the directory itself, not its contents |
 
 Flags combine, so `ls -lah` is the one you'll type most. Here's what a line of it means:
@@ -139,7 +145,8 @@ convention that `ls` (and most file browsers) respect. Configuration often lives
 ## Typing less
 
 - **Tab** completes file and directory names. Press it twice to see all the matches.
-- **↑** recalls earlier commands, and **Ctrl-R** searches your history as you type.
+- **↑** recalls earlier commands. On a real shell **Ctrl-R** also searches your history as you
+  type (the station console has ↑ and Tab, not Ctrl-R).
 
 ## Try it
 

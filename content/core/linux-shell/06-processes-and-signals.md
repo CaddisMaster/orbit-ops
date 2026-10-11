@@ -90,12 +90,12 @@ cards:
 
 Every running program is a **process** with a numeric **PID**, an owner, and a parent.
 
-```bash
-ps aux | head          # every process: user, PID, %CPU, %MEM, command
-ps -ef --forest        # the same, drawn as a parent/child tree
-pgrep -a uvicorn       # PIDs and command lines matching a name
-top                    # live view, busiest first (q to quit; htop is nicer if installed)
-```
+| Command | Shows |
+|---|---|
+| `ps aux` | every process: user, PID, %CPU, %MEM, command |
+| `ps aux --sort=-%cpu \| head` | the busiest first (`-` means highest first), and only the top few |
+| `pgrep -a NAME` | the PID and command line of every process whose name matches |
+| `top` | a live view, busiest first (q quits). The station console can't run full-screen programs, so use the `ps` line above there |
 
 PID 1 is the first process the kernel starts (`systemd` on most servers). In a container, PID 1
 is whatever the image's `CMD` runs, for this app that's `uvicorn`.
@@ -112,11 +112,17 @@ you'll use:
 | `SIGHUP` | 1 | closing the terminal; many daemons treat it as "reload config" | hang up |
 | `SIGKILL` | 9 | `kill -9` | stop **now**, can't be caught |
 
-```bash
-kill 4821              # SIGTERM: polite
-kill -9 4821           # SIGKILL: only if TERM didn't work
-pkill -f diagnostics   # by matching the command line instead of a PID
-```
+| Command | Sends |
+|---|---|
+| `kill 4821` | SIGTERM to PID 4821: polite |
+| `kill -9 4821` | SIGKILL: only if TERM didn't work |
+| `pkill NAME` | SIGTERM to every process whose name matches, no PID needed |
+| `pkill -9 NAME` | SIGKILL by name |
+| `pkill -f TEXT` | matches anywhere in the command line, not just the name |
+
+**Check that it worked.** `kill` and `pkill` only deliver the signal; they don't wait to see
+what happens. Run `pgrep -a NAME` again afterwards: if the process is still listed, it ignored
+the signal, and that's when you reach for `-9`.
 
 Programs can **handle** `SIGTERM`: finish the current request, flush to disk, close
 connections. `SIGKILL` gives them no chance at all, which is how half-written files and stale
@@ -146,6 +152,8 @@ jobs               # list background jobs
 fg %1              # bring job 1 to the foreground
 # Ctrl-Z           # suspend the foreground job; then `bg` resumes it in the background
 ```
+
+The station console has `&`, `jobs`, `fg`, `bg` and Ctrl-C, but not Ctrl-Z.
 
 Background jobs still die when you close the terminal (`SIGHUP`). Anything meant to outlive
 your session belongs in a service manager, which is what the systemd unit is for.

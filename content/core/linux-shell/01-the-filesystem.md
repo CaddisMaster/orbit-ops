@@ -156,21 +156,23 @@ Three shortcuts work in any path:
 So from `/var/log`, the path `../lib` is `/var/lib`, and `~/notes.txt` is
 `/home/sean/notes.txt` wherever you are.
 
-## Moving and reading
+## Looking, moving and reading
 
-Two more commands get you through this module's console task. The next modules go deeper.
+Four more commands get you through this module's console task. The next modules go deeper.
 
-```bash
-cd /var/log             # move into a directory (module 02 covers cd fully)
-cat /etc/hostname       # print a whole file: right for anything short
-less /var/log/syslog    # page through a long one: Space and b to move, /word to search, q to quit
-head -n 5 /etc/passwd   # just the first 5 lines
-tail -n 5 /etc/passwd   # just the last 5: in a log, that's where the newest entries are
-```
+| Command | Does | Example |
+|---|---|---|
+| `ls PATH` | lists what's in a directory, without going there | `ls /var/log` |
+| `cd PATH` | moves you into a directory | `cd /var/log` |
+| `cat FILE` | prints a whole file: right for anything short | `cat /etc/hostname` |
+| `less FILE` | pages through a long one (Space and b to move, `/word` to search, q to quit) | `less /var/log/syslog` |
+| `head -n 5 FILE` / `tail -n 5 FILE` | just the first or last 5 lines (in a log, the newest are at the end) | `tail -n 5 /etc/passwd` |
+
+`ls` on its own lists where you are. Give it a path and it lists that directory instead, so you
+can look before you move. `cd` accepts any path, absolute or relative.
 
 These are how you **read** a file. **nano** is for *editing* one, and it comes in Unit 1.2 along
-with the scripts you'll write. The station console doesn't have `less` yet, so use `cat` and
-`head` there.
+with the scripts you'll write.
 
 ## Try it
 

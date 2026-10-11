@@ -170,17 +170,23 @@ grep -r "COOKIE_SECURE" .        # search every file under the current directory
 grep -E '" 5[0-9]{2} ' access.log   # extended regex: any 5xx status (after the quoted request)
 ```
 
+The station console's `grep` knows `-i -v -n -c -q` and `-E`, but not `-r` or context (`-C`):
+on a real server you'll use those too.
+
 ## Counting and ranking
 
-```bash
-wc -l access.log                         # how many lines
-sort names.txt                           # alphabetical
-sort -n sizes.txt                        # numeric (so 10 sorts after 9)
-sort -rn                                 # numeric, largest first
-uniq -c                                  # collapse ADJACENT duplicates, with counts
-head -n 10 / tail -n 10                  # first / last lines
-tail -f /var/log/nginx/access.log        # follow a growing file (Ctrl-C to stop)
-```
+| Command | Does |
+|---|---|
+| `wc -l access.log` | counts the lines |
+| `sort names.txt` | sorts alphabetically |
+| `sort -n sizes.txt` | sorts as numbers, so 10 comes after 9 |
+| `sort -rn` | numbers, largest first (`-r` reverses) |
+| `uniq -c` | collapses **adjacent** duplicate lines into one, with a count in front |
+| `head -n 10` / `tail -n 10` | the first / last lines |
+| `tail -f /var/log/nginx/access.log` | follows a growing file (Ctrl-C stops; not on the station console, whose files don't grow) |
+
+`uniq` only compares each line with the one before it, which is why it almost always comes
+after `sort`.
 
 ## Cutting columns: cut and awk
 
@@ -190,7 +196,9 @@ awk '{print $1}' access.log              # field 1, separated by whitespace
 awk '$9 >= 500 {print $7}' access.log    # path of every 5xx response
 ```
 
-`cut` is for one fixed delimiter. `awk` handles runs of spaces and lets you add conditions.
+`awk` splits each line into fields on whitespace: `$1` is the first, `$2` the second, `$NF`
+the last, and `$0` the whole line. `cut` is for one fixed delimiter. `awk` handles runs of spaces
+and lets you add conditions.
 
 ## sed: edit a stream
 

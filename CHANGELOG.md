@@ -68,7 +68,23 @@ and why it matters, not what the diff says.
   - A quiz question can show a script or a command's output as a code block (`code:`), so
     Unit 1.2's "what happens here?" questions read like a terminal, not one run-on line.
 
+### Changed
+- Every lesson with a console task now says what the task needs in plain sentences and tables,
+  not only in code comments or the Try it (#101). Unit 1.1's commands are tables, and the ideas
+  that tripped people up are spelled out:
+  - `mv` and `cp` take many files with the destination last;
+  - `..` needs its slash;
+  - a pattern that matches nothing comes back unchanged;
+  - a bare `cd` returns to where the console started;
+  - check with `pgrep` that TERM worked before using `kill -9`.
+
+  Lessons also say when the console lacks something they mention (Ctrl-R, `tail -f`, `top`).
+
 ### Fixed
+- **`rm -i` in the console asked nothing and deleted anyway.** Now `rm -i`, `mv -i` and
+  `cp -i` ask first, in GNU's words, and the last of `-f` and `-i` wins (#101).
+- Moving several files into a directory that doesn't exist now says `No such file or
+  directory`, as real `mv`, `cp` and `ln` do, instead of `Not a directory`.
 - A release now reaches your browser straight away (#92). After an update, browsers could keep
   the old stylesheet, scripts and art for hours (Safari did, after the laptop arrived), so a new
   page could be drawn with last release's CSS until a hard reload. Every stylesheet, script and

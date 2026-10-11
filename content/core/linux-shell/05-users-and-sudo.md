@@ -95,10 +95,13 @@ cards:
 
 ## Who am I?
 
-```bash
-whoami        # sean
-id            # uid=1000(sean) gid=1000(sean) groups=1000(sean),27(sudo),998(docker)
-```
+| Command | Shows | For example |
+|---|---|---|
+| `whoami` | your user name | `sean` |
+| `id` | your user and group numbers, and every group you're in | `uid=1000(sean) gid=1000(sean) groups=1000(sean),27(sudo),998(docker)` |
+| `id NAME` | the same for another user, read fresh from `/etc/group` | `id deploy` |
+| `groups` | just the group names | `sean sudo docker` |
+| `getent group NAME…` | a group's line: its name, number and members | `sudo:x:27:sean` |
 
 Every process runs as a **user**, and every user belongs to one or more **groups**. File
 permissions (last module) are checked against exactly these: owner, group, everyone else.

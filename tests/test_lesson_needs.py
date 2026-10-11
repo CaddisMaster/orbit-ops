@@ -1,0 +1,162 @@
+"""#101: everything a console task needs is plainly on the page, and the
+lessons describe the console truthfully.
+
+A lesson "says" something when it's in its prose or a table: not only in a
+code block's comment, and not only in Try it, which is for a real machine.
+The commands a task's solution uses are checked in tests/test_content.py (#80);
+NEEDS below are the ideas behind them, which no parser can find, written down
+per module with the words the lesson uses for each."""
+
+import html
+import re
+
+import pytest
+
+from app.content import load_catalog
+
+
+def _sections(module) -> list[str]:
+    """The lesson's h2 sections before Try it, as HTML."""
+    body = module.body_html.split("<h2>Try it</h2>")[0]
+    return [s for s in re.split(r"(?=<h2>)", body) if s.strip()]
+
+
+def _text(fragment: str, code_blocks: bool) -> str:
+    if not code_blocks:
+        fragment = re.sub(r"<pre.*?</pre>", " ", fragment, flags=re.S)
+    return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+
+def _says(module) -> str:
+    return " ".join(_text(s, code_blocks=False) for s in _sections(module))
+
+
+# For each module with a console task: what the task needs, and the words its lesson
+# uses to say it (in its prose or a table, before the task).
+NEEDS = {
+    "the-filesystem": {
+        "logs live under /var/log": "/var/log Logs",
+        "ls takes a path, so you can look before you move": "lists what's in a directory, without going there",
+        "cd takes an absolute path": "`cd` accepts any path, absolute or relative",
+        "cat prints a file": "prints a whole file",
+    },
+    "navigating": {
+        "ls -a shows hidden files": "**all** entries, including hidden dotfiles",
+        "a hidden file's name starts with a dot": "Any name beginning with `.` is hidden",
+        "each .. goes up one level, and needs its slash": "`..` is a step like any other directory name",
+        "a relative path goes up and back down": "up two, then down into",
+        "a bare cd returns to where the console started": "home is the directory the task starts in",
+    },
+    "files-and-globs": {
+        "mkdir makes the archive directory": "creates one directory",
+        "mv moves several files into a directory": "moves **several** files into a directory",
+        "the last argument is the destination": "the last one is where it goes",
+        "the destination directory must exist first": "must be a directory that already exists",
+        "echo previews what a glob matches": "shows exactly the list",
+        "narrow a glob by writing more of the name": "Narrow a pattern by writing more of the name yourself",
+        "a glob that matches nothing is left as it is": "A pattern that matches nothing is left as it is",
+        "rm deletes without a bin": "There is no recycle bin",
+    },
+    "permissions": {
+        "600 is read and write for the owner only": "secrets",
+        "u+x adds execute for the owner only": "adds execute for the user (the owner) only",
+        "ls -l shows the permission string": "The first column of `ls -l` is ten characters",
+    },
+    "users-and-sudo": {
+        "sudo asks for your own password": "asks for **your own** password",
+        "usermod -aG appends, -G replaces": "Without `-a`, `usermod -G` *replaces* your groups",
+        "field 7 of /etc/passwd is the shell": "Field 7 is the shell",
+        "cut -d: -f7 pulls a field out": "cut the line at each `:` and keep the one you want",
+        "> writes a command's output to a file": "`>` writes output to a file",
+    },
+    "processes-and-signals": {
+        "ps can sort the busiest first": "the busiest first",
+        "kill and pkill send TERM by default": "SIGTERM to every process whose name matches",
+        "pkill -9 sends KILL by name": "SIGKILL by name",
+        "check whether TERM worked before KILL": "Check that it worked",
+    },
+    "pipes-and-redirection": {
+        "ls takes several paths": "`ls` takes several paths",
+        "errors go to stderr, a separate stream": "they're **separate streams**",
+        "> file 2>&1 sends both into one file": "both end up in `out.log`",
+        "grep keeps only matching lines": "prints only the lines of FILE that contain WORD",
+    },
+    "text-tools": {
+        "awk prints a field": "splits each line into fields",
+        "uniq -c counts adjacent duplicates": "collapses **adjacent** duplicate lines",
+        "sort before uniq": "which is why it almost always comes after `sort`",
+        "sort -rn ranks by count": "numbers, largest first",
+        "the whole top-N pipeline": "rank by count, keep the top ten",
+    },
+    "environment-and-path": {
+        "the first match on PATH wins": "runs the first file with that name",
+        "prepend a directory to make it win": "Prepend a directory to make its programs win",
+        "~/.bashrc is read by every new shell": "every new interactive Bash shell",
+        "append a line with >>": "**Appending** with `>>` matters",
+    },
+    "reading-and-editing": {
+        "man shows a command's page": "the full manual page",
+        "SEE ALSO points at the related pages": "SEE ALSO",
+        "section 5 is file formats": "file formats",
+        "/pattern searches a page": "`/pattern` searches it",
+        "sudo nano edits a root-owned file": "Open them with `sudo nano /etc/…`",
+        "^O then Enter writes, ^X exits": "write the file",
+    },
+    "finding-things-and-disk-space": {
+        "df shows how full the disk is": "how big each filesystem is",
+        "du finds what's using it": "how much the files under each PATH add up to",
+        "find by size and by age": "changed **more** than 30 days ago",
+        "check find's list before -delete": "Run it without `-delete` first",
+        "empty a log that's still open": "Empty the file instead",
+        "tar -czf makes a compressed archive": "**c**reate, g**z**ipped",
+        "tar -tzf lists an archive": "lis**t** what's inside",
+        "ln -sf replaces a link": "replacing a link that's already called NAME",
+    },
+}
+
+
+def _modules_with_tasks():
+    catalog = load_catalog()
+    return [m for m in catalog.unit_modules("linux-shell") + catalog.unit_modules("bash-scripting") if m.terminal]
+
+
+@pytest.mark.criterion(101, "Every console task's needs are written down")
+def test_every_console_task_has_its_needs_written_down():
+    assert {m.slug for m in _modules_with_tasks()} == NEEDS.keys()
+
+
+@pytest.mark.criterion(101, "Nothing a task needs is only in a code comment or Try it")
+@pytest.mark.parametrize("module", _modules_with_tasks(), ids=lambda m: m.slug)
+def test_the_lesson_says_what_its_task_needs(module):
+    says = _says(module)
+    from app.content.render import render_inline
+
+    for need, words in NEEDS[module.slug].items():
+        plain = _text(str(render_inline(words)), code_blocks=True)
+        assert plain in says, f"{module.slug}: the lesson doesn't plainly say that {need} (looked for {plain!r})"
+
+
+# What the station console doesn't have, as a lesson would mention it. A section that
+# mentions one must also say "station console", so nobody tries it there and wonders why.
+CONSOLE_LACKS = {
+    "Ctrl-R": r"Ctrl-R",
+    "ls -t": r"\bls -t\b",
+    "Ctrl-Z": r"Ctrl-Z",
+    "grep -r": r"\bgrep -r\b",
+    "grep -C": r"\bgrep\b[^\n]*-C \d",
+    "tail -f": r"\btail -f\b",
+    "less +F": r"\bless \+F\b",
+    "nano's ^W": r"\^W",
+    "top": r"(?<![\w-])top(?= +# |\s*\|| *$)|<code>top</code>",
+}
+
+
+@pytest.mark.criterion(101, "The console is described truthfully")
+@pytest.mark.parametrize("module", load_catalog().ordered_modules(), ids=lambda m: m.slug)
+def test_lessons_say_when_the_console_lacks_something(module):
+    for section in _sections(module):
+        text = _text(section, code_blocks=True) + " " + section
+        for what, pattern in CONSOLE_LACKS.items():
+            if re.search(pattern, text, flags=re.M):
+                assert "station console" in text, f"{module.slug}: mentions {what}, which the console lacks, without saying so"
+    assert "doesn't have `less`" not in module.body_html and "have <code>less</code> yet" not in module.body_html

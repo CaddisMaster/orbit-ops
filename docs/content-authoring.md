@@ -244,9 +244,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   block run `docker compose exec -u "$(id -u):$(id -g)" web python -m scripts.export_exercises`
   and commit `tests/js/fixtures/exercises.json`; a test fails while it's stale.
 - **What the console knows** (`help` lists it):
-  - files: `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r) mv
-    rm (-r -f) chmod (octal and symbolic, -R) chown`
-  - text: `grep (-i -v -n -c -q) wc sort uniq head tail cut tee`, and small `awk` and `sed`:
+  - files: `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r -i) mv
+    (-i -f) rm (-r -f -i) chmod (octal and symbolic, -R) chown`. `-i` asks in GNU's words
+    (`rm: remove regular file 'a.log'? `), and the last of `-f`/`-i` wins, as in coreutils.
+  - text: `grep (-i -v -n -c -q -E) wc sort uniq head tail cut tee`, and small `awk` and `sed`:
     - awk: `-F SEP`; `pattern { print … }` rules with `BEGIN`/`END`; patterns of `/re/`,
       comparisons (numeric when both sides are numbers), `~ !~ ! && ||`; `print` of `$0`, `$N`,
       `$NF`, `NF`, `NR`, strings and concatenation. No variables, arithmetic, `printf` or arrays.
@@ -319,6 +320,18 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
   the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a
   real login.
+- **The lesson must say what the task needs, plainly** (#101). Every command the solution uses
+  has to appear in the lesson's prose or a table, in this module or an earlier one: a code
+  block's comment or the Try it doesn't count (`tests/test_content.py` checks it). The ideas
+  behind the commands ("the last argument is the destination", "`..` needs its slash", "check
+  that TERM worked") are listed per module in `NEEDS` in `tests/test_lesson_needs.py`, with the
+  words the lesson uses for each. A new module with a console task adds its entry. Point the
+  task at the right section if it helps, but don't hand over the answer: an example in the
+  lesson should use a different file or directory from the task's.
+- **Say when the console lacks something.** A lesson section that mentions a key or command
+  the console doesn't have (Ctrl-R, `tail -f`, `top`, nano's ^W, …: `CONSOLE_LACKS` in the
+  same test) must say "station console" in that section, so nobody tries it there and wonders
+  why.
 - **Still open the module and do it yourself** before merging: CI proves the solution works,
   not that the task reads well.
 

@@ -100,31 +100,39 @@ cards:
 
 ## Creating
 
-```bash
-touch notes.txt              # create an empty file (or update its timestamp)
-mkdir reports                # one directory
-mkdir -p backups/2026/10     # a whole path; no error if it exists
-```
+| Command | Does |
+|---|---|
+| `touch notes.txt` | creates an empty file (or updates its timestamp) |
+| `mkdir reports` | creates one directory |
+| `mkdir -p backups/2026/10` | creates a whole path, and doesn't complain if it exists |
+| `mkdir ../archive` | creates `archive` one level up, next to the directory you're in |
 
 ## Copying, moving, deleting
 
-```bash
-cp notes.txt notes.bak       # copy a file
-cp -r reports reports-old    # copy a directory (recursive)
-mv notes.bak archive/        # move into a directory
-mv draft.txt final.txt       # rename = move within the same directory
-rm final.txt                 # delete a file
-rm -r reports-old            # delete a directory and its contents
-rmdir empty-dir              # delete a directory only if it's empty
-```
+| Command | Does |
+|---|---|
+| `cp notes.txt notes.bak` | copies a file |
+| `cp -r reports reports-old` | copies a directory and everything in it (**r**ecursive) |
+| `mv notes.bak archive/` | moves a file into a directory |
+| `mv a.log b.log c.log archive/` | moves **several** files into a directory |
+| `mv *.log ../archive/` | the same with a glob, into `archive` one level up |
+| `mv draft.txt final.txt` | renames: a move within the same directory |
+| `rm final.txt` | deletes a file (`rm a b c` deletes several) |
+| `rm -r reports-old` | deletes a directory and its contents |
+| `rmdir empty-dir` | deletes a directory, only if it's empty |
+
+**`cp` and `mv` read their arguments the same way: everything before the last one is what to
+copy or move, and the last one is where it goes.** With two names, the last can be a new name
+(a rename). With more than two, the last must be a directory that already exists, or you get
+`target 'archive/': No such file or directory`. Make it first with `mkdir`.
 
 > ⚠️ **There is no recycle bin.** `rm` is permanent and doesn't ask. Add `-i` to be prompted, and
 > read every `rm -r` back to yourself before pressing Enter. One stray space turns
 > `rm -r ~/scratch` into `rm -r ~ /scratch`: two arguments, the first being your entire home
 > directory. (GNU `rm` does refuse `rm -r /` itself, but nothing protects `~`.)
 
-`cp` and `mv` will also **overwrite** an existing destination silently. `-i` makes them ask, and
-`-n` makes them never overwrite.
+`cp` and `mv` will also **overwrite** an existing destination silently. `-i` makes them ask
+first, and `rm -i` asks before each file. Only an answer starting with `y` means yes.
 
 ## Globs: patterns the shell expands
 
@@ -143,8 +151,13 @@ echo *.log        # see exactly what a glob expands to, safely
 rm *.log          # rm receives: app.log error.log ... (never the pattern itself)
 ```
 
-So **preview a destructive glob with `echo` first**. If nothing matches, Bash passes the pattern
-through unchanged, which is why `rm *.lgo` complains about a file literally named `*.lgo`.
+So **preview a destructive glob with `echo` first**. `echo` prints whatever it's given, so
+`echo *.log` shows exactly the list `rm *.log` would receive. Narrow a pattern by writing more of
+the name yourself: `crash-*` matches every crash file, and `crash-2026-10-*` only October's.
+
+**A pattern that matches nothing is left as it is.** `echo crash-09*` prints `crash-09*` back
+when no name starts with `crash-09`. That's your sign the pattern is wrong, and it's why
+`rm *.lgo` complains about a file literally named `*.lgo`.
 
 Quotes stop expansion: `grep '*.log' file` searches for the literal text `*.log`.
 

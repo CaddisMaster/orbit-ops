@@ -131,12 +131,12 @@ So `rw-` = 6, `r-x` = 5, `rwx` = 7, and a full mode is three digits: user, group
 
 ## Changing permissions: `chmod`
 
-```bash
-chmod 600 .env               # octal: set all three classes at once
-chmod u+x deploy.sh          # symbolic: add execute for the user (owner)
-chmod go-w shared.txt        # remove write from group and others
-chmod u=rw,go= .env          # set exactly: same as 600
-```
+| Command | Does |
+|---|---|
+| `chmod 600 .env` | octal: sets all three classes at once |
+| `chmod u+x deploy.sh` | symbolic: adds execute for the user (the owner) only, and leaves everything else alone |
+| `chmod go-w shared.txt` | removes write from group and others |
+| `chmod u=rw,go= .env` | sets exactly: the same as 600 |
 
 The symbolic form uses `u` (user/owner), `g` (group), `o` (others), `a` (all), with `+`, `-`
 or `=`.

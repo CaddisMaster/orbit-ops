@@ -136,7 +136,8 @@ which python3          # just the one that wins
 The current directory is **not** on the PATH, so you run a local script with an explicit path:
 `./deploy.sh`.
 
-Prepend a directory to make its programs win:
+`export` makes a variable an environment variable, and `PATH` is one. Prepend a directory to
+make its programs win:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -152,6 +153,14 @@ file:
 | `~/.bashrc` | every new interactive Bash shell |
 | `~/.profile` | login shells (SSH sessions, a desktop login) |
 
+To add a line, edit the file (nano comes in Unit 1.2) or append it with `>>`, in single quotes
+so `$PATH` is written as it is rather than expanded now:
+
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+```
+
+**Appending** with `>>` matters: a single `>` would replace the whole file with that one line.
 After editing, `source ~/.bashrc` applies it to the shell you're in.
 
 ## Try it
