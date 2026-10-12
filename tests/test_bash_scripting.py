@@ -662,3 +662,68 @@ def test_module_09s_figures_match_the_console():
     script = start[BACKUP].contents
     assert "&& rm -r $work\necho \"backup complete\"" in script and "set -e" not in script
     assert "EXIT 2" in _said(module, "console_done")
+
+
+# --- 10: Scheduling with cron (#77) ---------------------------------------------------------
+CRONTAB = "/var/spool/cron/crontabs/cadet"
+SHIFT_JOB = "*/15 * * * * /station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1"
+BACKUP_JOB = "30 2 * * * /station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1"
+
+
+def _scheduled(start, *, shift_job=SHIFT_JOB, backup_job=BACKUP_JOB, ran_by_hand=True):
+    """What a learner leaves: a crontab with both jobs, and each job's command run once by hand."""
+    exercise = _module("scheduling-with-cron").terminal
+    fs = client_spec(exercise)["fs"]
+    state = {**start, CRONTAB: Node(type="file", mode=0o600, owner="cadet", group="crontab", contents=f"{shift_job}\n{backup_job}\n")}
+    if ran_by_hand:
+        printed = fs["/station/sensors/o2"]["contents"] + fs["/var/log/scrubber/scrubberd.log"]["contents"].splitlines()[-1] + "\n"
+        state["/var/log/routines/shift-check.log"] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents=printed)
+        state["/var/log/routines/backup-logs.log"] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents="backup complete\n")
+    return state
+
+
+@pytest.mark.criterion(77, "Module 10 of Unit 1.2 is complete content")
+def test_module_10_is_complete_content():
+    modules = load_catalog().unit_modules("bash-scripting")
+    assert len(modules) == 10 and modules[9].slug == "scheduling-with-cron"  # Unit 1.2 is whole
+    _complete_content(modules[9])
+
+
+@pytest.mark.criterion(77, "Module 10's console task can be done")
+def test_module_10s_end_state_passes_on_the_server():
+    exercise = _module("scheduling-with-cron").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _scheduled(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [
+        {"shift_job": SHIFT_JOB.replace("/station/bin/shift-check", "shift-check")},  # not on cron's PATH
+        {"backup_job": BACKUP_JOB.replace(" 2>&1", "")},  # errors lost
+        {"backup_job": BACKUP_JOB.replace("30 2 ", "2 30 ")},  # minute and hour swapped
+        {"shift_job": SHIFT_JOB.replace("*/15", "15")},  # once an hour, at quarter past
+        {"ran_by_hand": False},
+    ],
+    ids=["shift-check-by-name", "no-2>&1", "hour-and-minute-swapped", "once-an-hour", "never-run-by-hand"],
+)
+def test_module_10_refuses_the_shortcuts(shortcut):
+    exercise = _module("scheduling-with-cron").terminal
+    assert not grade(exercise, _scheduled(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_10s_figures_match_the_console():
+    module = _module("scheduling-with-cron")
+    exercise = module.terminal
+    fs = client_spec(exercise)["fs"]
+    o2 = re.match(r"O2 ([\d.]+%)", fs["/station/sensors/o2"]["contents"]).group(1)
+    assert any(getattr(c, "text", None) == f"O2 {o2}" for c in exercise.checks)
+    jobs = [c.text for c in exercise.checks if getattr(c, "contains", None) == CRONTAB]
+    assert f"ROUTINES · {len(jobs)} · SCHEDULED: 0" in _said(module, "open") and f"{len(jobs)} JOBS" in _said(module, "console_done")
+    # Both scripts are on the learner's PATH but not on cron's, which is the lesson's point,
+    # and backup-logs can really write its archive now.
+    assert "/station/bin" in exercise.env["PATH"].split(":")
+    assert fs["/srv/backups"]["group"] == "crew" and fs["/srv/backups"]["mode"] == 0o775
+    assert fs["/var/log/routines"]["group"] == "crew" and fs["/var/log/routines"]["mode"] == 0o775
+    assert "That's Bash scripting done" in _said(module, "complete") and module.comms.window == {"complete": "relay-pass"}

@@ -277,6 +277,8 @@ def test_no_console_task_needs_an_untaught_command():
         # A script the learner writes is run by its name, which no lesson teaches (#70).
         written = " ".join(module.terminal.solution)
         used = {c for c in used if not re.search(rf"(?:>|>>)\s*\S*/{re.escape(c)}(?![\w.-])", written)}
+        # So is one of the exercise's own files run by its full path, as cron needs (#77).
+        used -= {f.path for f in module.terminal.files}
         untaught = sorted(c for c in used if not re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", taught))
         assert not untaught, f"{module.slug}'s console task uses {untaught}, which no lesson up to it teaches"
 

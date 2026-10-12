@@ -163,6 +163,15 @@ NEEDS = {
         "a trap on EXIT runs however the script ends": "**A trap on `EXIT` runs as the script ends, however it ends**",
         "report success last, after checking": "**Report success last**",
     },
+    "scheduling-with-cron": {
+        "crontab -e / crontab FILE install a crontab": "replaces it with the contents of FILE",
+        "the five fields, in order": "**five time fields, then the command**",
+        "*/N is every Nth value": "**every Nth value**, a step",
+        "cron's PATH lacks your own directories": "Your own directories, like `~/bin`",
+        "write full paths": "**Write full paths**",
+        ">> log 2>&1 keeps output and errors": "**append both output and errors to a log**",
+        "run the job's command by hand first": "run its command by hand exactly as the crontab says",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

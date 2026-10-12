@@ -2277,6 +2277,196 @@
    "user": "cadet"
   }
  },
+ "scheduling-with-cron": {
+  "solution": [
+   "crontab -l",
+   "/station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1",
+   "/station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1",
+   "cat /var/log/routines/shift-check.log /var/log/routines/backup-logs.log",
+   "crontab - <<'EOF'\n# m h dom mon dow command\n*/15 * * * * /station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1\n30 2 * * * /station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1\nEOF",
+   "crontab -l"
+  ],
+  "source": "core/bash-scripting/10-scheduling-with-cron.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/var/spool/cron/crontabs/cadet",
+     "text": "*/15 * * * * /station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1"
+    },
+    {
+     "contains": "/var/spool/cron/crontabs/cadet",
+     "text": "30 2 * * * /station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1"
+    },
+    {
+     "contains": "/var/log/routines/shift-check.log",
+     "text": "O2 20.8%"
+    },
+    {
+     "contains": "/var/log/routines/backup-logs.log",
+     "text": "backup complete"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/srv": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/srv/backups": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin/backup-logs": {
+     "contents": "#!/usr/bin/env bash\n# backup-logs: archive the scrubber logs, then tidy up.\nset -euo pipefail\n\ndest=${BACKUP_DEST:-/srv/backups}\narchive=\"$dest/scrubber-logs.tar.gz\"\nwork=$(mktemp -d)\ntrap 'rm -rf \"$work\"' EXIT\n\ncp /var/log/scrubber/*.log \"$work\"/\ntar -czf \"$archive\" -C \"$work\" .\n[ -f \"$archive\" ]\necho \"backup complete\"\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/bin/shift-check": {
+     "contents": "#!/usr/bin/env bash\n# The shift check: air, scrubbers, disk.\ncat /station/sensors/o2\ntail -n 1 /var/log/scrubber/scrubberd.log\ndf -h /\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/sensors": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/sensors/o2": {
+     "contents": "O2 20.8% (ring A 20.9 · ring B 20.7)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/routines": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber/ring-a.log": {
+     "contents": "2026-10-08 08:55:00 ring-a CO2 3200 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/scrubber/scrubberd.log": {
+     "contents": "2026-10-08 08:25:00 scrubbers nominal: 2 beds, ring-b CO2 3300 ppm\n2026-10-08 08:55:00 scrubbers nominal: 2 beds, ring-b CO2 3250 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor reads the crontab over your shoulder. \"Every fifteen minutes, and half past two. Full paths, logs for both. Now we can all sleep.\"",
+   "user": "cadet"
+  }
+ },
  "text-tools": {
   "solution": [
    "head -n 3 /var/log/docking/access.log",
