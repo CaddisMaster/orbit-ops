@@ -138,6 +138,15 @@ NEEDS = {
         "${f%.log} drops the extension": "`%` removes a match from the end",
         "continue carries on with the next one": "**carries on with the next one**",
     },
+    "arguments-and-input": {
+        "$1 is the first argument": "each argument in turn",
+        "$# counts the arguments": "how many arguments there are",
+        "quotes decide what counts as one argument": "so quotes decide what counts as one",
+        "a usage line goes to stderr": "print a **usage** line",
+        "exit 2 means used wrongly": "**Exit status 2 is the convention for \"used wrongly\"**",
+        "a different failure gets a different number": "give it a different number",
+        "${2:-1} gives an optional argument a default": "`days=${2:-1}` is `$2`, or 1 if there isn't one",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
