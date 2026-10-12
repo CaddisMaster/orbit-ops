@@ -37,6 +37,16 @@ A per-session log, standing decisions and a release ledger. Newest first.
 - **The console checks itself against the real tools.** Each new capability was compared
   snippet by snippet with bash 5.2 and GNU find/du/tar in a scratch harness. Differences are
   either fixed or deliberate (sorted `find` output, simulated archives, no hard links).
+- **Content-only work ships as PATCH releases** (#110). When v0.6.0 went out with Unit 1.2
+  half written, modules 05–10 moved to a `v0.6.x` milestone and shipped as 0.6.1. A module that
+  needs new console code would make its release the next MINOR.
+- **Behaviour is graded by a logged run.** The server sees only the end state, so a task about
+  a script's behaviour has the learner append each run's output and `exit $?` to a log, and
+  the checks pair the two (#72, #74, #76). A trap is proven by `files_under: /tmp` after a failed
+  run. Use it only where output alone can't show the behaviour (#75 didn't need it).
+- **The console's crontab refuses bad times; Ubuntu 24.04's doesn't** (#77). Kept on purpose
+  (#66). Lessons mustn't claim a real crontab refuses them, or quote one PATH for cron jobs
+  (`docs/content-authoring.md`).
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -44,6 +54,8 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.6.1 | 2026-10-12 | Unit 1.2 modules 05–10 (conditionals → cron): Bash scripting complete, *Routine Automated*; GNU-style `tar` cannot-open message. PATCH, no migrations |
+| 0.6.0 | 2026-10-12 | The console as a real shell (control flow, functions, `set -e`/trap, nano, man, cron, find/du/tar, links); Unit 1.2 modules 01–04; the lesson audit (#101); report paths with spaces accepted; release-versioned static URLs |
 | 0.5.0 | 2026-10-10 | SM-2 flashcards as MERIDIAN's watch drill (XP, streak, dashboard); self-hosted Pyodide and the first code challenge; the laptop with a closing lid; the map as the *Meridian*; unit briefings shown; migration `0007` |
 | 0.4.0 | 2026-10-09 | Console tasks in 9/10 Unit 1.1 modules (sudo, processes, env, awk/sed); the pixel-art desk, its computer and the comms log; Unit 1.1 told as one story |
 | 0.3.0 | 2026-10-09 | XP/ranks, streaks + freezes, badges, station map, deck colours, the station console; migrations `0004`–`0006` |
@@ -52,14 +64,52 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 ## Sessions
 
-### 2026-10-11 (evening) — Unit 1.2 modules 01–04, and the lesson audit
+### 2026-10-12 — v0.6.0 and v0.6.1 shipped; Unit 1.2 complete
 
-> 🚀 **START THE NEXT SESSION BY CUTTING A RELEASE**, before any more modules (Sean's call,
-> 2026-10-11). Production 0.5.0 has a live bug that #108 fixes: the server refuses a console
-> report holding any file name with a space, a comma or a `*`, so a solved task goes unlogged.
-> The release bundles everything since 0.5.0: the v0.6.0 console (#64–#67, #92), modules
-> 01–04, the audit (#101) and that fix. No migrations and no new env vars since 0.5.0, but run
-> `release-prep` to confirm. Remove this note once it's released.
+- **Released v0.6.0** first thing (#110; run `38244098095`, `/healthz` 0.6.0 / `e62a035`), which
+  fixed the refused-reports bug on prod. The v0.6.0 milestone closed. Modules 05–10 moved to a
+  new **v0.6.x** milestone, to ship as a PATCH.
+- **Merged:** #111 conditionals (#72), #112 loops (#73), #113 arguments and input (#74), #114
+  functions (#75), #115 robust scripts (#76), #117 scheduling with cron (#77). That completes
+  Unit 1.2, and its badge was earned in the browser.
+- **Released v0.6.1** (#118; run `38251659082`, `/healthz` 0.6.1 / `72d6e90`). Budget Buddy
+  stayed green, and no migrations ran.
+- **Every module was checked against the real thing:**
+  - the solution, the starting script and the Try it in `ubuntu:24.04` (bash 5.2, GNU tar 1.35,
+    cron 3.0pl1-184ubuntu2);
+  - a Playwright solve as `verify-bot`;
+  - every "On the real station" claim against the file it names.
+- **What that checking changed:**
+  - **Console:** `tar` that can't write its archive now prints GNU's `Cannot open:` (and the
+    `tar (child):` lines with `-z`), and nothing else (#115). GNU's timing-dependent `Wrote
+    only 4096 of 10240 bytes` is left out on purpose.
+  - **Ubuntu 24.04's cron:** `crontab` validates no time fields, and jobs inherit the service's
+    PATH (`cron -P`). The lesson, its Try it and `docs/content-authoring.md` say so. The Try it
+    now saves the learner's own crontab and restores it.
+  - **Two drafted claims were wrong:** the healthz loop is the smoke test, and the dump check is
+    `gzip -t`.
+- **Decided this session:**
+  - Module 08 shares code between `deck-readings` and a new `co2-alarm`, not `o2-check` as the
+    issue said: the O2 sensor's format shares nothing with the CO2 logs.
+  - Module 05's starting script already counts in tenths, so the task stays about conditionals.
+  - `/tmp` is listed as mode 777 in module 09 (the schema takes no sticky bit), because
+    `files_under` needs it in the starting state.
+  - `test_no_console_task_needs_an_untaught_command` skips an exercise's own files run by full
+    path.
+- **Filed:** #116, the deploy's `pg_dump | gzip` has no `pipefail`, so a failed dump can pass
+  `gzip -t`. ⚠️ Today's pre-deploy dumps were about 2.8 KB: check one ends with `dump complete`.
+- **Process notes:**
+  - `check_criteria` failed once on a GitHub GraphQL 504. A rerun of the failed job passed.
+  - In a Docker `ubuntu` image, `truncate` makes sparse files (so `du` shows 16K), and the cron
+    daemon didn't fire a job reliably. Use `fallocate` for sizes, and `env -i` to show a job's
+    environment.
+- **Next:**
+  1. Open **v0.7.0 — Labs and AI** and file its issues (`docs/roadmap.md`).
+  2. #116 is small and protects every deploy, so consider it early.
+  3. Sean, on prod: Review loads (`0007`), and module 04's `Spare Parts.csv` solve is logged.
+  4. #103–#105 when Sean picks them. #105 still waits on a screenshot.
+
+### 2026-10-11 (evening) — Unit 1.2 modules 01–04, and the lesson audit
 
 - **Merged:** #100 module 01 reading and editing (#68), #102 module 02 finding things and disk
   space (#69), #106 the lesson audit (#101), #107 module 03 your first script (#70), #108 module
