@@ -150,7 +150,7 @@ jobs:
               "umask 022 && cat > ${APP_DIR}/.docker-compose.yml.new" < docker-compose.yml
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
               "cd ${APP_DIR} && sh -s -- '${EXPECTED}' '${VERSION}' release" < scripts/install_compose.sh
-      - name: Deploy over SSH
+      - name: Pin TAG and start the database
         run: |
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
               "set -e
@@ -160,17 +160,21 @@ jobs:
                grep -v '^TAG=' .env > .env.tmp
                printf 'TAG=%s\n' '${VERSION}' >> .env.tmp
                mv .env.tmp .env
-               set -a; . ./.env; set +a
                # A no-op when db is already up (install_compose.sh has refused any
                # compose change that would recreate it); on the very first deploy
                # it creates the database so there is something to back up.
-               docker compose up -d --wait db
-               # Backup first, verified, before anything changes.
-               mkdir -p backups
-               DUMP=\"backups/pre-deploy-\$(date +%Y%m%d-%H%M%S).sql.gz\"
-               docker compose exec -T db pg_dump -U \"\$DB_USER\" \"\$DB_NAME\" | gzip > \"\$DUMP\"
-               gzip -t \"\$DUMP\"
-               echo \"backup ok: \$DUMP (\$(stat -c%s \"\$DUMP\") bytes)\"
+               docker compose up -d --wait db"
+      # Backup first, verified, before anything changes. bash, not sh: the script
+      # needs pipefail, which Ubuntu 24.04's dash refuses (#116).
+      - name: Back up the database
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "cd ${APP_DIR} && bash -s -- pre-deploy" < scripts/backup_db.sh
+      - name: Migrate and swap the image
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "set -e
+               cd ${APP_DIR}
                # Expand-phase migrations from the NEW image, while the old one still serves.
                docker compose pull web
                docker compose run --rm --no-deps -T web alembic upgrade head

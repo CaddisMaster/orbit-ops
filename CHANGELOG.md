@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Fixed
+- The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
+  check only that the dump was valid gzip, and a failed `pg_dump` still leaves one, so a deploy
+  could migrate with no usable backup while its log said `backup ok`. The backup is now
+  `scripts/backup_db.sh`, run under bash with `pipefail`. It keeps a dump only if `pg_dump`
+  succeeded **and** the dump ends with its completion line. Otherwise the deploy stops before
+  migrating, and no file is kept. The RUNBOOK's manual dump before a `db` change gets the
+  same checks.
+
 ## [0.6.1] — 2026-10-12
 
 Bash scripting, finished: Unit 1.2's last six modules, from conditionals and loops to
