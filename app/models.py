@@ -156,12 +156,11 @@ class CardState(Base):
 
 class AiRequest(Base):
     """The AI spend ledger (#120): one row per model call that came back with a
-    bill. The monthly budget is summed from here (app/ai.py), never stored.
+    bill. The monthly budget is summed from here (app/spend.py), never stored.
 
     user_id is SET NULL, not CASCADE: money spent stays spent, so deleting a user
-    must not shrink the month's total. It's also NULL for calls with no learner,
-    such as scripts/draft_module.py. Cost is integer microcents (a millionth of a
-    cent), because a hint costs about 0.05 cents."""
+    must not shrink the month's total (hence nullable). Cost is integer
+    microcents (a millionth of a cent), because a hint costs about 0.05 cents."""
 
     __tablename__ = "ai_requests"
     __table_args__ = (
@@ -174,7 +173,7 @@ class AiRequest(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    purpose: Mapped[str] = mapped_column(String(32))  # "hint", "lab_review", "draft"
+    purpose: Mapped[str] = mapped_column(String(32))  # "hint", "lab_review"
     model: Mapped[str] = mapped_column(String(64))
     input_tokens: Mapped[int]
     output_tokens: Mapped[int]
