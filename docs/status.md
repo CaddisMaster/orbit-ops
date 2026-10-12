@@ -48,6 +48,17 @@ A per-session log, standing decisions and a release ledger. Newest first.
 - **The console's crontab refuses bad times; Ubuntu 24.04's doesn't** (#77). Kept on purpose
   (#66). Lessons mustn't claim a real crontab refuses them, or quote one PATH for cron jobs
   (`docs/content-authoring.md`).
+- **Labs run on the learner's own machine** (#121). The learner pastes the output and the server
+  checks the text; nothing runs server-side. Checks never depend on hashes, dates, names or git's
+  default branch, so there is no exact-match check. Unit 1.3 (Git) is the first unit built on
+  labs; the console never learns `git`. Like a console task, a lab doesn't gate completion.
+- **The app's API key pays for runtime AI only** (2026-10-12): hints (Haiku 5.5, #123) and lab
+  reviews (Sonnet 5.5, #122), behind one gate (`spend.run`, #120) with a $5/month cap. Lessons
+  are written in Claude Code sessions, never through the key; `draft_module.py` was dropped.
+- **A hint never sees the answer key, and its reply is checked anyway** (#123). A replaced hint
+  is free. Short quiz answers (`-a`, `/`, `3`) sometimes catch an innocent hint: accepted.
+- **Every module goes through the `content-reviewer` agent** before its Try it run and PR (#124).
+  For a lab it's the only #101 check.
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -64,6 +75,58 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-12 (afternoon) — v0.7.0 opened; its platform half built
+
+- **Opened v0.7.0 — Labs and AI** and filed #120–#132. #116 joined it, to go first. Sean chose:
+  Unit 1.3 Git as labs, the roadmap's model split, #116 first.
+- **Merged:**
+  - #134: the deploy's backup is a verified script (#116).
+  - #135 and #137: `0008 ai_requests` and the AI gate (#120). #136 was the same branch, closed by GitHub (see process notes).
+  - #138: labs (#121).
+  - #139 and #140: `0009` and Claude's lab review (#122).
+  - #141: hints (#123).
+  - #142: the content-reviewer agent (#124).
+- **Nothing released.** Production is still 0.6.1.
+- **Decided this session:**
+  - **No `draft_module.py`**, and so no Opus in the app. Sean questioned the cost, and the
+    sessions already write the lessons. #124 is now the reviewer agent alone, and the roadmap
+    says so.
+  - Labs don't gate completion. #121 assumed console tasks do, and they never did.
+  - Server-side refusal fallbacks were left off for the lab review. On Sonnet 5.5 they only retry
+    the `cyber` and `frontier_llm` categories, and they'd need the beta client around `parse()`.
+  - Hint XP: 5, once per item; a hint replaced by the guard is free.
+- **What checking against the real thing found:**
+  - **#116:**
+    - Ubuntu 24.04's dash refuses `set -o pipefail`.
+    - `docker compose exec -T` under `bash -s` swallowed the rest of the script, which then
+      exited **0** with no backup.
+    - pg_dump 16.15 puts `\unrestrict` after its completion line.
+  - **#122:** the SDK sends a Pydantic class's docstring to the model as the schema. Found with
+    the real SDK against `httpx2.MockTransport`.
+  - **#121 and #124:** YAML bit twice, so docs that teach YAML are now parsed by tests.
+    - An unquoted `?` in a doc example didn't load.
+    - The agent's `description` was cut off at ` #101`.
+  - **#124:** git isn't in `ubuntu:24.04`; a first commit needs an identity; `git log` in a
+    terminal shows `(HEAD -> master)`. All noted on #125.
+- **Process notes:**
+  - ⚠️ **A stacked PR is closed when its base branch is deleted.** Merging #135 with
+    `--delete-branch` closed #136 for good, and it can't be reopened or retargeted. Point a
+    feature PR at `main` from the start, even while its migration PR is open. #140 did, and it
+    worked.
+  - Playwright screenshots log CSP errors (a caret-hiding `<style>`). In gotchas.
+  - A new `.claude/agents/*.md` isn't an agent type until the next session, so #124's
+    hand-verification ran a general-purpose agent that read and followed the file.
+  - No Anthropic key on the VM, so no live API call yet. The droplet needs `ANTHROPIC_API_KEY`
+    in `.env` (RUNBOOK §3) before the release.
+- **Next:**
+  1. The Git modules, #125 → #132. Read #125's comment first, and run each through the
+     content-reviewer. Module 08 (#132) is the first `ai_review` lab.
+  2. Release v0.7.0 when Sean says, after the key is on the droplet. Migrations `0008` and
+     `0009` are expand-only.
+  3. Sean, on prod (still open): Review loads (`0007`), and check that a pre-deploy dump ends with
+     `dump complete`.
+  4. #103–#105 when Sean picks them.
 
 ### 2026-10-12 — v0.6.0 and v0.6.1 shipped; Unit 1.2 complete
 
