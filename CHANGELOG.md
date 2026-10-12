@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- A database table for AI spend: one row per model call, with its purpose, model, tokens and
+  cost. The monthly AI budget will be summed from it. Spend outlives a deleted user, so the
+  month's total can't shrink (#120).
+
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
   check only that the dump was valid gzip, and a failed `pg_dump` still leaves one, so a deploy
