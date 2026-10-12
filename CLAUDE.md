@@ -86,7 +86,7 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.5.0** is in production; the next milestone is **v0.6.0 — Bash scripting**.
+See `docs/status.md`. **v0.6.1** is in production; the next milestone is **v0.7.0 — Labs and AI**.
 
 ## Maintainer notes (local only)
 
