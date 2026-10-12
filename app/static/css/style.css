@@ -319,6 +319,8 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .readout strong { color: var(--accent); font-weight: 600; }
 .readout a { color: inherit; text-decoration: none; }
 .readout a:hover strong, .readout a:focus-visible strong { text-decoration: underline; }
+/* AI offline (#120): no key, or the month's budget spent. Dimmed, not alarming. */
+.readout .uplink.is-offline strong { color: var(--muted); font-weight: 400; }
 
 /* Transmission briefings (static/js/briefing.js types them out). */
 .transmission { border-left: 2px solid var(--accent); padding-left: 0.9rem; }
