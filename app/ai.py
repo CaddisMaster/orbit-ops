@@ -6,22 +6,25 @@ The ledger and the monthly budget are app/spend.py, and every call goes through
 `spend.run()`, which checks the budget first (non-negotiable #7).
 
 Each feature adds its own `_call_*_model()` seam here (hints #123, lab review
-#122, drafting #124), so a test monkeypatches one function per feature. A
+#122), so a test monkeypatches one function per feature. A
 missing key, a missing package or any API error becomes `AIUnavailable`, and the
 page says "offline" rather than erroring (non-negotiable #2).
+
+Only the running app calls the API, for what has to happen while a learner
+studies with no Claude Code session open. Lessons are written in those sessions,
+never through this key (#124 dropped `draft_module.py`, 2026-10-12).
 """
 
 import math
 from dataclasses import dataclass
 from typing import Literal
 
-Purpose = Literal["hint", "lab_review", "draft"]
+Purpose = Literal["hint", "lab_review"]
 
 # One model per purpose (Sean, 2026-10-12): cheapest where it's called most.
 MODELS: dict[str, str] = {
     "hint": "claude-haiku-5-5",
     "lab_review": "claude-sonnet-5-5",
-    "draft": "claude-opus-5-5",
 }
 
 
@@ -43,6 +46,7 @@ class Price:
 PRICES: dict[str, Price] = {
     "claude-haiku-5-5": Price(input=0.10, output=0.50, cache_read=0.01),
     "claude-sonnet-5-5": Price(input=2.00, output=10.00, cache_read=0.20),
+    # No purpose uses Opus. It's here as the price an unknown model is charged at.
     "claude-opus-5-5": Price(input=4.00, output=20.00, cache_read=0.20),
 }
 _HAIKU_LONG = Price(input=0.50, output=2.50, cache_read=0.05)
@@ -98,14 +102,14 @@ def cost_microcents(model: str, usage: Usage) -> int:
     return math.ceil(round(dollars_per_mtok_tokens * _MICROCENTS_PER_DOLLAR_PER_MTOK, 6))
 
 
-def client(api_key: str, timeout: float = 30.0):
+def client(api_key: str):
     """An Anthropic client, or AIUnavailable("no_key"). Imported here so a broken
-    or missing package costs the AI features, never the app's startup. The
-    default timeout suits a learner waiting on a page; the drafting CLI passes more."""
+    or missing package costs the AI features, never the app's startup."""
     if not api_key:
         raise AIUnavailable("no_key")
     try:
         import anthropic
     except ImportError as exc:  # pragma: no cover - it's pinned in requirements.txt
         raise AIUnavailable("error") from exc
-    return anthropic.Anthropic(api_key=api_key, timeout=timeout, max_retries=1)
+    # A learner is waiting on the page: fail in seconds, not the SDK's 10 minutes.
+    return anthropic.Anthropic(api_key=api_key, timeout=30.0, max_retries=1)

@@ -101,8 +101,9 @@ def test_usage_reads_the_sdk_shape_with_empty_cache_fields():
 
 
 def test_every_purpose_has_a_priced_model():
-    assert set(ai.MODELS) == {"hint", "lab_review", "draft"}
+    assert set(ai.MODELS) == {"hint", "lab_review"}
     assert all(model in ai.PRICES for model in ai.MODELS.values())
+    assert "claude-opus-5-5" not in ai.MODELS.values()  # lessons are written in sessions, not through this key (#124)
 
 
 # --- the ledger and the budget --------------------------------------------------------

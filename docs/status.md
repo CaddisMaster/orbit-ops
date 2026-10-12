@@ -7,7 +7,8 @@ A per-session log, standing decisions and a release ledger. Newest first.
 - **Stack:** FastAPI + Jinja/htmx + SQLAlchemy 2.0 + Alembic (chosen 2026-10-08 to learn a new
   backend while keeping the server-rendered frontend). Sync routes first; async is a later lesson.
 - **One uvicorn process**, no Redis, no scheduler container — RAM on the shared droplet.
-- **Content in git**, AI for hints / lab review / drafting (the "hybrid" option).
+- **Content in git**, written with Claude in sessions. The app's own API key pays only for
+  hints and lab review; no `draft_module.py` (dropped 2026-10-12, #124).
 - **Single user**, but every learner-state query is user-scoped.
 - **Desktop only** (Mac/Windows browsers, 1280×720 and up), decided 2026-10-09 for the desk
   (#38). No phone layouts or phone criteria in new work.
