@@ -7,6 +7,8 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Added
+- A place on each exercise attempt for Claude's review of a passed lab: its score, strengths
+  and issues. Empty for everything else (#122).
 - A database table for AI spend: one row per model call, with its purpose, model, tokens and
   cost. The monthly AI budget will be summed from it. Spend outlives a deleted user, so the
   month's total can't shrink (#120).

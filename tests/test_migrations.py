@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
-from app.models import ActivityDay, AiRequest, BadgeEarned, CardState, XpEvent
+from app.models import ActivityDay, AiRequest, BadgeEarned, CardState, ExerciseAttempt, XpEvent
 
 ROLE = "orbit_app"
 
@@ -158,3 +158,18 @@ def test_a_negative_bill_is_refused(make_user, column, value):
         db.add(_ai_request(user.id, **{column: value}))
         with pytest.raises(IntegrityError):
             db.commit()
+
+
+def test_an_attempt_has_no_review_until_one_is_written(make_user):
+    """0009: existing and new rows are NULL; a lab's review is a JSON object (#122)."""
+    user = make_user()
+    with SessionLocal() as db:
+        plain = ExerciseAttempt(user_id=user.id, module_slug="m", kind="quiz", item=0, submitted=["1"], correct=True)
+        reviewed = ExerciseAttempt(
+            user_id=user.id, module_slug="m", kind="lab", item=0, submitted={"boxes": []}, correct=True,
+            review={"score": 80, "strengths": ["Clear subjects."], "issues": []},
+        )
+        db.add_all([plain, reviewed])
+        db.commit()
+        assert db.scalar(text("SELECT review IS NULL FROM exercise_attempts WHERE id = :i"), {"i": plain.id})
+        assert db.scalar(text("SELECT review->>'score' FROM exercise_attempts WHERE id = :i"), {"i": reviewed.id}) == "80"

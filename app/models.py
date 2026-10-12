@@ -71,10 +71,13 @@ class ExerciseAttempt(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     module_slug: Mapped[str] = mapped_column(String(64))
-    kind: Mapped[str] = mapped_column(String(16))  # "quiz" now; "challenge", "lab" later
+    kind: Mapped[str] = mapped_column(String(16))  # "quiz", "terminal", "challenge", "lab"
     item: Mapped[int]  # question index within the module's quiz
     submitted: Mapped[list] = mapped_column(JSONB)
     correct: Mapped[bool]
+    # Claude's review of a passed lab (#122): {score, strengths, issues}. NULL for
+    # everything else, and for a lab whose review never ran or was unavailable.
+    review: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
