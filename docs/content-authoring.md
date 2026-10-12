@@ -455,6 +455,20 @@ Raw HTML in lessons is **disabled**: it renders as literal text. Use Markdown.
 
 Formatting inside a code block is literal, so `*word*` in a ```text diagram shows the asterisks.
 
+### Hints (nothing to write)
+
+Every unanswered question, console task, challenge and unpassed lab gets a **Hint** button
+(#123). Claude writes the hint from what the learner can see. So the lesson is what makes a good
+hint possible: if the idea a task needs isn't in the lesson's prose (the #101 rule), the hint
+can't point at it.
+
+- The model never gets a quiz `answer` or `explain`, a console `solution` or `checks`, a
+  challenge's check code or `solution`, or a lab's `example`. A challenge's check `says` and a
+  lab check's `says` *are* sent: the learner sees them after a submit anyway.
+- A reply containing the answer is replaced by a pointer back to the lesson. For a question,
+  "the answer" is a fill-in spelling or the right option's text, however short. So a right
+  option of `3` or `/` will sometimes catch an innocent hint. That's the safe side to err on.
+
 ## Writing guidelines
 
 - **15–20 minutes, all in.** About 500–900 words of lesson, a quiz of 3–5 questions, and a

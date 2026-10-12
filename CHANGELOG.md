@@ -31,6 +31,11 @@ and why it matters, not what the diff says.
   It runs on Sonnet 5.5 through the AI budget gate. With no key or no budget left, the lab still
   passes and the review can be asked for later. The checks always decide pass or fail; the
   review never does.
+- Hints (#123): stuck on a quiz question, the console, a challenge or a lab, ask for a hint.
+  Haiku 5.5 sees the lesson, the task and what you've tried, never the answer key. A reply that
+  gives the answer away anyway is replaced with a pointer back to the lesson, free. A hint
+  costs 5 XP once per task, however many you ask for, and each task allows one a minute. With
+  no key or budget, the buttons say "Hints are offline".
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to

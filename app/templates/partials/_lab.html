@@ -44,6 +44,9 @@
     {% elif lab_state.verdict %}<p class="muted">Not yet: fix what's marked ✗ and check again.</p>
     {% endif %}
   </div>
+  {% if not lab_state.passed %}
+  {% with item = "lab", include = "#lab .lab-paste", outcome = none %}{% include "partials/_hint.html" %}{% endwith %}
+  {% endif %}
   {% if lab.ai_review and lab_state.passed %}
   {% with review = lab_state.review, pending = just_passed and not lab_state.review, unavailable = none, xp_gained = 0 %}{% include "partials/_lab_review.html" %}{% endwith %}
   {% endif %}

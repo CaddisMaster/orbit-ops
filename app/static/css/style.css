@@ -488,6 +488,15 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .lab-status { min-height: 1.6em; margin: 0.6rem 0 0; }
 .lab-passed { color: var(--ok); font-weight: 700; }
 .lab-error { color: var(--danger); }
+/* Hints (#123): a button under each task, and the last hint asked for. */
+.hint-box { margin-top: 0.6rem; }
+.hint-ask { font-size: 0.85rem; }
+.hint-ask[disabled] { color: var(--muted); cursor: not-allowed; text-decoration: none; }
+.hint-price { color: var(--muted); }
+.hint-text { margin: 0 0 0.35rem; padding: 0.5rem 0.75rem; border-left: 3px solid var(--accent); background: rgb(255 255 255 / 0.03); }
+.hint-text.is-pointer { border-left-color: var(--muted); }
+.hint-label { color: var(--accent); font: 600 0.75rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 0.35rem; }
+.hint-cost { color: var(--muted); font: 0.8rem var(--mono); }
 /* Claude's review of a passed lab (#122). */
 .lab-review { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
 .lab-review .eyebrow { margin-bottom: 0.25rem; }
