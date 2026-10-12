@@ -25,6 +25,12 @@ and why it matters, not what the diff says.
   Work*, is earned for passing a first lab. Like a console task, a lab doesn't decide whether a
   module is complete: the quiz still does. No real module has a lab yet: Unit 1.3's will be the
   first.
+- Claude reviews a passed lab (#122), for labs whose author asks for it with a rubric. Once the
+  checks pass, the review loads by itself without delaying the pass: a score out of 100, up to
+  three things done well and three to do differently. It earns a bonus of up to 20 XP, once.
+  It runs on Sonnet 5.5 through the AI budget gate. With no key or no budget left, the lab still
+  passes and the review can be asked for later. The checks always decide pass or fail; the
+  review never does.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
