@@ -50,7 +50,7 @@ app/terminal.py      terminal exercises: grade the posted filesystem; static/js/
 app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
 app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review)
-alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0008 ai_requests)
+alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0009 attempt review)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
 scripts/             create_user.py, install_compose.sh + backup_db.sh (deploy), check_criteria.py (CI), fetch_pyodide.py (image)
