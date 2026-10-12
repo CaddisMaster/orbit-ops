@@ -130,6 +130,14 @@ NEEDS = {
         ">&2 sends an error to stderr": "Error messages go to stderr with `>&2`",
         "VAR=x cmd sets a variable for one run": "**for a single run**",
     },
+    "loops": {
+        "for runs once per word": "runs the same commands once for each word in a list",
+        "a glob gives one word per file, spaces and all": "**one word per file, spaces and all**",
+        "quote the loop variable every time": "**quote it every time**",
+        "${f##*/} drops the directory": "everything up to the last `/`",
+        "${f%.log} drops the extension": "`%` removes a match from the end",
+        "continue carries on with the next one": "**carries on with the next one**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
