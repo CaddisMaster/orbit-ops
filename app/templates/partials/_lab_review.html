@@ -1,0 +1,31 @@
+{# Claude's review of a passed lab (#122), inside the lab section. One of:
+   - the review: score, strengths and issues. Model text, so it's only ever
+     rendered escaped (never |md or |safe);
+   - `pending`: just passed, so the review loads itself (hx-trigger="load") and
+     the pass never waits on the model;
+   - `unavailable`: why not ("no_key", "over_budget" or "error"), with a retry;
+   - neither: passed earlier with no review yet, so offer one.
+   The POST carries the CSRF token from <body hx-headers>. #}
+{% set review_url = "/modules/" ~ module.slug ~ "/lab/review" %}
+<div class="lab-review" id="lab-review"{% if pending %} hx-post="{{ review_url }}" hx-trigger="load" hx-swap="outerHTML"{% endif %}>
+  {% if review %}
+    <p class="eyebrow">Review · Claude</p>
+    <p class="lab-review-score"><strong>{{ review.score }}</strong>/100{% if xp_gained %} <span class="xp-gain">+{{ xp_gained }} XP</span>{% endif %}</p>
+    {% if review.strengths %}
+    <h3 class="lab-review-head">What worked</h3>
+    <ul class="lab-review-list is-strengths">{% for s in review.strengths %}<li>{{ s }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if review.issues %}
+    <h3 class="lab-review-head">Next time</h3>
+    <ul class="lab-review-list is-issues">{% for s in review.issues %}<li>{{ s }}</li>{% endfor %}</ul>
+    {% endif %}
+  {% elif pending %}
+    <p class="muted lab-review-wait" role="status">Reviewing your work against the rubric…</p>
+  {% else %}
+    {% if unavailable %}
+    <p class="muted" role="status">The review is unavailable right now ({{ {"no_key": "the uplink is offline", "over_budget": "this month's AI budget is spent", "error": "the reviewer didn't answer"}[unavailable] }}). Your lab still passed.</p>
+    {% endif %}
+    <button type="button" class="secondary" hx-post="{{ review_url }}" hx-target="#lab-review" hx-swap="outerHTML">
+      {{ "Try the review again" if unavailable else "Ask Claude for a review" }}</button>
+  {% endif %}
+</div>

@@ -8,14 +8,19 @@ for a learning app: faking a paste is more work than doing the lab.
 
 Checks are written so that a real run on any machine passes: they never compare
 hashes, dates or names that differ between machines (docs/content-authoring.md).
+
+A lab with `ai_review` also gets Claude's review once it passes (#122): feedback
+against the author's rubric and a bonus of up to REVIEW_XP_MAX, never the verdict.
 """
 
+import logging
 import re
 from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import ai, spend
 from app.content import Module
 from app.content.schema import (
     MAX_PASTE,
@@ -26,9 +31,13 @@ from app.content.schema import (
     NotContainsLabCheck,
     RegexLabCheck,
 )
+from app.game import xp
 from app.models import ExerciseAttempt
 
+log = logging.getLogger("orbit.ai")
+
 XP = 40  # for a module's lab, the first time it passes (docs/roadmap.md §4)
+REVIEW_XP_MAX = 20  # Claude's review adds up to this, once (#122)
 
 
 def normalise(paste: str) -> str:
@@ -104,6 +113,7 @@ class LabState:
     pastes: tuple[str, ...]
     verdict: Verdict | None
     passed: bool  # ever, not just the last attempt
+    review: dict | None = None  # Claude's review, once one has been written (#122)
 
 
 def state(db: Session, user_id: int, module: Module) -> LabState:
@@ -120,4 +130,75 @@ def state(db: Session, user_id: int, module: Module) -> LabState:
     pastes = list(last.submitted["boxes"])[: len(module.lab.boxes)]
     pastes += [""] * (len(module.lab.boxes) - len(pastes))
     # Regraded, not read back: if the module's checks changed since, the page shows today's verdict.
-    return LabState(pastes=tuple(pastes), verdict=grade(module.lab, pastes), passed=any(a.correct for a in attempts))
+    return LabState(
+        pastes=tuple(pastes),
+        verdict=grade(module.lab, pastes),
+        passed=any(a.correct for a in attempts),
+        review=next((a.review for a in reversed(attempts) if a.review), None),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Claude's review of a passed lab (#122)
+# ---------------------------------------------------------------------------
+
+
+def review_xp(score: int) -> int:
+    """round(score / 5): 100 earns REVIEW_XP_MAX, 80 earns 16."""
+    return min(REVIEW_XP_MAX, round(score / 5))
+
+
+@dataclass(frozen=True)
+class ReviewOutcome:
+    review: dict | None  # the stored review, new or from before
+    unavailable: str | None = None  # AIUnavailable's reason: "no_key", "over_budget" or "error"
+    xp_gained: int = 0
+
+
+def review(db: Session, user_id: int, module: Module) -> ReviewOutcome:
+    """Review this learner's passed lab, once. The latest passing attempt is locked
+    for the call, so a double request waits, then finds the review written: one
+    model call, one bonus. The caller commits."""
+    target = db.scalar(
+        select(ExerciseAttempt)
+        .where(
+            ExerciseAttempt.user_id == user_id,
+            ExerciseAttempt.module_slug == module.slug,
+            ExerciseAttempt.kind == "lab",
+            ExerciseAttempt.correct,
+        )
+        .order_by(ExerciseAttempt.id.desc())
+        .limit(1)
+        .with_for_update()
+    )
+    if target is None:
+        return ReviewOutcome(review=None)
+    done = db.scalar(
+        select(ExerciseAttempt.review)
+        .where(
+            ExerciseAttempt.user_id == user_id,
+            ExerciseAttempt.module_slug == module.slug,
+            ExerciseAttempt.kind == "lab",
+            ExerciseAttempt.review.is_not(None),
+        )
+        .limit(1)
+    )
+    if done is not None:
+        return ReviewOutcome(review=done)
+
+    pastes = list(target.submitted["boxes"])
+    boxes = [(box.prompt, paste) for box, paste in zip(module.lab.boxes, pastes, strict=False)]
+    prompt = ai.lab_review_prompt(module.lab.task, boxes, list(module.lab.rubric))
+    try:
+        response = spend.run(user_id, "lab_review", lambda client, model: ai._call_lab_review_model(client, model, prompt=prompt))
+    except ai.AIUnavailable as exc:
+        return ReviewOutcome(review=None, unavailable=exc.reason)
+    if response.stop_reason == "refusal" or response.parsed_output is None:
+        # Billed and recorded by spend.run, but nothing to show: say unavailable, never why.
+        log.warning("AI lab_review of %s ended with %s", module.slug, response.stop_reason)
+        return ReviewOutcome(review=None, unavailable="error")
+
+    target.review = ai.clean_review(response.parsed_output)
+    bonus = review_xp(target.review["score"])
+    gained = xp.award(db, user_id, xp.Award(bonus, "lab_review", module.slug)) if bonus else 0
+    return ReviewOutcome(review=target.review, xp_gained=gained)

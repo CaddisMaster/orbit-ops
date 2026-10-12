@@ -544,6 +544,19 @@ class Lab(_Strict):
     setup: Text | None = None  # a shell snippet that builds a known starting point, shown to copy
     boxes: Annotated[list[LabBox], Field(min_length=1, max_length=4)]
     success: Text = "Okafor's voice crackles over the comm: \"Logged. Good work, cadet.\""
+    # Claude reviews a passed lab against the rubric (#122): feedback and a bonus,
+    # never the verdict, which stays the checks'. Each rubric line is one thing
+    # good work does ("Each subject says what the commit does, in the imperative").
+    ai_review: bool = False
+    rubric: Annotated[list[Text], Field(max_length=8)] = []
+
+    @model_validator(mode="after")
+    def _review_has_a_rubric(self):
+        if self.ai_review and not self.rubric:
+            raise ValueError("ai_review needs a rubric: what good work looks like, a line per point")
+        if self.rubric and not self.ai_review:
+            raise ValueError("rubric is only read when ai_review is true")
+        return self
 
 
 class ModuleFile(_Strict):

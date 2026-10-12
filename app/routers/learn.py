@@ -235,13 +235,42 @@ def lab_report(
             arrivals = comms.beat(catalog, module, "lab_done", new=True)
             window_event = module.comms.window.get("lab_done")
     db.commit()
-    state = lab.LabState(pastes=tuple(pastes) + ("",) * (len(module.lab.boxes) - len(pastes)), verdict=verdict, passed=verdict.passed or already)
+    state = lab.LabState(
+        pastes=tuple(pastes) + ("",) * (len(module.lab.boxes) - len(pastes)),
+        verdict=verdict,
+        passed=verdict.passed or already,
+        review=lab.state(db, user.id, module).review if already else None,
+    )
     return templates.TemplateResponse(
         request, "partials/_lab.html",
         {
             **context, "lab_state": state, "just_passed": first_pass,
             "xp_gained": xp_gained, "new_badges": new_badges, "arrivals": arrivals, "window_event": window_event,
         },
+    )
+
+
+@router.post("/modules/{slug}/lab/review", response_class=HTMLResponse)
+def lab_review(
+    slug: str,
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    """Claude's review of a passed lab (#122), asked for by the lab section after a
+    first pass (or by its button). Runs once per lab; later calls show the stored
+    review. Without a key or budget, says so and the lab stays passed."""
+    module = _module_or_404(catalog, slug)
+    if module.lab is None or not module.lab.ai_review:
+        raise HTTPException(status_code=404)
+    outcome = lab.review(db, user.id, module)
+    db.commit()
+    if outcome.review is None and outcome.unavailable is None:
+        raise HTTPException(status_code=404)  # no passing attempt to review
+    return templates.TemplateResponse(
+        request, "partials/_lab_review.html",
+        {"module": module, "review": outcome.review, "unavailable": outcome.unavailable, "xp_gained": outcome.xp_gained, "pending": False},
     )
 
 

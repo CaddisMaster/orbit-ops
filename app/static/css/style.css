@@ -488,6 +488,15 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .lab-status { min-height: 1.6em; margin: 0.6rem 0 0; }
 .lab-passed { color: var(--ok); font-weight: 700; }
 .lab-error { color: var(--danger); }
+/* Claude's review of a passed lab (#122). */
+.lab-review { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.lab-review .eyebrow { margin-bottom: 0.25rem; }
+.lab-review-score { margin: 0 0 0.5rem; font: 1rem/1.4 var(--mono); }
+.lab-review-score strong { color: var(--accent); font-size: 1.4rem; }
+.lab-review-head { margin: 0.75rem 0 0.3rem; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.lab-review-list { margin: 0; padding-left: 1.2rem; }
+.lab-review-list li { margin: 0 0 0.3rem; }
+.lab-review-wait::before { content: "▸ "; color: var(--accent); }
 
 /* --- Flashcard review (#51) ------------------------------------------------------ */
 .review-card { max-width: 640px; margin-left: auto; margin-right: auto; }

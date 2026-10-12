@@ -186,6 +186,25 @@ lab:
   `: ` in unquoted text (`hint: Did it happen?}` is a YAML error), the same trap as comms `text`.
 - `comms.lab_done` (below) is the crew's reply to the first pass.
 
+**Claude's review (optional, #122).** For work a check can't judge (are the commit messages any
+good, is the Dockerfile sensible?), add a rubric and Claude reviews the lab once it passes:
+
+```yaml
+lab:
+  ai_review: true
+  rubric:                  # 1–8 lines, each one thing good work does; required with ai_review
+    - Each commit subject says what the change does, in the imperative.
+    - The body says why, not what the diff already shows.
+  boxes: …
+```
+
+- The checks still decide pass or fail. The review is feedback and a bonus of `round(score/5)`
+  XP, at most 20, once per lab. It runs on Sonnet 5.5 through the app's budget-checked key, so
+  without a key or budget the lab passes and the review waits ("Ask Claude for a review").
+- Write the rubric as what good looks like, not as a checklist the checks already cover. The
+  model is told to judge only the rubric.
+- Keep it to labs whose work has a quality to judge. Most labs don't need one.
+
 ### Flashcards
 
 In the story, review is **MERIDIAN's watch drill** (#82). MERIDIAN's readout heads it, and when
