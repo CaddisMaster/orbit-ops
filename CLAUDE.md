@@ -89,7 +89,8 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.6.1** is in production; the next milestone is **v0.7.0 — Labs and AI**.
+See `docs/status.md`. **v0.6.1** is in production. **v0.7.0 — Labs and AI** is open: its platform
+(labs, the AI gate, lab review, hints, the content reviewer) is merged, and Unit 1.3 Git is next.
 
 ## Maintainer notes (local only)
 
