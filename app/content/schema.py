@@ -474,6 +474,78 @@ class Challenge(_Strict):
     solution: Text
 
 
+# ---------------------------------------------------------------------------
+# Labs (#121): work done on the learner's own machine (real git, later Docker
+# and a cluster), never on the server. The learner pastes what it printed and
+# the server checks the text. Checks never compare hashes, dates or names that
+# differ between machines, which is why there is no exact-match check.
+# ---------------------------------------------------------------------------
+MAX_PASTE = 20_000  # characters per box; app/lab.py refuses more without recording
+
+
+class _LabCheck(_Strict):
+    says: Text  # what it checks, in words: listed after a submit, passed or not
+    hint: Text | None = None  # shown when it fails: "did the merge fast-forward?"
+
+
+class ContainsLabCheck(_LabCheck):
+    contains: Text  # this text appears somewhere (case-sensitive)
+
+
+class NotContainsLabCheck(_LabCheck):
+    not_contains: Text  # this text appears nowhere
+
+
+class RegexLabCheck(_LabCheck):
+    regex: Text  # Python `re`, MULTILINE: ^ and $ match at each line
+
+    @model_validator(mode="after")
+    def _compiles(self):
+        try:
+            re.compile(self.regex, re.MULTILINE)
+        except re.error as exc:
+            raise ValueError(f"regex {self.regex!r} does not compile: {exc}") from exc
+        return self
+
+
+class LineCount(_Strict):
+    min: Annotated[int, Field(ge=0)] | None = None
+    max: Annotated[int, Field(ge=1)] | None = None
+
+    @model_validator(mode="after")
+    def _a_bound(self):
+        if self.min is None and self.max is None:
+            raise ValueError("lines needs min, max or both")
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("lines: min is more than max")
+        return self
+
+
+class LinesLabCheck(_LabCheck):
+    lines: LineCount  # how many non-blank lines the paste has
+
+
+LabCheck = ContainsLabCheck | NotContainsLabCheck | RegexLabCheck | LinesLabCheck
+
+
+class LabBox(_Strict):
+    prompt: Text  # what to paste (Markdown): "The output of `git log --oneline`"
+    checks: Annotated[list[LabCheck], Field(min_length=1, max_length=10)]
+    # A paste that passes every check, from a real run. CI holds it to the checks
+    # (tests/test_lab.py); it's never sent to the browser, like quiz answers.
+    example: Annotated[str, Field(min_length=1, max_length=MAX_PASTE)]
+
+
+class Lab(_Strict):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    from_: Slug | None = Field(default=None, alias="from")  # the cast member asking
+    task: Text  # what to do, on your own machine (Markdown)
+    setup: Text | None = None  # a shell snippet that builds a known starting point, shown to copy
+    boxes: Annotated[list[LabBox], Field(min_length=1, max_length=4)]
+    success: Text = "Okafor's voice crackles over the comm: \"Logged. Good work, cadet.\""
+
+
 class ModuleFile(_Strict):
     """A module's YAML front matter. The slug and the position in its unit come
     from the filename (`NN-slug.md`), not from here, so they cannot disagree."""
@@ -487,6 +559,7 @@ class ModuleFile(_Strict):
     terminal: TerminalExercise | None = None  # a station-console task (#17)
     comms: Comms | None = None  # messages in the comms log (#38)
     challenge: Challenge | None = None  # a bonus Python challenge (#54)
+    lab: Lab | None = None  # work on your own machine, checked by what you paste (#121)
 
     @model_validator(mode="after")
     def _challenge_inputs_are_console_files(self) -> ModuleFile:
@@ -549,7 +622,11 @@ class FirstPerfectQuizRule(_Strict):
     first_perfect_quiz: Literal[True]  # any module completed with a 100% quiz
 
 
-BadgeRule = UnitCompleteRule | StreakRule | FirstPerfectQuizRule
+class LabsCompletedRule(_Strict):
+    labs_completed: Annotated[int, Field(ge=1)]  # this many modules' labs passed (#121)
+
+
+BadgeRule = UnitCompleteRule | StreakRule | FirstPerfectQuizRule | LabsCompletedRule
 
 # The inline-SVG emblems in templates/partials/_emblem.html.
 Emblem = Literal["life-support", "fabrication", "fleet", "shields", "flame", "star"]
@@ -585,16 +662,18 @@ class Message(_Strict):
     text: Text  # inline Markdown
 
 
-Beat = Literal["open", "console_done", "complete"]
+Beat = Literal["open", "console_done", "lab_done", "complete"]
 
 
 class Comms(_Strict):
     """What a module's messages are and when they arrive: `open` when the
     module is first opened (the briefing), `console_done` when its console task
-    passes, `complete` when it's completed (the debrief)."""
+    passes, `lab_done` when its lab passes (#121), `complete` when it's
+    completed (the debrief)."""
 
     open: list[Message] = []
     console_done: list[Message] = []
+    lab_done: list[Message] = []
     complete: list[Message] = []
     window: dict[Beat, WindowEvent] = {}  # a window event that plays at a beat
 

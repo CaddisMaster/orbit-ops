@@ -48,6 +48,7 @@ app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their le
 app/station_map.py   the /map layout (pure); app/console.py: header readout + comms log (app/comms.py)
 app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js is the simulated shell
 app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
+app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review)
 alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0008 ai_requests)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md

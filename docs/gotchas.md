@@ -65,6 +65,10 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   `scripts/fetch_pyodide.py`, `docker compose build web`.
 - **Playwright's `waitForFunction` evaluates a string**, which the CSP blocks (`'unsafe-eval'`)
   on our pages. Wait on a selector instead (`waitForSelector(…, { state: 'detached' })`).
+- **Playwright's screenshots log CSP errors that aren't ours.** To hide the caret it injects a
+  `<style>`, which `style-src 'self'` blocks: one "Applying inline style violates…" error per
+  screenshot, with the empty string's hash (`sha256-47DEQpj8…`). Count console errors in a run
+  that takes no screenshots before blaming the app (#121).
 
 ## Deploy scripts
 

@@ -471,6 +471,24 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .challenge-status { min-height: 1.6em; margin: 0.6rem 0 0; }
 .challenge-passed { color: var(--ok); font-weight: 700; }
 
+/* --- Labs (#121): done on your own machine, checked by the paste ------------------ */
+.lab { margin-top: 1.25rem; }
+.lab-label { display: flex; gap: 0.4rem; margin: 0.9rem 0 0.35rem; font-size: 0.9rem; }
+.lab-step { color: var(--accent); font-weight: 700; }
+.lab-prompt > :first-child { margin-top: 0; }
+.lab-prompt > :last-child { margin-bottom: 0; }
+.lab-setup { margin-bottom: 0.25rem; }
+.lab-paste { min-height: 8rem; }
+.lab-checks { list-style: none; margin: 0.5rem 0 0; padding: 0; font-size: 0.9rem; }
+.lab-checks li { margin: 0 0 0.3rem; }
+.lab-checks .is-right .mark { color: var(--ok); }
+.lab-checks .is-wrong .mark { color: var(--danger); }
+.lab-hint { color: var(--muted); }
+.lab-actions { margin-top: 0.75rem; }
+.lab-status { min-height: 1.6em; margin: 0.6rem 0 0; }
+.lab-passed { color: var(--ok); font-weight: 700; }
+.lab-error { color: var(--danger); }
+
 /* --- Flashcard review (#51) ------------------------------------------------------ */
 .review-card { max-width: 640px; margin-left: auto; margin-right: auto; }
 .review-front { font-size: 1.35rem; font-weight: 600; margin: 0.75rem 0 1.25rem; }
