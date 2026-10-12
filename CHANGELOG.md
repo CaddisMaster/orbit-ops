@@ -36,6 +36,12 @@ and why it matters, not what the diff says.
   complete` anyway, and left 2.1G of copies in `/tmp`. The learner clears up and hardens it, then
   runs it into the unwritable `/srv/backups` (it must stop with tar's status and leave nothing
   behind) and into a directory of their own (it must succeed).
+- Unit 1.2 module 10, "Scheduling with cron" (#77), the end of **Bash scripting**: the five
+  fields, `*`, ranges, lists and `*/N`, `crontab -e`/`-l`/`FILE`, cron's small environment
+  (a short PATH, `sh`, no `~/.bashrc`, no terminal), keeping a job's output with `>> log 2>&1`,
+  and running a job the way cron will with `env -i`. In the console, `shift-check` goes on every
+  15 minutes and `backup-logs` at 02:30. Both use full paths and their own logs, and each command
+  is run once by hand first. Finishing it completes Unit 1.2 and earns *Routine Automated*.
 
 ### Fixed
 - When `tar` couldn't write its archive, the console said `tar: FILE: Permission denied`. Now

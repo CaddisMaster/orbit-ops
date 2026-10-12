@@ -275,7 +275,11 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     does, and the console's own page wins within a section. `crontab -l -e -r` and `crontab FILE|-` keep the table at
     `/var/spool/cron/crontabs/<user>` (root's spool, mode 1730: `cat` can't read it, as on a
     real system, but a task's `contains` check can). It's checked as cron loads it (`bad
-    minute`, `bad day-of-week`, …) and refused if wrong. Nothing runs on a schedule.
+    minute`, `bad day-of-week`, …) and refused if wrong, as classic cron and cronie do. ⚠️
+    Ubuntu 24.04's `crontab` (3.0pl1-184ubuntu2) checks none of the time fields (`61`, even
+    `abc`, installs and never runs), and its jobs inherit the cron service's PATH (`cron -P`)
+    instead of `/usr/bin:/bin`, so a lesson mustn't say a real crontab refuses a bad time. Nothing
+    runs on a schedule.
   - disk (#67): `find PATH… [EXPR]` (`-name -iname -path -type f|d|l -size [+-]N[ckMG] -mtime
     -mmin -newer -empty -user`, `! -not -a -o ( )`, `-maxdepth -mindepth`, `-print -delete -exec
     cmd {} \;` and `+`; sorted output, never following links), `du (-s -h -a -c -d N
