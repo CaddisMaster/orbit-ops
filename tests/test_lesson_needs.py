@@ -119,6 +119,17 @@ NEEDS = {
         "$( ) puts a command's output in a variable": "runs the command and puts its output in its place",
         "$(( )) adds numbers, without $ inside": "variables don't need their `$`",
     },
+    "conditionals": {
+        "if runs on a command's exit status": "checks its exit status",
+        "[ ] needs spaces": "**needs spaces**",
+        "-f tests for a file, and ! turns a test around": "`!` turns any test around",
+        "-lt compares whole numbers": "`-lt` (less than)",
+        "decimals are compared in tenths": "count in tenths and compare those",
+        "the first true branch wins, so test the worst first": "test the most serious one first",
+        "exit N ends the script with that status": "**`exit N` ends the script with status N**",
+        ">&2 sends an error to stderr": "Error messages go to stderr with `>&2`",
+        "VAR=x cmd sets a variable for one run": "**for a single run**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

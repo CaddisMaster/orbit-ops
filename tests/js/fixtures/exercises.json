@@ -1,4 +1,164 @@
 {
+ "conditionals": {
+  "solution": [
+   "O2_SENSOR=/station/sensors/test/missing o2-check",
+   "cat /station/bin/o2-check",
+   "cat > /station/bin/o2-check <<'EOF'\n#!/usr/bin/env bash\n# The O2 check: is the air safe to breathe?\n# It reads the sensor that O2_SENSOR names, or the live one.\nsensor=${O2_SENSOR:-/station/sensors/o2}\n\nif [ ! -f \"$sensor\" ]; then\n  echo \"o2-check: no sensor at $sensor\" >&2\n  exit 2\nfi\n\n# The sensor says \"O2 19.2% (ring A …)\". Keep the number: 19.2\nreading=$(cut -d' ' -f2 \"$sensor\" | cut -d% -f1)\n\n# Bash compares whole numbers only, so count in tenths: 19.2 is 192.\nwhole=${reading%.*}\ntenth=${reading#*.}\ntenths=$((whole * 10 + tenth))\n\nif [ \"$tenths\" -lt 195 ]; then\n  echo \"ALERT O2 $reading%\"\n  exit 1\nelif [ \"$tenths\" -lt 205 ]; then\n  echo \"WARN O2 $reading%\"\nelse\n  echo \"OK O2 $reading%\"\nfi\nEOF",
+   "O2_SENSOR=/station/sensors/test/low o2-check >> ~/o2-test.log 2>&1; echo \"exit $?\" >> ~/o2-test.log",
+   "O2_SENSOR=/station/sensors/test/border o2-check >> ~/o2-test.log 2>&1; echo \"exit $?\" >> ~/o2-test.log",
+   "O2_SENSOR=/station/sensors/test/normal o2-check >> ~/o2-test.log 2>&1; echo \"exit $?\" >> ~/o2-test.log",
+   "O2_SENSOR=/station/sensors/test/missing o2-check >> ~/o2-test.log 2>&1; echo \"exit $?\" >> ~/o2-test.log",
+   "cat ~/o2-test.log"
+  ],
+  "source": "core/bash-scripting/05-conditionals.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/o2-test.log",
+     "text": "ALERT O2 19.2%\nexit 1"
+    },
+    {
+     "contains": "/home/cadet/o2-test.log",
+     "text": "WARN O2 19.5%\nexit 0"
+    },
+    {
+     "contains": "/home/cadet/o2-test.log",
+     "text": "OK O2 20.9%\nexit 0"
+    },
+    {
+     "contains": "/home/cadet/o2-test.log",
+     "text": "o2-check: no sensor at /station/sensors/test/missing\nexit 2"
+    },
+    {
+     "executable": "/station/bin/o2-check"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin/o2-check": {
+     "contents": "#!/usr/bin/env bash\n# The O2 check: is the air safe to breathe?\n# It reads the sensor that O2_SENSOR names, or the live one.\nsensor=${O2_SENSOR:-/station/sensors/o2}\n\n# The sensor says \"O2 19.2% (ring A …)\". Keep the number: 19.2\nreading=$(cut -d' ' -f2 \"$sensor\" | cut -d% -f1)\n\n# Bash compares whole numbers only, so count in tenths: 19.2 is 192.\nwhole=${reading%.*}\ntenth=${reading#*.}\ntenths=$((whole * 10 + tenth))\n\necho \"O2 $reading%\"\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/sensors": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/sensors/o2": {
+     "contents": "O2 20.4% (ring A 20.7 · ring B 20.1)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/station/sensors/test": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/sensors/test/border": {
+     "contents": "O2 19.5% (ring A 19.7 · ring B 19.3)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/station/sensors/test/low": {
+     "contents": "O2 19.2% (ring A 19.6 · ring B 18.8)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/station/sensors/test/normal": {
+     "contents": "O2 20.9% (ring A 21.0 · ring B 20.8)\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor reads the log twice. \"Four cases, four right answers. Now it can be trusted while we sleep.\"",
+   "user": "cadet"
+  }
+ },
  "environment-and-path": {
   "solution": [
    "type -a python3",
