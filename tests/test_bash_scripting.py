@@ -375,3 +375,74 @@ def test_module_05s_figures_match_the_console():
     assert f"{TESTS}/missing" not in client_spec(exercise)["fs"]
     # The script the learner starts from already counts in tenths, as the task says.
     assert "tenths=$((whole * 10 + tenth))" in _start(exercise)[O2_CHECK].contents
+
+
+# --- 06: Loops (#73) ------------------------------------------------------------------------
+SENSORS = "/var/log/sensors"
+READINGS = "/home/cadet/readings.txt"
+LIMIT = 5000
+
+
+def _deck_logs(exercise):
+    fs = client_spec(exercise)["fs"]
+    return {p.removeprefix(SENSORS + "/").removesuffix(".log"): n["contents"] for p, n in sorted(fs.items()) if p.startswith(SENSORS + "/")}
+
+
+def _deck_readings(start, *, quoted=True, over=lambda ppm: ppm > LIMIT, line=-1, skip_empty=True, trim=True):
+    """What a learner's deck-readings prints, run over the module's logs."""
+    exercise = _module("loops").terminal
+    out = ""
+    for deck, contents in _deck_logs(exercise).items():
+        name = deck if trim else f"{SENSORS}/{deck}.log"
+        lines = contents.splitlines() if quoted or " " not in deck else []  # unquoted, tail gets two missing files
+        if not lines:
+            out += f"{name}: no reading\n" if skip_empty else f"{name}:  ppm\n"
+            continue
+        ppm = int(lines[line].split()[3])
+        out += f"{name}: {ppm} ppm" + (" OVER LIMIT" if over(ppm) else "") + "\n"
+    script = Node(type="file", mode=0o775, owner="cadet", group="crew", contents="#!/usr/bin/env bash\n")
+    return {**start, "/station/bin/deck-readings": script, READINGS: Node(type="file", mode=0o664, owner="cadet", group="crew", contents=out)}
+
+
+@pytest.mark.criterion(73, "Module 06 of Unit 1.2 is complete content")
+def test_module_06_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[5]
+    assert module.slug == "loops"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(73, "Module 06's console task can be done")
+def test_module_06s_end_state_passes_on_the_server():
+    exercise = _module("loops").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _deck_readings(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [{"quoted": False}, {"over": lambda ppm: ppm >= LIMIT}, {"line": 0}, {"skip_empty": False}, {"trim": False}],
+    ids=["unquoted-path", "exactly-the-limit-is-over", "first-reading-not-last", "empty-log-not-skipped", "full-path-as-name"],
+)
+def test_module_06_refuses_the_shortcuts(shortcut):
+    exercise = _module("loops").terminal
+    assert not grade(exercise, _deck_readings(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_06s_figures_match_the_console():
+    module = _module("loops")
+    logs = _deck_logs(module.terminal)
+    last = {deck: int(c.splitlines()[-1].split()[3]) for deck, c in logs.items() if c}
+    over = [deck for deck, ppm in last.items() if ppm > LIMIT]
+    empty = [deck for deck, c in logs.items() if not c]
+    assert f"{len(logs)} DECKS" in _said(module, "open") and "twelve" in module.story_html.lower() and len(logs) == 12
+    assert f"{len(logs)} DECKS · {len(over)} OVER LIMIT · {len(empty)} NO READING" in _said(module, "console_done")
+    assert over == ["galley"] and f"Galley at {last['galley']}" in _said(module, "console_done")
+    assert empty == ["observation"] and "observation" in _said(module, "console_done")
+    # The traps are really there: a name with a space, a reading exactly on the line,
+    # and a deck that was over earlier in its log but isn't now.
+    assert any(" " in deck for deck in logs) and LIMIT in last.values()
+    assert any(int(line.split()[3]) > LIMIT for deck, c in logs.items() if deck not in over for line in c.splitlines())
+    assert f"over {LIMIT} ppm" in " ".join(module.terminal.task.split()).replace("**", "")
+    # The task's example of an over-limit line isn't a real deck's, so it gives nothing away.
+    assert "stores" not in logs

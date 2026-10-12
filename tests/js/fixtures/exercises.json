@@ -796,6 +796,228 @@
    "user": "cadet"
   }
  },
+ "loops": {
+  "solution": [
+   "ls /var/log/sensors",
+   "tail -n 1 /var/log/sensors/galley.log",
+   "cat > /station/bin/deck-readings <<'EOF'\n#!/usr/bin/env bash\n# Each deck's last CO2 reading, flagged if it's over the alarm line.\nlimit=5000\n\nfor f in /var/log/sensors/*.log; do\n  deck=${f##*/}\n  deck=${deck%.log}\n  last=$(tail -n 1 \"$f\")\n  if [ -z \"$last\" ]; then\n    echo \"$deck: no reading\"\n    continue\n  fi\n  ppm=$(echo \"$last\" | cut -d' ' -f4)\n  if [ \"$ppm\" -gt \"$limit\" ]; then\n    echo \"$deck: $ppm ppm OVER LIMIT\"\n  else\n    echo \"$deck: $ppm ppm\"\n  fi\ndone\nEOF",
+   "chmod +x /station/bin/deck-readings",
+   "deck-readings > ~/readings.txt",
+   "cat ~/readings.txt"
+  ],
+  "source": "core/bash-scripting/06-loops.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "bridge: 3900 ppm\n"
+    },
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "galley: 5300 ppm OVER LIMIT\n"
+    },
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "hydroponics bay: 4300 ppm\n"
+    },
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "lab: 4100 ppm\n"
+    },
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "observation: no reading\n"
+    },
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "quarters-a: 3650 ppm\nquarters-b: 3850 ppm\nworkshop: 5000 ppm\n"
+    },
+    {
+     "executable": "/station/bin/deck-readings"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/sensors": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/sensors/airlock.log": {
+     "contents": "2026-10-08 07:55:00 CO2 3100 ppm\n2026-10-08 08:25:00 CO2 3150 ppm\n2026-10-08 08:55:00 CO2 3200 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/bridge.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4100 ppm\n2026-10-08 08:25:00 CO2 4000 ppm\n2026-10-08 08:55:00 CO2 3900 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/cargo.log": {
+     "contents": "2026-10-08 07:55:00 CO2 3600 ppm\n2026-10-08 08:25:00 CO2 3500 ppm\n2026-10-08 08:55:00 CO2 3550 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/engineering.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4400 ppm\n2026-10-08 08:25:00 CO2 4500 ppm\n2026-10-08 08:55:00 CO2 4600 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/galley.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4700 ppm\n2026-10-08 08:25:00 CO2 5000 ppm\n2026-10-08 08:55:00 CO2 5300 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/hydroponics bay.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4200 ppm\n2026-10-08 08:25:00 CO2 4250 ppm\n2026-10-08 08:55:00 CO2 4300 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/lab.log": {
+     "contents": "2026-10-08 07:55:00 CO2 5600 ppm\n2026-10-08 08:25:00 CO2 4800 ppm\n2026-10-08 08:55:00 CO2 4100 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/medbay.log": {
+     "contents": "2026-10-08 07:55:00 CO2 3300 ppm\n2026-10-08 08:25:00 CO2 3300 ppm\n2026-10-08 08:55:00 CO2 3350 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/observation.log": {
+     "contents": "",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/quarters-a.log": {
+     "contents": "2026-10-08 07:55:00 CO2 3800 ppm\n2026-10-08 08:25:00 CO2 3700 ppm\n2026-10-08 08:55:00 CO2 3650 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/quarters-b.log": {
+     "contents": "2026-10-08 07:55:00 CO2 3750 ppm\n2026-10-08 08:25:00 CO2 3800 ppm\n2026-10-08 08:55:00 CO2 3850 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/workshop.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4600 ppm\n2026-10-08 08:25:00 CO2 4800 ppm\n2026-10-08 08:55:00 CO2 5000 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor reads down the list. \"Twelve decks in one look. And the galley's over: that'll be the ovens again.\"",
+   "user": "cadet"
+  }
+ },
  "navigating": {
   "solution": [
    "cd /station/comms/relay",

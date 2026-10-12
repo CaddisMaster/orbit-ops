@@ -13,6 +13,12 @@ and why it matters, not what the diff says.
   so the lesson shows how to count a reading like 19.2% in tenths. In the console, `o2-check`
   learns to say `ALERT`, `WARN` or `OK` and to refuse to run without its sensor, then is tested
   against all four cases, including a reading exactly on the alarm line.
+- Unit 1.2 module 06, "Loops" (#73): `for` over words, globs, `{1..N}` and a command's output;
+  why a glob is safe and `$f` inside the loop isn't; trimming a path to a name with `${f##*/}`
+  and `${f%.log}`; `while read -r` line by line; `break` and `continue`; `while` and `until`.
+  In the console you write `deck-readings`, which gives all twelve decks' latest CO2 in one
+  list. It has to cope with a log named `hydroponics bay.log`, an empty log, a reading exactly
+  on the limit, and a deck that was over earlier but isn't now.
 
 ## [0.6.0] — 2026-10-12
 
