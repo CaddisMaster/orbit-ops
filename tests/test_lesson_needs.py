@@ -156,6 +156,13 @@ NEEDS = {
         "a function's status is its last command's": "**the status of its last command**",
         "source runs a library in the current shell": "runs the file **in the current shell**",
     },
+    "robust-scripts": {
+        "bash carries on after a failure by default": "**bash carries on with the next line**",
+        "set -e stops at the first failure": "**stops the script at the first command that fails**",
+        "mktemp -d makes a fresh temp directory": "**`mktemp -d` makes a fresh directory with a unique name**",
+        "a trap on EXIT runs however the script ends": "**A trap on `EXIT` runs as the script ends, however it ends**",
+        "report success last, after checking": "**Report success last**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

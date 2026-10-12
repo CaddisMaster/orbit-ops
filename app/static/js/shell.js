@@ -2776,8 +2776,18 @@
   function entrySize(e) { return e.size !== undefined ? e.size : new TextEncoder().encode(e.contents || "").length; }
 
   // Write an archive file, recording its size.
+  var TOO_BIG = ": too big for the station console's simulated archives (keep under 20 KB of text)";
+
+  // The archive itself can't be opened, to read or to write. With -z, gzip runs
+  // as tar's child, and says so.
+  function cannotOpen(o, error) {
+    var why = o.file + ": Cannot open: " + error.slice(error.lastIndexOf(": ") + 2) + "\n";
+    if (o.gzip) return { out: "", err: "tar (child): " + why + "tar (child): Error is not recoverable: exiting now\ntar: Child returned status 2\ntar: Error is not recoverable: exiting now\n", code: 2 };
+    return { out: "", err: "tar: " + why + "tar: Error is not recoverable: exiting now\n", code: 2 };
+  }
+
   function writeArchive(sh, path, text, bytes) {
-    if (text.length > MAX_ARCHIVE) return path + ": too big for the station console's simulated archives (keep under 20 KB of text)";
+    if (text.length > MAX_ARCHIVE) return path + TOO_BIG;
     var why = sh.writeFile(path, text, false);
     if (why) return why;
     if (path !== "/dev/null") sh.lookup(path).node.size = bytes;
@@ -2817,19 +2827,16 @@
       bytes = tgzSize(entries);
     }
     var why = writeArchive(sh, o.file, text, bytes);
-    if (why) return { out: out, err: err + "tar: " + why + "\ntar: Error is not recoverable: exiting now\n", code: 2 };
+    if (why && why.slice(-TOO_BIG.length) === TOO_BIG) return { out: out, err: err + "tar: " + why + "\ntar: Error is not recoverable: exiting now\n", code: 2 };
+    // GNU tar opens the archive before it reads a member, so a failed open is all it reports.
+    if (why) return cannotOpen(o, why);
     if (failed) err += "tar: Exiting with failure status due to previous errors\n";
     return { out: out, err: err, code: failed ? 2 : 0 };
   }
 
   function tarRead(sh, o, mode) {
     var r = sh.readFile("tar", o.file);
-    if (r.error) {
-      var why = o.file + ": Cannot open: " + r.error.slice(r.error.lastIndexOf(": ") + 2) + "\n";
-      // With -z, gzip runs as tar's child, and says so.
-      if (o.gzip) return { out: "", err: "tar (child): " + why + "tar (child): Error is not recoverable: exiting now\ntar: Child returned status 2\ntar: Error is not recoverable: exiting now\n", code: 2 };
-      return { out: "", err: "tar: " + why + "tar: Error is not recoverable: exiting now\n", code: 2 };
-    }
+    if (r.error) return cannotOpen(o, r.error);
     var gz = unpack(r.text, "gzip");
     if (o.gzip && !gz) return { out: "", err: "gzip: stdin: not in gzip format\ntar: Child returned status 1\ntar: Error is not recoverable: exiting now\n", code: 2 };
     var tar = unpack(gz ? gz.contents : r.text, "tar");

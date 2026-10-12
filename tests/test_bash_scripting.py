@@ -586,3 +586,79 @@ def test_module_08s_figures_match_the_console():
     assert f"CO2 hit {galley} ppm" in module.story_html and "50000" in _said(module, "open")
     assert "5000 ppm" in exercise.task and "CO2 LIMIT 5000 PPM" in _said(module, "console_done")
     assert "5000" in [line.split()[3] for c in _deck_logs(exercise).values() for line in c.splitlines()[-1:]]
+
+
+# --- 09: Robust scripts (#76) ---------------------------------------------------------------
+BACKUP = "/station/bin/backup-logs"
+BACKUP_LOG = "/home/cadet/backup-test.log"
+WORK = "/tmp/backup-work"
+TAR_FAILS = (
+    "tar (child): /srv/backups/scrubber-logs.tar.gz: Cannot open: Permission denied\n"
+    "tar (child): Error is not recoverable: exiting now\ntar: Child returned status 2\ntar: Error is not recoverable: exiting now\n"
+)
+
+
+def _hardened(start, *, stops=True, trapped=True, cleaned=True, good_run=True):
+    """What a learner leaves after cleaning up, hardening backup-logs and running it both ways."""
+    state = dict(start)
+    if cleaned:
+        for p in [p for p in state if p == WORK or p.startswith(WORK + "/")]:
+            del state[p]
+    if not trapped:  # the failed run's copies are still in its mktemp directory
+        logs = [p for p in start if p.startswith("/var/log/scrubber/")]
+        state["/tmp/tmp.k3J9x0QaZb"] = Node(type="dir", mode=0o700, owner="cadet", group="crew")
+        for p in logs:
+            state["/tmp/tmp.k3J9x0QaZb/" + p.rsplit("/", 1)[1]] = start[p].model_copy(update={"owner": "cadet", "group": "crew"})
+    log = TAR_FAILS + ("exit 2\n" if stops else "backup complete\nexit 0\n")
+    if good_run:
+        log += "backup complete\nexit 0\n"
+        state["/home/cadet/backups"] = Node(type="dir", mode=0o775, owner="cadet", group="crew")
+        state["/home/cadet/backups/scrubber-logs.tar.gz"] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents="gzip\n", size=4096)
+    state[BACKUP_LOG] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents=log)
+    script = 'set -euo pipefail\nwork=$(mktemp -d)\n' + ("trap 'rm -rf \"$work\"' EXIT\n" if trapped else "")
+    state[BACKUP] = start[BACKUP].model_copy(update={"contents": "#!/usr/bin/env bash\n" + script})
+    return state
+
+
+@pytest.mark.criterion(76, "Module 09 of Unit 1.2 is complete content")
+def test_module_09_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[8]
+    assert module.slug == "robust-scripts"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(76, "Module 09's console task can be done")
+def test_module_09s_end_state_passes_on_the_server():
+    exercise = _module("robust-scripts").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _hardened(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [{"stops": False}, {"trapped": False}, {"cleaned": False}, {"good_run": False}],
+    ids=["failure-still-reports-success", "no-trap-leaves-copies", "last-nights-mess-left", "never-backed-up"],
+)
+def test_module_09_refuses_the_shortcuts(shortcut):
+    exercise = _module("robust-scripts").terminal
+    assert not grade(exercise, _hardened(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_09s_figures_match_the_console():
+    from math import ceil
+
+    module = _module("robust-scripts")
+    exercise = module.terminal
+    start = _start(exercise)
+    # MERIDIAN quotes what `du -sh /tmp/backup-work` says: whole 4K blocks, rounded up as GNU does.
+    used = 4096 + sum(ceil(n.bytes() / 4096) * 4096 for p, n in start.items() if p.startswith(WORK + "/"))
+    assert f"/TMP/BACKUP-WORK · {ceil(used / 2**30 * 10) / 10}G" in _said(module, "open")
+    assert "left 2 GB of copies" in module.story_html
+    # Last night's failure is real: cadet can't write to /srv/backups, and the old script says
+    # it's done whatever tar did.
+    backups = start["/srv/backups"]
+    assert backups.owner == "root" and backups.mode == 0o755
+    script = start[BACKUP].contents
+    assert "&& rm -r $work\necho \"backup complete\"" in script and "set -e" not in script
+    assert "EXIT 2" in _said(module, "console_done")
