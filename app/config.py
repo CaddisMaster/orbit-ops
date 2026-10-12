@@ -36,8 +36,9 @@ class Settings(BaseSettings):
     templates_auto_reload: bool = False
     app_timezone: str = "UTC"
 
+    # AI (#120). No key, or the month's spend at the budget, turns every AI feature off.
     anthropic_api_key: str = ""
-    ai_monthly_budget_cents: int = 500
+    ai_monthly_budget_cents: int = Field(default=500, ge=0)
 
     # Login attempts allowed per client per minute (BB: 10/min on POST /login).
     login_rate_limit: int = 10

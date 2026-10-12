@@ -87,6 +87,8 @@ tested in `tests/test_security_headers.py`. Do not add duplicates here.
 | `COOKIE_SECURE` | `1` |
 | `DB_APP_USER` / `DB_APP_PASSWORD` | `orbit_app` / a generated password (below) |
 | `SECRET_KEY` | `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `ANTHROPIC_API_KEY` | an Anthropic API key for this app alone (Console → API keys), so it can be revoked on its own. Empty turns every AI feature off: the readout shows **Uplink offline** |
+| `AI_MONTHLY_BUDGET_CENTS` | `500` unless Sean says otherwise. A calendar month in `APP_TIMEZONE`; spend is in the `ai_requests` table |
 
 **The least-privilege role.** Migration `0002` creates `orbit_app` with DML on every table (and,
 through default privileges, every future table) but no DDL, no TRUNCATE, and **no password** —

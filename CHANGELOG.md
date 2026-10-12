@@ -10,6 +10,12 @@ and why it matters, not what the diff says.
 - A database table for AI spend: one row per model call, with its purpose, model, tokens and
   cost. The monthly AI budget will be summed from it. Spend outlives a deleted user, so the
   month's total can't shrink (#120).
+- The AI foundation (#120). Every model call goes through one gate that refuses when there's
+  no API key or this month's spend has reached `AI_MONTHLY_BUDGET_CENTS`, and records each
+  call's tokens and cost. Months follow `APP_TIMEZONE`. Hints will use Haiku 5.5 and lab
+  review Sonnet 5.5. The header readout gains **Uplink online/offline**, so you can see
+  whether AI features are available. Nothing calls a model yet: hints (#123) and lab review
+  (#122) are the first features to.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
