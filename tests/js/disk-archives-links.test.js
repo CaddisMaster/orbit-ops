@@ -201,3 +201,19 @@ test("ls shows the year for files older than six months", () => {
   const sh = station({ "/station/ancient.log": file("x\n", { mtime: "2025-12-01T10:00:00" }) });
   assert.equal(out(sh, "ls -l ancient.log"), "-rw-r--r-- 1 cadet crew 2 Dec  1  2025 ancient.log\n");
 });
+
+test("tar that can't write its archive says so as GNU tar does, and reports nothing else (#76)", () => {
+  const sh = station({ "/srv": dir("root"), "/srv/backups": dir("root") });
+  assert.equal(
+    out(sh, "tar -czf /srv/backups/old.tar.gz old 2>&1; echo $?"),
+    "tar (child): /srv/backups/old.tar.gz: Cannot open: Permission denied\n" +
+      "tar (child): Error is not recoverable: exiting now\n" +
+      "tar: Child returned status 2\n" +
+      "tar: Error is not recoverable: exiting now\n2\n",
+  );
+  assert.equal(
+    out(sh, "tar -cf /nowhere/old.tar old missing 2>&1; echo $?"),
+    "tar: /nowhere/old.tar: Cannot open: No such file or directory\ntar: Error is not recoverable: exiting now\n2\n",
+  );
+  assert.equal(out(sh, "ls /srv/backups"), "");
+});

@@ -30,6 +30,18 @@ and why it matters, not what the diff says.
   `co2-alarm` disagree about the galley's 5300 ppm, because one has the limit typed as 50000.
   The learner moves the sensor code into `/station/lib/sensors.sh`, with the limit in one place,
   and makes both scripts source it.
+- Unit 1.2 module 09, "Robust scripts" (#76): why bash carries on after a failure, `set
+  -euo pipefail` and the exceptions to `-e`, `mktemp -d`, `trap … EXIT` for cleanup, failing
+  loudly, and ShellCheck. In the console, last night's `backup-logs` failed, said `backup
+  complete` anyway, and left 2.1G of copies in `/tmp`. The learner clears up and hardens it, then
+  runs it into the unwritable `/srv/backups` (it must stop with tar's status and leave nothing
+  behind) and into a directory of their own (it must succeed).
+
+### Fixed
+- When `tar` couldn't write its archive, the console said `tar: FILE: Permission denied`. Now
+  it says what GNU tar says, `Cannot open:` and, with `-z`, the `tar (child):` lines and
+  `Child returned status 2`. Like GNU, it reports nothing about the files it would have
+  archived, because it opens the archive first.
 
 ## [0.6.0] — 2026-10-12
 

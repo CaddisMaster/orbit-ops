@@ -2047,6 +2047,236 @@
    "user": "cadet"
   }
  },
+ "robust-scripts": {
+  "solution": [
+   "cat /station/bin/backup-logs",
+   "du -sh /tmp/backup-work",
+   "rm -r /tmp/backup-work",
+   "cat > /station/bin/backup-logs <<'EOF'\n#!/usr/bin/env bash\n# backup-logs: archive the scrubber logs, then tidy up.\nset -euo pipefail\n\ndest=${BACKUP_DEST:-/srv/backups}\narchive=\"$dest/scrubber-logs.tar.gz\"\nwork=$(mktemp -d)\ntrap 'rm -rf \"$work\"' EXIT\n\ncp /var/log/scrubber/*.log \"$work\"/\ntar -czf \"$archive\" -C \"$work\" .\n[ -f \"$archive\" ]\necho \"backup complete\"\nEOF",
+   "backup-logs >> ~/backup-test.log 2>&1; echo \"exit $?\" >> ~/backup-test.log",
+   "mkdir ~/backups",
+   "BACKUP_DEST=~/backups backup-logs >> ~/backup-test.log 2>&1; echo \"exit $?\" >> ~/backup-test.log",
+   "cat ~/backup-test.log",
+   "du -sh /tmp"
+  ],
+  "source": "core/bash-scripting/09-robust-scripts.md",
+  "spec": {
+   "checks": [
+    {
+     "missing": "/tmp/backup-work"
+    },
+    {
+     "files_under": "/tmp",
+     "max_age": null,
+     "max_size": "1M",
+     "name": null
+    },
+    {
+     "contains": "/home/cadet/backup-test.log",
+     "text": "Error is not recoverable: exiting now\nexit 2\n"
+    },
+    {
+     "contains": "/home/cadet/backup-test.log",
+     "text": "backup complete\nexit 0\n"
+    },
+    {
+     "exists": "/home/cadet/backups/scrubber-logs.tar.gz",
+     "type": "file"
+    },
+    {
+     "contains": "/station/bin/backup-logs",
+     "text": "mktemp -d"
+    },
+    {
+     "contains": "/station/bin/backup-logs",
+     "text": "trap"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "disk": {
+    "base": 4509715661,
+    "size": 21474836480
+   },
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/srv": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/srv/backups": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin/backup-logs": {
+     "contents": "#!/usr/bin/env bash\n# backup-logs: archive the scrubber logs, then tidy up.\ndest=${BACKUP_DEST:-/srv/backups}\nwork=/tmp/backup-work\n\nmkdir -p $work\ncp /var/log/scrubber/*.log $work/\ntar -czf $dest/scrubber-logs.tar.gz -C $work . && rm -r $work\necho \"backup complete\"\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/tmp": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/tmp/backup-work": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/tmp/backup-work/ring-a.log": {
+     "contents": "2026-10-07 23:59:00 ring-a CO2 3400 ppm\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "size": 536870912,
+     "type": "file"
+    },
+    "/tmp/backup-work/ring-b.log": {
+     "contents": "2026-10-07 23:59:00 ring-b CO2 3500 ppm\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "size": 536870912,
+     "type": "file"
+    },
+    "/tmp/backup-work/scrubberd.log": {
+     "contents": "2026-10-07 23:59:00 scrubbers nominal\n",
+     "group": "crew",
+     "mode": 420,
+     "owner": "cadet",
+     "size": 1073741824,
+     "type": "file"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/scrubber/ring-a.log": {
+     "contents": "2026-10-08 08:55:00 ring-a CO2 3400 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "size": 536870912,
+     "type": "file"
+    },
+    "/var/log/scrubber/ring-b.log": {
+     "contents": "2026-10-08 08:55:00 ring-b CO2 3500 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "size": 536870912,
+     "type": "file"
+    },
+    "/var/log/scrubber/scrubberd.log": {
+     "contents": "2026-10-08 08:55:00 scrubbers nominal\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "size": 1073741824,
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor watches the failed run stop dead and leave nothing behind. \"That's a failure I can see. Mission Control won't have to tell us next time.\"",
+   "user": "cadet"
+  }
+ },
  "text-tools": {
   "solution": [
    "head -n 3 /var/log/docking/access.log",
