@@ -16,6 +16,13 @@ and why it matters, not what the diff says.
   review Sonnet 5.5. The header readout gains **Uplink online/offline**, so you can see
   whether AI features are available. Nothing calls a model yet: hints (#123) and lab review
   (#122) are the first features to.
+- Labs (#121): exercises done on your own machine, with real `git` from Unit 1.3 and later
+  Docker and a cluster. You paste what the commands printed, and the app checks the text. It
+  runs nothing. A failed check shows its hint, and what you pasted stays in the box. The first
+  pass is worth 40 XP and brings the crew's `lab_done` reply on comms. A new badge, *Field
+  Work*, is earned for passing a first lab. Like a console task, a lab doesn't decide whether a
+  module is complete: the quiz still does. No real module has a lab yet: Unit 1.3's will be the
+  first.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to

@@ -46,6 +46,7 @@
   <section class="lesson prose">{{ module.body_html | safe }}</section>
 
   {% if terminal_spec %}{% include "partials/_terminal.html" %}{% endif %}
+  {% if module.lab %}{% include "partials/_lab.html" %}{% endif %}
   {% if challenge_spec %}{% include "partials/_challenge.html" %}{% endif %}
 
   <section class="card quiz" aria-labelledby="quiz-heading">

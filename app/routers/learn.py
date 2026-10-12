@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from app import challenge, comms, progress, station_map, terminal
+from app import challenge, comms, lab, progress, station_map, terminal
 from app.console import Readout, console_readout
 from app.content import Catalog, Module, get_catalog
 from app.db import get_db
@@ -101,6 +101,9 @@ def module_page(
             "challenge_passed": challenge_passed,
             "challenge_xp": challenge.XP,
             "challenge_from": catalog.cast.get(module.challenge.from_) if module.challenge and module.challenge.from_ else None,
+            "lab_state": lab.state(db, user.id, module) if module.lab else None,
+            "lab_xp": lab.XP,
+            "lab_from": catalog.cast.get(module.lab.from_) if module.lab and module.lab.from_ else None,
             # A window event at the `open` beat plays on the first visit only (#45).
             "window_event": module.comms.window.get("open") if module.comms and first_visit else None,
         },
@@ -182,6 +185,66 @@ def challenge_report(
     return JSONResponse({"correct": correct, "xp_gained": xp_gained})
 
 
+@router.post("/modules/{slug}/lab", response_class=HTMLResponse)
+def lab_report(
+    slug: str,
+    request: Request,
+    box: Annotated[list[str] | None, Form()] = None,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    """Pasted output from a lab done on the learner's own machine (#121). The
+    server checks the text (app/lab.py); nothing is run. The first pass earns
+    lab.XP, the lab_done comms and any badge it completes, all in one transaction.
+    Always 200 with the lab section re-rendered: htmx doesn't swap a 4xx."""
+    module = _module_or_404(catalog, slug)
+    if module.lab is None:
+        raise HTTPException(status_code=404)
+    completed = progress.completed_slugs(db, user.id)
+    if not progress.module_available(catalog, slug, completed):
+        flash(request, f"“{module.title}” is still locked. {progress.blocker(catalog, slug, completed)}")
+        return Response(status_code=403, headers={"HX-Redirect": "/"})
+
+    pastes = (box or [])[: len(module.lab.boxes)]
+    context = {"module": module, "lab_xp": lab.XP, "lab_from": catalog.cast.get(module.lab.from_) if module.lab.from_ else None}
+    if lab.too_long(pastes):
+        # Refused before anything is recorded; the boxes keep what was pasted.
+        state = lab.LabState(pastes=tuple(pastes), verdict=None, passed=slug in lab.passed_slugs(db, user.id))
+        return templates.TemplateResponse(
+            request, "partials/_lab.html",
+            {**context, "lab_state": state, "error": f"That's more than {lab.MAX_PASTE:,} characters in one box. Paste only the output the step asks for."},
+        )
+
+    already = slug in lab.passed_slugs(db, user.id)
+    verdict = lab.grade(module.lab, pastes)
+    lab.record(db, user.id, module, pastes, verdict)
+    first_pass = verdict.passed and not already
+    xp_gained, new_badges, arrivals, window_event = 0, [], [], None
+    if first_pass:
+        xp_gained = xp.award(db, user.id, xp.Award(lab.XP, "lab", slug))
+        db.flush()
+        facts = badges.Facts(
+            completed=completed,
+            streak=streaks.current_streak(db, user.id, streaks.today()).length,
+            perfect_quiz=badges.has_perfect_quiz(db, user.id),
+            labs_passed=len(lab.passed_slugs(db, user.id)),  # autoflush: includes this one
+        )
+        new_badges = badges.award(db, user.id, catalog, facts)
+        if module.comms:
+            arrivals = comms.beat(catalog, module, "lab_done", new=True)
+            window_event = module.comms.window.get("lab_done")
+    db.commit()
+    state = lab.LabState(pastes=tuple(pastes) + ("",) * (len(module.lab.boxes) - len(pastes)), verdict=verdict, passed=verdict.passed or already)
+    return templates.TemplateResponse(
+        request, "partials/_lab.html",
+        {
+            **context, "lab_state": state, "just_passed": first_pass,
+            "xp_gained": xp_gained, "new_badges": new_badges, "arrivals": arrivals, "window_event": window_event,
+        },
+    )
+
+
 @router.post("/modules/{slug}/quiz/{index}", response_class=HTMLResponse)
 def answer_question(
     slug: str,
@@ -226,6 +289,7 @@ def answer_question(
             completed=progress.completed_slugs(db, user.id),  # autoflush: includes this module
             streak=streaks.current_streak(db, user.id, streaks.today()).length,
             perfect_quiz=badges.has_perfect_quiz(db, user.id),
+            labs_passed=len(lab.passed_slugs(db, user.id)),
         )
         new_badges = badges.award(db, user.id, catalog, facts)
         if module.comms:

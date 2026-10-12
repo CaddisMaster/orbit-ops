@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app import progress
+from app import lab, progress
 from app.console import Readout, console_readout
 from app.content import Catalog, FlashCard, get_catalog
 from app.db import get_db
@@ -115,6 +115,7 @@ def grade(
                 completed=completed,
                 streak=streaks.current_streak(db, user.id, today).length,
                 perfect_quiz=badges.has_perfect_quiz(db, user.id),
+                labs_passed=len(lab.passed_slugs(db, user.id)),
             )
             badges.award(db, user.id, catalog, facts)  # a streak badge can be earned here too
     db.commit()

@@ -145,6 +145,47 @@ challenge:
 - The checks reach the page (the browser runs them), so a determined learner can read them.
   That's the trade for never running learner code on the server.
 
+### A lab (optional)
+
+Work done on the learner's **own machine** (real `git` from Unit 1.3, later Docker and a
+cluster), checked by what they paste back (#121). The server never runs anything; it reads the
+text. It's worth 40 XP the first time it passes, and doesn't gate completion: the quiz does that.
+
+```yaml
+lab:
+  from: okafor             # optional: the cast member asking, shown as "Okafor asks:"
+  task: |-                 # Markdown: what to do, step by step
+    Put `airmix.conf` under version control in two commits …
+  setup: |-                # optional: a shell snippet that builds a known starting point.
+    mkdir -p ~/meridian && cd ~/meridian   # shown to copy; it must run as-is in ubuntu:24.04
+  boxes:                   # 1–4 paste boxes, each with its own checks
+    - prompt: The output of `git log --oneline`.      # Markdown
+      checks:
+        - {lines: {min: 2, max: 2}, says: "Two commits", hint: "Did the second commit happen?"}
+        - {regex: '^[0-9a-f]{7,} ', says: "Short hashes from git log --oneline"}
+        - {contains: "Track airmix.conf", says: "The first commit's message"}
+        - {not_contains: "Untracked files", says: "Nothing left untracked"}
+      example: |           # a REAL run's output, pasted. CI requires it to pass every check;
+        3f1c2ab Set the O2 floor to 19.5%                # never sent to the page
+        9e0d1f7 Track airmix.conf
+```
+
+- **Checks never depend on what differs between machines.** Hashes, dates, times, usernames,
+  hostnames, paths under `$HOME` and git's default branch name all vary, which is why there is
+  no exact-match check. Match the shape (`^[0-9a-f]{7,} `), or text the task fixed (a commit
+  message the steps dictate, a file the `setup` created).
+- **`contains` is case-sensitive; `regex` is Python `re` with `MULTILINE`** (`^`/`$` at each
+  line). `lines` counts non-blank lines. A Windows paste's `\r\n` is read as `\n`.
+- **`says` is listed after every submit**, passed or failed, so write it as what's being
+  checked. **`hint` shows only on a failure**: make it the likely mistake ("did the merge
+  fast-forward?"), never the answer.
+- **The `example` comes from a real run**, the steps followed in `ubuntu:24.04` as a sudo-capable
+  non-root user, with output pasted, not written from memory. If a check fails it, the check
+  or the steps are wrong.
+- ⚠️ **Quote `says` and `hint`** in the `{…}` form. A flow mapping breaks on a `?`, a `,` or a
+  `: ` in unquoted text (`hint: Did it happen?}` is a YAML error), the same trap as comms `text`.
+- `comms.lab_done` (below) is the crew's reply to the first pass.
+
 ### Flashcards
 
 In the story, review is **MERIDIAN's watch drill** (#82). MERIDIAN's readout heads it, and when
@@ -342,9 +383,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 
 ### Comms: the crew's messages (optional)
 
-A module can send messages to the comms log on the desk's laptop, at three beats: `open`
+A module can send messages to the comms log on the desk's laptop, at four beats: `open`
 (the briefing, on the first visit; it replaces the italic `story` on the page), `console_done`
-(the first time its console task passes) and `complete` (the debrief). A beat can also play a
+(the first time its console task passes), `lab_done` (the first time its lab passes) and
+`complete` (the debrief). A beat can also play a
 window event outside the desk's window.
 
 ```yaml
@@ -361,9 +403,9 @@ comms:
 
 - `from` is a slug from `cast:` in `syllabus.yml` (Okafor, MERIDIAN, Mission Control), or
   validation fails naming the file and the character. `text` is inline Markdown.
-- `console_done` needs a `terminal:` exercise in the same module.
+- `console_done` needs a `terminal:` exercise in the same module, and `lab_done` a `lab:`.
 - A window event plays once, when its beat happens: `open` on the first visit, `console_done`
-  with the console's first pass, `complete` with the completing answer. Unit 1.1 uses
+  with the console's first pass, `lab_done` with the lab's, `complete` with the completing answer. Unit 1.1 uses
   `relay-pass` (02 open), `shuttle-dock` (04 complete), `debris-drift` (06 open) and `aurora`
   (10 complete, the end of the unit).
 - **If MERIDIAN quotes a number** (CPU, attempts, a time), it must be true of the exercise:
