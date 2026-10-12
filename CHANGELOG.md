@@ -6,6 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-10-12
+
+Bash scripting, finished: Unit 1.2's last six modules, from conditionals and loops to
+arguments, functions, robust scripts and cron. Completing it earns *Routine Automated*. The
+console's `tar` now fails the way GNU tar does when it can't write its archive.
+
 ### Added
 - Unit 1.2 module 05, "Conditionals" (#72): `if` as a test of an exit status, `[ ]` and its
   string, number and file tests, `elif`/`else` and why order matters, `[[ ]]`, `&&` and `||` as
