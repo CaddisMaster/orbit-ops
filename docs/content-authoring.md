@@ -469,6 +469,23 @@ can't point at it.
   "the answer" is a fill-in spelling or the right option's text, however short. So a right
   option of `3` or `/` will sometimes catch an innocent hint. That's the safe side to err on.
 
+## Before Sean plays it
+
+Modules are written with Claude in Claude Code sessions, one issue and one PR each. Before a
+module's PR, in this order:
+
+1. **Write it**, with the `NEEDS` entry for a console task.
+2. **Run the `content-reviewer` agent** on it (`.claude/agents/content-reviewer.md`, #124).
+   It reads the module against this file and reports: the #101 rule (and for a **lab** it's the
+   only check, since no test parses a lab's steps), the quiz against the lesson, claims against
+   the repo, lab checks that hold on any machine, and the Try it script to run. Fix what it
+   finds, or say in the PR why not.
+3. **Run the Try it** in a fresh `ubuntu:24.04` container as a sudo-capable non-root user, plus
+   whatever the reviewer couldn't confirm. For a lab, follow its steps there and paste the real
+   output into each box's `example`.
+4. **Play it in the browser** as `verify-bot`: the console solution, the challenge, the lab.
+5. **Open the PR.** Sean plays it before it merges.
+
 ## Writing guidelines
 
 - **15–20 minutes, all in.** About 500–900 words of lesson, a quiz of 3–5 questions, and a
@@ -484,5 +501,5 @@ can't point at it.
   collapses into one line: put it in `code:`.
 - **Quiz the idea, not the trivia.** Every `explain` should teach something, including why the
   wrong options are wrong when that's useful.
-- **Fact-check AI drafts like code.** A drafted module is a starting point, not a source.
-  Run every command in "Try it" yourself before merging.
+- **Fact-check every draft like code.** A drafted module is a starting point, not a source.
+  Run every command in "Try it" yourself before merging (see "Before Sean plays it").

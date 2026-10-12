@@ -21,5 +21,5 @@ Verified by hand: #<n> "<Scenario title>" — what you checked
 - [ ] Any new query is scoped to the current user
 - [ ] A schema change is an Alembic revision **in its own PR**, expand-only (no drop/rename of
       anything the running image uses)
-- [ ] New lesson content passes `tests/test_content.py` and was fact-checked, not just generated
+- [ ] New lesson content passes `tests/test_content.py`, went through the `content-reviewer` agent and its Try it ran in `ubuntu:24.04` (`docs/content-authoring.md`, "Before Sean plays it")
 - [ ] No secrets or credentials in the diff
