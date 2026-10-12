@@ -446,3 +446,73 @@ def test_module_06s_figures_match_the_console():
     assert f"over {LIMIT} ppm" in " ".join(module.terminal.task.split()).replace("**", "")
     # The task's example of an over-limit line isn't a real deck's, so it gives nothing away.
     assert "stores" not in logs
+
+
+# --- 07: Arguments and input (#74) ----------------------------------------------------------
+REPORT_LOG = "/home/cadet/report-test.log"
+COPIES = ["/station/bin/galley-report", "/station/bin/lab-report"]
+
+
+def _deck_log(exercise, deck):
+    return client_spec(exercise)["fs"][f"{SENSORS}/{deck}.log"]["contents"].splitlines()
+
+
+def _calls_logged(start, *, usage_status=2, unknown_status=1, default_days=1, quoted=True, delete_copies=True):
+    """The log a learner leaves after the five calls, and the copies deleted (or not)."""
+    exercise = _module("arguments-and-input").terminal
+    out = f"usage: deck-report DECK [DAYS]\nexit {usage_status}\n"
+    out += f"deck-report: no such deck: nowhere\nexit {unknown_status}\n"
+    for deck, days in (("galley", None), ("galley", 3), ("hydroponics bay", 2)):
+        n = days or default_days
+        if " " in deck and not quoted:
+            out += f"deck-report: no such deck: {deck}\nexit {unknown_status}\n"
+            continue
+        out += f"{deck}: {n} day report\n" + "".join(line + "\n" for line in _deck_log(exercise, deck)[-n:]) + "exit 0\n"
+    state = {**start, REPORT_LOG: Node(type="file", mode=0o664, owner="cadet", group="crew", contents=out)}
+    state["/station/bin/deck-report"] = Node(type="file", mode=0o775, owner="cadet", group="crew", contents="#!/usr/bin/env bash\n")
+    if delete_copies:
+        for copy in COPIES:
+            del state[copy]
+    return state
+
+
+@pytest.mark.criterion(74, "Module 07 of Unit 1.2 is complete content")
+def test_module_07_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[6]
+    assert module.slug == "arguments-and-input"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(74, "Module 07's console task can be done")
+def test_module_07s_end_state_passes_on_the_server():
+    exercise = _module("arguments-and-input").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _calls_logged(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [{"usage_status": 0}, {"unknown_status": 2}, {"default_days": 5}, {"quoted": False}, {"delete_copies": False}],
+    ids=["usage-exits-0", "unknown-deck-exits-2", "no-default-of-1", "unquoted-deck", "copies-kept"],
+)
+def test_module_07_refuses_the_shortcuts(shortcut):
+    exercise = _module("arguments-and-input").terminal
+    assert not grade(exercise, _calls_logged(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_07s_figures_match_the_console():
+    module = _module("arguments-and-input")
+    exercise = module.terminal
+    start = _start(exercise)
+    galley, lab = (start[c].contents for c in COPIES)
+    # The copies drifted as the story and Okafor say: the galley's names the lab, and the lab's shows two days.
+    assert "echo \"lab: 1 day report\"" in galley and "tail -n 1 /var/log/sensors/galley.log" in galley
+    assert "1 day report" in lab and "tail -n 2" in lab
+    assert f"{len(COPIES)} COPIES" in _said(module, "open")
+    # Galley's 5100 is in the 3-day report but not the 1-day one.
+    readings = {line.split()[0]: int(line.split()[2]) for line in _deck_log(exercise, "galley")}
+    assert readings["2026-10-07"] == 5100 and "Galley hit 5100 on the 7th" in _said(module, "console_done")
+    assert max(readings.values()) == 5100 and "5100" not in _deck_log(exercise, "galley")[-1]
+    calls = ["deck-report >>", "`deck-report nowhere`", "`deck-report galley`", "`deck-report galley 3`", '`deck-report "hydroponics bay" 2`']
+    assert all(call in exercise.task for call in calls) and f"{len(calls)} CALLS TESTED" in _said(module, "console_done")

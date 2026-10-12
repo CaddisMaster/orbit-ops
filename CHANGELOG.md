@@ -19,6 +19,11 @@ and why it matters, not what the diff says.
   In the console you write `deck-readings`, which gives all twelve decks' latest CO2 in one
   list. It has to cope with a log named `hydroponics bay.log`, an empty log, a reading exactly
   on the limit, and a deck that was over earlier but isn't now.
+- Unit 1.2 module 07, "Arguments and input" (#74): `$0`, `$1`…`$9`, `$#`, `"$@"` (and why not
+  `$*`), `shift`, a usage line on stderr with exit 2, an optional argument with `${2:-1}`, and
+  `read -r -p` for scripts a person runs. In the console, two report scripts that drifted apart
+  as copies become one `deck-report DECK [DAYS]`. It's tested five ways, including no deck, an
+  unknown deck and `"hydroponics bay"`.
 
 ## [0.6.0] — 2026-10-12
 

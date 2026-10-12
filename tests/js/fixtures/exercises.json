@@ -1,4 +1,191 @@
 {
+ "arguments-and-input": {
+  "solution": [
+   "ls /station/bin",
+   "cat /station/bin/galley-report /station/bin/lab-report",
+   "cat > /station/bin/deck-report <<'EOF'\n#!/usr/bin/env bash\n# A deck's CO2 readings for the last DAYS days (default 1).\nif [ $# -lt 1 ]; then\n  echo \"usage: deck-report DECK [DAYS]\" >&2\n  exit 2\nfi\n\ndeck=$1\ndays=${2:-1}\nlog=\"/var/log/sensors/$deck.log\"\n\nif [ ! -f \"$log\" ]; then\n  echo \"deck-report: no such deck: $deck\" >&2\n  exit 1\nfi\n\necho \"$deck: $days day report\"\ntail -n \"$days\" \"$log\"\nEOF",
+   "chmod +x /station/bin/deck-report",
+   "rm /station/bin/galley-report /station/bin/lab-report",
+   "deck-report >> ~/report-test.log 2>&1; echo \"exit $?\" >> ~/report-test.log",
+   "deck-report nowhere >> ~/report-test.log 2>&1; echo \"exit $?\" >> ~/report-test.log",
+   "deck-report galley >> ~/report-test.log 2>&1; echo \"exit $?\" >> ~/report-test.log",
+   "deck-report galley 3 >> ~/report-test.log 2>&1; echo \"exit $?\" >> ~/report-test.log",
+   "deck-report \"hydroponics bay\" 2 >> ~/report-test.log 2>&1; echo \"exit $?\" >> ~/report-test.log",
+   "cat ~/report-test.log"
+  ],
+  "source": "core/bash-scripting/07-arguments-and-input.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/report-test.log",
+     "text": "usage: deck-report DECK [DAYS]\nexit 2\n"
+    },
+    {
+     "contains": "/home/cadet/report-test.log",
+     "text": "deck-report: no such deck: nowhere\nexit 1\n"
+    },
+    {
+     "contains": "/home/cadet/report-test.log",
+     "text": "galley: 1 day report\n2026-10-08 CO2 4700 ppm\nexit 0\n"
+    },
+    {
+     "contains": "/home/cadet/report-test.log",
+     "text": "galley: 3 day report\n2026-10-06 CO2 4900 ppm\n2026-10-07 CO2 5100 ppm\n2026-10-08 CO2 4700 ppm\nexit 0\n"
+    },
+    {
+     "contains": "/home/cadet/report-test.log",
+     "text": "hydroponics bay: 2 day report\n2026-10-07 CO2 4300 ppm\n2026-10-08 CO2 4250 ppm\nexit 0\n"
+    },
+    {
+     "executable": "/station/bin/deck-report"
+    },
+    {
+     "missing": "/station/bin/galley-report"
+    },
+    {
+     "missing": "/station/bin/lab-report"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin/galley-report": {
+     "contents": "#!/usr/bin/env bash\n# The galley's CO2, last day. Copied from lab-report.\necho \"lab: 1 day report\"\ntail -n 1 /var/log/sensors/galley.log\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/bin/lab-report": {
+     "contents": "#!/usr/bin/env bash\n# The lab's CO2, last day.\necho \"lab: 1 day report\"\ntail -n 2 /var/log/sensors/lab.log\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/sensors": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/sensors/bridge.log": {
+     "contents": "2026-10-04 CO2 3900 ppm\n2026-10-05 CO2 4000 ppm\n2026-10-06 CO2 3850 ppm\n2026-10-07 CO2 3950 ppm\n2026-10-08 CO2 3900 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/galley.log": {
+     "contents": "2026-10-04 CO2 4600 ppm\n2026-10-05 CO2 4750 ppm\n2026-10-06 CO2 4900 ppm\n2026-10-07 CO2 5100 ppm\n2026-10-08 CO2 4700 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/hydroponics bay.log": {
+     "contents": "2026-10-04 CO2 4100 ppm\n2026-10-05 CO2 4150 ppm\n2026-10-06 CO2 4200 ppm\n2026-10-07 CO2 4300 ppm\n2026-10-08 CO2 4250 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/lab.log": {
+     "contents": "2026-10-04 CO2 4400 ppm\n2026-10-05 CO2 4500 ppm\n2026-10-06 CO2 4800 ppm\n2026-10-07 CO2 4300 ppm\n2026-10-08 CO2 4100 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "Okafor deletes a note from her console. \"One script, every deck, and it tells you how to use it. No more copies.\"",
+   "user": "cadet"
+  }
+ },
  "conditionals": {
   "solution": [
    "O2_SENSOR=/station/sensors/test/missing o2-check",
