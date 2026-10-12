@@ -44,6 +44,7 @@ app/static_files.py  static_url (?v= per release), Cache-Control on /static and 
 app/content/         schema.py, loader.py (load_catalog → Catalog), render.py (Markdown, Pygments)
 app/progress.py      lock rules + today's mission (pure), check_answer, record_answer
 app/ai.py            models, prices and cost per call (pure); app/spend.py: the AI ledger + monthly budget
+app/hints.py         hints: the prompt without the answer key, and the leak guard on the reply
 app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their ledgers)
 app/station_map.py   the /map layout (pure); app/console.py: header readout + comms log (app/comms.py)
 app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js is the simulated shell

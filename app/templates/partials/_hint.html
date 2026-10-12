@@ -1,0 +1,24 @@
+{# A hint for one item (#123): the button, and the last hint asked for. Swapped
+   whole by POST /modules/{slug}/hint. `include` is a CSS selector for what the
+   learner has tried so far (the question's form, the console's history, the
+   challenge's code, the lab's pastes), sent with the request.
+   `outcome` is app.hints.HintOutcome, or none before any hint. The hint is model
+   text: only ever rendered escaped. #}
+<div class="hint-box" id="hint-{{ item }}">
+  {% if outcome %}
+    {% if outcome.text %}
+    <p class="hint-text{{ ' is-pointer' if outcome.leaked }}" role="status"><span class="hint-label">Hint</span> {{ outcome.text }}{% if outcome.charged %} <span class="hint-cost">−{{ outcome.charged }} XP</span>{% endif %}</p>
+    {% elif outcome.wait %}
+    <p class="muted" role="status">One hint a minute for each task. Have another go first.</p>
+    {% elif outcome.unavailable %}
+    <p class="muted" role="status">No hint right now ({{ {"no_key": "the uplink is offline", "over_budget": "this month's AI budget is spent", "error": "the hint system didn't answer"}[outcome.unavailable] }}). Nothing was charged.</p>
+    {% endif %}
+  {% endif %}
+  {% if hints_online %}
+  <button type="button" class="link hint-ask" hx-post="/modules/{{ module.slug }}/hint" hx-vals='{"item": "{{ item }}"}'
+          {% if include %}hx-include="{{ include }}"{% endif %} hx-target="#hint-{{ item }}" hx-swap="outerHTML">
+    {{ "Another hint" if outcome and outcome.text else "Stuck? Get a hint" }} <span class="hint-price">· costs 5 XP once for this task</span></button>
+  {% else %}
+  <button type="button" class="link hint-ask" disabled>Hints are offline</button>
+  {% endif %}
+</div>

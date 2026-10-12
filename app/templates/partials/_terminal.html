@@ -48,4 +48,7 @@
     <button type="button" class="term-key term-reset" data-reset>Reset</button>
   </div>
   <p class="term-status muted" role="status"></p>
+  {# console.js copies the last commands here, so a hint sees what was tried (#123). #}
+  <input type="hidden" id="hint-attempt-console" name="attempt" value="">
+  {% with item = "console", include = "#hint-attempt-console", outcome = none %}{% include "partials/_hint.html" %}{% endwith %}
 </section>

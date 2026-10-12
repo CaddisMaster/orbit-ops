@@ -6,8 +6,8 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 
 - **Jinja typos render as empty strings.** Assert on rendered content in tests.
 - **`get_settings()` is `lru_cache`d.** Env vars set after first import are ignored.
-- **The rate limiter is in-process memory.** Correct only with one uvicorn process. If you ever
-  add workers, move it to the database or Redis first.
+- **The rate limiters are in-process memory** (login, and hints' one-a-minute, #123). Correct only
+  with one uvicorn process. If you ever add workers, move them to the database or Redis first.
 - **`csrf_protect` reads the form body.** Starlette caches it on the request, so route `Form()`
   params still work — but a route reading `request.body()` raw on a form POST would not.
 - **Exception handlers for bare `Exception`** run outside `SecurityHeadersMiddleware`, so a 500

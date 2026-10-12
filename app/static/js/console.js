@@ -271,6 +271,9 @@
       if (line.trim() && !secret) {
         if (history[history.length - 1] !== line) history.push(line);
         if (history.length > HISTORY_MAX) history.shift();
+        // What a hint sees of the attempt (#123): recent commands, never a masked line.
+        var tried = root.querySelector("#hint-attempt-console");
+        if (tried) tried.value = history.slice(-15).join("\n");
       }
       at = history.length;
       settle(sh.run(line));

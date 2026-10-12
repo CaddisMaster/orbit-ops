@@ -16,4 +16,5 @@
   </fieldset>
   {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
   <button type="submit" class="secondary">Check answer</button>
+  {% with item = "quiz-" ~ index, include = "#q" ~ index, outcome = none %}{% include "partials/_hint.html" %}{% endwith %}
 </form>
