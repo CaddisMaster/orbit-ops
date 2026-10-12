@@ -6,6 +6,13 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-12
+
+Bash scripting, part one: the station console became a real shell for scripts (control flow,
+functions, `set -euo pipefail`, traps, nano, man, cron, `find`, `tar` and links), and Unit 1.2
+opens with its first four modules. Modules 05–10 follow as 0.6.x releases. It also fixes a
+solved console task going unlogged when a file name held a space.
+
 ### Added
 - The station console runs real shell scripts (#64). It has `if`/`elif`/`else`, `for`,
   `while` and `until` loops with `break` and `continue`, and `case` with glob patterns. Tests
