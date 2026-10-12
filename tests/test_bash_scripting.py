@@ -516,3 +516,73 @@ def test_module_07s_figures_match_the_console():
     assert max(readings.values()) == 5100 and "5100" not in _deck_log(exercise, "galley")[-1]
     calls = ["deck-report >>", "`deck-report nowhere`", "`deck-report galley`", "`deck-report galley 3`", '`deck-report "hydroponics bay" 2`']
     assert all(call in exercise.task for call in calls) and f"{len(calls)} CALLS TESTED" in _said(module, "console_done")
+
+
+# --- 08: Functions (#75) --------------------------------------------------------------------
+LIB = "/station/lib/sensors.sh"
+DECK_READINGS = "/station/bin/deck-readings"
+CO2_ALARM = "/station/bin/co2-alarm"
+
+
+def _librarised(start, *, limit=5000, at_limit_is_over=False, sourced_by=(DECK_READINGS, CO2_ALARM)):
+    """What a learner leaves: the library, the scripts that source it, and their saved output."""
+    exercise = _module("functions").terminal
+    lib = f"CO2_LIMIT_PPM={limit}\nlast_ppm() {{ :; }}\nover_limit() {{ :; }}\n"
+
+    def over(ppm, own_limit):
+        return ppm >= own_limit if at_limit_is_over else ppm > own_limit
+
+    readings = ""
+    for deck, contents in _deck_logs(exercise).items():
+        if not contents:
+            readings += f"{deck}: no reading\n"
+            continue
+        ppm = int(contents.splitlines()[-1].split()[3])
+        readings += f"{deck}: {ppm} ppm" + (" OVER LIMIT" if over(ppm, limit if DECK_READINGS in sourced_by else 5000) else "") + "\n"
+    galley = int(_deck_logs(exercise)["galley"].splitlines()[-1].split()[3])
+    alarm = ("ALARM" if over(galley, limit if CO2_ALARM in sourced_by else 50000) else "ok") + f" galley: {galley} ppm\n"
+    state = {**start, LIB: Node(type="file", mode=0o664, owner="cadet", group="crew", contents=lib)}
+    for script in sourced_by:
+        state[script] = start[script].model_copy(update={"contents": f"#!/usr/bin/env bash\nsource {LIB}\n# … over_limit \"$ppm\" …\n"})
+    state["/home/cadet/readings.txt"] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents=readings)
+    state["/home/cadet/alarm.txt"] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents=alarm)
+    return state
+
+
+@pytest.mark.criterion(75, "Module 08 of Unit 1.2 is complete content")
+def test_module_08_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[7]
+    assert module.slug == "functions"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(75, "Module 08's console task can be done")
+def test_module_08s_end_state_passes_on_the_server():
+    exercise = _module("functions").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _librarised(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [{"sourced_by": (DECK_READINGS,)}, {"sourced_by": (CO2_ALARM,)}, {"at_limit_is_over": True}, {"limit": 50000}],
+    ids=["co2-alarm-keeps-its-own-copy", "deck-readings-keeps-its-own-copy", "exactly-the-limit-is-over", "the-wrong-limit-shared"],
+)
+def test_module_08_refuses_the_shortcuts(shortcut):
+    exercise = _module("functions").terminal
+    assert not grade(exercise, _librarised(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_08s_figures_match_the_console():
+    module = _module("functions")
+    exercise = module.terminal
+    start = _start(exercise)
+    galley = int(_deck_logs(exercise)["galley"].splitlines()[-1].split()[3])
+    # The two scripts really disagree about the galley, as MERIDIAN and the story say.
+    assert "limit=5000\n" in start[DECK_READINGS].contents and "limit=50000" in start[CO2_ALARM].contents
+    assert 5000 < galley < 50000
+    assert f"GALLEY CO2 {galley} PPM · DECK-READINGS: OVER LIMIT · CO2-ALARM: OK" in _said(module, "open")
+    assert f"CO2 hit {galley} ppm" in module.story_html and "50000" in _said(module, "open")
+    assert "5000 ppm" in exercise.task and "CO2 LIMIT 5000 PPM" in _said(module, "console_done")
+    assert "5000" in [line.split()[3] for c in _deck_logs(exercise).values() for line in c.splitlines()[-1:]]

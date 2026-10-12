@@ -983,6 +983,208 @@
    "user": "cadet"
   }
  },
+ "functions": {
+  "solution": [
+   "deck-readings",
+   "co2-alarm galley",
+   "cat /station/bin/deck-readings /station/bin/co2-alarm",
+   "cat > /station/lib/sensors.sh <<'EOF'\n# Shared sensor code. Source it; don't run it.\nCO2_LIMIT_PPM=5000\n\n# last_ppm FILE: print the last reading in FILE, in ppm (nothing if it's empty).\nlast_ppm() {\n  local last\n  last=$(tail -n 1 \"$1\")\n  [ -n \"$last\" ] || return 1\n  echo \"$last\" | cut -d' ' -f4\n}\n\n# over_limit PPM: succeed if PPM is over the CO2 limit.\nover_limit() {\n  [ \"$1\" -gt \"$CO2_LIMIT_PPM\" ]\n}\nEOF",
+   "cat > /station/bin/deck-readings <<'EOF'\n#!/usr/bin/env bash\n# Each deck's last CO2 reading, flagged if it's over the alarm line.\nsource /station/lib/sensors.sh\n\nfor f in /var/log/sensors/*.log; do\n  deck=${f##*/}\n  deck=${deck%.log}\n  ppm=$(last_ppm \"$f\")\n  if [ -z \"$ppm\" ]; then\n    echo \"$deck: no reading\"\n    continue\n  fi\n  if over_limit \"$ppm\"; then\n    echo \"$deck: $ppm ppm OVER LIMIT\"\n  else\n    echo \"$deck: $ppm ppm\"\n  fi\ndone\nEOF",
+   "cat > /station/bin/co2-alarm <<'EOF'\n#!/usr/bin/env bash\n# co2-alarm DECK: sound the alarm if a deck's CO2 is over the limit.\nsource /station/lib/sensors.sh\n\ndeck=$1\nppm=$(last_ppm \"/var/log/sensors/$deck.log\")\n\nif over_limit \"$ppm\"; then\n  echo \"ALARM $deck: $ppm ppm\"\n  exit 1\nfi\necho \"ok $deck: $ppm ppm\"\nEOF",
+   "deck-readings > ~/readings.txt",
+   "co2-alarm galley > ~/alarm.txt",
+   "cat ~/readings.txt ~/alarm.txt"
+  ],
+  "source": "core/bash-scripting/08-functions.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/readings.txt",
+     "text": "bridge: 3900 ppm\ngalley: 5300 ppm OVER LIMIT\nhydroponics bay: 4300 ppm\nobservation: no reading\nworkshop: 5000 ppm\n"
+    },
+    {
+     "contains": "/home/cadet/alarm.txt",
+     "text": "ALARM galley: 5300 ppm"
+    },
+    {
+     "contains": "/station/lib/sensors.sh",
+     "text": "last_ppm"
+    },
+    {
+     "contains": "/station/lib/sensors.sh",
+     "text": "over_limit"
+    },
+    {
+     "contains": "/station/bin/deck-readings",
+     "text": "/station/lib/sensors.sh"
+    },
+    {
+     "contains": "/station/bin/deck-readings",
+     "text": "over_limit"
+    },
+    {
+     "contains": "/station/bin/co2-alarm",
+     "text": "/station/lib/sensors.sh"
+    },
+    {
+     "contains": "/station/bin/co2-alarm",
+     "text": "over_limit"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {
+    "PATH": "/station/bin:/usr/local/bin:/usr/bin:/bin"
+   },
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/station/bin/co2-alarm": {
+     "contents": "#!/usr/bin/env bash\n# co2-alarm DECK: sound the alarm if a deck's CO2 is over the limit.\nlimit=50000   # 5%\n\ndeck=$1\nlast=$(tail -n 1 \"/var/log/sensors/$deck.log\")\nppm=$(echo \"$last\" | cut -d' ' -f4)\n\nif [ \"$ppm\" -gt \"$limit\" ]; then\n  echo \"ALARM $deck: $ppm ppm\"\n  exit 1\nfi\necho \"ok $deck: $ppm ppm\"\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/bin/deck-readings": {
+     "contents": "#!/usr/bin/env bash\n# Each deck's last CO2 reading, flagged if it's over the alarm line.\nlimit=5000\n\nfor f in /var/log/sensors/*.log; do\n  deck=${f##*/}\n  deck=${deck%.log}\n  last=$(tail -n 1 \"$f\")\n  if [ -z \"$last\" ]; then\n    echo \"$deck: no reading\"\n    continue\n  fi\n  ppm=$(echo \"$last\" | cut -d' ' -f4)\n  if [ \"$ppm\" -gt \"$limit\" ]; then\n    echo \"$deck: $ppm ppm OVER LIMIT\"\n  else\n    echo \"$deck: $ppm ppm\"\n  fi\ndone\n",
+     "group": "crew",
+     "mode": 509,
+     "owner": "cadet",
+     "type": "file"
+    },
+    "/station/lib": {
+     "contents": "",
+     "group": "crew",
+     "mode": 509,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/sensors": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/sensors/bridge.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4000 ppm\n2026-10-08 08:25:00 CO2 3950 ppm\n2026-10-08 08:55:00 CO2 3900 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/galley.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4900 ppm\n2026-10-08 08:25:00 CO2 5100 ppm\n2026-10-08 08:55:00 CO2 5300 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/hydroponics bay.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4200 ppm\n2026-10-08 08:25:00 CO2 4250 ppm\n2026-10-08 08:55:00 CO2 4300 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/observation.log": {
+     "contents": "",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/var/log/sensors/workshop.log": {
+     "contents": "2026-10-08 07:55:00 CO2 4700 ppm\n2026-10-08 08:25:00 CO2 4900 ppm\n2026-10-08 08:55:00 CO2 5000 ppm\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "success": "The galley's alarm light comes on, at last. Okafor flips it off. \"Late, but right. And next time the limit changes, it changes in one place.\"",
+   "user": "cadet"
+  }
+ },
  "loops": {
   "solution": [
    "ls /var/log/sensors",

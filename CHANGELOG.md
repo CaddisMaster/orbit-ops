@@ -24,6 +24,12 @@ and why it matters, not what the diff says.
   `read -r -p` for scripts a person runs. In the console, two report scripts that drifted apart
   as copies become one `deck-report DECK [DAYS]`. It's tested five ways, including no deck, an
   unknown deck and `"hydroponics bay"`.
+- Unit 1.2 module 08, "Functions" (#75): defining and calling functions, their own arguments,
+  `local`, and the two ways a function answers: data with `echo` and `$( )`, yes or no with its
+  exit status. Then sharing them with `source`. In the console, `deck-readings` and
+  `co2-alarm` disagree about the galley's 5300 ppm, because one has the limit typed as 50000.
+  The learner moves the sensor code into `/station/lib/sensors.sh`, with the limit in one place,
+  and makes both scripts source it.
 
 ## [0.6.0] — 2026-10-12
 

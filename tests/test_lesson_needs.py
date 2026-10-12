@@ -147,6 +147,15 @@ NEEDS = {
         "a different failure gets a different number": "give it a different number",
         "${2:-1} gives an optional argument a default": "`days=${2:-1}` is `$2`, or 1 if there isn't one",
     },
+    "functions": {
+        "a function is called by its name, like a command": "**call it like any command**",
+        "$1 inside a function is the function's own": "**the function's own arguments**",
+        "local keeps a variable in its function": "**`local` makes a variable belong to the function**",
+        "data is echoed and captured with $( )": "prints it with `echo`",
+        "yes or no is the exit status": "sets its exit status",
+        "a function's status is its last command's": "**the status of its last command**",
+        "source runs a library in the current shell": "runs the file **in the current shell**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
