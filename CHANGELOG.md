@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- Unit 1.2 module 05, "Conditionals" (#72): `if` as a test of an exit status, `[ ]` and its
+  string, number and file tests, `elif`/`else` and why order matters, `[[ ]]`, `&&` and `||` as
+  short ifs, `case`, and failing well with `exit N` and `>&2`. Bash compares whole numbers only,
+  so the lesson shows how to count a reading like 19.2% in tenths. In the console, `o2-check`
+  learns to say `ALERT`, `WARN` or `OK` and to refuse to run without its sensor, then is tested
+  against all four cases, including a reading exactly on the alarm line.
+
 ## [0.6.0] — 2026-10-12
 
 Bash scripting, part one: the station console became a real shell for scripts (control flow,

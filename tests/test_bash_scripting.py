@@ -310,3 +310,68 @@ def test_module_04s_figures_match_the_console():
     assert f"Food: {n['food.csv']} items" in exercise.task  # the task's example line is a real one
     # The starting script has the bug the story tells: an unquoted path with a space.
     assert "parts=$dir/Spare Parts.csv" in _start(exercise)[CARGO].contents
+
+
+# --- 05: Conditionals (#72) -----------------------------------------------------------------
+O2_CHECK = "/station/bin/o2-check"
+O2_LOG = "/home/cadet/o2-test.log"
+TESTS = "/station/sensors/test"
+
+
+def _reading(exercise, name):
+    return re.match(r"O2 ([\d.]+)%", client_spec(exercise)["fs"][f"{TESTS}/{name}"]["contents"]).group(1)
+
+
+def _tested(start, *, guard=True, alert_below=19.5, alert_exit=1):
+    """The log a learner leaves after running their o2-check on all four test readings."""
+    exercise = _module("conditionals").terminal
+    log = ""
+    for name in ("low", "border", "normal"):
+        o2 = float(_reading(exercise, name))
+        verdict, status = ("ALERT", alert_exit) if o2 < alert_below else ("WARN", 0) if o2 < 20.5 else ("OK", 0)
+        log += f"{verdict} O2 {_reading(exercise, name)}%\nexit {status}\n"
+    if guard:
+        log += f"o2-check: no sensor at {TESTS}/missing\nexit 2\n"
+    else:  # no file test: cut fails, the empty reading counts as 0 tenths, and it's an ALERT
+        log += f"cut: {TESTS}/missing: No such file or directory\nALERT O2 %\nexit {alert_exit}\n"
+    return {**start, O2_LOG: Node(type="file", mode=0o664, owner="cadet", group="crew", contents=log)}
+
+
+@pytest.mark.criterion(72, "Module 05 of Unit 1.2 is complete content")
+def test_module_05_is_complete_content():
+    module = load_catalog().unit_modules("bash-scripting")[4]
+    assert module.slug == "conditionals"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(72, "Module 05's console task can be done")
+def test_module_05s_end_state_passes_on_the_server():
+    exercise = _module("conditionals").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _tested(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [{"guard": False}, {"alert_below": 19.6}, {"alert_exit": 0}],
+    ids=["no-file-test", "border-reading-is-an-alert", "alert-exits-0"],
+)
+def test_module_05_refuses_the_shortcuts(shortcut):
+    exercise = _module("conditionals").terminal
+    assert not grade(exercise, _tested(_start(exercise), **shortcut), exercise.cwd)
+
+
+def test_module_05s_figures_match_the_console():
+    module = _module("conditionals")
+    exercise = module.terminal
+    low, border, normal = (float(_reading(exercise, n)) for n in ("low", "border", "normal"))
+    # MERIDIAN's 03:00 reading is the `low` test file, and the story tells the same number.
+    assert f"O2 {low}%" in _said(module, "open") and f"{low}%" in module.story_html
+    # One reading per verdict, with `border` exactly on the ALERT line, so `-le` is caught.
+    task = " ".join(exercise.task.split())
+    assert "below 19.5%: `ALERT`" in task and "below 20.5%: `WARN`" in task
+    assert low < 19.5 == border < 20.5 <= normal
+    assert f"{TESTS}/missing" not in client_spec(exercise)["fs"]
+    # The script the learner starts from already counts in tenths, as the task says.
+    assert "tenths=$((whole * 10 + tenth))" in _start(exercise)[O2_CHECK].contents
