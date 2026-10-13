@@ -48,6 +48,13 @@ and why it matters, not what the diff says.
   `--staged`, including the one that can't be undone. In the lab, two fixes sit in the same
   file and only the tested one is committed. You paste the short status, the commit and what's
   left in the file.
+- Unit 1.3 module 03, "Reading history" (#127). It covers `git log`'s filters (`--oneline`,
+  `--graph`, `-p`, `--author`, `--since`, `-- PATH`), `git show`, and `git blame`, including
+  why the commit blame names may only have touched the line. Then `git log -S`, the pickaxe,
+  finds where a value was added or removed. In the lab, a month of history by three crew
+  members hides who raised the CO2 alarm to 5000 ppm. Blame points at a commit that only
+  re-spaced the file, and the pickaxe finds the real one. The setup builds the same history,
+  hashes included, on any machine, and runs in zsh as well as bash.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
