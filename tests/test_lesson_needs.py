@@ -195,6 +195,16 @@ NEEDS = {
         "log --oneline is a line per commit": "`git log --oneline` shows one line each",
         "a clean status means everything is committed": "nothing to commit, working tree clean",
     },
+    "staging-and-diffs": {
+        "git diff shows what isn't staged": "what you **haven't staged** yet",
+        "git add -p asks about each hunk": "shows you its changes a hunk at a time and asks about each one",
+        "- is how it was, + is how it is now": "A line starting with `-` is how it was, `+` is how it is now",
+        "y stages a hunk": "stage this hunk",
+        "n leaves a hunk unstaged, in the file": "don't stage this hunk; it stays in your working tree",
+        "check git diff --staged before committing": "**Check `git diff --staged` before every commit.**",
+        "git show HEAD prints the last commit": "the last commit: its message, then its diff",
+        "status --short: left is the index, right the working tree": "the left is the index, the right is the working tree",
+    },
 }
 
 

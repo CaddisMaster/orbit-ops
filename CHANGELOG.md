@@ -42,6 +42,12 @@ and why it matters, not what the diff says.
   message and a parent) and why nobody else's hashes match yours. In the lab you put
   `airmix.conf` under version control in two commits on your own machine, and paste
   `git log --oneline` and `git status`.
+- Unit 1.3 module 02, "Staging and diffs" (#126). It covers the working tree, the index and
+  HEAD; `git diff` against `git diff --staged`, and reading a hunk; `git add -p` for staging
+  part of a file; `git status --short`'s two columns; and `git restore` with and without
+  `--staged`, including the one that can't be undone. In the lab, two fixes sit in the same
+  file and only the tested one is committed. You paste the short status, the commit and what's
+  left in the file.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
