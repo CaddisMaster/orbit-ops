@@ -182,12 +182,25 @@ NEEDS = {
         "tar -tzf lists an archive": "lis**t** what's inside",
         "ln -sf replaces a link": "replacing a link that's already called NAME",
     },
+    # Labs (#121) are checked by what's pasted, so no parser reads their steps: NEEDS is
+    # the only test that the lesson teaches them.
+    "your-first-repository": {
+        "install git on your own machine": "`sudo apt update`, then `sudo apt install git`",
+        "check whether a name is set": "prints nothing if it isn't set",
+        "set a name and email before the first commit": "`git config --global user.name`",
+        "git init makes a repository": "`git init` turns the current directory into a **repository**",
+        "add, then commit": "**`git add` first, then `git commit`**",
+        "an edited file is added again before its commit": "Changes not staged for commit changed since the last commit, but not added yet",
+        "commit -m gives the message": "`git commit -m \"message\"`",
+        "log --oneline is a line per commit": "`git log --oneline` shows one line each",
+        "a clean status means everything is committed": "nothing to commit, working tree clean",
+    },
 }
 
 
 def _modules_with_tasks():
-    catalog = load_catalog()
-    return [m for m in catalog.unit_modules("linux-shell") + catalog.unit_modules("bash-scripting") if m.terminal]
+    """Every module with a console task or a lab."""
+    return [m for m in load_catalog().ordered_modules() if m.terminal or m.lab]
 
 
 @pytest.mark.criterion(101, "Every console task's needs are written down")

@@ -23,8 +23,7 @@ and why it matters, not what the diff says.
   runs nothing. A failed check shows its hint, and what you pasted stays in the box. The first
   pass is worth 40 XP and brings the crew's `lab_done` reply on comms. A new badge, *Field
   Work*, is earned for passing a first lab. Like a console task, a lab doesn't decide whether a
-  module is complete: the quiz still does. No real module has a lab yet: Unit 1.3's will be the
-  first.
+  module is complete: the quiz still does. Unit 1.3's modules are the first with labs.
 - Claude reviews a passed lab (#122), for labs whose author asks for it with a rubric. Once the
   checks pass, the review loads by itself without delaying the pass: a score out of 100, up to
   three things done well and three to do differently. It earns a bonus of up to 20 XP, once.
@@ -36,6 +35,13 @@ and why it matters, not what the diff says.
   gives the answer away anyway is replaced with a pointer back to the lesson, free. A hint
   costs 5 XP once per task, however many you ask for, and each task allows one a minute. With
   no key or budget, the buttons say "Hints are offline".
+- Unit 1.3 module 01, "Your first repository" (#125), the first module of **Git** and the
+  first with a lab. It covers getting git on Ubuntu, a Mac or Windows; `git config` for the
+  name and email every commit carries, and why that's per machine; and `init`, `status`, `add`,
+  `commit -m` and `log`. It explains what a commit is (a snapshot with an author, a time, a
+  message and a parent) and why nobody else's hashes match yours. In the lab you put
+  `airmix.conf` under version control in two commits on your own machine, and paste
+  `git log --oneline` and `git status`.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to

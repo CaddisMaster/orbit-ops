@@ -40,8 +40,8 @@ Every task is the console task (`terminal:`), the challenge (`challenge:`) and t
   quiz `explain`. If the only place a command or flag appears is one of those, it's a finding.
   Name the command and say "the #101 rule".
 - **The ideas behind the commands count too** ("the last argument is the destination",
-  "`git add` stages, it doesn't commit"). For a console task, `NEEDS` in
-  `tests/test_lesson_needs.py` should list them. Say if a new console task has no entry.
+  "`git add` stages, it doesn't commit"). For a console task or a lab, `NEEDS`
+  in `tests/test_lesson_needs.py` should list them. Say if a new one has no entry.
 - **The lesson's examples use different names from the task's.** An example that is the task's
   answer with the same file, branch or value hands it over.
 - **Console only:** every command must exist in the station console (`docs/content-authoring.md`
