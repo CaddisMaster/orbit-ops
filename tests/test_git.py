@@ -4,6 +4,8 @@ real run prints on any machine and refuse the likely mistakes.
 That the steps can be done for real is checked by hand in ubuntu:24.04, and each
 box's `example` is pasted from that run (docs/content-authoring.md)."""
 
+import re
+
 import pytest
 
 from app import lab
@@ -114,3 +116,51 @@ def test_module_02s_status_check_still_refuses_a_staged_file():
 )
 def test_module_02s_lab_refuses_the_likely_mistakes(status, show, diff):
     assert not _passes(_module("staging-and-diffs"), status, show, diff)
+
+
+# --- 03: Reading history (#127) -----------------------------------------------------------
+BLAME = "cb9b8e19 (Nakamura 2026-09-22 09:00:00 +0000 3) co2_alarm_ppm = 5000\n"
+PICKAXE = "025b30b Quieten the galley alarms\n"
+SHOW_PETROV = """commit 025b30b6f43d729166e305726c2a8172866618f6
+Author: Petrov <petrov@meridian.example>
+Date:   Mon Sep 14 09:00:00 2026 +0000
+
+    Quieten the galley alarms
+
+-co2_alarm_ppm=2000
++co2_alarm_ppm=5000
+"""
+
+
+@pytest.mark.criterion(127, "Module 03 of Unit 1.3 is complete content")
+def test_module_03_is_complete_content():
+    module = load_catalog().unit_modules("git")[2]
+    assert module.slug == "reading-history"
+    _complete_content(module)
+
+
+def test_module_03s_lab_passes_any_machines_output():
+    whole_blame = "^a952dc3 (Okafor   2026-09-01 09:00:00 +0000 1) # Alarm thresholds, habitat ring.\r\n" + BLAME.replace("\n", "\r\n")
+    assert _passes(_module("reading-history"), whole_blame, "025b30b (HEAD -> main) Quieten the galley alarms\n", SHOW_PETROV)
+
+
+@pytest.mark.parametrize(
+    "blame, pickaxe, show",
+    [
+        ("025b30b6 (Petrov   2026-09-14 09:00:00 +0000 3) co2_alarm_ppm = 5000\n", PICKAXE, SHOW_PETROV),  # git blame -w
+        (BLAME, "cb9b8e1 Align the settings\n", SHOW_PETROV),  # searched for the line as it reads today
+        (BLAME, PICKAXE, "commit cb9b8e19\nAuthor: Nakamura <nakamura@meridian.example>\n\n    Align the settings\n\n-co2_alarm_ppm=5000\n+co2_alarm_ppm = 5000\n"),  # showed blame's commit
+    ],
+)
+def test_module_03s_lab_refuses_the_likely_mistakes(blame, pickaxe, show):
+    assert not _passes(_module("reading-history"), blame, pickaxe, show)
+
+
+def test_module_03s_setup_is_the_story():
+    """The setup's history is what the lab and the comms say: Petrov set 5000 inside a
+    galley commit, and Nakamura's re-spacing is what blame sees."""
+    setup = _module("reading-history").lab.setup
+    assert "edit alarms.conf 's/^co2_alarm_ppm=2000$/co2_alarm_ppm=5000/'; c Petrov 2026-09-14 \"Quieten the galley alarms\"" in setup
+    assert "edit alarms.conf 's/=/ = /';" in setup and 'c Nakamura 2026-09-22 "Align the settings"' in setup
+    assert len(re.findall(r"(?:^|; +)c (?:Okafor|Petrov|Nakamura) ", setup, re.M)) == 15
+    assert "\n#" not in setup, "zsh, the Mac's shell, doesn't treat # as a comment when you paste"

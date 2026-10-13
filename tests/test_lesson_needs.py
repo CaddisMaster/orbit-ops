@@ -205,6 +205,17 @@ NEEDS = {
         "git show HEAD prints the last commit": "the last commit: its message, then its diff",
         "status --short: left is the index, right the working tree": "the left is the index, the right is the working tree",
     },
+    "reading-history": {
+        "git blame names the last commit to change each line": "labelled by the **last commit that changed it**",
+        "what blame names may only have touched the line": "Always `git show` the commit blame names",
+        "git show HASH prints one commit": "`git show HASH` prints one commit in full",
+        "a short hash is enough": "the seven characters `--oneline` shows are enough",
+        "git log -S finds where text was added or removed": "**where it was added or removed**",
+        "search for what changed, not the line as it reads today": "Search for **what changed**",
+        "--oneline is a line per commit": "a line per commit: short hash and message",
+        "-S combines with --oneline": "`--oneline` or `-p` to see the result briefly or in full",
+        "blame's first column is the hash to show": "That's the commit's short hash",
+    },
 }
 
 
