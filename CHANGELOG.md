@@ -67,6 +67,12 @@ and why it matters, not what the diff says.
   resolved, finishing with `git commit`, and `git merge --abort`. In the lab, Nakamura and
   Petrov changed the same CO2 warning on two branches, and you settle it at the brief's value
   in a merge commit that says so. Their other changes merge by themselves.
+- Unit 1.3 module 06, "Remotes" (#130). It covers a bare repository as the shared copy (on
+  disk, no GitHub account needed), `clone`, `origin` and tracking, `remote -v`, `push`, and
+  `fetch` against `pull`. Then `git status -sb`'s ahead and behind, and why status needs a fetch
+  before you trust it. Then a rejected push, and what git 2.43 says when a pull has diverged.
+  In the lab you clone Mission Control's copy, push a fix, then fetch and pull a change
+  Nakamura pushed after you.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to

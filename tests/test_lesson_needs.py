@@ -236,6 +236,16 @@ NEEDS = {
         "git commit finishes the merge, -m says how": "**`git commit`** makes the merge commit. Use `-m` to say how you settled it",
         "clean changes merge by themselves": "Changes to **different** parts of a file merge by themselves",
     },
+    "remotes": {
+        "git clone URL DIR copies a repository": "copies the repository at URL (a web address or a path) into DIR",
+        "git remote -v shows where origin points": "lists the remotes and where they point",
+        "git push sends your commits": "sends your branch's new commits to the remote",
+        "git fetch changes none of your files": "**without touching your files**",
+        "git pull is fetch then merge": "`git fetch`, then merges what it fetched into your branch",
+        "status -sb: ahead means push, behind means pull": "one commit you haven't pushed",
+        "fetch before trusting status": "**`git fetch` before you trust it**",
+        "sh FILE runs a script that isn't executable": "runs with `sh FILE`, even when it isn't executable",
+    },
 }
 
 

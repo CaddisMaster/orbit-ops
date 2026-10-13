@@ -263,3 +263,35 @@ def test_module_05s_setup_is_the_brief():
     assert "co2_warn_ppm = 1500/'\nc Petrov" in setup
     assert "co2_warn_ppm = 800/'\nc Nakamura" in setup
     assert "\n#" not in setup
+
+
+# --- 06: Remotes (#130) -------------------------------------------------------------------
+LOG3 = """388e174 (HEAD -> main, origin/main, origin/HEAD) Add the beacon interval
+5d0e4cc Retry the uplink every 30 seconds
+9c89c21 Track the relay settings
+"""
+
+
+@pytest.mark.criterion(130, "Module 06 of Unit 1.3 is complete content")
+def test_module_06_is_complete_content():
+    module = load_catalog().unit_modules("git")[5]
+    assert module.slug == "remotes"
+    _complete_content(module)
+
+
+def test_module_06s_lab_passes_any_machines_output():
+    assert _passes(_module("remotes"), "## main...origin/main\r\n", LOG3.replace(", origin/HEAD", "").replace("\n", "\r\n"))
+
+
+@pytest.mark.parametrize(
+    "status, log",
+    [
+        ("## main...origin/main [ahead 1]\n", "5d0e4cc (HEAD -> main) Retry the uplink every 30 seconds\n9c89c21 (origin/main, origin/HEAD) Track the relay settings\n"),  # never pushed
+        ("## main...origin/main [behind 1]\n", "5d0e4cc (HEAD -> main) Retry the uplink every 30 seconds\n9c89c21 Track the relay settings\n"),  # fetched, never pulled
+        ("## main...origin/main\n M relay.conf\n", LOG3),  # an edit left uncommitted
+        ("## main...origin/main\n", "5d0e4cc Retry the uplink every 30 seconds\n388e174 Add the beacon interval\n9c89c21 Track the relay settings\n"),  # pushed after her
+        ("## main\n", LOG3),  # in the setup's own copy, or a repo with no remote
+    ],
+)
+def test_module_06s_lab_refuses_the_likely_mistakes(status, log):
+    assert not _passes(_module("remotes"), status, log)
