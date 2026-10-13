@@ -73,6 +73,12 @@ and why it matters, not what the diff says.
   before you trust it. Then a rejected push, and what git 2.43 says when a pull has diverged.
   In the lab you clone Mission Control's copy, push a fix, then fetch and pull a change
   Nakamura pushed after you.
+- Unit 1.3 module 07, "Undoing things" (#131). It covers `git commit --amend` before a push,
+  and `git revert` as the safe undo for anything already pushed. Then `git reset` and its
+  three modes, with why it's only for commits that are yours alone, and `git reflog` to get
+  back a commit `reset --hard` "lost". In the lab, the setup really does run `reset --hard`
+  over Okafor's battery fix. You rescue it from the reflog, then revert Petrov's pushed commit
+  without rewriting anyone's history.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
