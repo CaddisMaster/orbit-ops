@@ -246,6 +246,15 @@ NEEDS = {
         "fetch before trusting status": "**`git fetch` before you trust it**",
         "sh FILE runs a script that isn't executable": "runs with `sh FILE`, even when it isn't executable",
     },
+    "undoing-things": {
+        "git reflog lists every commit HEAD was on": "lists **every commit `HEAD` has been on**",
+        "reset --hard HASH brings a lost commit back": "**`git reset --hard HASH`** moves your branch back to it",
+        "only if nothing's been committed since": "If nothing has been committed since",
+        "git revert makes a new, opposite commit": "makes a **new commit that does the opposite** of HASH",
+        "--no-edit keeps revert's message": "`--no-edit` keeps it",
+        "revert is the safe undo for pushed work": "the safe way to undo anything already pushed",
+        "reset --hard throws away what's after HASH": "**thrown away**, files and all",
+    },
 }
 
 

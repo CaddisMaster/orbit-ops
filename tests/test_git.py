@@ -295,3 +295,51 @@ def test_module_06s_lab_passes_any_machines_output():
 )
 def test_module_06s_lab_refuses_the_likely_mistakes(status, log):
     assert not _passes(_module("remotes"), status, log)
+
+
+# --- 07: Undoing things (#131) ------------------------------------------------------------
+LOG4 = """fbe31c0 (HEAD -> main) Revert "Turn off solar tracking to save the motors"
+5b9d2d9 Raise the battery reserve to 35%
+eaa8d17 Raise the heater budget to 900 W
+7e744ed Turn off solar tracking to save the motors
+"""
+POWER = "solar_tracking = on\nbattery_reserve_pct = 35\nheater_budget_w = 900\n"
+REFLOG = "5b9d2d9 HEAD@{3}: commit: Raise the battery reserve to 35%\n"
+
+
+@pytest.mark.criterion(131, "Module 07 of Unit 1.3 is complete content")
+def test_module_07_is_complete_content():
+    module = load_catalog().unit_modules("git")[6]
+    assert module.slug == "undoing-things"
+    _complete_content(module)
+
+
+@pytest.mark.parametrize(
+    "log",
+    [
+        LOG4.replace("\n", "\r\n"),
+        # recovered with a rescue branch and merged after the revert: the fix lands on top
+        'a1b2c3d (HEAD -> main) Merge branch \'rescue\'\n5b9d2d9 (rescue) Raise the battery reserve to 35%\nfbe31c0 Revert "Turn off solar tracking to save the motors"\neaa8d17 Raise the heater budget to 900 W\n7e744ed Turn off solar tracking to save the motors\n',
+    ],
+)
+def test_module_07s_lab_passes_any_machines_output(log):
+    assert _passes(_module("undoing-things"), log, POWER, REFLOG)
+
+
+@pytest.mark.parametrize(
+    "log, power, reflog",
+    [
+        (  # reverted first, then reset --hard to the fix: the revert is gone again
+            "5b9d2d9 (HEAD -> main) Raise the battery reserve to 35%\neaa8d17 Raise the heater budget to 900 W\n7e744ed Turn off solar tracking to save the motors\n9ba9096 Track the power settings\n",
+            POWER.replace("= on", "= off"), REFLOG,
+        ),
+        (  # "undid" Petrov by rewriting history instead of reverting
+            "5b9d2d9 (HEAD -> main) Raise the battery reserve to 35%\neaa8d17 Raise the heater budget to 900 W\n9ba9096 Track the power settings\n",
+            POWER, REFLOG,
+        ),
+        (LOG4, POWER, "eaa8d17 HEAD@{0}: reset: moving to HEAD~1\n"),  # pasted the reset, not the commit
+        (LOG4.replace("5b9d2d9 Raise the battery reserve to 35%\n", ""), POWER.replace("35", "30"), REFLOG),  # never recovered
+    ],
+)
+def test_module_07s_lab_refuses_the_likely_mistakes(log, power, reflog):
+    assert not _passes(_module("undoing-things"), log, power, reflog)
