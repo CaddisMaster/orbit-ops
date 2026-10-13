@@ -216,6 +216,16 @@ NEEDS = {
         "-S combines with --oneline": "`--oneline` or `-p` to see the result briefly or in full",
         "blame's first column is the hash to show": "That's the commit's short hash",
     },
+    "branches-and-merging": {
+        "switch -c makes a branch and switches to it": "creates a branch called NAME, where you are, and switches to it",
+        "switch NAME goes back to a branch": "switches to NAME: your files change to match its newest commit",
+        "merge from the branch you're landing on": "switch to `main` first, then merge the branch",
+        "both moved: a merge commit": "a new commit with **two parents**",
+        "--no-edit keeps git's message": "`--no-edit` keeps it without opening the editor",
+        "leaving vi": "type `:wq` and Enter",
+        "--graph --all draws every branch": "draws every branch, newest at the top",
+        "branch -d deletes a merged branch": "deletes the name NAME, if its commits are merged",
+    },
 }
 
 

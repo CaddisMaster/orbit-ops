@@ -164,3 +164,49 @@ def test_module_03s_setup_is_the_story():
     assert "edit alarms.conf 's/=/ = /';" in setup and 'c Nakamura 2026-09-22 "Align the settings"' in setup
     assert len(re.findall(r"(?:^|; +)c (?:Okafor|Petrov|Nakamura) ", setup, re.M)) == 15
     assert "\n#" not in setup, "zsh, the Mac's shell, doesn't treat # as a comment when you paste"
+
+
+# --- 04: Branches and merging (#128) ------------------------------------------------------
+GRAPH = """*   c15b2f8 (HEAD -> main) Merge branch 'pump-schedule'
+|\\
+| * c6781b5 Cycle the pumps on a schedule
+* | 2806943 Change the filters every 21 days
+|/
+* aa3f114 Track the pump and filter settings
+"""
+
+
+@pytest.mark.criterion(128, "Module 04 of Unit 1.3 is complete content")
+def test_module_04_is_complete_content():
+    module = load_catalog().unit_modules("git")[3]
+    assert module.slug == "branches-and-merging"
+    _complete_content(module)
+
+
+@pytest.mark.parametrize(
+    "graph",
+    [
+        GRAPH.replace("|\\\n", "|\\  \n").replace("|/\n", "|/  \n"),  # git's own trailing spaces
+        # the two commits in the same second can come out the other way round
+        GRAPH.replace("| * c6781b5 Cycle the pumps on a schedule\n* | 2806943 Change the filters every 21 days",
+                      "| * 2806943 Change the filters every 21 days\n* | c6781b5 Cycle the pumps on a schedule"),
+        GRAPH.replace(" (HEAD -> main)", ""),  # piped
+    ],
+)
+def test_module_04s_lab_passes_any_machines_graph(graph):
+    assert _passes(_module("branches-and-merging"), graph, "* main\n")
+
+
+@pytest.mark.parametrize(
+    "graph, branches",
+    [
+        (  # merged by fast-forward: no merge, one line
+            "* c6781b5 (HEAD -> main) Cycle the pumps on a schedule\n* 2806943 Change the filters every 21 days\n* aa3f114 Track the pump and filter settings\n",
+            "* main\n",
+        ),
+        (GRAPH, "* main\n  pump-schedule\n"),  # the branch was never deleted
+        (GRAPH.replace("Merge branch 'pump-schedule'", "Merge branch 'main' into pump-schedule"), "* main\n"),  # merged the wrong way
+    ],
+)
+def test_module_04s_lab_refuses_the_likely_mistakes(graph, branches):
+    assert not _passes(_module("branches-and-merging"), graph, branches)

@@ -55,6 +55,12 @@ and why it matters, not what the diff says.
   members hides who raised the CO2 alarm to 5000 ppm. Blame points at a commit that only
   re-spaced the file, and the pickaxe finds the real one. The setup builds the same history,
   hashes included, on any machine, and runs in zsh as well as bash.
+- Unit 1.3 module 04, "Branches and merging" (#128). It covers what a branch is (a name for a
+  commit), `git switch -c`, switching, fast-forward against a merge commit, `--no-ff`, the
+  merge message's editor (and how to leave vi), reading `git log --graph --all`, and
+  `git branch -d`. In the lab, the pump schedule is worked on a branch while `main` takes a
+  filter fix, and then the two are joined with a merge commit. You paste the graph showing both
+  lines and the merge.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
