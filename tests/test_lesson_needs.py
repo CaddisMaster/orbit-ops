@@ -255,6 +255,18 @@ NEEDS = {
         "revert is the safe undo for pushed work": "the safe way to undo anything already pushed",
         "reset --hard throws away what's after HASH": "**thrown away**, files and all",
     },
+    "working-together": {
+        ".gitignore lists what to keep out": "lists them, one pattern per line, and is committed",
+        "a directory pattern ends in /": "a directory called `build`, and everything in it",
+        "status --ignored --short lists ignored files": "lists them with `!!`",
+        "a second -m is the body": "each `-m` is a paragraph",
+        "the body says why": "**why**: the reason, which the diff can't show",
+        "subjects are imperative and capitalised": "**imperative and capitalised**",
+        "one change per commit": "One change per commit",
+        "git rebase main replays the branch on top": "replays your commits **on top of** where `main` is now",
+        "rebase is run from the branch": "run on your branch, replays your commits",
+        "main.. and the %s/%b format": "`git log main..` lists the commits on your branch that `main` doesn't have",
+    },
 }
 
 
