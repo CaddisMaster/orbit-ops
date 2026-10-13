@@ -210,3 +210,56 @@ def test_module_04s_lab_passes_any_machines_graph(graph):
 )
 def test_module_04s_lab_refuses_the_likely_mistakes(graph, branches):
     assert not _passes(_module("branches-and-merging"), graph, branches)
+
+
+# --- 05: Merge conflicts (#129) -----------------------------------------------------------
+RESOLVED = """# Sensor limits, habitat ring.
+co2_warn_ppm = 1200
+co2_alarm_ppm = 2000
+o2_low_pct = 19.5
+pressure_low_kpa = 94
+smoke_ppm = 60
+humidity_high_pct = 65
+"""
+MERGED = """*   a843d66 (HEAD -> main) Merge galley-warning: CO2 warning at 1200 ppm
+|\\
+| * 4970ef8 (galley-warning) Raise the CO2 warning so the galley stops setting it off
+* | 0fadf2b Lower the humidity alarm to 65%
+* | 548ab9a Lower the CO2 warning for the night shift
+|/
+* 1448122 Track the sensor limits
+"""
+
+
+@pytest.mark.criterion(129, "Module 05 of Unit 1.3 is complete content")
+def test_module_05_is_complete_content():
+    module = load_catalog().unit_modules("git")[4]
+    assert module.slug == "merge-conflicts"
+    _complete_content(module)
+
+
+def test_module_05s_lab_passes_any_machines_output():
+    graph = MERGED.replace(" (galley-warning)", "").replace(" (HEAD -> main)", "").replace("|\\\n", "|\\  \n")
+    assert _passes(_module("merge-conflicts"), RESOLVED.replace("\n", "\r\n"), graph)
+
+
+@pytest.mark.parametrize(
+    "conf, graph",
+    [
+        (RESOLVED.replace("co2_warn_ppm = 1200\n", "<<<<<<< HEAD\nco2_warn_ppm = 1200\n=======\nco2_warn_ppm = 1500\n>>>>>>> galley-warning\n"), MERGED),  # markers left
+        (RESOLVED.replace("co2_warn_ppm = 1200\n", "co2_warn_ppm = 1200\nco2_warn_ppm = 1500\n"), MERGED),  # a side's line kept as well
+        (RESOLVED.replace("1200", "1500"), MERGED.replace("1200", "1500")),  # took Petrov's side
+        (RESOLVED.replace("humidity_high_pct = 65", "humidity_high_pct = 70"), MERGED),  # rewrote the file from memory
+        (RESOLVED, "* 0fadf2b (HEAD -> main) Lower the humidity alarm to 65%\n* 548ab9a Lower the CO2 warning for the night shift\n* 1448122 Track the sensor limits\n"),  # aborted
+    ],
+)
+def test_module_05s_lab_refuses_the_likely_mistakes(conf, graph):
+    assert not _passes(_module("merge-conflicts"), conf, graph)
+
+
+def test_module_05s_setup_is_the_brief():
+    """The two branches really hold the values the task and comms quote."""
+    setup = _module("merge-conflicts").lab.setup
+    assert "co2_warn_ppm = 1500/'\nc Petrov" in setup
+    assert "co2_warn_ppm = 800/'\nc Nakamura" in setup
+    assert "\n#" not in setup

@@ -226,6 +226,15 @@ NEEDS = {
         "--graph --all draws every branch": "draws every branch, newest at the top",
         "branch -d deletes a merged branch": "deletes the name NAME, if its commits are merged",
     },
+    "merge-conflicts": {
+        "the top half is your branch, the bottom the one merging in": "the version on the branch **you're on**",
+        "the answer can be neither side": "often a third value",
+        "delete every marker line": "**Delete every marker line**",
+        "an editor to resolve in": "`nano FILE` opens it",
+        "git add marks it resolved": "**`git add FILE`** marks it resolved",
+        "git commit finishes the merge, -m says how": "**`git commit`** makes the merge commit. Use `-m` to say how you settled it",
+        "clean changes merge by themselves": "Changes to **different** parts of a file merge by themselves",
+    },
 }
 
 
