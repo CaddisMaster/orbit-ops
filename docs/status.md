@@ -59,6 +59,13 @@ A per-session log, standing decisions and a release ledger. Newest first.
   is free. Short quiz answers (`-a`, `/`, `3`) sometimes catch an innocent hint: accepted.
 - **Every module goes through the `content-reviewer` agent** before its Try it run and PR (#124).
   For a lab it's the only #101 check.
+- **Lab setups are pasted into the learner's own shell** (#127 on). They build history with
+  fixed `GIT_AUTHOR_*`/`GIT_COMMITTER_*` names and dates, so hashes match on every machine. They
+  have **no `#` lines** (interactive zsh, the Mac's shell, runs them as commands), edit with `sed
+  … > f.new && mv` (BSD vs GNU `sed -i`), use `git init -b main`, and `unset -f` their helpers.
+  Lab examples are captured through a TTY (`script`, with `GIT_PAGER=cat`).
+- **Unit 1.3 needs only Unit 1.1**, so a Git lab that edits a file names an editor (`nano`) in
+  its own lesson (#149), rather than Git requiring Unit 1.2.
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -75,6 +82,61 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-13 — Unit 1.3 Git written: all eight modules
+
+- **Merged:** the eight Git modules, one PR each, plus one follow-up.
+  - #144 (#125) Your first repository
+  - #145 (#126) Staging and diffs
+  - #146 (#127) Reading history
+  - #147 (#128) Branches and merging
+  - #148 (#129) Merge conflicts
+  - #150 (#130) Remotes
+  - #151 (#131) Undoing things
+  - #152 (#132) Working together, the first `ai_review` lab and the end of the unit (*Every Change Logged*)
+  - #149: a nano line in module 01, a follow-up to #148's review.
+- **Nothing released.** Production is still 0.6.1. v0.7.0's content and platform are both
+  merged.
+- **How each module was made:**
+  - written with a `NEEDS` entry, which now covers labs as well as console tasks (#144)
+  - setup, steps and Try it run in `ubuntu:24.04`, under bash and pasted into interactive zsh
+  - read by the content-reviewer, whose unconfirmed claims were then run in a container
+  - played as `verify-bot` in Playwright, then checked with `/verify`, then the PR
+- **Decided this session:**
+  - Labs check what can be checked, and each refusal has a test named for the mistake. Module
+    08's rubric asks Claude only for what the pastes show and the checks can't judge.
+  - Issue deviations, each noted in its PR:
+    - module 01's file is in `~/meridian`, not `/etc`
+    - module 02 pastes `git show HEAD` and `git diff`, not `--stat`
+    - modules 03, 07 and 08 got extra boxes
+  - The editor gap: a line in module 01 (#149), not a Unit 1.2 prerequisite. Sean's choice.
+- **What checking against the real thing found:**
+  - zsh doesn't treat `#` as a comment when pasted. `script` hung on git's pager.
+  - The real `add -p` prompt. The `fetch first` vs `non-fast-forward` rejections. git 2.43's
+    divergent-pull refusal. `branch -d` refusing a squashed branch. `main` has no merge commits.
+  - YAML ate the leading space of ` M file` (use `|2`). Splitting a module on `---` breaks on
+    examples that contain `---` (ask the loader).
+  - Three hints that were wrong for one of the mistakes their check catches, found in the
+    browser.
+- **The reviewer caught:**
+  - a quiz that handed over the lab's `git revert` hash, and a table that was the lab's `.gitignore`
+  - "merging deploys", "history is never rewritten" and "life support fully online": all false
+  - the Unit 1.3 editor gap
+- **Process notes:**
+  - Branch protection is strict. #150 needed `gh pr update-branch` after #149 merged.
+  - Sean's local `sean` account had Unit 1.1 marked complete by hand, to open Git without
+    replaying it: seven modules, `permissions` included. Unwind if wanted.
+- **Next:**
+  1. **Release v0.7.0** when Sean says. First `ANTHROPIC_API_KEY` (and optionally
+     `AI_MONTHLY_BUDGET_CENTS`) goes in the droplet's `.env`, from the Mac. Migrations `0008`
+     and `0009` are expand-only. The first live hint and lab review happen then, so watch
+     module 08's rubric on its first real review.
+  2. On the Mac: play the Git labs, and check the two things the VM couldn't. Does Apple git
+     build module 03's history with HEAD `5bb59d5`? Does an empty clone land on `main`
+     (module 06's Try it)?
+  3. Still open from before: Review loads on prod (`0007`), and a pre-deploy dump ends with
+     `dump complete`.
+  4. #103–#105, #83, #84 when Sean picks them. Next unit after the release: Networking (1.4).
 
 ### 2026-10-12 (afternoon) — v0.7.0 opened; its platform half built
 
