@@ -390,7 +390,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   block's comment or the Try it doesn't count (`tests/test_content.py` checks it). The ideas
   behind the commands ("the last argument is the destination", "`..` needs its slash", "check
   that TERM worked") are listed per module in `NEEDS` in `tests/test_lesson_needs.py`, with the
-  words the lesson uses for each. A new module with a console task adds its entry. Point the
+  words the lesson uses for each. A new module with a console task or a lab adds its entry. Point the
   task at the right section if it helps, but don't hand over the answer: an example in the
   lesson should use a different file or directory from the task's.
 - **Say when the console lacks something.** A lesson section that mentions a key or command
@@ -474,10 +474,10 @@ can't point at it.
 Modules are written with Claude in Claude Code sessions, one issue and one PR each. Before a
 module's PR, in this order:
 
-1. **Write it**, with the `NEEDS` entry for a console task.
+1. **Write it**, with the `NEEDS` entry for a console task or a lab.
 2. **Run the `content-reviewer` agent** on it (`.claude/agents/content-reviewer.md`, #124).
-   It reads the module against this file and reports: the #101 rule (and for a **lab** it's the
-   only check, since no test parses a lab's steps), the quiz against the lesson, claims against
+   It reads the module against this file and reports: the #101 rule (for a **lab**, `NEEDS` is the
+   only test of it, since no test parses a lab's steps), the quiz against the lesson, claims against
    the repo, lab checks that hold on any machine, and the Try it script to run. Fix what it
    finds, or say in the PR why not.
 3. **Run the Try it** in a fresh `ubuntu:24.04` container as a sudo-capable non-root user, plus
