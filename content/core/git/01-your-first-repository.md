@@ -186,6 +186,9 @@ directory, where git keeps the history, and nothing else changes. (It may also p
 | `git commit -m "message"` | records everything staged, as one commit, with that message |
 | `git log` | lists the commits, newest first; `git log --oneline` shows one line each |
 
+Change files with any editor: git only sees the result. In a terminal, `nano FILE` opens one,
+and ^O then Enter saves, ^X leaves.
+
 Recording a change is always two steps: **`git add` first, then `git commit`**. The pause
 between them is on purpose: you choose what goes in the commit. `git status` tells you where
 each file stands:

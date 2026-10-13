@@ -190,6 +190,7 @@ NEEDS = {
         "set a name and email before the first commit": "`git config --global user.name`",
         "git init makes a repository": "`git init` turns the current directory into a **repository**",
         "add, then commit": "**`git add` first, then `git commit`**",
+        "an editor to change the file with": "`nano FILE` opens one",
         "an edited file is added again before its commit": "Changes not staged for commit changed since the last commit, but not added yet",
         "commit -m gives the message": "`git commit -m \"message\"`",
         "log --oneline is a line per commit": "`git log --oneline` shows one line each",

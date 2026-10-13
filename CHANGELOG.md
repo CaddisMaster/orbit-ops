@@ -41,7 +41,8 @@ and why it matters, not what the diff says.
   `commit -m` and `log`. It explains what a commit is (a snapshot with an author, a time, a
   message and a parent) and why nobody else's hashes match yours. In the lab you put
   `airmix.conf` under version control in two commits on your own machine, and paste
-  `git log --oneline` and `git status`.
+  `git log --oneline` and `git status`. It names an editor (`nano`, and how to save and leave),
+  because the lab edits a file and Unit 1.3 doesn't need Unit 1.2, where nano is taught.
 - Unit 1.3 module 02, "Staging and diffs" (#126). It covers the working tree, the index and
   HEAD; `git diff` against `git diff --staged`, and reading a hunk; `git add -p` for staging
   part of a file; `git status --short`'s two columns; and `git restore` with and without
