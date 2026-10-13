@@ -61,6 +61,11 @@ and why it matters, not what the diff says.
   `git branch -d`. In the lab, the pump schedule is worked on a branch while `main` takes a
   filter fix, and then the two are joined with a merge commit. You paste the graph showing both
   lines and the merge.
+- Unit 1.3 module 05, "Merge conflicts" (#129). It covers why conflicts happen, reading the
+  markers, resolving by editing (which may mean neither side's value), `git add` to mark a file
+  resolved, finishing with `git commit`, and `git merge --abort`. In the lab, Nakamura and
+  Petrov changed the same CO2 warning on two branches, and you settle it at the brief's value
+  in a merge commit that says so. Their other changes merge by themselves.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
