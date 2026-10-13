@@ -343,3 +343,64 @@ def test_module_07s_lab_passes_any_machines_output(log):
 )
 def test_module_07s_lab_refuses_the_likely_mistakes(log, power, reflog):
     assert not _passes(_module("undoing-things"), log, power, reflog)
+
+
+# --- 08: Working together (#132) ----------------------------------------------------------
+MESSAGES = """Start night lighting at 21:00
+The night shift now starts at 21:00, an hour earlier, and the lights should change with it.
+---
+Dim the corridors to 20% at night
+The night shift sleeps off the corridors, and at 60% the light under the doors kept them awake.
+---
+Ignore the generated reports and the relay secret
+The reports are rebuilt from the logs every night, and secrets.env holds the relay token, which must never leave this machine.
+---
+"""
+IGNORED = "!! report/\n!! secrets.env\n"
+LINEAR = """* 9964aeb (HEAD -> night-lighting) Start night lighting at 21:00
+* 2e809ab Dim the corridors to 20% at night
+* 69a18ac Ignore the generated reports and the relay secret
+* a98dc2d (main) Track the galley lighting
+* 5dd8052 Track the lighting settings
+"""
+CONF = "corridor_night_pct = 20\ncabin_night_pct = 40\nnight_starts = 21:00\nnight_ends = 06:00\n"
+
+
+@pytest.mark.criterion(132, "Module 08 of Unit 1.3 is complete content")
+def test_module_08_is_complete_content():
+    module = load_catalog().unit_modules("git")[7]
+    assert module.slug == "working-together"
+    _complete_content(module)
+    assert module.lab.ai_review and module.lab.rubric, "the unit's first lab reviewed by Claude (#122)"
+    assert module.slug == load_catalog().unit_modules("git")[-1].slug, "the end of the unit"
+
+
+def test_module_08s_lab_passes_any_machines_output():
+    messages = "\n" + MESSAGES.replace("with it.\n", "with it.\n\nIt matches the new rota.\n").replace("\n", "\r\n")
+    assert _passes(_module("working-together"), messages, IGNORED, LINEAR.replace(" (HEAD -> night-lighting)", "").replace(" (main)", ""), CONF)
+
+
+@pytest.mark.parametrize(
+    "messages, ignored, graph, conf",
+    [
+        ("Dim the corridors and start at 21:00\nBoth of Okafor's changes.\n---\nIgnore the reports\nThey're generated.\n---\n", IGNORED, LINEAR, CONF),  # two changes in one commit
+        (MESSAGES.replace("Dim the corridors to 20% at night\nThe night shift sleeps off the corridors, and at 60% the light under the doors kept them awake.\n", "Dim the corridors to 20% at night\n"), IGNORED, LINEAR, CONF),  # a commit with no body
+        (MESSAGES.replace("Start night", "start night"), IGNORED, LINEAR, CONF),  # lower-case subject
+        (MESSAGES, "?? .gitignore\n!! report/\n!! secrets.env\n", LINEAR, CONF),  # .gitignore never committed
+        (MESSAGES, "?? report/\n?? secrets.env\n", LINEAR, CONF),  # nothing ignored
+        (  # merged main in instead of rebasing
+            MESSAGES, IGNORED,
+            "*   b1c2d3e (HEAD -> night-lighting) Merge branch 'main' into night-lighting\n|\\\n| * a98dc2d (main) Track the galley lighting\n* | df57c63 Start night lighting at 21:00\n",
+            CONF,
+        ),
+        (MESSAGES, IGNORED, LINEAR, CONF.replace("= 20", "= 60")),  # the corridor change never made
+    ],
+)
+def test_module_08s_lab_refuses_the_likely_mistakes(messages, ignored, graph, conf):
+    assert not _passes(_module("working-together"), messages, ignored, graph, conf)
+
+
+def test_module_08s_setup_leaves_the_junk_untracked():
+    setup = _module("working-together").lab.setup
+    assert "report/lighting-2026-10-12.html" in setup and "secrets.env" in setup
+    assert setup.rstrip().endswith("unset -f c") and "\n#" not in setup

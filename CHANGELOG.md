@@ -79,6 +79,13 @@ and why it matters, not what the diff says.
   back a commit `reset --hard` "lost". In the lab, the setup really does run `reset --hard`
   over Okafor's battery fix. You rescue it from the reflog, then revert Petrov's pushed commit
   without rewriting anyone's history.
+- Unit 1.3 module 08, "Working together" (#132), the end of **Git**. It covers `.gitignore`
+  (generated files and secrets, and why a committed secret must be changed, not deleted), commit
+  messages with an imperative, capitalised subject and a body that says why, and `git rebase`
+  for a straight history. It walks this project's own issue → branch → PR → squash-merge flow.
+  The lab is the first reviewed by Claude: you keep the junk out, make Okafor's two changes as
+  one commit each, and rebase onto `main`. The checks decide the pass, and Claude then reviews
+  the messages against a rubric. Completing it earns *Every Change Logged*.
 
 ### Fixed
 - The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
