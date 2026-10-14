@@ -90,9 +90,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.6.1** is in production. **v0.7.0 — Labs and AI** is open: its platform
-(labs, the AI gate, lab review, hints, the content reviewer) and all of Unit 1.3 Git are merged.
-It waits on an Anthropic key on the droplet and Sean's go.
+See `docs/status.md`. **v0.7.0 — Labs and AI** is in production (2026-10-14), with the app's own
+Anthropic key on the droplet. Merged since and unreleased: quiz retries, typed flashcards, crew
+comms for promotions and badges, the desk scaling with the screen, and the Life Support mystery
+(`docs/story.md`) through Unit 1.3.
 
 ## Maintainer notes (local only)
 

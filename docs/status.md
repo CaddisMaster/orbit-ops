@@ -73,6 +73,7 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.7.0 | 2026-10-14 | Labs and AI: Unit 1.3 Git (8 modules, labs on your own machine), Claude hints and lab review behind a monthly budget, the AI gate and **Uplink** readout, the verified pre-deploy backup; migrations `0008`, `0009` |
 | 0.6.1 | 2026-10-12 | Unit 1.2 modules 05–10 (conditionals → cron): Bash scripting complete, *Routine Automated*; GNU-style `tar` cannot-open message. PATCH, no migrations |
 | 0.6.0 | 2026-10-12 | The console as a real shell (control flow, functions, `set -e`/trap, nano, man, cron, find/du/tar, links); Unit 1.2 modules 01–04; the lesson audit (#101); report paths with spaces accepted; release-versioned static URLs |
 | 0.5.0 | 2026-10-10 | SM-2 flashcards as MERIDIAN's watch drill (XP, streak, dashboard); self-hosted Pyodide and the first code challenge; the laptop with a closing lid; the map as the *Meridian*; unit briefings shown; migration `0007` |
@@ -82,6 +83,56 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-14 — v0.7.0 shipped; #103, #104, #83, #84, #160 and half of #105
+
+- **Released v0.7.0** (run `38557174800`, `33d4579`), after Sean put a key for this app alone
+  and `AI_MONTHLY_BUDGET_CENTS=500` in the droplet's `.env` from the Mac. The cut was #154.
+  - The deploy's first real backup logged `backup ok`, 2811 bytes. The script keeps only a dump
+    that ends with `dump complete`, so the old 2.8 KB worry is settled.
+  - `0008` and `0009` ran in the deploy. `/healthz` reports 0.7.0, and BB is still green.
+- **Merged since the release (all unreleased):**
+  - #133: Dependabot, `anthropic` 1.13.0 and `pycparser` 3.11.
+  - #155: the app scales with the desk, 1rem = scene width / 80, between 16 and 32px (part of
+    #105). 1280×720 is unchanged byte for byte.
+  - #156 (#103): a wrong quiz answer gets **Try again** / **Show me**, and only the first
+    attempt is scored. *Show me* is an attempt with an empty answer, so no migration.
+  - #157 (#104): flashcards show their unit, module and lesson section, with links. Lesson
+    headings have `sec-` ids. You type the answer before the back, and an exact `accept:` answer
+    preselects Good. All 84 cards are backfilled.
+  - #158 (#83): promotions and badges speak on comms, derived like everything else. A
+    completion's moment is its XP award's (Postgres `now()` is the transaction's start).
+  - #159 (#84): `docs/story.md` holds the Life Support mystery. Unit 1.2's cron task now finds
+    `/etc/cron.d/scrubber-maint` at 02:35.
+  - #161 (#160): *Reading history*'s lab builds `~/meridian/station-config`. Its last step
+    finds `depot-sync`'s commit `b26750b` with `git log -S scrubber-flush`.
+- **Decided this session:**
+  - #103: existing wrong answers become retryable too.
+  - #104: grading stays self-graded, and `accept:` is only for single-string answers.
+  - #83: a badge without lines gets MERIDIAN's `COMMENDATION LOGGED · NAME`.
+  - #160: option 1, a second repo, so the alarms history (HEAD `5bb59d5`) is untouched.
+  - Labs allow four boxes, so step 6 puts both pastes in one box.
+- **What checking against the real thing found:**
+  - `git log -S` searches contents, so the file name `scrubber-maint` finds nothing.
+  - htmx focuses `[autofocus]` at settle, about 20 ms after the swap.
+  - The console has no `printf`.
+  - `/etc/cron.d` user fields were confirmed in `ubuntu:24.04`.
+  - Console success text is plain text, not Markdown.
+- **Process notes:**
+  - The auto-mode classifier refused the release PR's merge until Sean said "merge it".
+  - `scripts.export_exercises` must run as the host user (`-u "$(id -u):$(id -g)"`).
+  - A test user seeded straight into `module_progress` earns every badge at its first check, so
+    its comms fill with commendations. That's an artifact of the seeding, not a bug.
+- **Next:**
+  1. On the desk: does the readout say **Uplink online**? Ask for the first live hint, and play
+     module 08's lab for the first real review. Open Review once to confirm `0007` on prod.
+  2. #105's first half: a screenshot from the 2K monitor, plus the browser, zoom and macOS
+     scaling.
+  3. Release the merged work when Sean says (a MINOR: #103, #104, #83 and #84 change behaviour).
+  4. Content gap: module 05 (`users-and-sudo`) has a `sudo` vs `su` card, but the lesson never
+     teaches `su`. Not filed yet.
+  5. The Mac checks from 2026-10-13 still stand. Next unit: Networking (1.4), with its clue from
+     `docs/story.md`.
 
 ### 2026-10-13 — Unit 1.3 Git written: all eight modules
 
