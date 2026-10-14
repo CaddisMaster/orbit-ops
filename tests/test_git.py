@@ -141,7 +141,10 @@ def test_module_03_is_complete_content():
 
 def test_module_03s_lab_passes_any_machines_output():
     whole_blame = "^a952dc3 (Okafor   2026-09-01 09:00:00 +0000 1) # Alarm thresholds, habitat ring.\r\n" + BLAME.replace("\n", "\r\n")
-    assert _passes(_module("reading-history"), whole_blame, "025b30b (HEAD -> main) Quieten the galley alarms\n", SHOW_PETROV)
+    assert _passes(
+        _module("reading-history"), whole_blame, "025b30b (HEAD -> main) Quieten the galley alarms\n", SHOW_PETROV,
+        (DEPOT_PICKAXE + SHOW_DEPOT).replace("\n", "\r\n"),
+    )
 
 
 @pytest.mark.parametrize(
@@ -153,7 +156,7 @@ def test_module_03s_lab_passes_any_machines_output():
     ],
 )
 def test_module_03s_lab_refuses_the_likely_mistakes(blame, pickaxe, show):
-    assert not _passes(_module("reading-history"), blame, pickaxe, show)
+    assert not _passes(_module("reading-history"), blame, pickaxe, show, DEPOT_PICKAXE + SHOW_DEPOT)
 
 
 def test_module_03s_setup_is_the_story():
@@ -162,8 +165,61 @@ def test_module_03s_setup_is_the_story():
     setup = _module("reading-history").lab.setup
     assert "edit alarms.conf 's/^co2_alarm_ppm=2000$/co2_alarm_ppm=5000/'; c Petrov 2026-09-14 \"Quieten the galley alarms\"" in setup
     assert "edit alarms.conf 's/=/ = /';" in setup and 'c Nakamura 2026-09-22 "Align the settings"' in setup
-    assert len(re.findall(r"(?:^|; +)c (?:Okafor|Petrov|Nakamura) ", setup, re.M)) == 15
+    alarms = setup.split("~/meridian/station-config")[0]
+    assert len(re.findall(r"(?:^|; +)c (?:Okafor|Petrov|Nakamura) ", alarms, re.M)) == 15
     assert "\n#" not in setup, "zsh, the Mac's shell, doesn't treat # as a comment when you paste"
+
+
+# --- 03, the Life Support mystery's Unit 1.3 clue (#160, docs/story.md) --------------------
+DEPOT_PICKAXE = "b26750b Update drone credential list\n"
+SHOW_DEPOT = """commit b26750b5eea5051761593ba452ec2163fb150f28
+Author: depot-sync <depot-sync@depot.example>
+Date:   Wed Sep 30 09:00:00 2026 +0000
+
+    Update drone credential list
+
+diff --git a/drones/md-3.list b/drones/md-3.list
+-md3-key-0417
+-md3-key-0418
++depot-key-a1
++depot-key-a2
++depot-key-a3
+diff --git a/etc/cron.d/scrubber-maint b/etc/cron.d/scrubber-maint
+new file mode 100644
++# nightly controller flush. do not remove
++35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1
+"""
+
+
+@pytest.mark.criterion(160, "Unit 1.3 plants its clue")
+def test_module_03s_setup_builds_the_depot_sync_commit():
+    """Run in ubuntu:24.04 under bash and pasted into zsh: both give b26750b, and the alarms
+    repo's HEAD stays 5bb59d5. The cron file is the one Unit 1.2's console finds."""
+    module = _module("reading-history")
+    setup = module.lab.setup
+    assert 'c depot-sync 2026-09-30 "Update drone credential list" depot-sync@depot.example' in setup
+    depot = setup.split('c depot-sync')[0].rsplit("\n", 3)[-3:]
+    assert any("> etc/cron.d/scrubber-maint" in line for line in depot)  # added in that commit
+    assert any("depot-key-a1" in line for line in depot)  # with the drone's new list
+    assert 'c Okafor 2026-10-05' in setup  # and it isn't the newest commit, so it has to be searched for
+    cron = load_catalog().modules["scheduling-with-cron"].terminal.files
+    planted = next(f.contents for f in cron if f.path == "/etc/cron.d/scrubber-maint")
+    assert "35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1" in planted
+    assert "scrubber-flush" in module.lab.task and "git log -S" in module.lab.task
+
+
+@pytest.mark.criterion(160, "The lab checks the clue was found")
+@pytest.mark.parametrize(
+    "pickaxe, show",
+    [
+        ("", SHOW_DEPOT),  # -S scrubber-maint: a file name, so nothing found
+        ("468f05b Rotate the logs at 04:00, after the backups\n", SHOW_DEPOT),  # git log -1 instead of searching
+        (DEPOT_PICKAXE, "commit 468f05b\nAuthor: Okafor <okafor@meridian.example>\n\n    Rotate the logs at 04:00, after the backups\n"),  # showed HEAD
+        (DEPOT_PICKAXE, SHOW_DEPOT.split("diff --git a/etc")[0]),  # a show cut short before the cron file
+    ],
+)
+def test_module_03s_lab_refuses_a_missed_clue(pickaxe, show):
+    assert not _passes(_module("reading-history"), BLAME, PICKAXE, SHOW_PETROV, pickaxe + show)
 
 
 # --- 04: Branches and merging (#128) ------------------------------------------------------

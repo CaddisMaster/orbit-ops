@@ -221,6 +221,7 @@ NEEDS = {
         "--oneline is a line per commit": "a line per commit: short hash and message",
         "-S combines with --oneline": "`--oneline` or `-p` to see the result briefly or in full",
         "blame's first column is the hash to show": "That's the commit's short hash",
+        "-S searches contents, so search for what a file says (#160)": "It searches what files **contain**, not their names",
     },
     "branches-and-merging": {
         "switch -c makes a branch and switches to it": "creates a branch called NAME, where you are, and switches to it",

@@ -13,6 +13,12 @@ and why it matters, not what the diff says.
   check what already runs at night. In `/etc/cron.d` there's a root job nobody on the crew
   wrote, running at 02:35, five minutes before scrubber B went dark. The lesson now teaches
   system jobs in `/etc/cron.d`, and the crew react on comms.
+- Unit 1.3 picks up the mystery (#160). *Reading history*'s lab also builds the station's
+  config repo, and a last step finds who added the 02:35 job, with `git log -S` and `git show`:
+  `depot-sync`, the supply depot's update feed, on 2026-09-30. Its message, "Update drone
+  credential list", doesn't mention the cron job it brought, and the same commit is why the drone
+  couldn't log in the night the station went dark. The lesson now says that `-S` searches what
+  files contain, not their names. Git's last debrief points the thread at Networking.
 - The crew notice promotions and commendations (#83). Reaching a new rank brings a line on
   comms: from Okafor up to Chief Engineer, and from Mission Control for Station Commander.
   Earning a badge brings MERIDIAN's "COMMENDATION LOGGED · <NAME>". The lines arrive after the

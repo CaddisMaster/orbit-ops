@@ -77,8 +77,9 @@ lab:
     Find out when the CO2 alarm was set to 5000 ppm, who did it, and what they said.
 
     1. Run the setup below, once. It builds `~/meridian/alarms`, a month of history: 15 commits
-       by Okafor, Petrov and Nakamura, with their dates. To start again, delete
-       `~/meridian/alarms` first.
+       by Okafor, Petrov and Nakamura, with their dates. It also builds
+       `~/meridian/station-config`, where the station's cron jobs are kept. To start again, delete
+       both first.
     2. In `~/meridian/alarms`, run `git blame alarms.conf` and paste the line for
        `co2_alarm_ppm`.
     3. Look at that commit with `git show`. Did it set the value, or only touch the line?
@@ -86,10 +87,18 @@ lab:
        printed.
     5. Paste what `git show` prints for that commit. If it opens in a pager, make the terminal
        taller so it fits on one screen, or press `q` and run it again.
+
+    Then Okafor's other question. `/etc/cron.d/scrubber-maint`, the 02:35 job nobody on the crew
+    wrote, runs `/usr/local/sbin/scrubber-flush`.
+
+    6. In `~/meridian/station-config`, find the commit that added it: search the history for
+       **what the job runs** with `git log -S` and `--oneline`. Then `git show` that commit, and
+       read who made it and whether its message says what its diff does. Paste both, one after
+       the other, into the last box.
   setup: |-
     mkdir -p ~/meridian/alarms && cd ~/meridian/alarms && git init -q
     c() {
-      export GIT_AUTHOR_NAME="$1" GIT_AUTHOR_EMAIL="$(echo "$1" | tr 'A-Z' 'a-z')@meridian.example"
+      export GIT_AUTHOR_NAME="$1" GIT_AUTHOR_EMAIL="${4:-$(echo "$1" | tr 'A-Z' 'a-z')@meridian.example}"
       export GIT_COMMITTER_NAME="$1" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
       export GIT_AUTHOR_DATE="$2 09:00:00 +0000" GIT_COMMITTER_DATE="$2 09:00:00 +0000"
       git add -A && git commit -q -m "$3"
@@ -113,6 +122,15 @@ lab:
     edit alarms.conf 's/=/ = /';                                 c Nakamura 2026-09-22 "Align the settings"
     echo 'Fri  Petrov' >> rota.txt;                              c Okafor 2026-09-25 "Add Friday's watch"
     echo '# O2 sensor replaced 2026-09-27, ring B.' >> alarms.conf; c Nakamura 2026-09-28 "Note the new O2 sensor"
+    mkdir -p ~/meridian/station-config && cd ~/meridian/station-config && git init -q && mkdir -p etc/cron.d drones
+    printf "# rotate the station's logs\n0 3 * * *  root  /usr/sbin/logrotate /etc/logrotate.conf\n" > etc/cron.d/logrotate
+    printf "# keep the station clock on Mission Control's time (Okafor, 2025-11)\n0 2 * * *  root  /usr/local/sbin/clock-sync\n" > etc/cron.d/clock-sync
+    c Okafor 2026-08-20 "Track the station's cron jobs"
+    printf 'md3-key-0417\nmd3-key-0418\n' > drones/md-3.list;   c Nakamura 2026-09-12 "Track the maintenance drone's credentials"
+    printf 'depot-key-a1\ndepot-key-a2\ndepot-key-a3\n' > drones/md-3.list
+    printf '# nightly controller flush. do not remove\n35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1\n' > etc/cron.d/scrubber-maint
+    c depot-sync 2026-09-30 "Update drone credential list" depot-sync@depot.example
+    edit etc/cron.d/logrotate 's/^0 3 /0 4 /';                  c Okafor 2026-10-05 "Rotate the logs at 04:00, after the backups"
     unset -f c edit
   boxes:
     - prompt: "The line `git blame alarms.conf` prints for `co2_alarm_ppm`."
@@ -159,15 +177,41 @@ lab:
          fan_rpm=1500
         -alarm_volume=8
         +alarm_volume=3
+    - prompt: "In `~/meridian/station-config`: what `git log -S` printed with `--oneline`, then what `git show` printed for that commit."
+      checks:
+        - {regex: '^[0-9a-f]{7,} (\(.*\) )?Update drone credential list *$', says: "git log -S found the commit that added the 02:35 job", hint: "-S searches what the files contain, not their names. Search for scrubber-flush, the command the job runs, and paste the --oneline form first."}
+        - {contains: "Author: depot-sync <depot-sync@depot.example>", says: "git show names who committed it", hint: "Then give git show the hash git log -S found, and paste what it prints after it."}
+        - {contains: "+35 2 * * *  root  /usr/local/sbin/scrubber-flush", says: "Its diff adds the cron job"}
+        - {contains: "+depot-key-a1", says: "And, in the same commit, the drone's new credential list"}
+      example: |
+        b26750b Update drone credential list
+        commit b26750b5eea5051761593ba452ec2163fb150f28
+        Author: depot-sync <depot-sync@depot.example>
+        Date:   Wed Sep 30 09:00:00 2026 +0000
+
+            Update drone credential list
+
+        diff --git a/drones/md-3.list b/drones/md-3.list
+        ...
+        +depot-key-a1
+        ...
+        +++ b/etc/cron.d/scrubber-maint
+        @@ -0,0 +1,2 @@
+        +# nightly controller flush. do not remove
+        +35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1
 comms:
   open:
     - {from: meridian, text: "CO2 ALARM · SET 5000 ppm · SPEC 2000 ppm"}
     - {from: okafor, text: "The CO2 alarm's at 5000. At that level people get headaches long before anything beeps. It should be 2000."}
     - {from: okafor, text: "I want to know when it changed, who changed it, and what they said when they did. The alarm settings have been in git for a month, so it's all there."}
+    - {from: okafor, text: "And while you're in the history: the station's cron jobs are in git too. Find out who added `scrubber-maint`."}
   lab_done:
     - {from: meridian, text: "CO2_ALARM_PPM 2000 → 5000 · PETROV · 2026-09-14 · \"QUIETEN THE GALLEY ALARMS\""}
     - {from: okafor, text: "Petrov, turning the galley's alarm down. The CO2 alarm went with it, in the same commit, and the message only mentions the galley."}
     - {from: okafor, text: "And blame pointed at Nakamura, who only lined up the equals signs. Good thing you didn't stop there."}
+    - {from: meridian, text: "STATION-CONFIG · B26750B · 2026-09-30 · AUTHOR: DEPOT-SYNC · MESSAGE: \"UPDATE DRONE CREDENTIAL LIST\" · DIFF: +ETC/CRON.D/SCRUBBER-MAINT"}
+    - {from: okafor, text: "depot-sync isn't a person. It's the supply depot's update feed. It said it was changing the drone's passwords, and it brought a root cron job along."}
+    - {from: okafor, text: "Same commit, the drone's new list. That's why MD-3 couldn't log in the night we went dark. One commit, two changes again, and this time on purpose."}
   complete:
     - {from: okafor, text: "I've put the alarm back to 2000 and asked Petrov. He thought that line was the galley's. One commit, two changes, and nobody could tell."}
     - {from: meridian, text: "CO2 ALARM · 2000 ppm · RESET BY OKAFOR · REASON IN COMMIT MESSAGE"}
@@ -222,6 +266,8 @@ so it finds a change whatever its commit was called.
 
 - Search for **what changed**, like the value, not the line as it reads today. A line that was
   re-spaced since won't match the old version.
+- It searches what files **contain**, not their names. To find the commit that added a file,
+  search for something written inside it.
 - Add `-- PATH` to search one file, and `--oneline` or `-p` to see the result briefly or in full.
 
 **On the real station:** this app's Content Security Policy allows `'wasm-unsafe-eval'`, which

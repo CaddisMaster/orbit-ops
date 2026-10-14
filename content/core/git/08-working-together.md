@@ -191,6 +191,7 @@ comms:
     - {from: meridian, text: "UNIT · GIT · COMPLETE · EVERY CHANGE: AUTHOR · REASON · HISTORY"}
     - {from: mission, text: "*Meridian*, Mission Control. We can read your station's history from here, and it makes sense. That's Git done, cadet."}
     - {from: okafor, text: "Look outside. The shuttle's bringing the next crew, and they'll learn this station from its log. Make it worth reading."}
+    - {from: okafor, text: "One more thing. scrubber-flush has been talking to something every night at 02:35. When the network's back, we find out what."}
   window: {complete: shuttle-dock}
 ---
 
