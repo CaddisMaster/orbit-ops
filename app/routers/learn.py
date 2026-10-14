@@ -92,7 +92,7 @@ def module_page(
             "unit": unit,
             "track": next(t for t in catalog.tracks if t.slug == module.track),
             "unit_size": len(unit.modules),
-            "answers": progress.first_attempts(db, user.id, slug),
+            "answers": progress.question_states(db, user.id, slug),
             "record": record,
             "next": progress.next_module(catalog, slug, completed) if record.status == "complete" else None,
             "terminal_spec": terminal.client_spec(module.terminal) if module.terminal else None,
@@ -280,8 +280,9 @@ def hint(
         return Response(status_code=403, headers={"HX-Redirect": "/"})
     if kind == "quiz":
         index = int(item.removeprefix("quiz-"))
-        if index in progress.first_attempts(db, user.id, slug):
-            raise HTTPException(status_code=409)  # answered: the explanation is showing, no hint needed
+        state = progress.question_states(db, user.id, slug).get(index)
+        if state is not None and state.settled:
+            raise HTTPException(status_code=409)  # settled: the explanation is showing, no hint needed
         question = module.quiz[index]
         if question.type == "fill":
             tried = (answer or [""])[0][:200]
@@ -336,16 +337,12 @@ def answer_question(
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
 ):
-    module = _module_or_404(catalog, slug)
-    if not 0 <= index < len(module.quiz):
-        raise HTTPException(status_code=404)
-    completed = progress.completed_slugs(db, user.id)
-    if not progress.module_available(catalog, slug, completed):
-        flash(request, f"“{module.title}” is still locked. {progress.blocker(catalog, slug, completed)}")
-        return Response(status_code=403, headers={"HX-Redirect": "/"})
+    module, refused = _quiz_question(catalog, slug, index, request, db, user)
+    if refused:
+        return refused
 
     question = module.quiz[index]
-    answer = [a[:200] for a in (answer or [])[:10]]  # bound what gets stored
+    answer =[a[:200] for a in (answer or [])[:10]]  # bound what gets stored
     correct = progress.check_answer(question, answer)
     context = {"module": module, "question": question, "index": index}
     if correct is None:
@@ -383,7 +380,7 @@ def answer_question(
         "partials/_answered.html",
         {
             **context,
-            "attempt": result.attempt,
+            "state": result.state,
             "just_completed": result.just_completed,
             "record": record,
             "xp_gained": xp_gained,
@@ -393,4 +390,63 @@ def answer_question(
             "window_event": window_event,
             "next": progress.next_module(catalog, slug, completed) if result.just_completed else None,
         },
+    )
+
+
+def _quiz_question(catalog: Catalog, slug: str, index: int, request: Request, db: Session, user: User):
+    """The module and question for a quiz route, or the response refusing it."""
+    module = _module_or_404(catalog, slug)
+    if not 0 <= index < len(module.quiz):
+        raise HTTPException(status_code=404)
+    completed = progress.completed_slugs(db, user.id)
+    if not progress.module_available(catalog, slug, completed):
+        flash(request, f"“{module.title}” is still locked. {progress.blocker(catalog, slug, completed)}")
+        return module, Response(status_code=403, headers={"HX-Redirect": "/"})
+    return module, None
+
+
+@router.get("/modules/{slug}/quiz/{index}", response_class=HTMLResponse)
+def question_form(
+    slug: str,
+    index: int,
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    """Try again (#103): the question's form, to change a wrong answer. A settled
+    question shows its answer instead."""
+    module, refused = _quiz_question(catalog, slug, index, request, db, user)
+    if refused:
+        return refused
+    context = {"module": module, "question": module.quiz[index], "index": index}
+    state = progress.question_states(db, user.id, slug).get(index)
+    if state is not None and state.settled:
+        return templates.TemplateResponse(request, "partials/_answered.html", {**context, "state": state, "just_completed": False})
+    return templates.TemplateResponse(
+        request, "partials/_question.html", {**context, "retry": state is not None, "hints_online": spend.uplink_online(db)}
+    )
+
+
+@router.post("/modules/{slug}/quiz/{index}/show", response_class=HTMLResponse)
+def show_answer(
+    slug: str,
+    index: int,
+    request: Request,
+    user: User = Depends(require_user),
+    catalog: Catalog = Depends(get_catalog),
+    db: Session = Depends(get_db),
+):
+    """Show me (#103): give up on a wrong answer and see the right one. The
+    first answer is still the one scored."""
+    module, refused = _quiz_question(catalog, slug, index, request, db, user)
+    if refused:
+        return refused
+    state = progress.show_me(db, user.id, module, index)
+    if state is None:
+        raise HTTPException(status_code=409)  # not answered yet: answer it first
+    db.commit()
+    return templates.TemplateResponse(
+        request, "partials/_answered.html",
+        {"module": module, "question": module.quiz[index], "index": index, "state": state, "just_completed": False},
     )

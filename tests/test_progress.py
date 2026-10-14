@@ -15,7 +15,7 @@ from app.content import get_catalog, load_catalog
 from app.content.schema import ChoiceQuestion, FillQuestion, MultiQuestion
 from app.db import SessionLocal
 from app.main import app
-from app.models import ExerciseAttempt, ModuleProgress
+from app.models import ExerciseAttempt, ModuleProgress, XpEvent
 from app.progress import check_answer, module_available, next_module, todays_mission
 
 SYLLABUS = """
@@ -131,18 +131,20 @@ def test_todays_mission_rule(catalog):
 @pytest.mark.criterion(5, "Answering a question gives immediate feedback")
 def test_answer_is_replaced_in_place_with_verdict_and_explanation(logged_in, test_curriculum):
     logged_in.get("/modules/one")
-    response = answer(logged_in, "one", 0, "0")
+    response = answer(logged_in, "one", 0, "1")
     assert response.status_code == 200
     html = response.text
     assert 'id="q0"' in html and "<html" not in html  # a fragment for hx-swap, not a page
-    assert "Not quite." in html
+    assert "Correct, first time." in html
     assert "Right is right." in html  # the explanation, revealed only now
     assert "(your answer)" in html
+    # a wrong answer says so at once, but keeps the explanation back until settled (#103)
+    assert "Not quite." in answer(logged_in, "one", 1, "dir").text
 
 
 @pytest.mark.criterion(5, "Answering a question gives immediate feedback")
 def test_correct_answer_says_so(logged_in, test_curriculum):
-    assert "Correct." in answer(logged_in, "one", 0, "1").text
+    assert "Correct, first time." in answer(logged_in, "one", 0, "1").text
 
 
 def test_empty_answer_is_not_recorded(logged_in, test_curriculum, user):
@@ -153,13 +155,15 @@ def test_empty_answer_is_not_recorded(logged_in, test_curriculum, user):
         assert db.query(ExerciseAttempt).filter_by(user_id=user.id).count() == 0
 
 
-def test_first_answer_counts_and_reloads_answered(logged_in, test_curriculum):
-    answer(logged_in, "one", 0, "0")
-    again = answer(logged_in, "one", 0, "1")
-    assert "Not quite." in again.text  # still shows the first, counted attempt
+def test_a_settled_answer_reloads_answered_and_cant_be_changed(logged_in, test_curriculum, user):
+    answer(logged_in, "one", 0, "1")
+    again = answer(logged_in, "one", 0, "0")
+    assert "Correct, first time." in again.text  # a settled question ignores later answers
     page = logged_in.get("/modules/one").text
-    assert "Not quite." in page and 'hx-post="/modules/one/quiz/0"' not in page
+    assert "Correct, first time." in page and 'hx-post="/modules/one/quiz/0"' not in page
     assert 'hx-post="/modules/one/quiz/1"' in page  # the unanswered one is still a form
+    with SessionLocal() as db:
+        assert db.query(ExerciseAttempt).filter_by(user_id=user.id, item=0).count() == 1
 
 
 def test_unknown_question_index_is_404(logged_in, test_curriculum):
@@ -256,3 +260,86 @@ def test_progress_is_per_user(client, make_user, test_curriculum):
     client.cookies.clear()
     login(client, second.username)
     assert client.get("/modules/two", follow_redirects=False).status_code == 303
+
+
+# --- changing a wrong answer (#103) -----------------------------------------------
+def try_again(client, slug, index):
+    return client.get(f"/modules/{slug}/quiz/{index}", headers={"HX-Request": "true"})
+
+
+def show_me(client, slug, index):
+    from tests.conftest import csrf
+
+    return client.post(f"/modules/{slug}/quiz/{index}/show", headers={"HX-Request": "true", "X-CSRF-Token": csrf(client)})
+
+
+@pytest.mark.criterion(103, "A wrong answer can be changed")
+def test_a_wrong_answer_can_be_tried_again(logged_in, test_curriculum, user):
+    logged_in.get("/modules/one")
+    wrong = answer(logged_in, "one", 0, "0").text
+    assert "Not quite." in wrong and "Try again" in wrong
+    assert 'hx-get="/modules/one/quiz/0"' in wrong
+    form = try_again(logged_in, "one", 0).text
+    assert 'hx-post="/modules/one/quiz/0"' in form and 'name="answer"' in form  # the question, to answer again
+    assert "Your first answer is still the one scored." in form
+    right = answer(logged_in, "one", 0, "1").text  # the new answer is checked
+    assert "Correct on another try." in right and "Right is right." in right
+    with SessionLocal() as db:
+        assert [a.correct for a in db.query(ExerciseAttempt).filter_by(user_id=user.id, item=0).order_by(ExerciseAttempt.id)] == [False, True]
+
+
+def test_a_wrong_retry_can_be_tried_again(logged_in, test_curriculum):
+    answer(logged_in, "one", 1, "dir")
+    again = answer(logged_in, "one", 1, "pwd").text
+    assert "Not quite." in again and "pwd" in again and "It is ls." not in again
+
+
+@pytest.mark.criterion(103, "Trying again doesn't give the answer away")
+def test_the_answer_stays_hidden_until_right_or_show_me(logged_in, test_curriculum):
+    for response in (answer(logged_in, "one", 0, "0"), try_again(logged_in, "one", 0)):
+        assert "Right is right." not in response.text  # no explanation
+        assert "✓" not in response.text and "is-right" not in response.text  # no right option marked
+    page = logged_in.get("/modules/one").text
+    assert "Right is right." not in page and "Not quite." in page
+    fill = answer(logged_in, "one", 1, "dir").text
+    assert "Accepted:" not in fill and "It is ls." not in fill
+    shown = show_me(logged_in, "one", 1).text
+    assert "Accepted: ls" in shown and "It is ls." in shown and "Here's the answer." in shown
+    assert 'hx-post="/modules/one/quiz/1"' not in logged_in.get("/modules/one").text  # settled: no more tries
+
+
+def test_show_me_needs_an_answer_first(logged_in, test_curriculum):
+    logged_in.get("/modules/one")
+    assert show_me(logged_in, "one", 0).status_code == 409
+
+
+@pytest.mark.criterion(103, "The first attempt is the one that's scored")
+def test_a_retry_scores_nothing(logged_in, test_curriculum, user):
+    answer(logged_in, "one", 0, "0")
+    answer(logged_in, "one", 0, "1")  # right on another try
+    last = answer(logged_in, "one", 1, "ls")
+    assert "Module complete · 50%" in last.text
+    with SessionLocal() as db:
+        row = db.query(ModuleProgress).filter_by(user_id=user.id, module_slug="one").one()
+        assert row.score == 50
+        reasons = {e.reason for e in db.query(XpEvent).filter_by(user_id=user.id, ref="one")}
+        assert "module_complete" in reasons and "perfect_quiz" not in reasons
+    assert "Correct on another try. Your first answer was wrong, and that's the one scored." in logged_in.get("/modules/one").text
+
+
+@pytest.mark.criterion(103, "Retries are mine alone")
+def test_retries_are_per_user(client, make_user, test_curriculum):
+    from tests.conftest import login
+
+    first, second = make_user(), make_user()
+    login(client, first.username)
+    answer(client, "one", 0, "0")
+    answer(client, "one", 0, "1")
+    show_me(client, "one", 0)
+    client.cookies.clear()
+    login(client, second.username)
+    page = client.get("/modules/one").text
+    assert 'hx-post="/modules/one/quiz/0"' in page and "Not quite." not in page  # untouched for them
+    assert show_me(client, "one", 0).status_code == 409  # the other learner's answers don't count
+    answer(client, "one", 0, "1")
+    assert "Module complete · 100%" in answer(client, "one", 1, "ls").text

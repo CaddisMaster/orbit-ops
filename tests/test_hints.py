@@ -174,6 +174,13 @@ def test_an_answered_question_gets_no_hint(logged_in, perms, hinter):
     assert hinter.prompts == []
 
 
+def test_a_question_being_tried_again_gets_hints(logged_in, perms, hinter):
+    # answered wrong but not settled (#103): the right option is still hidden, so a hint helps
+    logged_in.post("/modules/perms/quiz/0", data={"answer": "0"}, headers={"HX-Request": "true", "X-CSRF-Token": csrf(logged_in)})
+    assert ask(logged_in, "quiz-0").status_code == 200
+    assert len(hinter.prompts) == 1
+
+
 def test_an_unknown_item_is_404(logged_in, perms, hinter):
     for item in ("quiz-9", "challenge", "nonsense"):
         assert ask(logged_in, item).status_code == 404

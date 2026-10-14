@@ -131,22 +131,48 @@ def start_module(db: Session, user_id: int, slug: str) -> ModuleProgress:
     return progress
 
 
-def first_attempts(db: Session, user_id: int, slug: str) -> dict[int, ExerciseAttempt]:
-    """The first quiz attempt at each question index — the ones that count."""
+# "Show me" (#103) is stored as a quiz attempt with nothing submitted, which no
+# real answer can be (check_answer returns None for it, and None isn't stored).
+SHOW_ME: list[str] = []
+
+
+@dataclass
+class QuestionState:
+    """One question's attempts (#103). `first` is the one that's scored. The
+    question is `settled` once answered right or given up with Show me; until
+    then a wrong answer can be changed, and the right option stays hidden."""
+
+    first: ExerciseAttempt
+    last: ExerciseAttempt  # the latest real answer (never a Show me)
+    revealed: bool  # settled by Show me rather than by a right answer
+
+    @property
+    def settled(self) -> bool:
+        return self.last.correct or self.revealed
+
+
+def question_states(db: Session, user_id: int, slug: str) -> dict[int, QuestionState]:
+    """Every attempted question's state, by index."""
     attempts = db.scalars(
         select(ExerciseAttempt)
         .where(ExerciseAttempt.user_id == user_id, ExerciseAttempt.module_slug == slug, ExerciseAttempt.kind == "quiz")
         .order_by(ExerciseAttempt.id)
     )
-    first: dict[int, ExerciseAttempt] = {}
+    states: dict[int, QuestionState] = {}
     for attempt in attempts:
-        first.setdefault(attempt.item, attempt)
-    return first
+        state = states.get(attempt.item)
+        if state is None:
+            states[attempt.item] = QuestionState(first=attempt, last=attempt, revealed=attempt.submitted == SHOW_ME)
+        elif attempt.submitted == SHOW_ME:
+            state.revealed = True
+        else:
+            state.last = attempt
+    return states
 
 
 @dataclass
 class AnswerResult:
-    attempt: ExerciseAttempt  # the attempt that counts (the first one)
+    state: QuestionState
     just_completed: bool  # this answer finished the module
 
 
@@ -154,24 +180,41 @@ def record_answer(
     db: Session, user_id: int, module: Module, index: int, submitted: list[str], correct: bool
 ) -> AnswerResult:
     """Store the answer; if every question now has a first attempt, complete the
-    module with its score. Re-answering an answered question is recorded as
-    history but changes nothing. The caller commits."""
+    module with its score. Only the first attempt is scored: a retry (#103) is
+    recorded but changes no score. An answer to a settled question is ignored.
+    The caller commits."""
     progress = start_module(db, user_id, module.slug)
-    existing = first_attempts(db, user_id, module.slug)
+    states = question_states(db, user_id, module.slug)
+    state = states.get(index)
+    if state is not None and state.settled:
+        return AnswerResult(state=state, just_completed=False)
     attempt = ExerciseAttempt(
         user_id=user_id, module_slug=module.slug, kind="quiz", item=index, submitted=submitted, correct=correct
     )
     db.add(attempt)
     db.flush()
-    if index in existing:
-        return AnswerResult(attempt=existing[index], just_completed=False)
+    if state is not None:
+        state.last = attempt
+        return AnswerResult(state=state, just_completed=False)
 
-    existing[index] = attempt
+    state = states[index] = QuestionState(first=attempt, last=attempt, revealed=False)
     just_completed = False
-    if progress.status != "complete" and len(existing) == len(module.quiz):
-        right = sum(1 for a in existing.values() if a.correct)
+    if progress.status != "complete" and len(states) == len(module.quiz):
+        right = sum(1 for s in states.values() if s.first.correct)
         progress.status = "complete"
         progress.score = round(100 * right / len(module.quiz))
         progress.completed_at = datetime.now(UTC)
         just_completed = True
-    return AnswerResult(attempt=attempt, just_completed=just_completed)
+    return AnswerResult(state=state, just_completed=just_completed)
+
+
+def show_me(db: Session, user_id: int, module: Module, index: int) -> QuestionState | None:
+    """Give up on a wrongly answered question: settle it so the right option and
+    the explanation show. None if it hasn't been answered yet. The caller commits."""
+    state = question_states(db, user_id, module.slug).get(index)
+    if state is None or state.settled:
+        return state
+    db.add(ExerciseAttempt(user_id=user_id, module_slug=module.slug, kind="quiz", item=index, submitted=SHOW_ME, correct=False))
+    db.flush()
+    state.revealed = True
+    return state
