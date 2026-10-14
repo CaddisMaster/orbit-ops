@@ -90,10 +90,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.7.0 — Labs and AI** is in production (2026-10-14), with the app's own
-Anthropic key on the droplet. Merged since and unreleased: quiz retries, typed flashcards, crew
-comms for promotions and badges, the desk scaling with the screen, and the Life Support mystery
-(`docs/story.md`) through Unit 1.3.
+See `docs/status.md`. **v0.8.0** is in production (2026-10-14), with the app's own Anthropic key on
+the droplet. Open: milestone **v0.9.0 — Networking** (#164–#176): the console learns a simulated
+station network, then Unit 1.4's ten modules, with the Life Support mystery's next clue
+(`docs/story.md`).
 
 ## Maintainer notes (local only)
 

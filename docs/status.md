@@ -73,6 +73,7 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.8.0 | 2026-10-14 | The desk scales with the screen and fills wide windows (#105); quiz retries (#103); typed, sourced flashcards (#104); the crew notice promotions and badges (#83); the Life Support mystery's 1.2 and 1.3 clues (#84, #160). No migrations |
 | 0.7.0 | 2026-10-14 | Labs and AI: Unit 1.3 Git (8 modules, labs on your own machine), Claude hints and lab review behind a monthly budget, the AI gate and **Uplink** readout, the verified pre-deploy backup; migrations `0008`, `0009` |
 | 0.6.1 | 2026-10-12 | Unit 1.2 modules 05–10 (conditionals → cron): Bash scripting complete, *Routine Automated*; GNU-style `tar` cannot-open message. PATCH, no migrations |
 | 0.6.0 | 2026-10-12 | The console as a real shell (control flow, functions, `set -e`/trap, nano, man, cron, find/du/tar, links); Unit 1.2 modules 01–04; the lesson audit (#101); report paths with spaces accepted; release-versioned static URLs |
@@ -83,6 +84,33 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-14 (afternoon) — #105 finished, v0.8.0 shipped, Networking planned
+
+- **#105:**
+  - Sean's 1080p screenshot was 1864×984. Rendering at that size locally showed the scene was
+    never cropped: a window wider than 16:9 letterboxes it, and the art runs into the bars.
+  - Two previews were built on a throwaway branch and compared on a private artifact page:
+    A, redraw with margins; B, a wider room behind the scene. **Sean chose B.**
+  - #163: `Canvas` takes an `origin`, `room.wide()` draws 432×180, and `body::before` places it
+    at the scene's scale. 16:9 is byte-identical, and every existing PNG is unchanged.
+- **Released v0.8.0** (run `38575135182`, `542844a`; the cut was #177). Backup ok at 3118
+  bytes, no migrations, `/healthz` 0.8.0, BB green.
+  - Sean chose 0.8.0 for this release, and the Networking milestone was renamed v0.9.0, which
+    keeps milestones and minors one to one. v0.7.0's milestone is closed.
+- **Planned Unit 1.4 (milestone v0.9.0 — Networking), 13 issues:**
+  - console platform: #164 (network, `ip`/`ss`/`ping`/`nc`), #165 (DNS: `dig`/`host`/`getent`,
+    `/etc/hosts`), #166 (`curl` over station HTTP services, and `ufw`)
+  - modules #167–#176: 01–03 and 09–10 are console tasks, 04–08 are labs (HTTP, APIs + `jq`,
+    TLS, SSH keys, rsync and tunnels). #176 carries the mystery's 1.4 clue and updates
+    `docs/story.md`.
+  - Decided: the simulated network for story tasks, labs for real-world skills. The station's
+    fake hosts can't exist on the real internet.
+- **Next:**
+  1. #164, the console's station network. Suggested order: #164 → #167 → #165 → #168 → #169 →
+     labs #170–#174 → #166 → #175 → #176.
+  2. On the desk: the first live hint and lab review; open Review once (`0007` on prod).
+  3. The `su` gap in module 05 is still unfiled.
 
 ### 2026-10-14 — v0.7.0 shipped; #103, #104, #83, #84, #160 and half of #105
 
