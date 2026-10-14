@@ -41,3 +41,10 @@ def test_the_stories_times_agree_with_the_content():
     assert "02:40 scrubber B: offline" in str(catalog.modules["the-filesystem"].terminal.files)
     assert "35 2 * * *" in str(catalog.modules["scheduling-with-cron"].terminal.files)
     assert "02:35" in STORY and "02:40" in STORY
+
+
+@pytest.mark.criterion(160, "The story file agrees")
+def test_unit_13s_clue_is_marked_written():
+    git = next(c for c in _clues() if c["unit"].startswith("1.3"))
+    assert git["status"].startswith("written") and git["module"] == "03 Reading history"
+    assert "git log -S scrubber-flush" in git["finds"] and "git show" in git["finds"]
