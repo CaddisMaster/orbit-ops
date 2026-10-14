@@ -70,15 +70,19 @@ quiz:
       in the file unstaged, and `s` **splits** a hunk into smaller ones when it can.
 cards:
   - id: three-places
+    section: "Three places a change can be"
     front: The three places a change can be, in git
     back: "The **working tree** (your files), the **index** (staged: the next commit) and **HEAD** (the last commit)."
   - id: diff-vs-staged
+    section: "Seeing the difference"
     front: "`git diff` vs `git diff --staged`"
     back: "`git diff`: working tree against the index (not staged yet). `--staged`: the index against HEAD (what the next commit holds)."
   - id: status-short
+    section: "The short status"
     front: "`git status --short`: what do `M `, ` M` and `MM` mean?"
     back: "Left column is the index, right is the working tree. `M ` staged, ` M` changed but not staged, `MM` some of each."
   - id: restore
+    section: "Taking it back"
     front: "`git restore --staged FILE` vs `git restore FILE`"
     back: "`--staged` unstages and keeps the edit. Without it, the edit is thrown away, with no undo."
 lab:

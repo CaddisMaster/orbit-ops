@@ -59,12 +59,17 @@ comms:
   window: {complete: aurora}
 cards:
   - id: update-vs-upgrade
+    section: "The package manager"
     front: "`apt update` vs `apt upgrade`"
     back: "`update` refreshes the package lists; `upgrade` installs newer versions of what's installed."
   - id: package-owner
+    section: "Asking questions"
+    accept: ["dpkg -S /usr/bin/curl"]
     front: Which package owns /usr/bin/curl?
     back: "`dpkg -S /usr/bin/curl`"
   - id: package-versions
+    section: "Asking questions"
+    accept: ["apt-cache policy nginx", "apt policy nginx"]
     front: See the installed and candidate versions of a package
     back: "`apt-cache policy nginx` (or `apt policy nginx`)."
 ---

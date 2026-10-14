@@ -1,27 +1,51 @@
-{# The review queue's one card (#51), swapped whole: "Show answer" and each
-   grade replace #review-card with what comes next. Plain links and forms
+{# The review queue's one card (#51), swapped whole: "Check" or "Show answer"
+   and each grade replace #review-card with what comes next. The front says
+   where the card is from and takes a typed answer, shown beside the back (#104). Plain links and forms
    underneath, so it works without htmx too. In the story it's MERIDIAN's
    watch drill (#82): a readout heads it, and a crew line clears it. #}
 {% if card %}
 <section class="card review-card deck--{{ catalog.modules[card.module].track }}" id="review-card" aria-live="polite">
   <p class="drill-readout">{% if meridian %}<img class="avatar" src="{{ static_url('img/avatar-' ~ meridian.avatar ~ '.png') }}" alt="" width="20" height="20"> {% endif %}<span>Watch drill · {{ remaining }} item{{ '' if remaining == 1 else 's' }} · from: {{ drill_decks | join(" · ") }}</span></p>
-  <p class="eyebrow">Card from “{{ catalog.modules[card.module].title }}”{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
+  {% set source = catalog.modules[card.module] %}
+  <p class="eyebrow">Unit {{ catalog.unit_code(source.unit) }} {{ catalog.units[source.unit].title }}{% if xp_gained %} <span class="review-xp">+{{ xp_gained }} XP</span>{% endif %}</p>
+  <p class="card-source muted">From <a href="/modules/{{ source.slug }}">{{ source.title }}</a>
+    {%- if card.section_html %} <span aria-hidden="true">›</span> <a href="/modules/{{ source.slug }}#{{ card.section_anchor }}">{{ card.section_html }}</a>{% endif %}</p>
   <p class="review-front">{{ card.front_html }}</p>
   {% if revealed %}
-  <p class="review-back">{{ card.back_html }}</p>
+  <div class="review-compare{% if typed %} has-typed{% endif %}">
+    {% if typed %}
+    <div class="review-yours{% if matched %} is-matched{% endif %}">
+      <p class="review-label">Your answer{% if matched %} <span class="review-matched">✓ matched</span>{% endif %}</p>
+      <p><code>{{ typed }}</code></p>
+    </div>
+    {% endif %}
+    <div class="review-back">
+      {% if typed %}<p class="review-label">The card</p>{% endif %}
+      <p>{{ card.back_html }}</p>
+    </div>
+  </div>
   <form class="review-grades" method="post" action="/review"
         hx-post="/review" hx-target="#review-card" hx-swap="outerHTML">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <input type="hidden" name="card" value="{{ card.id }}">
-    <p class="muted">How well did you remember it?</p>
+    <p class="muted">{% if matched %}An exact answer, so Good is selected. Press Enter, or pick another.{% else %}How well did you remember it?{% endif %}</p>
     <button type="submit" name="grade" value="again" class="secondary">Again</button>
     <button type="submit" name="grade" value="hard" class="secondary">Hard</button>
-    <button type="submit" name="grade" value="good" class="primary">Good</button>
+    <button type="submit" name="grade" value="good" class="primary"{% if matched %} autofocus{% endif %}>Good</button>
     <button type="submit" name="grade" value="easy" class="secondary">Easy</button>
   </form>
   {% else %}
-  <p><a class="button primary" href="/review/answer?card={{ card.id | urlencode }}"
-        hx-get="/review/answer?card={{ card.id | urlencode }}" hx-target="#review-card" hx-swap="outerHTML">Show answer</a></p>
+  <form class="review-check" method="post" action="/review/answer"
+        hx-post="/review/answer" hx-target="#review-card" hx-swap="outerHTML">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="hidden" name="card" value="{{ card.id }}">
+    <label for="review-typed">Type your answer, or leave it blank and just look</label>
+    <input type="text" id="review-typed" name="typed" class="review-typed" autocomplete="off" spellcheck="false" maxlength="500" autofocus>
+    <div class="review-check-actions">
+      <button type="submit" class="primary">Check</button>
+      <button type="submit" name="show" value="1" class="secondary">Show answer</button>
+    </div>
+  </form>
   {% endif %}
 </section>
 {% else %}

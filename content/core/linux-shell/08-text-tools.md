@@ -149,12 +149,15 @@ comms:
     - {from: okafor, text: "No intruder, just a confused drone. Most mysteries on this station are."}
 cards:
   - id: grep-count
+    section: "grep: find lines"
     front: Count matching lines with grep
     back: "`grep -c pattern file` (or `grep pattern file | wc -l`)."
   - id: top-n
+    section: "Counting and ranking"
     front: "The 'top N' pipeline"
     back: "`… | sort | uniq -c | sort -rn | head -n N`"
   - id: cut-fields
+    section: "Cutting columns: cut and awk"
     front: "`cut -d: -f1 /etc/passwd`"
     back: "Splits each line on `:` and prints the first field: every username."
 ---

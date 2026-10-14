@@ -72,15 +72,19 @@ quiz:
       lost: it's in a commit, on `cabin-heat`, and switching back brings it back.
 cards:
   - id: branch-is-a-name
+    section: "A branch is a name for a commit"
     front: What is a git branch?
     back: "A name pointing at a commit. Committing moves the current branch's name forward."
   - id: switch-c
+    section: "A branch is a name for a commit"
     front: Create a branch and start working on it
     back: "`git switch -c NAME` (older: `git checkout -b NAME`)."
   - id: fast-forward
+    section: "Merging"
     front: Fast-forward vs merge commit
     back: "If your branch hasn't moved, `git merge` just moves its name forward. If both have, it makes a merge commit with two parents. `--no-ff` always makes one."
   - id: branch-d
+    section: "Reading the graph"
     front: "`git branch -d` vs `-D`"
     back: "`-d` deletes a branch only if its commits are merged. `-D` deletes it anyway."
 lab:

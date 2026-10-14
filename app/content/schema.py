@@ -88,6 +88,12 @@ class Card(_Strict):
     id: Slug
     front: Text
     back: Text
+    # The lesson heading it's about, as written after the ## (#104): the card
+    # links to it. The loader checks the module has that heading.
+    section: Text | None = None
+    # Exact answers (`cp -r src dest`): typing one marks the card matched and
+    # preselects Good. Compared with spaces collapsed; grading stays the learner's.
+    accept: list[Text] = []
 
 
 # ---------------------------------------------------------------------------

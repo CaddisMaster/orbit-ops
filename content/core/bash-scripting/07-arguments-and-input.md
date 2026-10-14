@@ -66,15 +66,20 @@ quiz:
       is 1.
 cards:
   - id: positional-arguments
+    section: "Arguments: `$1` to `$9`"
     front: "`$0`, `$1`, `$#` in a script"
     back: "The script's own name, its first argument, and how many arguments there are."
   - id: quoted-at
+    section: "`\"$@\"`: passing them all on"
+    accept: ["\"$@\""]
     front: Pass all of a script's arguments on, unchanged
     back: "`\"$@\"`, in quotes. Each argument stays one word, spaces and all."
   - id: usage-exit-2
+    section: "Checking what you were given"
     front: A script was called wrongly. What does it do?
     back: "Prints a `usage:` line to stderr (`>&2`) and exits 2."
   - id: shift
+    section: "`shift`"
     front: What does `shift` do?
     back: "Drops `$1` and moves the rest down: `$2` becomes `$1`, and `$#` goes down by one."
 terminal:

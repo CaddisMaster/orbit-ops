@@ -72,12 +72,15 @@ comms:
   window: {open: relay-pass}
 cards:
   - id: ls-lah
+    section: "Looking: `ls`"
     front: What does `ls -lah` show?
     back: Every entry including hidden ones (`-a`), in long format (`-l`), with human-readable sizes (`-h`).
   - id: cd-dash
+    section: "Moving: `cd`"
     front: "`cd -` vs `cd ..`"
     back: "`cd -` returns to the previous directory; `cd ..` goes up one level."
   - id: hidden-files
+    section: "Hidden files"
     front: What makes a file "hidden" on Linux?
     back: Its name starts with a dot (`.bashrc`, `.env`). There's no hidden attribute; `ls` just skips dotfiles unless you pass `-a`.
 ---

@@ -80,15 +80,20 @@ quiz:
       before anything with `--hard` in it.
 cards:
   - id: revert-vs-reset
+    section: "Undo a commit everyone has: revert"
     front: "Undo a commit others already have"
     back: "`git revert HASH`: a new commit that does the opposite. `reset` rewrites history and is for commits that are only yours."
   - id: reset-modes
+    section: "Move your branch back: reset"
     front: "`git reset --soft` / `--mixed` / `--hard` HASH"
     back: "All move the branch to HASH. The changes in between stay staged / stay in your files unstaged / are thrown away."
   - id: reflog
+    section: "Nothing is lost (for a while): the reflog"
+    accept: ["git reflog"]
     front: "Get back a commit `reset --hard` \"lost\""
     back: "`git reflog` lists every commit HEAD was on. Find it, then `git reset --hard HASH` (or `git switch -c rescue HASH`)."
   - id: amend
+    section: "Fix the last commit"
     front: Fix your last commit before pushing
     back: "Stage the fix, then `git commit --amend --no-edit` (or `-m \"new message\"`)."
 lab:

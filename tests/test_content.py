@@ -82,7 +82,7 @@ def test_a_valid_tree_builds_the_catalog(tmp_path):
     assert catalog.units["git"].modules == ()  # listed, no files yet: "coming soon"
     assert catalog.modules["second"].position == 2
     assert catalog.modules["first"].xp == 50  # default
-    assert "<h2>Lesson</h2>" in catalog.modules["first"].body_html
+    assert '<h2 id="sec-lesson">Lesson</h2>' in catalog.modules["first"].body_html
 
 
 # --- invalid modules name the file and the field -------------------------------
@@ -223,7 +223,7 @@ def test_real_modules_follow_the_authoring_guidelines(module):
     assert 10 <= module.minutes <= 20, "a daily module is 15–20 minutes (10 at the least)"
     assert 3 <= len(module.quiz) <= 5, "quiz: 3–5 questions"
     assert len(module.cards) >= 2, "at least two flashcards"
-    assert "<h2>Try it</h2>" in module.body_html, "every module ends with something to run"
+    assert '<h2 id="sec-try-it">Try it</h2>' in module.body_html, "every module ends with something to run"
 
 
 # --- #80: nothing the console asks for goes untaught ------------------------------------
@@ -320,3 +320,46 @@ def test_comms_names_one_place_on_the_station():
     badge = next(b for b in catalog.badges if b.slug == "unit-networking")  # a badge slug is permanent
     assert badge.name == "Relays Restored" and "comms array" not in badge.name.lower()
     assert "relay network" in catalog.units["networking"].briefing_html
+
+
+# --- #104: where a card comes from ------------------------------------------------
+CARDS = """cards:
+  - id: one
+    section: "{section}"
+    accept: ["cp -r src dest"]
+    front: Copy a directory
+    back: "`cp -r src dest`"
+---"""
+
+
+def _with_card(section: str) -> dict[str, str]:
+    lesson = "## Lesson\n\nBody.\n\n### Moving: `cd`\n\nMore.\n"
+    return {"core/shell/01-first.md": MODULE.replace("---\n## Lesson\n\nBody text.\n", CARDS.format(section=section) + "\n" + lesson)}
+
+
+@pytest.mark.criterion(104, "A bad section is caught")
+def test_a_card_whose_section_is_no_heading_fails_naming_the_file_and_card(tmp_path):
+    found = problems(write_tree(tmp_path, files=_with_card("Copying")))
+    assert found == ["core/shell/01-first.md: card 'one': section 'Copying' is not a ## or ### heading in the lesson"]
+
+
+def test_a_cards_section_is_its_heading_as_written(tmp_path):
+    card = load_catalog(write_tree(tmp_path, files=_with_card("Moving: `cd`"))).modules["first"].cards[0]
+    assert (card.section_html, card.section_anchor) == ("Moving: <code>cd</code>", "sec-moving-cd")
+    assert card.accept == ("cp -r src dest",)
+
+
+def test_lesson_headings_get_ids_that_cant_clash_with_the_page():
+    from app.content.render import lesson_sections, render_markdown
+
+    text = "## Try it\n\n```bash\n## not a heading\n```\n\n## Try it\n\n### `[ ]` tests\n"
+    assert lesson_sections(text) == {"Try it": "sec-try-it", "`[ ]` tests": "sec-tests"}
+    html = render_markdown(text, anchors=True)
+    assert '<h2 id="sec-try-it">' in html and '<h2 id="sec-try-it-2">' in html and '<h3 id="sec-tests">' in html
+
+
+def test_every_real_card_points_at_its_lesson_section():
+    # backfilled with #104; the loader has already checked each one is a heading
+    for module in load_catalog().ordered_modules():
+        for card in module.cards:
+            assert card.section_anchor and f'id="{card.section_anchor}"' in module.body_html, card.id

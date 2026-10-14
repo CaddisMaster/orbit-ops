@@ -72,15 +72,19 @@ quiz:
       `git push` and `git pull` know where to go.
 cards:
   - id: remote-origin
+    section: "A remote is another copy"
     front: What's `origin`?
     back: "The name `git clone` gives the remote it came from. `git remote -v` shows where it points."
   - id: fetch-vs-pull
+    section: "A remote is another copy"
     front: "`git fetch` vs `git pull`"
     back: "Fetch downloads and moves `origin/main`, changing none of your files. Pull is fetch, then merge into your branch."
   - id: status-sb
+    section: "Ahead and behind"
     front: "`## main...origin/main [ahead 1, behind 2]`"
     back: "One commit of yours not pushed, two of theirs not pulled, as of the last fetch."
   - id: rejected-push
+    section: "When someone pushed first"
     front: "`! [rejected] main -> main (fetch first)`"
     back: "Someone pushed first. Pull their work in (with new commits of your own: `git pull --no-rebase`), then push again."
 lab:

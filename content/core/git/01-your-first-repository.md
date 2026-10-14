@@ -79,15 +79,19 @@ quiz:
       and the history is gone, but the files you're working on stay.
 cards:
   - id: what-a-commit-is
+    section: "What a commit is"
     front: What's in a commit?
     back: "A snapshot of every tracked file, plus an author, a time, a message and its parent. The hash names all of it."
   - id: git-identity
+    section: "Tell git who you are"
     front: Tell git who you are, on this machine
     back: "`git config --global user.name \"Your Name\"` and `git config --global user.email \"you@example.com\"`. Kept in `~/.gitconfig`."
   - id: add-then-commit
+    section: "A repository, and the three commands you'll use most"
     front: The two steps that record a change
     back: "`git add FILE` stages it, then `git commit -m \"message\"` records what's staged."
   - id: untracked
+    section: "A repository, and the three commands you'll use most"
     front: "\"Untracked files\" in `git status`"
     back: "Git can see the file but has never been told to keep it. `git add` it."
 lab:

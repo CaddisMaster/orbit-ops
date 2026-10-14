@@ -64,15 +64,20 @@ quiz:
       save. `crontab -r` deletes it, with no undo, and `r` is right next to `e`.
 cards:
   - id: cron-fields
+    section: "The five fields"
     front: The five fields of a crontab line, in order
     back: "Minute, hour, day of month, month, day of week. Then the command."
   - id: cron-step
+    section: "The five fields"
+    accept: ["*/15 * * * *"]
     front: "Every 15 minutes, in cron"
     back: "`*/15 * * * *`"
   - id: cron-environment
+    section: "Cron's environment is not yours"
     front: Why does a script that works by hand fail under cron?
     back: "Cron's environment is small: a PATH of system directories only, `sh`, no `~/.bashrc`, no terminal. Use full paths."
   - id: cron-logging
+    section: "Keep what jobs say"
     front: Keep a cron job's output and errors
     back: "Append both to a log: `… >> /var/log/job.log 2>&1`."
 terminal:

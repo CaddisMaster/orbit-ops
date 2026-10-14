@@ -203,15 +203,20 @@ comms:
     - {from: okafor, text: "That's tomorrow's job. Get some sleep."}
 cards:
   - id: man-sections
+    section: "Reading a man page"
     front: "man sections 1, 5 and 8"
     back: "1: commands. 5: file formats, like config files. 8: admin commands and daemons. `man 5 crontab` reads the crontab file's page."
   - id: search-in-less
+    section: "less: reading long files"
     front: Search in less (and in man)
     back: "`/pattern` then Enter; `n` for the next match, `N` for the one before. `q` quits."
   - id: save-in-nano
+    section: "nano: editing a file"
     front: Save and leave in nano
     back: "^O then Enter writes the file. ^X exits, and asks first if there are unsaved changes."
   - id: escape-vim
+    section: "Enough vim to escape"
+    accept: [":q!"]
     front: Get out of vim without saving
     back: "Esc, then `:q!` and Enter. (`:wq` saves and quits.)"
 ---

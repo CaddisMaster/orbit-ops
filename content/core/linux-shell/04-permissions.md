@@ -84,12 +84,15 @@ comms:
   window: {complete: shuttle-dock}
 cards:
   - id: octal-bits
+    section: "Octal: the numbers"
     front: "Octal values of r, w, x"
     back: "r = 4, w = 2, x = 1. Add them per class: 7 = rwx, 6 = rw-, 5 = r-x, 4 = r--."
   - id: directory-execute
+    section: "Directories are different"
     front: What does `x` mean on a directory?
     back: Permission to enter/traverse it. Listing names needs `r`; creating or deleting entries needs `w`.
   - id: chown
+    section: "Changing ownership: `chown`"
     front: Change a file's owner and group in one command
     back: "`chown user:group file` (needs root, so usually `sudo chown …`)."
 ---

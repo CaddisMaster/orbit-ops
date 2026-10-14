@@ -88,12 +88,16 @@ comms:
     - {from: okafor, text: "That's tomorrow's problem, then. And I have a feeling I know which file."}
 cards:
   - id: copy-directory
+    section: "Copying, moving, deleting"
+    accept: ["cp -r src dest"]
     front: How do you copy a whole directory?
     back: "`cp -r src dest`. Without `-r`, `cp` skips directories."
   - id: who-expands-globs
+    section: "Globs: patterns the shell expands"
     front: Who expands `*` in a command?
     back: The shell, before the command runs. The command only sees the resulting file names.
   - id: glob-wildcards
+    section: "Globs: patterns the shell expands"
     front: "`?` vs `*` in a glob"
     back: "`?` matches exactly one character; `*` matches any number (including none)."
 ---

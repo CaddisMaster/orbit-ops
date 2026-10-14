@@ -149,15 +149,19 @@ comms:
     - {from: okafor, text: "Every shift I type the same checks: the disk, the scrubbers, the logs. Tomorrow you write them down once, as a script."}
 cards:
   - id: find-old-files
+    section: "find: search by name, type, size and age"
     front: Find files changed more than 30 days ago
     back: "`find DIR -mtime +30` (`-name '*.log'` to narrow it; `-delete` once you've checked the list)."
   - id: df-vs-du
+    section: "How full is it, and with what?"
     front: "`df` vs `du`"
     back: "`df -h` shows each filesystem's size, used and free. `du -sh PATH` adds up the files under PATH."
   - id: tar-create-list
+    section: "tar and gzip: archives"
     front: Make a compressed archive, and look inside one
     back: "`tar -czf out.tar.gz FILES…` creates it. `tar -tzf out.tar.gz` lists it. (`-x` extracts.)"
   - id: empty-not-delete
+    section: "Emptying a file that's still in use"
     front: Free a big log a program is still writing to
     back: "Empty it: `> app.log`. Deleting it frees nothing until the program closes it."
 ---

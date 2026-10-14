@@ -18,7 +18,7 @@ from typing import get_args
 import yaml
 from pydantic import ValidationError
 
-from app.content.render import render_inline, render_markdown
+from app.content.render import lesson_sections, render_inline, render_markdown
 from app.content.schema import (
     BadgeSpec,
     Beat,
@@ -51,6 +51,9 @@ class FlashCard:
     module: str
     front_html: str
     back_html: str
+    section_html: str | None = None  # the lesson heading it's about (#104)
+    section_anchor: str | None = None  # that heading's id in the module page
+    accept: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,13 @@ class Catalog:
     badges: tuple[BadgeSpec, ...] = ()  # in syllabus order
     cast: dict[str, CastSpec] = field(default_factory=dict)
     drill_cleared: tuple = ()  # ((cast slug, line html), ...): said when the watch drill is cleared (#82)
+
+    def unit_code(self, unit_slug: str) -> str:
+        """"1.1": the track's number, then the unit's within it (as the map shows them)."""
+        for t_index, track in enumerate(self.tracks, 1):
+            if unit_slug in track.units:
+                return f"{t_index}.{track.units.index(unit_slug) + 1}"
+        raise KeyError(unit_slug)
 
     def unit_modules(self, unit_slug: str) -> list[Module]:
         return [self.modules[s] for s in self.units[unit_slug].modules]
@@ -246,6 +256,13 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             problems.append(f"{rel}: module slug '{slug}' is already used by {modules[slug].source}")
             continue
 
+        sections = lesson_sections(body)
+        for card in data.cards:
+            if card.section and card.section not in sections:
+                problems.append(
+                    f"{rel}: card '{card.id}': section '{card.section}' is not a ## or ### heading in the lesson"
+                )
+
         unit_module_slugs[unit_slug].append(slug)
         modules[slug] = Module(
             slug=slug,
@@ -253,9 +270,17 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             minutes=data.minutes,
             xp=data.xp,
             story_html=render_markdown(data.story),
-            body_html=render_markdown(body),
+            body_html=render_markdown(body, anchors=True),
             quiz=tuple(data.quiz),
-            cards=tuple(FlashCard(f"{slug}/{c.id}", slug, render_inline(c.front), render_inline(c.back)) for c in data.cards),
+            cards=tuple(
+                FlashCard(
+                    f"{slug}/{c.id}", slug, render_inline(c.front), render_inline(c.back),
+                    section_html=render_inline(c.section) if c.section else None,
+                    section_anchor=sections.get(c.section) if c.section else None,
+                    accept=tuple(c.accept),
+                )
+                for c in data.cards
+            ),
             terminal=data.terminal,
             terminal_task_html=render_markdown(data.terminal.task) if data.terminal else "",
             challenge=data.challenge,
