@@ -459,6 +459,26 @@ cast:
   - {slug: mission, name: Mission Control, role: Earth, avatar: mission, delay: "1.3 s"}  # light-delay stamp
 ```
 
+**Promotions and commendations** speak too (#83). A rank in `syllabus.yml` can have `comms:`,
+said when the learner first reaches it. Climbing back after a hint's cost dips them below
+doesn't count again. A badge can have `comms:` for when it's earned. A badge without any gets
+MERIDIAN's `COMMENDATION LOGGED · <NAME>`, so give one its own line only when it's worth more
+than the readout.
+
+```yaml
+ranks:
+  - title: Technician
+    level: 3
+    comms:
+      - {from: okafor, text: "Technician. It means I stop checking everything you touch. Most of it."}
+```
+
+They arrive with the response that earned them, after the debrief: the completing answer, the
+lab's first pass, or a review grade. A challenge's or a lab review's XP can promote too; that
+line shows on the next page. Like the rest of the log they're derived, not stored: a rank's
+moment is when the XP ledger first reached it, and a badge's is when it was earned. So editing
+a line changes everyone's history.
+
 A new character needs an avatar sprite in `art/sprites.py` (and its name in `Avatar` in
 `app/content/schema.py`); a new window event needs a sprite in `art/sprites.py`, its entry in
 `WINDOW_SPRITES` (`app/comms.py`), its name in `WindowEvent`, and a rule plus keyframes in

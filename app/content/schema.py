@@ -622,9 +622,17 @@ class TrackSpec(_Strict):
     units: Annotated[list[UnitSpec], Field(min_length=1)]
 
 
+class Message(_Strict):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    from_: Slug = Field(alias="from")  # a cast slug
+    text: Text  # inline Markdown
+
+
 class RankSpec(_Strict):
     title: Text
     level: Annotated[int, Field(ge=1)]  # the level at which this rank is reached
+    comms: list[Message] = []  # said on the comms log when the rank is reached (#83)
 
 
 # A badge's rule names one of the fixed evaluators in app/game/badges.py, as a
@@ -657,6 +665,9 @@ class BadgeSpec(_Strict):
     description: Text  # shown even while locked, so there is something to aim at
     emblem: Emblem
     rule: BadgeRule
+    # Said on the comms log when it's earned (#83). Without one, MERIDIAN logs
+    # "COMMENDATION LOGGED · <NAME>" (app/content/loader.py).
+    comms: list[Message] = []
 
 
 # ---------------------------------------------------------------------------
@@ -672,13 +683,6 @@ class CastSpec(_Strict):
     role: Text
     avatar: Avatar
     delay: Annotated[str, Field(pattern=r"^\d+(\.\d+)? s$")] | None = None  # light-delay, e.g. "1.3 s"
-
-
-class Message(_Strict):
-    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
-
-    from_: Slug = Field(alias="from")  # a cast slug
-    text: Text  # inline Markdown
 
 
 Beat = Literal["open", "console_done", "lab_done", "complete"]

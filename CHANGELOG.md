@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The crew notice promotions and commendations (#83). Reaching a new rank brings a line on
+  comms: from Okafor up to Chief Engineer, and from Mission Control for Station Commander.
+  Earning a badge brings MERIDIAN's "COMMENDATION LOGGED · <NAME>". The lines arrive after the
+  debrief, with the answer, lab pass or review grade that earned them, and stay in the comms
+  history at the moment they happened. That includes ranks and badges earned before this
+  release. A rank counts once, so regaining it after a hint's cost isn't a second promotion.
+  Lines are set per rank and badge in `syllabus.yml` and checked against the cast.
+
 ### Changed
 - Flashcards say where they come from and take a typed answer (#104). Each card names its unit
   and module, linked, and the part of the lesson it's about, linked straight to that heading

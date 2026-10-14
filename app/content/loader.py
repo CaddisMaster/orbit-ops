@@ -111,6 +111,10 @@ class Catalog:
     badges: tuple[BadgeSpec, ...] = ()  # in syllabus order
     cast: dict[str, CastSpec] = field(default_factory=dict)
     drill_cleared: tuple = ()  # ((cast slug, line html), ...): said when the watch drill is cleared (#82)
+    # ((cast slug, line html), ...) said when a rank is reached, by title, and when a
+    # badge is earned, by slug (#83)
+    rank_comms: dict[str, tuple] = field(default_factory=dict)
+    badge_comms: dict[str, tuple] = field(default_factory=dict)
 
     def unit_code(self, unit_slug: str) -> str:
         """"1.1": the track's number, then the unit's within it (as the map shows them)."""
@@ -129,6 +133,15 @@ class Catalog:
     def cards(self) -> dict[str, FlashCard]:
         """Every flashcard by id, in syllabus order."""
         return {c.id: c for m in self.ordered_modules() for c in m.cards}
+
+
+def _badge_comms(badge: BadgeSpec, cast: dict[str, CastSpec]) -> tuple:
+    """A badge's lines (#83): its own, or MERIDIAN logging the commendation."""
+    if badge.comms:
+        return tuple((m.from_, render_inline(m.text)) for m in badge.comms)
+    if "meridian" in cast:
+        return (("meridian", render_inline(f"COMMENDATION LOGGED · {badge.name.upper()}")),)
+    return ()
 
 
 def _split_front_matter(text: str) -> tuple[str, str] | None:
@@ -315,6 +328,14 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             problems.append(f"{module.source}: challenge.from: '{module.challenge.from_}' is not in the cast")
         if module.lab and module.lab.from_ and module.lab.from_ not in cast:
             problems.append(f"{module.source}: lab.from: '{module.lab.from_}' is not in the cast")
+    for rank in syllabus.ranks:
+        for i, message in enumerate(rank.comms):
+            if message.from_ not in cast:
+                problems.append(f"syllabus.yml: rank '{rank.title}': comms.{i}.from: '{message.from_}' is not in the cast")
+    for badge in syllabus.badges:
+        for i, message in enumerate(badge.comms):
+            if message.from_ not in cast:
+                problems.append(f"syllabus.yml: badge '{badge.slug}': comms.{i}.from: '{message.from_}' is not in the cast")
     for i, message in enumerate(syllabus.drill.cleared if syllabus.drill else ()):
         if message.from_ not in cast:
             problems.append(f"syllabus.yml: drill.cleared.{i}.from: '{message.from_}' is not in the cast")
@@ -354,4 +375,6 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
         tracks=tracks, units=units, modules=modules, ranks=tuple(syllabus.ranks), badges=tuple(syllabus.badges),
         cast=cast,
         drill_cleared=tuple((m.from_, render_inline(m.text)) for m in syllabus.drill.cleared) if syllabus.drill else (),
+        rank_comms={r.title: tuple((m.from_, render_inline(m.text)) for m in r.comms) for r in syllabus.ranks},
+        badge_comms={b.slug: _badge_comms(b, cast) for b in syllabus.badges},
     )

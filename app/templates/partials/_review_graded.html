@@ -2,3 +2,7 @@
    so the streak and the cards due keep up (#52). #}
 {% include "partials/_review_card.html" %}
 {% with oob = true %}{% include "partials/_readout.html" %}{% endwith %}
+{% if arrivals %}
+{# A promotion or a commendation joins the comms log (#83). #}
+<div hx-swap-oob="beforeend:#comms-log">{% for line in arrivals %}{% include "partials/_comms_line.html" %}{% endfor %}</div>
+{% endif %}

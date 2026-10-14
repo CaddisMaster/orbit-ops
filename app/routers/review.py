@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app import lab, progress
+from app import comms, lab, progress
 from app.console import Readout, console_readout
 from app.content import Catalog, FlashCard, get_catalog
 from app.db import get_db
@@ -118,7 +118,8 @@ def grade(
 ):
     _card_in_deck(db, user, catalog, card)
     today = streaks.today()
-    xp_gained, cleared = 0, False
+    xp_gained, cleared, new_badges = 0, False, []
+    reached = len(comms.promotions(db, user.id, catalog))
     if srs.record(db, user.id, card, grade, today):
         xp_gained = xp.review_award(db, user.id, card, today)
         completed = progress.completed_slugs(db, user.id)
@@ -132,7 +133,10 @@ def grade(
                 perfect_quiz=badges.has_perfect_quiz(db, user.id),
                 labs_passed=len(lab.passed_slugs(db, user.id)),
             )
-            badges.award(db, user.id, catalog, facts)  # a streak badge can be earned here too
+            new_badges = badges.award(db, user.id, catalog, facts)  # a streak badge can be earned here too
+    # A review's XP can promote, and clearing the queue can earn a streak badge (#83).
+    promoted = [rank for _, rank in comms.promotions(db, user.id, catalog)[reached:]]
+    arrivals = comms.recognition(catalog, promoted, [b.slug for b in new_badges])
     db.commit()
     if not request.headers.get("HX-Request"):
         return RedirectResponse("/review", status_code=303)
@@ -141,7 +145,7 @@ def grade(
         "partials/_review_graded.html",
         {
             **_context(db, user, catalog),
-            "revealed": False, "xp_gained": xp_gained, "cleared": cleared,
+            "revealed": False, "xp_gained": xp_gained, "cleared": cleared, "arrivals": arrivals,
             "cleared_line": _cleared_line(catalog, today) if cleared else None,
             "console": console_readout(request, user, catalog, db),  # after the commit: the new streak and count
         },
