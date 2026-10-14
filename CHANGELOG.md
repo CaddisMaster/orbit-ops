@@ -6,6 +6,13 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-14
+
+The desk fits any screen, and the lessons answer back. The app scales with the window and the
+room fills a wide one. A wrong quiz answer can be tried again. Flashcards take a typed answer and
+link to their lesson. The crew notice promotions and badges. And a mystery starts: why the
+station went dark, with clues in the cron module and the Git lab.
+
 ### Added
 - A mystery runs through Life Support: why the station went dark (#84). The plan is in
   `docs/story.md`: the cause, and the clue each unit uncovers with its own tools. Unit 1.2's
@@ -39,8 +46,6 @@ and why it matters, not what the diff says.
   or choose **Show me**. Your first answer is still the one scored: retries don't change the
   module's score, the perfect-quiz bonus or the badge, and each question says whether it was
   right first time. Questions already answered wrong can now be retried too.
-
-### Fixed
 - No more dark bars beside the desk on a wide window (#105). A 1080p or 2K browser window is
   wider than 16:9 once the tabs and taskbar take their share, so the desk was letterboxed. Behind
   the scene there's now the same room drawn wider, at the same scale, so the sides show more
@@ -49,6 +54,7 @@ and why it matters, not what the diff says.
   twice the size, but the lesson kept 16px text in a 760px column, a third of the glass. Text,
   the reading column, the comms log, avatars and emblems now scale with the desk: 1rem is an
   80th of the scene's width, between 16px (1280×720, unchanged) and 32px.
+- Dependencies: `anthropic` 1.13.0 and `pycparser` 3.11 (#133).
 
 ## [0.7.0] — 2026-10-14
 
