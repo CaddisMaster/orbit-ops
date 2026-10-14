@@ -6,6 +6,17 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-14
+
+Labs and AI: Unit 1.3 Git, eight modules done with real `git` on your own machine, graded from
+what you paste. Stuck on any task, ask Claude for a hint that never holds the answer; pass a lab
+and Claude reviews your work for bonus XP. Every model call goes through a monthly budget, and
+the header shows whether the uplink is online. Finishing Git earns *Every Change Logged*.
+
+**Server:** `ANTHROPIC_API_KEY=` (a key for this app alone) and `AI_MONTHLY_BUDGET_CENTS=500` in
+`/opt/orbit-ops/.env` before approving the deploy. Without the key everything works except hints
+and lab review, which show "Uplink offline".
+
 ### Added
 - A place on each exercise attempt for Claude's review of a passed lab: its score, strengths
   and issues. Empty for everything else (#122).
