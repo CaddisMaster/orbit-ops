@@ -15,6 +15,7 @@ def scenes():
     """{file name: render function}: everything build() writes and tests check."""
     out = {
         "room.png": room.render,
+        "room-wide.png": room.wide,
         "laptop-deck.png": room.deck,
         "laptop-lid.png": room.lid,
         "laptop-closed.png": room.closed,

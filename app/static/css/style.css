@@ -563,6 +563,16 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
    up. The whole app scrolls inside the screen; the page itself never scrolls.
    Desktop only: 1280x720 and up. */
 html, body { height: 100%; }
+/* Behind the scene, the same room drawn wider (art/room.py wide(), 432 for the scene's 320),
+   at the scene's own scale and centred on it. A window wider than 16:9 shows more wall and
+   desk at the sides instead of bars (#105). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url("../img/room-wide.png") center / calc(min(100vw, 100vh * 16 / 9) * 432 / 320) auto no-repeat;
+  image-rendering: pixelated;
+}
 .scene {
   position: fixed;
   inset: 0;

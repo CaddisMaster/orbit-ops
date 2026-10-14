@@ -41,6 +41,10 @@ and why it matters, not what the diff says.
   right first time. Questions already answered wrong can now be retried too.
 
 ### Fixed
+- No more dark bars beside the desk on a wide window (#105). A 1080p or 2K browser window is
+  wider than 16:9 once the tabs and taskbar take their share, so the desk was letterboxed. Behind
+  the scene there's now the same room drawn wider, at the same scale, so the sides show more
+  wall and desk, out to a 21:9 monitor. The scene itself is unchanged, and so is a 16:9 window.
 - The app grows with the screen (part of #105). On a 2560×1440 monitor the laptop's screen was
   twice the size, but the lesson kept 16px text in a 760px column, a third of the glass. Text,
   the reading column, the comms log, avatars and emblems now scale with the desk: 1rem is an
