@@ -6,6 +6,13 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- A wrong quiz answer can be changed (#103). It says "Not quite." and offers **Try again**,
+  without showing the right option or the explanation yet. Those appear once you answer right,
+  or choose **Show me**. Your first answer is still the one scored: retries don't change the
+  module's score, the perfect-quiz bonus or the badge, and each question says whether it was
+  right first time. Questions already answered wrong can now be retried too.
+
 ### Fixed
 - The app grows with the screen (part of #105). On a 2560×1440 monitor the laptop's screen was
   twice the size, but the lesson kept 16px text in a 760px column, a third of the glass. Text,

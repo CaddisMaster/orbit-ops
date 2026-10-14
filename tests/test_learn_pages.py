@@ -33,7 +33,7 @@ def test_quiz_answers_and_explanations_never_reach_the_browser(logged_in, client
     # Sanity: the rendered check really would find a revealed explanation.
     answered = logged_in.post(
         "/modules/the-filesystem/quiz/0",
-        data={"answer": ["0"]},
+        data={"answer": [str(quiz[0].answer)]},  # right: a wrong answer keeps it back (#103)
         headers={"HX-Request": "true", "X-CSRF-Token": csrf(logged_in)},
     ).text
     assert str(render_inline(quiz[0].explain))[:60] in answered

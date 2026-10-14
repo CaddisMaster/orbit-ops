@@ -201,6 +201,8 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .answered.right .verdict { color: var(--ok); }
 .answered.wrong .verdict { color: var(--warn); }
 .answered .explain { color: var(--muted); margin: 0; }
+.retry-actions { display: flex; align-items: center; gap: 1rem; margin: 0.4rem 0; }
+.scored-note { margin: 0.4rem 0 0; font-size: 0.85rem; }
 .completion { border-color: var(--accent); }
 .mission h1 { margin-bottom: 0.25rem; }
 .progress-summary { margin-top: 1.25rem; }

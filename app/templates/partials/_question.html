@@ -1,4 +1,5 @@
-{# An unanswered question: its own small form, swapped in place on submit. #}
+{# An unanswered question, or one being tried again after a wrong answer (#103):
+   its own small form, swapped in place on submit. #}
 <form class="question" id="q{{ index }}" hx-post="/modules/{{ module.slug }}/quiz/{{ index }}"
       hx-target="this" hx-swap="outerHTML">
   <fieldset>
@@ -14,6 +15,7 @@
       {% endfor %}
     {% endif %}
   </fieldset>
+  {% if retry %}<p class="muted scored-note">Trying again. Your first answer is still the one scored.</p>{% endif %}
   {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
   <button type="submit" class="secondary">Check answer</button>
   {% with item = "quiz-" ~ index, include = "#q" ~ index, outcome = none %}{% include "partials/_hint.html" %}{% endwith %}

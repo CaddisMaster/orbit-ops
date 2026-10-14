@@ -57,7 +57,7 @@
     {% for question in module.quiz %}
       {% set index = loop.index0 %}
       {% if index in answers %}
-        {% with attempt = answers[index], just_completed = false %}{% include "partials/_answered.html" %}{% endwith %}
+        {% with state = answers[index], just_completed = false %}{% include "partials/_answered.html" %}{% endwith %}
       {% else %}
         {% include "partials/_question.html" %}
       {% endif %}
