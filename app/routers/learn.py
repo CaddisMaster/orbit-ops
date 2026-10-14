@@ -13,7 +13,6 @@ from app.content import Catalog, Module, get_catalog
 from app.db import get_db
 from app.flash import flash
 from app.game import badges, streaks, xp
-from app.game.levels import standing
 from app.models import ExerciseAttempt, User
 from app.security import require_user
 from app.templating import templates
@@ -226,6 +225,7 @@ def lab_report(
     first_pass = verdict.passed and not already
     xp_gained, new_badges, arrivals, window_event = 0, [], [], None
     if first_pass:
+        reached = len(comms.promotions(db, user.id, catalog))
         xp_gained = xp.award(db, user.id, xp.Award(lab.XP, "lab", slug))
         db.flush()
         facts = badges.Facts(
@@ -238,6 +238,8 @@ def lab_report(
         if module.comms:
             arrivals = comms.beat(catalog, module, "lab_done", new=True)
             window_event = module.comms.window.get("lab_done")
+        promoted = [rank for _, rank in comms.promotions(db, user.id, catalog)[reached:]]
+        arrivals += comms.recognition(catalog, promoted, [b.slug for b in new_badges])
     db.commit()
     state = lab.LabState(
         pastes=tuple(pastes) + ("",) * (len(module.lab.boxes) - len(pastes)),
@@ -358,11 +360,10 @@ def answer_question(
     if result.just_completed:
         # Same transaction as the completion: all of it lands or none does.
         streaks.mark_active(db, user.id, streaks.today())
-        before = standing(xp.total_xp(db, user.id), catalog.ranks)
+        reached = len(comms.promotions(db, user.id, catalog))
         xp_gained = sum(xp.award(db, user.id, a) for a in xp.completion_awards(module, record.score))
-        after = standing(before.xp + xp_gained, catalog.ranks)
-        if after.rank != before.rank:
-            promoted_to = after.rank
+        promoted = [rank for _, rank in comms.promotions(db, user.id, catalog)[reached:]]
+        promoted_to = promoted[-1] if promoted else None
         facts = badges.Facts(
             completed=progress.completed_slugs(db, user.id),  # autoflush: includes this module
             streak=streaks.current_streak(db, user.id, streaks.today()).length,
@@ -373,6 +374,8 @@ def answer_question(
         if module.comms:
             arrivals = comms.beat(catalog, module, "complete", new=True)
             window_event = module.comms.window.get("complete")
+        # The crew notice a promotion or a commendation, after the debrief (#83).
+        arrivals += comms.recognition(catalog, promoted, [b.slug for b in new_badges])
     db.commit()
     completed = progress.completed_slugs(db, user.id)
     return templates.TemplateResponse(

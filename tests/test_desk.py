@@ -14,7 +14,7 @@ import pytest
 from app.content import ContentError, get_catalog, load_catalog
 from app.db import SessionLocal
 from app.main import app
-from app.models import ModuleProgress
+from app.models import ModuleProgress, XpEvent
 from tests.conftest import csrf
 from tests.test_progress import complete
 from tests.test_terminal import TERMINAL, _state
@@ -145,6 +145,9 @@ def test_the_comms_log_keeps_the_history(logged_in, desk, user):
         rows = {p.module_slug: p for p in db.query(ModuleProgress).filter_by(user_id=user.id)}
         rows["two"].completed_at = datetime.now(UTC) - timedelta(hours=2)
         rows["one"].completed_at = datetime.now(UTC) - timedelta(hours=1)
+        # a completion's moment is its module_complete award's (#83), so move those too
+        for event in db.query(XpEvent).filter_by(user_id=user.id, reason="module_complete"):
+            event.created_at = rows[event.ref].completed_at
         db.commit()
     for path in ("/", "/badges"):
         assert [(b, who) for b, who, _ in _lines(logged_in.get(path).text)] == [

@@ -8,14 +8,35 @@
 # this order (art/ship.py SLOTS). `emblem` names a line-art illustration in
 # app/templates/partials/_unit_emblem.html (optional).
 # Rank titles by level band, lowest first. The level curve is in app/game/levels.py
-# (level 3 = 283 XP, level 10 = 2700 XP, level 21 = 8944 XP).
+# (level 3 = 283 XP, level 10 = 2700 XP, level 21 = 8944 XP). `comms` is said on the
+# comms log when the rank is reached (#83); the first rank is where everyone starts.
 ranks:
   - {title: Cadet, level: 1}
-  - {title: Technician, level: 3}
-  - {title: Engineer, level: 6}
-  - {title: Systems Officer, level: 10}
-  - {title: Chief Engineer, level: 15}
-  - {title: Station Commander, level: 21}
+  - title: Technician
+    level: 3
+    comms:
+      - {from: meridian, text: "PERSONNEL RECORD UPDATED · RANK: TECHNICIAN"}
+      - {from: okafor, text: "Technician. It means I stop checking everything you touch. Most of it."}
+  - title: Engineer
+    level: 6
+    comms:
+      - {from: meridian, text: "PERSONNEL RECORD UPDATED · RANK: ENGINEER"}
+      - {from: okafor, text: "Engineer, then. You fix things now, not just find them. Don't let it go to your head; the station won't."}
+  - title: Systems Officer
+    level: 10
+    comms:
+      - {from: meridian, text: "PERSONNEL RECORD UPDATED · RANK: SYSTEMS OFFICER"}
+      - {from: okafor, text: "Systems Officer. Half the station's alarms will page you now. I'd say congratulations, but you'll see."}
+  - title: Chief Engineer
+    level: 15
+    comms:
+      - {from: meridian, text: "PERSONNEL RECORD UPDATED · RANK: CHIEF ENGINEER · NOTE: TWO ON STATION"}
+      - {from: okafor, text: "Two Chief Engineers. Fine by me. You take the night shifts."}
+  - title: Station Commander
+    level: 21
+    comms:
+      - {from: meridian, text: "PERSONNEL RECORD UPDATED · RANK: STATION COMMANDER"}
+      - {from: mission, text: "Mission Control to the Station Commander. Meridian is yours. It's been a long time since anyone up there could say that and mean it."}
 
 # Who can message you on the desk's comms log (#38). `avatar` is one of the
 # sprites in art/sprites.py; `delay` stamps a light-delay on every message.
@@ -203,7 +224,8 @@ tracks:
 # app/game/badges.py: {unit_complete: <unit slug>}, {streak: <days>},
 # {first_perfect_quiz: true} or {labs_completed: <n>}. `emblem` is one of the inline SVGs in
 # app/templates/partials/_emblem.html. A badge's slug is its permanent ID:
-# never rename one that has been earned.
+# never rename one that has been earned. When one is earned, MERIDIAN logs
+# "COMMENDATION LOGGED · <NAME>" on comms; give it `comms:` to say something else (#83).
 badges:
   - slug: first-perfect-quiz
     name: Clean Readout
