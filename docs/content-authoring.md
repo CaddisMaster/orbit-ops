@@ -459,6 +459,11 @@ cast:
   - {slug: mission, name: Mission Control, role: Earth, avatar: mission, delay: "1.3 s"}  # light-delay stamp
 ```
 
+**The Life Support mystery** (#84) runs through Units 1.1–1.5: why the station went dark.
+`docs/story.md` has the answer, and for each unit the clue, the module and the command that
+finds it. Read it before writing a Life Support unit. Each clue is found with that unit's own
+tools, never just told.
+
 **Promotions and commendations** speak too (#83). A rank in `syllabus.yml` can have `comms:`,
 said when the learner first reaches it. Climbing back after a hint's cost dips them below
 doesn't count again. A badge can have `comms:` for when it's earned. A badge without any gets

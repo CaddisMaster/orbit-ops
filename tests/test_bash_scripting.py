@@ -670,11 +670,20 @@ SHIFT_JOB = "*/15 * * * * /station/bin/shift-check >> /var/log/routines/shift-ch
 BACKUP_JOB = "30 2 * * * /station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1"
 
 
-def _scheduled(start, *, shift_job=SHIFT_JOB, backup_job=BACKUP_JOB, ran_by_hand=True):
-    """What a learner leaves: a crontab with both jobs, and each job's command run once by hand."""
+NIGHT_JOBS = "/home/cadet/night-jobs.txt"
+CLOCK_SYNC = "0 2 * * *  root  /usr/local/sbin/clock-sync"
+SCRUBBER_MAINT = "35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1"
+
+
+def _scheduled(start, *, shift_job=SHIFT_JOB, backup_job=BACKUP_JOB, ran_by_hand=True, night=(CLOCK_SYNC, SCRUBBER_MAINT)):
+    """What a learner leaves: the night's system jobs noted (as grep over /etc/cron.d prints
+    them), a crontab with both jobs, and each job's command run once by hand."""
     exercise = _module("scheduling-with-cron").terminal
     fs = client_spec(exercise)["fs"]
     state = {**start, CRONTAB: Node(type="file", mode=0o600, owner="cadet", group="crontab", contents=f"{shift_job}\n{backup_job}\n")}
+    files = {CLOCK_SYNC: "/etc/cron.d/clock-sync", SCRUBBER_MAINT: "/etc/cron.d/scrubber-maint"}
+    noted = "".join(f"{files[line]}:{line}\n" for line in night)
+    state[NIGHT_JOBS] = Node(type="file", mode=0o664, owner="cadet", group="cadet", contents=noted)
     if ran_by_hand:
         printed = fs["/station/sensors/o2"]["contents"] + fs["/var/log/scrubber/scrubberd.log"]["contents"].splitlines()[-1] + "\n"
         state["/var/log/routines/shift-check.log"] = Node(type="file", mode=0o664, owner="cadet", group="crew", contents=printed)
@@ -727,3 +736,24 @@ def test_module_10s_figures_match_the_console():
     assert fs["/srv/backups"]["group"] == "crew" and fs["/srv/backups"]["mode"] == 0o775
     assert fs["/var/log/routines"]["group"] == "crew" and fs["/var/log/routines"]["mode"] == 0o775
     assert "That's Bash scripting done" in _said(module, "complete") and module.comms.window == {"complete": "relay-pass"}
+
+
+# --- #84: the Life Support mystery's Unit 1.2 clue ---------------------------------------------
+@pytest.mark.criterion(84, "Unit 1.2 plants its clue")
+def test_the_cron_task_has_the_learner_find_the_0235_job():
+    exercise = _module("scheduling-with-cron").terminal
+    start = _start(exercise)
+    planted = client_spec(exercise)["fs"]["/etc/cron.d/scrubber-maint"]["contents"]
+    assert SCRUBBER_MAINT in planted  # 02:35, root, output thrown away
+    assert "02:00 and 02:59" in exercise.task and "~/night-jobs.txt" in exercise.task
+    assert not grade(exercise, _scheduled(start, night=(CLOCK_SYNC,)), exercise.cwd)  # missed it
+    assert grade(exercise, _scheduled(start), exercise.cwd)
+    # found with the unit's own tools: the solution reads /etc/cron.d with ls, cat and grep
+    solution = " ".join(exercise.solution)
+    assert "ls /etc/cron.d" in solution and "grep" in solution and "/etc/cron.d/*" in solution
+
+
+def test_the_crew_react_to_the_0235_job():
+    comms = _module("scheduling-with-cron").comms
+    said = " ".join(m.text for m in comms.console_done + comms.complete)
+    assert "SCRUBBER-MAINT · 02:35" in said and "evidence" in said

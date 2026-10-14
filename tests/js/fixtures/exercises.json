@@ -2279,6 +2279,10 @@
  },
  "scheduling-with-cron": {
   "solution": [
+   "ls /etc/cron.d",
+   "cat /etc/cron.d/*",
+   "grep ' 2 \\* \\* \\*' /etc/cron.d/* > ~/night-jobs.txt",
+   "cat ~/night-jobs.txt",
    "crontab -l",
    "/station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1",
    "/station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1",
@@ -2289,6 +2293,14 @@
   "source": "core/bash-scripting/10-scheduling-with-cron.md",
   "spec": {
    "checks": [
+    {
+     "contains": "/home/cadet/night-jobs.txt",
+     "text": "0 2 * * *  root  /usr/local/sbin/clock-sync"
+    },
+    {
+     "contains": "/home/cadet/night-jobs.txt",
+     "text": "35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1"
+    },
     {
      "contains": "/var/spool/cron/crontabs/cadet",
      "text": "*/15 * * * * /station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1"
@@ -2324,6 +2336,34 @@
      "mode": 493,
      "owner": "root",
      "type": "dir"
+    },
+    "/etc/cron.d": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/cron.d/clock-sync": {
+     "contents": "# keep the station clock on Mission Control's time (Okafor, 2025-11)\n0 2 * * *  root  /usr/local/sbin/clock-sync\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/cron.d/logrotate": {
+     "contents": "# rotate the station's logs\n0 4 * * *  root  /usr/sbin/logrotate /etc/logrotate.conf\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/cron.d/scrubber-maint": {
+     "contents": "# nightly controller flush. do not remove\n35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
     },
     "/etc/group": {
      "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
@@ -2416,6 +2456,41 @@
      "owner": "root",
      "type": "file"
     },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/clock-sync": {
+     "contents": "#!/bin/sh\nchronyc makestep\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubber-flush": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "file"
+    },
     "/var": {
      "contents": "",
      "group": "root",
@@ -2463,7 +2538,7 @@
    "groups": [],
    "password": null,
    "processes": [],
-   "success": "Okafor reads the crontab over your shoulder. \"Every fifteen minutes, and half past two. Full paths, logs for both. Now we can all sleep.\"",
+   "success": "Okafor reads the crontab over your shoulder. \"Every fifteen minutes, and half past two. Full paths, logs for both.\" Then he reads night-jobs.txt, and doesn't say anything for a while.",
    "user": "cadet"
   }
  },
