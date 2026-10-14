@@ -73,15 +73,19 @@ quiz:
       returns, and leaves any variable of the same name outside it untouched.
 cards:
   - id: define-a-function
+    section: "Defining and calling a function"
     front: Define and call a function in bash
     back: "`greet() { echo \"hello $1\"; }`, then `greet okafor`. No brackets in the call."
   - id: output-vs-status
+    section: "Output and status: two ways to answer"
     front: How does a function give back data, and how does it say yes or no?
     back: "Data: `echo` it, and capture with `$( )`. Yes or no: its status, `return 0`/`1`, or its last command's."
   - id: local
+    section: "`local`"
     front: Why use `local` in a function?
     back: "So its variables don't overwrite the script's. Without it, every variable is global."
   - id: source
+    section: "Sharing functions with `source`"
     front: Use the functions in `lib.sh` from a script
     back: "`source lib.sh` (or `. lib.sh`): it runs in the current shell, so the functions stay defined."
 terminal:

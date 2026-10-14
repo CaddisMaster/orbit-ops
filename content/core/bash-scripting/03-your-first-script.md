@@ -62,15 +62,19 @@ quiz:
       during this session isn't on it yet. `echo $PATH` shows what is.
 cards:
   - id: shebang
+    section: "The first line: the shebang"
     front: "What does `#!/usr/bin/env bash` at the top of a script do?"
     back: "It names the program that runs the script: `env` finds `bash` on the PATH."
   - id: run-a-script
+    section: "Making it runnable"
     front: "`./script.sh` vs `bash script.sh`"
     back: "`./script.sh` needs the execute bit (`chmod +x`). `bash script.sh` only reads the file, so it doesn't."
   - id: exit-status
+    section: "Exit statuses"
     front: "A script's exit status"
     back: "The number passed to `exit`, or else the last command's status. 0 is success; `echo $?` shows it."
   - id: personal-bin
+    section: "Where scripts live"
     front: "Where do your own scripts go, so you can run them by name?"
     back: "`~/bin` (on Ubuntu, on the PATH from your next login). For every user: `/usr/local/bin`, with sudo."
 terminal:

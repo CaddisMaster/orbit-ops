@@ -85,12 +85,15 @@ comms:
     - {from: okafor, text: "Now that the reactor's talking, let's find out who's been knocking on the front door all night."}
 cards:
   - id: file-descriptors
+    section: "Three streams"
     front: File descriptors 0, 1, 2
     back: "0 = stdin, 1 = stdout, 2 = stderr."
   - id: truncate-vs-append
+    section: "Redirection"
     front: "`>` vs `>>`"
     back: "`>` truncates then writes; `>>` appends."
   - id: tee
+    section: "tee: a T-junction"
     front: Save output to a file AND see it on screen
     back: "`cmd | tee out.log` (`tee -a` to append)."
 ---

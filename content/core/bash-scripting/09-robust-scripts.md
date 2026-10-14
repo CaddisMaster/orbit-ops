@@ -75,15 +75,20 @@ quiz:
       can't quietly become `rm -rf /*`.
 cards:
   - id: strict-mode
+    section: "`set -euo pipefail`"
     front: "What do `set -e`, `set -u` and `set -o pipefail` do?"
     back: "Stop at the first failed command; treat an unset variable as an error; make a pipeline fail if any part fails."
   - id: set-e-exceptions
+    section: "`set -euo pipefail`"
     front: When doesn't `set -e` stop a script?
     back: "For a command tested by `if`/`while`/`until`, on the left of `&&`/`||`, or after `!`."
   - id: trap-exit
+    section: "`trap … EXIT`: clean up, whatever happens"
     front: Clean up whatever happens to the script
     back: "`trap 'rm -rf \"$work\"' EXIT`, right after making it."
   - id: mktemp
+    section: "`mktemp`: a temp directory of your own"
+    accept: ["mktemp -d", "work=$(mktemp -d)"]
     front: Make a private temporary directory
     back: "`work=$(mktemp -d)`: a new, unique directory only you can read (mode 700)."
 terminal:

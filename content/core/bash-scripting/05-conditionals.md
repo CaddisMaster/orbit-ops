@@ -72,15 +72,19 @@ quiz:
       unquoted empty variable vanishes and leaves `[ -z ]`, which is true for the wrong reason.
 cards:
   - id: if-runs-a-command
+    section: "`if` runs a command"
     front: What does `if` actually check?
     back: "A command's exit status. 0 runs the `then` branch; anything else doesn't. `[ ]` is just a command."
   - id: brackets-need-spaces
+    section: "Tests: `[ ]`"
     front: "Why does `[\"$a\" = x]` fail?"
     back: "`[` is a command, so it needs spaces around it and before `]`: `[ \"$a\" = x ]`."
   - id: whole-numbers-only
+    section: "Whole numbers only"
     front: Compare `19.2` with `19.5` in bash
     back: "You can't directly: `-lt` is whole numbers only. Compare 192 and 195 tenths instead."
   - id: or-as-a-guard
+    section: "`&&` and `||`: short ifs"
     front: "What does `a || b` run?"
     back: "`b` only if `a` fails. `a && b` runs `b` only if `a` succeeds."
 terminal:

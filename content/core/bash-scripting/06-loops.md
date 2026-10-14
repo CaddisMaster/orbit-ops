@@ -69,15 +69,19 @@ quiz:
       `${f%.log}` would remove `.log` from the end.
 cards:
   - id: for-over-a-glob
+    section: "Looping over file names safely"
     front: Loop over every `.log` file in a directory
     back: "`for f in /var/log/*.log; do …; done`, with `\"$f\"` quoted inside."
   - id: while-read
+    section: "`while read`: one line at a time"
     front: Read a file line by line
     back: "`while read -r line; do …; done < file`"
   - id: break-continue
+    section: "`break` and `continue`"
     front: "`break` vs `continue`"
     back: "`continue` skips to the next pass; `break` leaves the loop."
   - id: strip-dir-and-extension
+    section: "Looping over file names safely"
     front: "From `f=/var/log/galley.log`, get `galley`"
     back: "`name=${f##*/}` (drop the directory), then `${name%.log}` (drop the extension)."
 terminal:

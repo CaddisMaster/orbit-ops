@@ -82,15 +82,19 @@ comms:
     - {from: okafor, text: "Day one done. Get some sleep. Tomorrow we find out who else is still out there."}
 cards:
   - id: reading-files
+    section: "Looking, moving and reading"
     front: Read a short file, and page through a long one
     back: "`cat file` prints all of it. `less file` pages: Space and b to move, `/word` to search, q to quit."
   - id: etc
+    section: "The directories you'll use most"
     front: What lives in `/etc`?
     back: System-wide configuration files (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/`).
   - id: var
+    section: "The directories you'll use most"
     front: What lives in `/var`?
     back: Variable data that changes while the system runs — logs (`/var/log`), caches, databases, mail.
   - id: absolute-vs-relative
+    section: "Absolute and relative paths"
     front: Absolute vs relative path?
     back: Absolute starts at `/` and means the same thing from anywhere. Relative is resolved from your current directory.
 ---

@@ -7,6 +7,12 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Changed
+- Flashcards say where they come from and take a typed answer (#104). Each card names its unit
+  and module, linked, and the part of the lesson it's about, linked straight to that heading
+  (lesson headings now have ids). Before the back, type your answer, or leave it blank and
+  choose Show answer. Then it's shown beside the card's back. You still grade yourself. A card
+  can list exact answers, and typing one marks it matched and preselects Good. Typed answers
+  aren't stored. Every existing card now has its lesson section, and 13 have exact answers.
 - A wrong quiz answer can be changed (#103). It says "Not quite." and offers **Try again**,
   without showing the right option or the explanation yet. Those appear once you answer right,
   or choose **Show me**. Your first answer is still the one scored: retries don't change the

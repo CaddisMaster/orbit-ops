@@ -102,6 +102,8 @@ quiz:                  # 1–8 questions; aim for 3–5
     explain: …
 cards:                 # optional flashcards, reviewed on an SM-2 schedule (#51)
   - id: etc            # a slug, unique in this module; PERMANENT (see below)
+    section: "The directories you'll use most"   # the lesson heading it's about (#104)
+    accept: ["/etc"]   # optional: exact answers that mark a typed answer matched
     front: What lives in /etc?
     back: System-wide configuration.
 ---
@@ -217,6 +219,19 @@ front and back are inline Markdown. Each review is scheduled with SM-2 and store
 freely and its schedule carries on, but rename the `id` and the card starts again as new (the
 old schedule is ignored, not deleted). Aim for three cards a module, each one fact you'd want in
 a week's time, not a summary of the lesson.
+
+Each card says where it's from (#104): its unit and module, and its **`section:`**, the `##` or
+`###` heading it's about, **exactly as written** after the hashes (backticks and all, in YAML
+double quotes). The card links straight to that heading. Every card has one. A section that
+isn't a heading in the lesson stops the content loading, naming the file and the card, so
+renaming a heading means updating its cards.
+
+On review the learner can type an answer before seeing the back, and it's shown beside it.
+Grading stays theirs. **`accept:`** lists exact answers, compared with spaces collapsed but case
+kept, and a typed one is marked *matched* with Good preselected. Use it only when there is one
+right string (`git reflog`, `*/15 * * * *`), never for a back that's a sentence, and include
+the obvious variants (`apt-cache policy nginx`, `apt policy nginx`). A near miss isn't marked
+wrong, just not matched.
 
 ### A terminal exercise (optional)
 

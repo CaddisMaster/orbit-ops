@@ -56,15 +56,19 @@ quiz:
       change by change, or `-1` for only the newest commit.
 cards:
   - id: blame-last-touch
+    section: "Who last touched a line"
     front: What does `git blame` name for each line?
     back: "The **last** commit that changed it: its hash, author and date. That may be a reformat, not the change you're looking for."
   - id: pickaxe
+    section: "When did this appear?"
     front: "`git log -S TEXT`"
     back: "Commits where the number of times TEXT appears changed: it was added or removed. Search for the value, not the whole line."
   - id: log-filters
+    section: "Searching the log"
     front: "Narrow `git log` to one person, one file, recent commits"
     back: "`--author=NAME`, `-- PATH` (last), `--since=DATE` or `--since=\"2 weeks ago\"`. They combine."
   - id: git-show
+    section: "Looking at one commit"
     front: "See one commit in full"
     back: "`git show HASH`: its author, date and message, then its diff. A short hash is enough."
 lab:

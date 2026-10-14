@@ -12,7 +12,7 @@ def test_module_page_shows_story_lesson_and_quiz(logged_in):
     html = page.text
     assert "The filesystem tree" in html
     assert "POWER RESTORED · CONTROL ROOM" in html  # the briefing, on comms (#45)
-    assert "<h2>One tree, one root</h2>" in html  # lesson Markdown
+    assert '<h2 id="sec-one-tree-one-root">One tree, one root</h2>' in html  # lesson Markdown
     assert '<pre class="highlight" data-lang="bash">' in html  # highlighted code
     assert "Which directory is the top of the entire Linux filesystem?" in html  # quiz
     assert 'type="checkbox"' in html  # the multi question

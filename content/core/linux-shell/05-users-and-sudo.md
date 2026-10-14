@@ -83,12 +83,16 @@ comms:
     - {from: mission, text: "*Kestrel* reports cargo transfer complete. Thank you, *Meridian*."}
 cards:
   - id: id
+    section: "Who am I?"
+    accept: ["id"]
     front: How do you see your user, UID and groups?
     back: "`id` (or `whoami` for just the name, `groups` for just the groups)."
   - id: usermod-append
+    section: "Groups"
     front: Add an existing user to a group without removing their other groups
     back: "`sudo usermod -aG docker sean`. The `-a` (append) matters; they must log in again for it to apply."
   - id: sudo-vs-su
+    section: "sudo: borrowing root for one command"
     front: "`sudo` vs `su`"
     back: "`sudo cmd` runs one command as root using YOUR password and is logged. `su` switches to another user and needs THEIR password."
 ---

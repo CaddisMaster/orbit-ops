@@ -80,12 +80,15 @@ comms:
     - {from: okafor, text: "One more day. The console's missing half the tools it should have. We'll fix that next."}
 cards:
   - id: shell-vs-environment
+    section: "Variables"
     front: Shell variable vs environment variable
     back: "`NAME=x` is visible only to this shell. `export NAME=x` is also inherited by every program started from it."
   - id: path-lookup
+    section: "PATH: where commands come from"
     front: How does the shell find a command?
     back: "It searches the directories in `$PATH`, left to right, and runs the first match."
   - id: one-command-variable
+    section: "Variables"
     front: Set a variable for one command only
     back: "`NAME=value command`, e.g. `DB_NAME=orbit_test pytest`."
 ---

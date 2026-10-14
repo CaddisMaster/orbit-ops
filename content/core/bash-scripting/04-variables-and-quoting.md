@@ -61,15 +61,20 @@ quiz:
       how a script takes a setting from the environment but still works without it.
 cards:
   - id: no-spaces-around-equals
+    section: "Variables"
     front: Assign a variable in bash
     back: "`name=value`, with no spaces around `=`. With spaces it's a command called `name`."
   - id: quote-your-variables
+    section: "Why unquoted variables break"
     front: Why write `"$file"` instead of `$file`?
     back: "Unquoted, the value is split at spaces and its globs are expanded. Double quotes keep it one word."
   - id: single-vs-double-quotes
+    section: "Quotes: single and double"
     front: "Single vs double quotes"
     back: "`'…'` keeps everything literally. `\"…\"` still expands `$var` and `$(…)`, as one word."
   - id: default-value
+    section: "Defaults: `${VAR:-default}`"
+    accept: ["${VAR:-default}"]
     front: "Use a default if a variable isn't set"
     back: "`${VAR:-default}`"
 terminal:

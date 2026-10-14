@@ -120,9 +120,14 @@ def _grade(client, card, grade, htmx=True):
 
 
 def _shown(html: str) -> str | None:
-    """The card on screen, by its "Show answer" link."""
-    m = re.search(r'href="/review/answer\?card=([^"]+)"', html)
-    return m.group(1).replace("%2F", "/") if m else None
+    """The card on screen, by the answer form's hidden `card`."""
+    m = re.search(r'<form class="review-check".*?name="card" value="([^"]+)"', html, re.S)
+    return m.group(1) if m else None
+
+
+def _reveal(client, card, htmx=True, **form):
+    headers = {"X-CSRF-Token": csrf(client)} | ({"HX-Request": "true"} if htmx else {})
+    return client.post("/review/answer", data={"card": card, **form}, headers=headers)
 
 
 @pytest.mark.criterion(51, "A completed module's cards join the review queue")
@@ -135,17 +140,17 @@ def test_a_completed_modules_cards_join_the_queue(logged_in, user):
     with SessionLocal() as db:
         due = srs.queue(db, user.id, catalog, {"navigating"}, TODAY).due
     assert [c.module for c in due] == ["navigating"] * 3  # not files-and-globs, which isn't complete
-    assert logged_in.get("/review/answer?card=files-and-globs/copy-directory").status_code == 404
+    assert _reveal(logged_in, "files-and-globs/copy-directory").status_code == 404
 
 
 def test_show_answer_reveals_the_back_and_the_grades(logged_in, user):
     _complete(user.id, "navigating")
-    part = logged_in.get("/review/answer?card=navigating/ls-lah", headers={"HX-Request": "true"}).text
+    part = _reveal(logged_in, "navigating/ls-lah", show="1").text
     assert 'id="review-card"' in part and "<html" not in part
     assert "human-readable sizes" in part
     assert re.findall(r'name="grade" value="([a-z]+)"', part) == ["again", "hard", "good", "easy"]
     assert 'name="csrf_token"' in part  # the plain form works without htmx
-    page = logged_in.get("/review/answer?card=navigating/ls-lah").text  # without htmx: the whole page
+    page = _reveal(logged_in, "navigating/ls-lah", htmx=False, show="1").text  # without htmx: the whole page
     assert "<html" in page and "human-readable sizes" in page
 
 
@@ -220,7 +225,7 @@ def test_the_review_queue_is_a_watch_drill(logged_in, user):
     page = logged_in.get("/review").text
     assert '<p class="drill-readout"><img class="avatar" src="/static/img/avatar-meridian.png?v=' in page
     assert "<span>Watch drill · 6 items · from: Life Support</span>" in page
-    assert 'Card from “Finding your way around”' in page
+    assert '<a href="/modules/navigating">Finding your way around</a>' in page
 
 
 @pytest.mark.criterion(82, "Clearing the drill gets a word from the crew")
@@ -277,3 +282,53 @@ def test_drill_and_challenge_speakers_must_be_in_the_cast(tmp_path, where, expec
     with pytest.raises(ContentError) as exc:
         load_catalog(tmp_path)
     assert expect in str(exc.value)
+
+
+# --- #104: where a card comes from, and typing the answer ------------------------------------
+@pytest.mark.criterion(104, "A card says where it comes from")
+def test_a_card_names_its_unit_and_links_its_module(logged_in, user):
+    _complete(user.id, "files-and-globs")
+    page = logged_in.get("/review").text
+    assert _shown(page) == "files-and-globs/copy-directory"
+    assert "Unit 1.1 Linux &amp; the shell" in page
+    assert '<a href="/modules/files-and-globs">Making, moving and matching files</a>' in page
+
+
+@pytest.mark.criterion(104, "A card can point at its lesson section")
+def test_a_card_links_to_its_lesson_section(logged_in, user):
+    _complete(user.id, "files-and-globs")
+    page = logged_in.get("/review").text
+    assert '<a href="/modules/files-and-globs#sec-copying-moving-deleting">Copying, moving, deleting</a>' in page
+    lesson = logged_in.get("/modules/files-and-globs").text
+    assert '<h2 id="sec-copying-moving-deleting">Copying, moving, deleting</h2>' in lesson
+
+
+@pytest.mark.criterion(104, "I can type my answer before seeing it")
+def test_a_typed_answer_is_shown_beside_the_back(logged_in, user):
+    _complete(user.id, "navigating")
+    front = logged_in.get("/review").text
+    assert 'name="typed"' in front and ">Check</button>" in front and ">Show answer</button>" in front
+    part = _reveal(logged_in, "navigating/ls-lah", typed="  list   everything ").text
+    assert "<code>list everything</code>" not in part and "<code>list   everything</code>" in part  # as typed, trimmed
+    assert "Your answer" in part and "human-readable sizes" in part
+    assert "matched" not in part and " autofocus" not in part  # no accept list: nothing preselected
+    assert re.findall(r'name="grade" value="([a-z]+)"', part) == ["again", "hard", "good", "easy"]
+    with SessionLocal() as db:
+        assert _state(user.id, "navigating/ls-lah") is None  # revealing records nothing; the typed answer isn't kept
+        assert db.scalar(select(CardState).where(CardState.user_id == user.id)) is None
+
+
+@pytest.mark.criterion(104, "An exact answer is recognised")
+def test_an_accepted_answer_is_matched_and_preselects_good(logged_in, user):
+    _complete(user.id, "files-and-globs")
+    part = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp  -r src dest").text  # spaces don't matter
+    assert "✓ matched" in part
+    assert re.search(r'<button type="submit" name="grade" value="good" class="primary" autofocus>', part)
+    near = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp -R src dest").text
+    assert "✓ matched" not in near and "<code>cp -R src dest</code>" in near
+
+
+def test_show_answer_ignores_anything_typed(logged_in, user):
+    _complete(user.id, "files-and-globs")
+    part = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp -r src dest", show="1").text
+    assert "Your answer" not in part and "✓ matched" not in part

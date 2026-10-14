@@ -17,8 +17,8 @@ from app.content import load_catalog
 
 def _sections(module) -> list[str]:
     """The lesson's h2 sections before Try it, as HTML."""
-    body = module.body_html.split("<h2>Try it</h2>")[0]
-    return [s for s in re.split(r"(?=<h2>)", body) if s.strip()]
+    body = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')[0]
+    return [s for s in re.split(r"(?=<h2[ >])", body) if s.strip()]
 
 
 def _text(fragment: str, code_blocks: bool) -> str:

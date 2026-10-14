@@ -33,7 +33,7 @@ def _with(state, path, contents):
 
 
 def _complete_content(module):
-    assert module.body_html and "<h2>Try it</h2>" in module.body_html
+    assert module.body_html and '<h2 id="sec-try-it">Try it</h2>' in module.body_html
     assert any(q.code for q in module.quiz), "a scenario question: a script or output, then a question"
     assert len(module.cards) >= 3
     assert module.terminal and module.terminal.solution

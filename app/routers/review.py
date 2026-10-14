@@ -2,6 +2,10 @@
 the answer and four grades. Graded over htmx, the next card swaps in; as a
 plain form, the grade redirects back to /review.
 
+The front says where the card comes from and takes a typed answer (#104). The
+answer is shown beside the back and never stored; one of the card's `accept`
+answers marks it matched and preselects Good. Grading stays the learner's.
+
 A review pays XP, up to a daily cap, and the grade that clears the queue files
 today's streak entry, as completing a module does (#52)."""
 
@@ -73,18 +77,29 @@ def review_page(
     )
 
 
-@router.get("/review/answer", response_class=HTMLResponse)
+def matches(card: FlashCard, typed: str) -> bool:
+    """Whether `typed` is one of the card's exact answers, spaces collapsed."""
+    said = " ".join(typed.split())
+    return bool(said) and any(said == " ".join(a.split()) for a in card.accept)
+
+
+@router.post("/review/answer", response_class=HTMLResponse)
 def reveal(
     request: Request,
-    card: str,
+    card: Annotated[str, Form()],
+    typed: Annotated[str, Form(max_length=500)] = "",
+    show: Annotated[str, Form()] = "",  # "Show answer": reveal without checking
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
     console: Readout = Depends(console_readout),
 ):
-    """The card again, with its back and the grade buttons (htmx, or a plain link)."""
+    """The card again, with its back, what was typed and the grade buttons (htmx,
+    or a plain form)."""
     flashcard = _card_in_deck(db, user, catalog, card)
-    context = {**_context(db, user, catalog), "card": flashcard, "revealed": True}
+    typed = "" if show else typed.strip()
+    context = {**_context(db, user, catalog), "card": flashcard, "revealed": True,
+               "typed": typed, "matched": matches(flashcard, typed)}
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(request, "partials/_review_card.html", context)
     return templates.TemplateResponse(

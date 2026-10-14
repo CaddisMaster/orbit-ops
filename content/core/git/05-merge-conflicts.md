@@ -75,15 +75,20 @@ quiz:
       because then choosing is a decision, not arithmetic.
 cards:
   - id: conflict-why
+    section: "Why conflicts happen"
     front: When does git stop a merge with a conflict?
     back: "When both branches changed the same (or neighbouring) lines differently since they split. Other changes merge by themselves."
   - id: conflict-markers
+    section: "Reading the markers"
     front: "`<<<<<<< HEAD` … `=======` … `>>>>>>> NAME`"
     back: "The top half is your branch (HEAD), the bottom half is NAME's. Edit it to the right result and delete all three marker lines."
   - id: finish-merge
+    section: "Resolving"
     front: Finish a merge once the file's resolved
     back: "`git add FILE` to mark it resolved, then `git commit`."
   - id: merge-abort
+    section: "Resolving"
+    accept: ["git merge --abort"]
     front: Back out of a merge in progress
     back: "`git merge --abort`: everything goes back to how it was before the merge."
 lab:

@@ -73,15 +73,19 @@ quiz:
       matches the messages git writes itself, like `Merge branch …` and `Revert "…"`.
 cards:
   - id: commit-message
+    section: "Messages that explain themselves"
     front: A good commit message
     back: "Subject: what it does, imperative, capitalised, ~50 characters, no full stop. Blank line. Body: **why**."
   - id: gitignore-tracked
+    section: "Keep things out: .gitignore"
     front: "`.gitignore` doesn't stop a file being tracked. Why not?"
     back: "It only applies to untracked files. `git rm --cached FILE` stops tracking one, keeping it on disk."
   - id: secret-in-history
+    section: "Keep things out: .gitignore"
     front: You pushed a secret. What now?
     back: "Change the secret. It's in the history, in every copy: deleting or ignoring the file only protects future commits."
   - id: rebase
+    section: "A tidy branch: rebase"
     front: "`git rebase main`"
     back: "Replays your branch's commits on top of `main` as new commits: a straight history. Only for commits nobody else has."
 lab:
