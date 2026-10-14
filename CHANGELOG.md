@@ -6,6 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Fixed
+- The app grows with the screen (part of #105). On a 2560×1440 monitor the laptop's screen was
+  twice the size, but the lesson kept 16px text in a 760px column, a third of the glass. Text,
+  the reading column, the comms log, avatars and emblems now scale with the desk: 1rem is an
+  80th of the scene's width, between 16px (1280×720, unchanged) and 32px.
+
 ## [0.7.0] — 2026-10-14
 
 Labs and AI: Unit 1.3 Git, eight modules done with real `git` on your own machine, graded from
