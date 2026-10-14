@@ -7,6 +7,12 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Added
+- A mystery runs through Life Support: why the station went dark (#84). The plan is in
+  `docs/story.md`: the cause, and the clue each unit uncovers with its own tools. Unit 1.2's
+  clue is now in *Scheduling with cron*. Before scheduling anything, the console task has you
+  check what already runs at night. In `/etc/cron.d` there's a root job nobody on the crew
+  wrote, running at 02:35, five minutes before scrubber B went dark. The lesson now teaches
+  system jobs in `/etc/cron.d`, and the crew react on comms.
 - The crew notice promotions and commendations (#83). Reaching a new rank brings a line on
   comms: from Okafor up to Chief Engineer, and from Mission Control for Station Commander.
   Earning a badge brings MERIDIAN's "COMMENDATION LOGGED · <NAME>". The lines arrive after the

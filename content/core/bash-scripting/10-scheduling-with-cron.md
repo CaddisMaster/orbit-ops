@@ -82,8 +82,12 @@ cards:
     back: "Append both to a log: `… >> /var/log/job.log 2>&1`."
 terminal:
   task: |
-    Put both routines on a schedule, in your crontab (`crontab -e`, or write a file and load it
-    with `crontab FILE`):
+    **First, check the night.** Before you add a job at 02:30, find out what this machine already
+    runs between 02:00 and 02:59. Copy the line of **every system job that starts in that hour**
+    into `~/night-jobs.txt`.
+
+    Then put both routines on a schedule, in your crontab (`crontab -e`, or write a file and load
+    it with `crontab FILE`):
 
     - **`shift-check` every 15 minutes**, using a step in the minute field;
     - **`backup-logs` every night at 02:30**.
@@ -138,14 +142,43 @@ terminal:
     - {path: /var/log/scrubber/ring-a.log, owner: root, group: root, contents: "2026-10-08 08:55:00 ring-a CO2 3200 ppm\n"}
     - {path: /var/log/routines, type: dir, owner: root, group: crew, mode: "775"}
     - {path: /srv/backups, type: dir, owner: root, group: crew, mode: "775"}
+    # The Life Support mystery (#84, docs/story.md): a job nobody on the crew wrote.
+    - {path: /etc/cron.d, type: dir, owner: root, group: root}
+    - path: /etc/cron.d/logrotate
+      owner: root
+      group: root
+      contents: |
+        # rotate the station's logs
+        0 4 * * *  root  /usr/sbin/logrotate /etc/logrotate.conf
+    - path: /etc/cron.d/clock-sync
+      owner: root
+      group: root
+      contents: |
+        # keep the station clock on Mission Control's time (Okafor, 2025-11)
+        0 2 * * *  root  /usr/local/sbin/clock-sync
+    - path: /etc/cron.d/scrubber-maint
+      owner: root
+      group: root
+      contents: |
+        # nightly controller flush. do not remove
+        35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1
+    - {path: /usr/local/sbin, type: dir, owner: root, group: root}
+    - {path: /usr/local/sbin/clock-sync, owner: root, group: root, mode: "755", contents: "#!/bin/sh\nchronyc makestep\n"}
+    - {path: /usr/local/sbin/scrubber-flush, owner: root, group: root, mode: "700", contents: "#!/bin/sh\n"}
   checks:
+    - {contains: /home/cadet/night-jobs.txt, text: "0 2 * * *  root  /usr/local/sbin/clock-sync"}
+    - {contains: /home/cadet/night-jobs.txt, text: "35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1"}
     - {contains: /var/spool/cron/crontabs/cadet, text: "*/15 * * * * /station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1"}
     - {contains: /var/spool/cron/crontabs/cadet, text: "30 2 * * * /station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1"}
     - {contains: /var/log/routines/shift-check.log, text: "O2 20.8%"}
     - {contains: /var/log/routines/backup-logs.log, text: "backup complete"}
   success: |-
-    Okafor reads the crontab over your shoulder. "Every fifteen minutes, and half past two. Full paths, logs for both. Now we can all sleep."
+    Okafor reads the crontab over your shoulder. "Every fifteen minutes, and half past two. Full paths, logs for both." Then he reads night-jobs.txt, and doesn't say anything for a while.
   solution:
+    - ls /etc/cron.d
+    - cat /etc/cron.d/*
+    - grep ' 2 \* \* \*' /etc/cron.d/* > ~/night-jobs.txt
+    - cat ~/night-jobs.txt
     - crontab -l
     - /station/bin/shift-check >> /var/log/routines/shift-check.log 2>&1
     - /station/bin/backup-logs >> /var/log/routines/backup-logs.log 2>&1
@@ -165,10 +198,13 @@ comms:
   console_done:
     - {from: meridian, text: "CRONTAB · CADET · 2 JOBS · NEXT: SHIFT-CHECK IN 15 MIN"}
     - {from: okafor, text: "Full paths, logs for both. That's a crontab I'd sign off."}
+    - {from: meridian, text: "/ETC/CRON.D/SCRUBBER-MAINT · 02:35 NIGHTLY · ROOT · OUTPUT DISCARDED · AUTHOR: NONE ON RECORD"}
+    - {from: okafor, text: "02:35. Five minutes before scrubber B went dark. `clock-sync` is mine. Nobody on this crew wrote that other one."}
   complete:
     - {from: meridian, text: "02:30 · BACKUP-LOGS · BACKUP COMPLETE · ARCHIVE SENT"}
     - {from: mission, text: "*Meridian*, Mission Control. Tonight's log archive arrived on schedule, and nobody had to stay up for it. That's Bash scripting done, cadet."}
     - {from: okafor, text: "The routines run themselves now. Go and get some sleep. The station's got it."}
+    - {from: okafor, text: "And leave `scrubber-maint` exactly where it is. If it's what I think it is, it's evidence."}
   window: {complete: relay-pass}
 ---
 
@@ -213,6 +249,27 @@ working hours on weekdays. Lines starting with `#` are comments.
 **Check the times yourself.** Many versions of cron refuse an impossible one, like minute `61`,
 with `bad minute`, and so does the station console. Ubuntu 24.04's installs it without a word,
 and the line simply never runs.
+
+## System jobs: `/etc/cron.d`
+
+Your crontab isn't the only one. Jobs that packages and admins install for the whole machine
+live in **`/etc/cron.d/`**, one file per set of jobs (and in the older single file
+`/etc/crontab`). They use the same five fields with one addition: **the user to run as**,
+between the time and the command.
+
+```text
+# /etc/cron.d/logrotate
+0 4 * * *  root  /usr/sbin/logrotate /etc/logrotate.conf
+```
+
+That's 04:00 every day, as `root`. **`crontab -l` never shows these**, so to know what a
+machine does at night you have to read them:
+
+| Command | What it shows |
+|---|---|
+| `ls /etc/cron.d` | the job files |
+| `cat /etc/cron.d/*` | every system job, one file after another |
+| `grep PATTERN /etc/cron.d/*` | the matching lines, each with **its file's name in front** (`/etc/cron.d/logrotate:0 4 * * * …`), because grep was given several files |
 
 ## Cron's environment is not yours
 

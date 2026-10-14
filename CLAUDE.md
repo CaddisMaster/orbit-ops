@@ -18,6 +18,7 @@ learn.seandesmet.com on the DigitalOcean droplet it shares with Budget Buddy.
 > | add an Alembic revision, add an env var, or cut a release | [`docs/deployment.md`](docs/deployment.md) |
 > | need the module map, data model or request flow | [`docs/architecture.md`](docs/architecture.md) |
 > | write or change anything under `content/` | [`docs/content-authoring.md`](docs/content-authoring.md) |
+> | write a Life Support unit's comms or story | [`docs/story.md`](docs/story.md) (the mystery's clues) |
 > | plan the next milestone or a feature's shape | [`docs/roadmap.md`](docs/roadmap.md) |
 > | run anything on the droplet | [`RUNBOOK.md`](RUNBOOK.md) |
 > | want the reasoning behind a workflow rule | [`CONTRIBUTING.md`](CONTRIBUTING.md) |

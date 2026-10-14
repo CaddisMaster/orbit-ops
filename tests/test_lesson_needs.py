@@ -171,6 +171,11 @@ NEEDS = {
         "write full paths": "**Write full paths**",
         ">> log 2>&1 keeps output and errors": "**append both output and errors to a log**",
         "run the job's command by hand first": "run its command by hand exactly as the crontab says",
+        # #84: the night's system jobs, found with the unit's own tools
+        "system jobs live in /etc/cron.d, not your crontab": "**`crontab -l` never shows these**",
+        "a system job's line names its user": "**the user to run as**",
+        "ls and cat read them": "every system job, one file after another",
+        "grep over several files names each match's file": "**its file's name in front**",
     },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
