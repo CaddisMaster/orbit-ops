@@ -52,3 +52,28 @@ def test_avatars_and_emblems_are_sized_in_rem():
     for selector, size in [(".avatar", "2rem"), (".emblem", "3rem"), (".unit-emblem", "3.5rem")]:
         rule = _rule(selector)
         assert f"width: {size};" in rule and f"height: {size};" in rule, selector
+
+
+# --- the side bars (#105) ---------------------------------------------------------------------
+@pytest.mark.criterion(105, "The desk fits a 2K screen")
+def test_the_scene_fits_the_window_and_the_wide_room_fills_the_sides():
+    from art import room
+
+    # the scene is always wholly inside the window: as wide as it can be at 16:9, and no wider
+    scene = _rule(".scene")
+    assert "width: min(100vw, calc(100vh * 16 / 9));" in scene and "height: min(100vh, calc(100vw * 9 / 16));" in scene
+    # behind it, the wide room at the scene's own scale, centred, so its middle is the scene
+    backdrop = _rule("body::before")
+    assert f"* {room.WIDE_W} / {room.W}) auto" in backdrop and 'url("../img/room-wide.png") center' in backdrop
+    assert backdrop.count("position: fixed;") == 1 and "image-rendering: pixelated;" in backdrop
+    # wide enough for a 21:9 monitor (2560x1080) to show no bars
+    assert room.WIDE_W / room.H >= 2560 / 1080
+
+
+def test_the_wide_rooms_middle_is_the_scenes_room():
+    from art import room
+
+    wide, scene = room.wide(), room.render()
+    m = room.WIDE_MARGIN
+    assert [row[m : m + room.W] for row in wide.rows] == scene.rows
+    assert (wide.width, wide.height) == (room.WIDE_W, room.H)

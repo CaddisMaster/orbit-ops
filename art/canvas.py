@@ -38,10 +38,31 @@ PALETTE = {
 
 
 class Canvas:
-    def __init__(self, width: int, height: int, fill: str = "clear", seed: int = 7):
+    def __init__(self, width: int, height: int, fill: str = "clear", seed: int = 7, origin: tuple[int, int] = (0, 0)):
+        """`origin` is where drawing's (0, 0) lands, so the same drawing code can paint a
+        bigger canvas with room around it (room.wide, #105). Coordinates passed to the
+        drawing methods are always the drawing's; `left`/`right`/`top`/`bottom` give the
+        canvas's extent in them."""
         self.width, self.height = width, height
+        self.ox, self.oy = origin
         self.rows = [[self.colour(fill)] * width for _ in range(height)]
         self.random = random.Random(seed)  # deterministic: same seed, same picture
+
+    @property
+    def left(self) -> int:
+        return -self.ox
+
+    @property
+    def right(self) -> int:  # exclusive
+        return self.width - self.ox
+
+    @property
+    def top(self) -> int:
+        return -self.oy
+
+    @property
+    def bottom(self) -> int:  # exclusive
+        return self.height - self.oy
 
     @staticmethod
     def colour(name: str) -> tuple[int, int, int, int]:
@@ -49,10 +70,12 @@ class Canvas:
         return c if len(c) == 4 else (*c, 255)
 
     def px(self, x: int, y: int, c: str) -> None:
+        x, y = x + self.ox, y + self.oy
         if 0 <= x < self.width and 0 <= y < self.height:
             self.rows[y][x] = self.colour(c)
 
     def rect(self, x0: int, y0: int, x1: int, y1: int, c: str) -> None:
+        x0, x1, y0, y1 = x0 + self.ox, x1 + self.ox, y0 + self.oy, y1 + self.oy
         for y in range(max(0, y0), min(self.height, y1 + 1)):
             for x in range(max(0, x0), min(self.width, x1 + 1)):
                 self.rows[y][x] = self.colour(c)
@@ -65,14 +88,15 @@ class Canvas:
 
     def disc(self, cx: float, cy: float, r: float, paint) -> None:
         """Fill a disc; `paint(x, y, d)` picks each pixel's colour name (or None)."""
-        for y in range(max(0, int(cy - r - 1)), min(self.height, int(cy + r + 2))):
-            for x in range(max(0, int(cx - r - 1)), min(self.width, int(cx + r + 2))):
+        for y in range(max(self.top, int(cy - r - 1)), min(self.bottom, int(cy + r + 2))):
+            for x in range(max(self.left, int(cx - r - 1)), min(self.right, int(cx + r + 2))):
                 d = math.hypot(x - cx, y - cy)
                 if d <= r and (c := paint(x, y, d)):
                     self.px(x, y, c)
 
     def shade(self, x0: int, y0: int, x1: int, y1: int, factor: float) -> None:
         """Darken what's already there (a shadow), keeping its hue."""
+        x0, x1, y0, y1 = x0 + self.ox, x1 + self.ox, y0 + self.oy, y1 + self.oy
         for y in range(max(0, y0), min(self.height, y1 + 1)):
             for x in range(max(0, x0), min(self.width, x1 + 1)):
                 r, g, b, a = self.rows[y][x]

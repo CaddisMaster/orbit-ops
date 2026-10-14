@@ -23,11 +23,25 @@ CLOSE_TAB = (34, 147, 61, 152)  # where the "Close lid" button sits on the bezel
 HINGE_Y = 154
 DECK_FRONT = 177  # the deck's front edge starts here and runs off the bottom
 SLEEP_LIGHT = (262, 178)  # the closed laptop's breathing light (CSS .is-closed .power-light)
+# The room drawn wider, behind the scene, so a window wider than 16:9 shows more wall and desk
+# instead of bars (#105). 56 a side makes 432x180, 2.4:1: enough for a 21:9 monitor. The CSS
+# scales it by WIDE_W / W (style.css, body::before).
+WIDE_MARGIN = 56
+WIDE_W = W + 2 * WIDE_MARGIN
 
 
 def render() -> Canvas:
     """The room alone: what you see with the laptop shut."""
-    c = Canvas(W, H, "wall", seed=38)
+    return _room(Canvas(W, H, "wall", seed=38))
+
+
+def wide() -> Canvas:
+    """The same room with WIDE_MARGIN more wall and desk on each side. Its middle W pixels
+    are render(), pixel for pixel, so the two line up behind the scene."""
+    return _room(Canvas(WIDE_W, H, "wall", seed=38, origin=(WIDE_MARGIN, 0)))
+
+
+def _room(c: Canvas) -> Canvas:
     wall(c)
     window(c)
     desk(c)
@@ -38,10 +52,10 @@ def render() -> Canvas:
 
 def wall(c: Canvas) -> None:
     for y in range(H):
-        for x in range(W):
+        for x in range(c.left, c.right):
             if (x // 40 + y // 45) % 2:
                 c.px(x, y, "wall2")
-    for x in range(0, W, 40):
+    for x in range(c.left - c.left % 40, c.right, 40):
         c.vline(x, 0, DESK_Y, "wall3")
 
 
@@ -113,14 +127,15 @@ def docking_arm(c: Canvas) -> None:
 
 
 def desk(c: Canvas) -> None:
-    c.rect(0, DESK_Y, W - 1, H - 1, "desk")
-    for x in range(-40, W, 11):  # the grain runs towards you
+    c.rect(c.left, DESK_Y, c.right - 1, H - 1, "desk")
+    first = -40 - 11 * -(c.left // 11)  # on the same 11-pixel pitch as x = -40, however wide
+    for x in range(first, c.right, 11):  # the grain runs towards you
         for y in range(DESK_Y + 2, H):
             gx = x + (y - DESK_Y) // 3
-            if 0 <= gx < W:
+            if c.left <= gx < c.right:
                 c.px(gx, y, "desk2")
-    c.rect(0, DESK_Y - 2, W - 1, DESK_Y - 1, "deskedge")
-    c.hline(0, W - 1, DESK_Y, "desk3")
+    c.rect(c.left, DESK_Y - 2, c.right - 1, DESK_Y - 1, "deskedge")
+    c.hline(c.left, c.right - 1, DESK_Y, "desk3")
 
 
 def lamp(c: Canvas) -> None:
