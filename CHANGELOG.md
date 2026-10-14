@@ -6,6 +6,107 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-14
+
+Labs and AI: Unit 1.3 Git, eight modules done with real `git` on your own machine, graded from
+what you paste. Stuck on any task, ask Claude for a hint that never holds the answer; pass a lab
+and Claude reviews your work for bonus XP. Every model call goes through a monthly budget, and
+the header shows whether the uplink is online. Finishing Git earns *Every Change Logged*.
+
+**Server:** `ANTHROPIC_API_KEY=` (a key for this app alone) and `AI_MONTHLY_BUDGET_CENTS=500` in
+`/opt/orbit-ops/.env` before approving the deploy. Without the key everything works except hints
+and lab review, which show "Uplink offline".
+
+### Added
+- A place on each exercise attempt for Claude's review of a passed lab: its score, strengths
+  and issues. Empty for everything else (#122).
+- A database table for AI spend: one row per model call, with its purpose, model, tokens and
+  cost. The monthly AI budget will be summed from it. Spend outlives a deleted user, so the
+  month's total can't shrink (#120).
+- The AI foundation (#120). Every model call goes through one gate that refuses when there's
+  no API key or this month's spend has reached `AI_MONTHLY_BUDGET_CENTS`, and records each
+  call's tokens and cost. Months follow `APP_TIMEZONE`. Hints will use Haiku 5.5 and lab
+  review Sonnet 5.5. The header readout gains **Uplink online/offline**, so you can see
+  whether AI features are available. Nothing calls a model yet: hints (#123) and lab review
+  (#122) are the first features to.
+- Labs (#121): exercises done on your own machine, with real `git` from Unit 1.3 and later
+  Docker and a cluster. You paste what the commands printed, and the app checks the text. It
+  runs nothing. A failed check shows its hint, and what you pasted stays in the box. The first
+  pass is worth 40 XP and brings the crew's `lab_done` reply on comms. A new badge, *Field
+  Work*, is earned for passing a first lab. Like a console task, a lab doesn't decide whether a
+  module is complete: the quiz still does. Unit 1.3's modules are the first with labs.
+- Claude reviews a passed lab (#122), for labs whose author asks for it with a rubric. Once the
+  checks pass, the review loads by itself without delaying the pass: a score out of 100, up to
+  three things done well and three to do differently. It earns a bonus of up to 20 XP, once.
+  It runs on Sonnet 5.5 through the AI budget gate. With no key or no budget left, the lab still
+  passes and the review can be asked for later. The checks always decide pass or fail; the
+  review never does.
+- Hints (#123): stuck on a quiz question, the console, a challenge or a lab, ask for a hint.
+  Haiku 5.5 sees the lesson, the task and what you've tried, never the answer key. A reply that
+  gives the answer away anyway is replaced with a pointer back to the lesson, free. A hint
+  costs 5 XP once per task, however many you ask for, and each task allows one a minute. With
+  no key or budget, the buttons say "Hints are offline".
+- Unit 1.3 module 01, "Your first repository" (#125), the first module of **Git** and the
+  first with a lab. It covers getting git on Ubuntu, a Mac or Windows; `git config` for the
+  name and email every commit carries, and why that's per machine; and `init`, `status`, `add`,
+  `commit -m` and `log`. It explains what a commit is (a snapshot with an author, a time, a
+  message and a parent) and why nobody else's hashes match yours. In the lab you put
+  `airmix.conf` under version control in two commits on your own machine, and paste
+  `git log --oneline` and `git status`. It names an editor (`nano`, and how to save and leave),
+  because the lab edits a file and Unit 1.3 doesn't need Unit 1.2, where nano is taught.
+- Unit 1.3 module 02, "Staging and diffs" (#126). It covers the working tree, the index and
+  HEAD; `git diff` against `git diff --staged`, and reading a hunk; `git add -p` for staging
+  part of a file; `git status --short`'s two columns; and `git restore` with and without
+  `--staged`, including the one that can't be undone. In the lab, two fixes sit in the same
+  file and only the tested one is committed. You paste the short status, the commit and what's
+  left in the file.
+- Unit 1.3 module 03, "Reading history" (#127). It covers `git log`'s filters (`--oneline`,
+  `--graph`, `-p`, `--author`, `--since`, `-- PATH`), `git show`, and `git blame`, including
+  why the commit blame names may only have touched the line. Then `git log -S`, the pickaxe,
+  finds where a value was added or removed. In the lab, a month of history by three crew
+  members hides who raised the CO2 alarm to 5000 ppm. Blame points at a commit that only
+  re-spaced the file, and the pickaxe finds the real one. The setup builds the same history,
+  hashes included, on any machine, and runs in zsh as well as bash.
+- Unit 1.3 module 04, "Branches and merging" (#128). It covers what a branch is (a name for a
+  commit), `git switch -c`, switching, fast-forward against a merge commit, `--no-ff`, the
+  merge message's editor (and how to leave vi), reading `git log --graph --all`, and
+  `git branch -d`. In the lab, the pump schedule is worked on a branch while `main` takes a
+  filter fix, and then the two are joined with a merge commit. You paste the graph showing both
+  lines and the merge.
+- Unit 1.3 module 05, "Merge conflicts" (#129). It covers why conflicts happen, reading the
+  markers, resolving by editing (which may mean neither side's value), `git add` to mark a file
+  resolved, finishing with `git commit`, and `git merge --abort`. In the lab, Nakamura and
+  Petrov changed the same CO2 warning on two branches, and you settle it at the brief's value
+  in a merge commit that says so. Their other changes merge by themselves.
+- Unit 1.3 module 06, "Remotes" (#130). It covers a bare repository as the shared copy (on
+  disk, no GitHub account needed), `clone`, `origin` and tracking, `remote -v`, `push`, and
+  `fetch` against `pull`. Then `git status -sb`'s ahead and behind, and why status needs a fetch
+  before you trust it. Then a rejected push, and what git 2.43 says when a pull has diverged.
+  In the lab you clone Mission Control's copy, push a fix, then fetch and pull a change
+  Nakamura pushed after you.
+- Unit 1.3 module 07, "Undoing things" (#131). It covers `git commit --amend` before a push,
+  and `git revert` as the safe undo for anything already pushed. Then `git reset` and its
+  three modes, with why it's only for commits that are yours alone, and `git reflog` to get
+  back a commit `reset --hard` "lost". In the lab, the setup really does run `reset --hard`
+  over Okafor's battery fix. You rescue it from the reflog, then revert Petrov's pushed commit
+  without rewriting anyone's history.
+- Unit 1.3 module 08, "Working together" (#132), the end of **Git**. It covers `.gitignore`
+  (generated files and secrets, and why a committed secret must be changed, not deleted), commit
+  messages with an imperative, capitalised subject and a body that says why, and `git rebase`
+  for a straight history. It walks this project's own issue → branch → PR → squash-merge flow.
+  The lab is the first reviewed by Claude: you keep the junk out, make Okafor's two changes as
+  one commit each, and rebase onto `main`. The checks decide the pass, and Claude then reviews
+  the messages against a rubric. Completing it earns *Every Change Logged*.
+
+### Fixed
+- The deploy's pre-migration backup can no longer pass when `pg_dump` fails (#116). It used to
+  check only that the dump was valid gzip, and a failed `pg_dump` still leaves one, so a deploy
+  could migrate with no usable backup while its log said `backup ok`. The backup is now
+  `scripts/backup_db.sh`, run under bash with `pipefail`. It keeps a dump only if `pg_dump`
+  succeeded **and** the dump ends with its completion line. Otherwise the deploy stops before
+  migrating, and no file is kept. The RUNBOOK's manual dump before a `db` change gets the
+  same checks.
+
 ## [0.6.1] — 2026-10-12
 
 Bash scripting, finished: Unit 1.2's last six modules, from conditionals and loops to

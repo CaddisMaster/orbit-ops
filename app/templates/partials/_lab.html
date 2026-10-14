@@ -1,0 +1,69 @@
+{# A module's lab (#121): done on your own machine, checked by what you paste.
+   A plain form: htmx posts it and swaps this whole section for the verdict
+   (routers/learn.py lab_report); without JavaScript it simply doesn't submit
+   in place. `lab_state` is app.lab.LabState: the last pastes and their results. #}
+{% set lab = module.lab %}
+<section class="card lab" id="lab" aria-labelledby="lab-heading">
+  <p class="eyebrow">Lab · on your own machine · {{ lab_xp }} XP</p>
+  <h2 id="lab-heading">Lab</h2>
+  {% if lab_from %}{% with who = lab_from, html = none, lead = "asks:" %}{% include "partials/_crew_line.html" %}{% endwith %}{% endif %}
+  <div class="task prose">{{ module.lab_task_html | safe }}</div>
+  {% if lab.setup %}
+  <p class="lab-label muted">Set up a starting point first: paste this into a terminal.</p>
+  <div class="prose lab-setup">{{ lab.setup | codeblock("bash") }}</div>
+  {% endif %}
+  <form class="lab-form" hx-post="/modules/{{ module.slug }}/lab" hx-target="#lab" hx-swap="outerHTML">
+    {% for box in lab.boxes %}
+    {% set results = lab_state.verdict.results[loop.index0] if lab_state.verdict else none %}
+    <div class="lab-box">
+      <label class="lab-label" for="lab-box-{{ loop.index0 }}">
+        <span class="lab-step">{{ loop.index }}.</span>
+        <span class="prose lab-prompt">{{ module.lab_prompts_html[loop.index0] | safe }}</span>
+      </label>
+      <textarea class="code-editor lab-paste" id="lab-box-{{ loop.index0 }}" name="box" rows="8" spellcheck="false"
+                autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"
+                placeholder="Paste the output here">{{ lab_state.pastes[loop.index0] }}</textarea>
+      {% if results %}
+      <ul class="lab-checks" aria-label="Checks for box {{ loop.index }}">
+        {% for rule in box.checks %}{% set ok = results[loop.index0] %}
+        <li class="{{ 'is-right' if ok else 'is-wrong' }}"><span class="mark" aria-hidden="true">{{ "✓" if ok else "✗" }}</span>
+          {{ rule.says }}{% if not ok and rule.hint %} <span class="lab-hint">· {{ rule.hint }}</span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div class="lab-actions"><button type="submit" class="primary">Check my output</button></div>
+  </form>
+  <div class="lab-status" role="status">
+    {% if error %}<p class="lab-error">{{ error }}</p>
+    {% elif just_passed %}
+      <p class="lab-passed">✓ Lab passed{% if xp_gained %} · +{{ xp_gained }} XP{% endif %}</p>
+      <p>{{ lab.success }}</p>
+    {% elif lab_state.passed %}<p><span class="lab-passed">✓ Passed</span>: the {{ lab_xp }} XP is yours.</p>
+    {% elif lab_state.verdict %}<p class="muted">Not yet: fix what's marked ✗ and check again.</p>
+    {% endif %}
+  </div>
+  {% if not lab_state.passed %}
+  {% with item = "lab", include = "#lab .lab-paste", outcome = none %}{% include "partials/_hint.html" %}{% endwith %}
+  {% endif %}
+  {% if lab.ai_review and lab_state.passed %}
+  {% with review = lab_state.review, pending = just_passed and not lab_state.review, unavailable = none, xp_gained = 0 %}{% include "partials/_lab_review.html" %}{% endwith %}
+  {% endif %}
+  {% if just_passed and new_badges %}
+  {% from "partials/_emblem.html" import emblem %}
+  <ul class="badge-list">
+    {% for badge in new_badges %}
+    <li class="badge earned">{{ emblem(badge.emblem) }}
+      <div><p class="badge-name">Badge earned: {{ badge.name }}</p><p class="badge-desc">{{ badge.description }}</p></div></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% if just_passed and arrivals %}
+{# The crew answers on the comms log (#38), as for a console task. #}
+<div hx-swap-oob="beforeend:#comms-log">{% for line in arrivals %}{% include "partials/_comms_line.html" %}{% endfor %}</div>
+{% endif %}
+{% if just_passed and window_event %}
+{% with event = window_event, oob = true %}{% include "partials/_window_event.html" %}{% endwith %}
+{% endif %}

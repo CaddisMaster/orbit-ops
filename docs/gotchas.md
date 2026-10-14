@@ -6,8 +6,8 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 
 - **Jinja typos render as empty strings.** Assert on rendered content in tests.
 - **`get_settings()` is `lru_cache`d.** Env vars set after first import are ignored.
-- **The rate limiter is in-process memory.** Correct only with one uvicorn process. If you ever
-  add workers, move it to the database or Redis first.
+- **The rate limiters are in-process memory** (login, and hints' one-a-minute, #123). Correct only
+  with one uvicorn process. If you ever add workers, move them to the database or Redis first.
 - **`csrf_protect` reads the form body.** Starlette caches it on the request, so route `Form()`
   params still work — but a route reading `request.body()` raw on a form POST would not.
 - **Exception handlers for bare `Exception`** run outside `SecurityHeadersMiddleware`, so a 500
@@ -65,6 +65,25 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   `scripts/fetch_pyodide.py`, `docker compose build web`.
 - **Playwright's `waitForFunction` evaluates a string**, which the CSP blocks (`'unsafe-eval'`)
   on our pages. Wait on a selector instead (`waitForSelector(…, { state: 'detached' })`).
+- **Playwright's screenshots log CSP errors that aren't ours.** To hide the caret it injects a
+  `<style>`, which `style-src 'self'` blocks: one "Applying inline style violates…" error per
+  screenshot, with the empty string's hash (`sha256-47DEQpj8…`). Count console errors in a run
+  that takes no screenshots before blaming the app (#121).
+
+## Deploy scripts
+
+Scripts piped to the droplet over ssh (`… "cd /opt/orbit-ops && bash -s -- args" < scripts/x.sh`),
+as `install_compose.sh` and `backup_db.sh` are (#116):
+
+- **The script is stdin.** Anything in it that reads stdin eats the rest of the script, and
+  the shell then exits **0** having run nothing more. `docker compose exec -T` forwards stdin,
+  so give such commands `< /dev/null`. A test stub for `docker` must read stdin too, or it
+  hides this (ours did, until a run against real Postgres).
+- **`sh` is dash, and Ubuntu 24.04's dash refuses `set -o pipefail`.** A script that pipes
+  something whose failure matters is `#!/bin/bash` and runs as `bash -s`.
+- **Check a dump by its completion line**, not by `gzip -t`. A current `pg_dump` writes a
+  `\unrestrict` line after `-- PostgreSQL database dump complete`, so look further back than
+  the last 3 lines.
 
 ## Migrations
 

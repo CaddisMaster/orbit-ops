@@ -319,6 +319,8 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .readout strong { color: var(--accent); font-weight: 600; }
 .readout a { color: inherit; text-decoration: none; }
 .readout a:hover strong, .readout a:focus-visible strong { text-decoration: underline; }
+/* AI offline (#120): no key, or the month's budget spent. Dimmed, not alarming. */
+.readout .uplink.is-offline strong { color: var(--muted); font-weight: 400; }
 
 /* Transmission briefings (static/js/briefing.js types them out). */
 .transmission { border-left: 2px solid var(--accent); padding-left: 0.9rem; }
@@ -468,6 +470,42 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 .challenge-checks .is-wrong { color: var(--danger); }
 .challenge-status { min-height: 1.6em; margin: 0.6rem 0 0; }
 .challenge-passed { color: var(--ok); font-weight: 700; }
+
+/* --- Labs (#121): done on your own machine, checked by the paste ------------------ */
+.lab { margin-top: 1.25rem; }
+.lab-label { display: flex; gap: 0.4rem; margin: 0.9rem 0 0.35rem; font-size: 0.9rem; }
+.lab-step { color: var(--accent); font-weight: 700; }
+.lab-prompt > :first-child { margin-top: 0; }
+.lab-prompt > :last-child { margin-bottom: 0; }
+.lab-setup { margin-bottom: 0.25rem; }
+.lab-paste { min-height: 8rem; }
+.lab-checks { list-style: none; margin: 0.5rem 0 0; padding: 0; font-size: 0.9rem; }
+.lab-checks li { margin: 0 0 0.3rem; }
+.lab-checks .is-right .mark { color: var(--ok); }
+.lab-checks .is-wrong .mark { color: var(--danger); }
+.lab-hint { color: var(--muted); }
+.lab-actions { margin-top: 0.75rem; }
+.lab-status { min-height: 1.6em; margin: 0.6rem 0 0; }
+.lab-passed { color: var(--ok); font-weight: 700; }
+.lab-error { color: var(--danger); }
+/* Hints (#123): a button under each task, and the last hint asked for. */
+.hint-box { margin-top: 0.6rem; }
+.hint-ask { font-size: 0.85rem; }
+.hint-ask[disabled] { color: var(--muted); cursor: not-allowed; text-decoration: none; }
+.hint-price { color: var(--muted); }
+.hint-text { margin: 0 0 0.35rem; padding: 0.5rem 0.75rem; border-left: 3px solid var(--accent); background: rgb(255 255 255 / 0.03); }
+.hint-text.is-pointer { border-left-color: var(--muted); }
+.hint-label { color: var(--accent); font: 600 0.75rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 0.35rem; }
+.hint-cost { color: var(--muted); font: 0.8rem var(--mono); }
+/* Claude's review of a passed lab (#122). */
+.lab-review { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+.lab-review .eyebrow { margin-bottom: 0.25rem; }
+.lab-review-score { margin: 0 0 0.5rem; font: 1rem/1.4 var(--mono); }
+.lab-review-score strong { color: var(--accent); font-size: 1.4rem; }
+.lab-review-head { margin: 0.75rem 0 0.3rem; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.lab-review-list { margin: 0; padding-left: 1.2rem; }
+.lab-review-list li { margin: 0 0 0.3rem; }
+.lab-review-wait::before { content: "▸ "; color: var(--accent); }
 
 /* --- Flashcard review (#51) ------------------------------------------------------ */
 .review-card { max-width: 640px; margin-left: auto; margin-right: auto; }

@@ -200,8 +200,8 @@ tracks:
           artefact came from.
 
 # Badges, in the order the badges page shows them. `rule` names one evaluator in
-# app/game/badges.py: {unit_complete: <unit slug>}, {streak: <days>} or
-# {first_perfect_quiz: true}. `emblem` is one of the inline SVGs in
+# app/game/badges.py: {unit_complete: <unit slug>}, {streak: <days>},
+# {first_perfect_quiz: true} or {labs_completed: <n>}. `emblem` is one of the inline SVGs in
 # app/templates/partials/_emblem.html. A badge's slug is its permanent ID:
 # never rename one that has been earned.
 badges:
@@ -210,6 +210,11 @@ badges:
     description: Finish a module with every quiz answer right first time.
     emblem: star
     rule: {first_perfect_quiz: true}
+  - slug: first-lab
+    name: Field Work
+    description: Pass a lab, done on your own machine.
+    emblem: star
+    rule: {labs_completed: 1}
   - slug: streak-7
     name: First Watch
     description: Keep a 7-day streak.

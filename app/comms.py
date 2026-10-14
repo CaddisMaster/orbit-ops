@@ -3,13 +3,13 @@ you, in the order the beats happened.
 
 Nothing about it is stored. The log is rebuilt on each request from what the
 learner has done: for every completed module, in the order it was completed,
-its `open`, `console_done` (if its console task passed) and `complete`
-messages. On a module page the module being worked on adds its `open` beat,
-and `console_done` once that has passed.
+its `open`, `console_done` (if its console task passed), `lab_done` (if its
+lab passed, #121) and `complete` messages. On a module page the module being
+worked on adds its `open` beat, and `console_done` / `lab_done` once passed.
 
 Messages that arrive on this page view are marked `new`, and static/js/
 comms.js reveals those one at a time. A briefing is new on the first visit
-(no progress row yet); console_done and complete arrive with the responses
+(no progress row yet); console_done, lab_done and complete arrive with the responses
 that earn them (routers/learn.py).
 """
 
@@ -18,11 +18,12 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import lab as labs
 from app.content import Catalog, Module
 from app.content.schema import CastSpec
 from app.models import ExerciseAttempt, ModuleProgress
 
-BEATS = ("open", "console_done", "complete")
+BEATS = ("open", "console_done", "lab_done", "complete")
 
 # Each window event's sprite (app/static/img/, drawn by art/sprites.py) and its
 # native size; style.css animates it under `.window-event.<event>`.
@@ -67,6 +68,7 @@ def history(db: Session, user_id: int, catalog: Catalog, current: str | None = N
         .order_by(ModuleProgress.completed_at.nulls_last(), ModuleProgress.id)
     ).all()
     passed = console_passed(db, user_id)
+    labbed = labs.passed_slugs(db, user_id)
     lines: list[Line] = []
     seen = set()
     for slug, status, _ in progress:
@@ -77,6 +79,8 @@ def history(db: Session, user_id: int, catalog: Catalog, current: str | None = N
         lines += beat(catalog, module, "open")
         if slug in passed:
             lines += beat(catalog, module, "console_done")
+        if slug in labbed:
+            lines += beat(catalog, module, "lab_done")
         lines += beat(catalog, module, "complete")
     module = catalog.modules.get(current) if current else None
     if module and module.comms and current not in seen:
@@ -84,4 +88,6 @@ def history(db: Session, user_id: int, catalog: Catalog, current: str | None = N
         lines += beat(catalog, module, "open", new=first_visit)
         if current in passed:
             lines += beat(catalog, module, "console_done")
+        if current in labbed:
+            lines += beat(catalog, module, "lab_done")
     return lines

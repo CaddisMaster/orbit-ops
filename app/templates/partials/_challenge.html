@@ -12,7 +12,7 @@
   <p class="challenge-nojs muted">Python challenges run in your browser and need JavaScript. The lesson and the quiz work without it.</p>
   <div class="challenge-ui" hidden>
     <label class="challenge-label muted" for="challenge-code">Your Python <span class="challenge-keys">· Tab indents · Esc then Tab leaves the editor · Ctrl/⌘+Enter runs</span></label>
-    <textarea class="code-editor" id="challenge-code" rows="14" spellcheck="false" autocapitalize="off"
+    <textarea class="code-editor" id="challenge-code" name="attempt" rows="14" spellcheck="false" autocapitalize="off"
               autocomplete="off" autocorrect="off" wrap="off">{{ challenge_code }}</textarea>
     <div class="challenge-actions">
       <button type="button" class="secondary" data-run>Run</button>
@@ -23,4 +23,5 @@
     <ul class="challenge-checks" aria-label="Checks" hidden></ul>
   </div>
   <p class="challenge-status" role="status">{% if challenge_passed %}<span class="challenge-passed">✓ Passed</span>: the {{ challenge_xp }} XP is yours. Improve it as much as you like.{% endif %}</p>
+  {% with item = "challenge", include = "#challenge-code", outcome = none %}{% include "partials/_hint.html" %}{% endwith %}
 </section>

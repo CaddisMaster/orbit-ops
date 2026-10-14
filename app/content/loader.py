@@ -13,6 +13,7 @@ is about, relative to content/.
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import get_args
 
 import yaml
 from pydantic import ValidationError
@@ -20,9 +21,11 @@ from pydantic import ValidationError
 from app.content.render import render_inline, render_markdown
 from app.content.schema import (
     BadgeSpec,
+    Beat,
     CastSpec,
     Challenge,
     Comms,
+    Lab,
     ModuleFile,
     Question,
     RankSpec,
@@ -32,6 +35,7 @@ from app.content.schema import (
 )
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
+BEATS: tuple[str, ...] = get_args(Beat)  # open, console_done, lab_done, complete
 _MODULE_FILENAME = re.compile(r"^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
 
 
@@ -64,6 +68,9 @@ class Module:
     challenge: Challenge | None
     challenge_task_html: str
     challenge_inputs: dict  # {variable: the console file's contents}, resolved once at startup
+    lab: Lab | None
+    lab_task_html: str
+    lab_prompts_html: tuple[str, ...]  # each box's prompt, rendered
     comms: Comms | None
     comms_html: dict  # {beat: ((cast slug, message html), ...)}, rendered once at startup
     unit: str
@@ -259,10 +266,13 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
             }
             if data.challenge and data.terminal
             else {},
+            lab=data.lab,
+            lab_task_html=render_markdown(data.lab.task) if data.lab else "",
+            lab_prompts_html=tuple(render_markdown(b.prompt) for b in data.lab.boxes) if data.lab else (),
             comms=data.comms,
             comms_html={
                 beat: tuple((m.from_, render_inline(m.text)) for m in getattr(data.comms, beat))
-                for beat in ("open", "console_done", "complete")
+                for beat in BEATS
             }
             if data.comms
             else {},
@@ -278,18 +288,22 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
     for module in modules.values():
         if module.challenge and module.challenge.from_ and module.challenge.from_ not in cast:
             problems.append(f"{module.source}: challenge.from: '{module.challenge.from_}' is not in the cast")
+        if module.lab and module.lab.from_ and module.lab.from_ not in cast:
+            problems.append(f"{module.source}: lab.from: '{module.lab.from_}' is not in the cast")
     for i, message in enumerate(syllabus.drill.cleared if syllabus.drill else ()):
         if message.from_ not in cast:
             problems.append(f"syllabus.yml: drill.cleared.{i}.from: '{message.from_}' is not in the cast")
     for module in modules.values():
         if not module.comms:
             continue
-        for beat in ("open", "console_done", "complete"):
+        for beat in BEATS:
             for i, message in enumerate(getattr(module.comms, beat)):
                 if message.from_ not in cast:
                     problems.append(f"{module.source}: comms.{beat}.{i}.from: '{message.from_}' is not in the cast")
         if (module.comms.console_done or "console_done" in module.comms.window) and not module.terminal:
             problems.append(f"{module.source}: comms.console_done: the module has no terminal exercise")
+        if (module.comms.lab_done or "lab_done" in module.comms.window) and not module.lab:
+            problems.append(f"{module.source}: comms.lab_done: the module has no lab")
 
     if problems:
         raise ContentError(problems)

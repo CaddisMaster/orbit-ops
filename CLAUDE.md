@@ -43,15 +43,18 @@ app/templating.py    the shared Jinja env (csrf_token, app_version, static_url g
 app/static_files.py  static_url (?v= per release), Cache-Control on /static and /pyodide/<version>
 app/content/         schema.py, loader.py (load_catalog → Catalog), render.py (Markdown, Pygments)
 app/progress.py      lock rules + today's mission (pure), check_answer, record_answer
+app/ai.py            models, prices and cost per call (pure); app/spend.py: the AI ledger + monthly budget
+app/hints.py         hints: the prompt without the answer key, and the leak guard on the reply
 app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their ledgers)
 app/station_map.py   the /map layout (pure); app/console.py: header readout + comms log (app/comms.py)
 app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js is the simulated shell
 app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
+app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review)
-alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0007 card_state)
+alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0009 attempt review)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
-scripts/             create_user.py, install_compose.sh (deploy), check_criteria.py (CI), fetch_pyodide.py (image)
+scripts/             create_user.py, install_compose.sh + backup_db.sh (deploy), check_criteria.py (CI), fetch_pyodide.py (image)
 ```
 
 ## Non-negotiables
@@ -86,7 +89,9 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.6.1** is in production; the next milestone is **v0.7.0 — Labs and AI**.
+See `docs/status.md`. **v0.6.1** is in production. **v0.7.0 — Labs and AI** is open: its platform
+(labs, the AI gate, lab review, hints, the content reviewer) and all of Unit 1.3 Git are merged.
+It waits on an Anthropic key on the droplet and Sean's go.
 
 ## Maintainer notes (local only)
 

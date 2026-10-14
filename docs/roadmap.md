@@ -7,7 +7,7 @@ Sean wants a web app he logs into every day to complete one gamified, ~15–20 m
 - Name and URL: **Orbit Ops** at `learn.seandesmet.com`. Repo `caddismaster/orbit-ops`, image `ghcr.io/caddismaster/orbit-ops`.
 - Stack: **FastAPI + Jinja2/HTMX + SQLAlchemy 2.0 + Alembic**. It gets its own Postgres 16 container.
 - Single user.
-- Lessons are Markdown/YAML in the repo. Claude adds hints, reviews lab submissions, and helps draft new modules (the "hybrid" option).
+- Lessons are Markdown/YAML in the repo, written with Claude in Claude Code sessions. The app itself calls Claude only for hints and lab review (the "hybrid" option).
 - Exercises: quizzes, in-browser Python challenges (Pyodide), hands-on labs, and spaced-repetition flashcards.
 - Gamification: XP, levels and streaks, plus badges and a skill tree, wrapped in a **space station ops** story.
 - Tracks: Core (Linux/Bash/Git/Networking), Python + Docker/Compose, Kubernetes + Helm, and CI/CD + IaC + Observability + Security.
@@ -33,7 +33,7 @@ orbit-ops/
     static/            # htmx (vendored, as BB does), css, js/pyodide-worker.js, station.svg
   content/             # THE CURRICULUM (see §3)
   alembic/             # migrations (replaces BB's numbered SQL + migrate.py)
-  scripts/             # draft_module.py (Claude-assisted authoring), validate_content.py, seed_dev.py, restore_check.py
+  scripts/             # validate_content.py, seed_dev.py, restore_check.py
   tests/  docs/  .github/  .claude/
   Dockerfile  docker-compose.yml  docker-compose.override.yml  test.sh  pyproject.toml
 ```
@@ -98,7 +98,7 @@ Each module's front matter holds `slug`, `title`, `minutes`, `xp`, `story` (a mi
 
 That is about 170 modules, roughly 6 months of daily work. Tracks 2–4 unlock as their prerequisite units are finished. Many modules link back to BB's own setup, for example "go read how Budget Buddy deploys".
 
-**How content gets written (hybrid).** `scripts/draft_module.py <unit> <slug>` asks Claude to draft a module from `syllabus.yml` in the content schema. The draft lands on a branch and is reviewed and merged through a PR, like any other change. The first release ships **Unit 1.1 written by hand (10 modules)** plus the complete syllabus. After that, units are drafted ahead of Sean's progress.
+**How content gets written.** Modules are written with Claude in Claude Code sessions, one issue and one PR each: Claude drafts the module, runs every command in `ubuntu:24.04`, solves it in the browser as a throwaway user, and checks each "On the real station" claim, then Sean reviews the PR and plays it. Units are written ahead of Sean's progress. (A `scripts/draft_module.py` that drafted through the API was planned and dropped on 2026-10-12: it would have duplicated the sessions, paid for them on the app's key, and skipped the checking, which is the slow part.)
 
 ## 4. Gamification
 - **XP:** module completion is worth 50, a perfect quiz +20, a code challenge +30, a lab +40, and an AI-reviewed lab can add up to +20. Each flashcard review earns 2, capped per day. Using a hint costs 5 XP.
@@ -110,10 +110,10 @@ That is about 170 modules, roughly 6 months of daily work. Tracks 2–4 unlock a
 
 ## 5. AI features (`app/ai.py`)
 These follow BB's `ai.py` pattern of wrapping the `anthropic` SDK.
-- **Hints** use `claude-haiku-4-5-20251001`. They are given the module context and the user's attempt, and are told never to reveal the answer.
-- **Lab review** uses `claude-sonnet-5-5`. It reviews a pasted Dockerfile, manifest or workflow against the lab's rubric and returns structured JSON (score, strengths, issues). Deterministic `verify` checks always run first.
-- **Module drafting** (the `scripts/` CLI) uses `claude-opus-5-5`.
-- There is a monthly spend cap set by `AI_MONTHLY_BUDGET_CENTS`, tracked in `ai_requests`. When the cap is reached, the AI features turn off gracefully.
+- **Hints** use `claude-haiku-5-5`. They are given the module context and the user's attempt, never the answer key, and a server-side guard refuses any reply that contains an accepted answer (#123).
+- **Lab review** uses `claude-sonnet-5-5`. It reviews a pasted Dockerfile, manifest or workflow against the lab's rubric and returns structured JSON (score, strengths, issues). Deterministic `verify` checks always run first (#122).
+- **That's all the app's key pays for**: what has to happen while Sean studies, with no Claude Code session open. Writing lessons doesn't go through it (§3). At a few hints and reviews a day, spend is well under $1 a month.
+- There is a monthly spend cap set by `AI_MONTHLY_BUDGET_CENTS` (default $5), tracked in `ai_requests`. When the cap is reached, the AI features turn off gracefully and the readout shows **Uplink offline** (#120).
 
 ## 6. Infrastructure on the shared droplet
 - `/opt/orbit-ops`, with compose services `web` (`127.0.0.1:5002:8000`) and `db`. The `db` port is **not published** at all; migrations run through `docker compose exec`.
@@ -129,7 +129,7 @@ These are copied from `/home/sean/Developer/personal-projects/budget-buddy` and 
 - `.pre-commit-config.yaml`, `pyproject.toml` (ruff rules), `pytest.ini` (`criterion` marker, `loadgroup`), and `test.sh`.
 - `VERSIONING.md` (0.MINOR.PATCH), `CONTRIBUTING.md` (issue → `<n>-slug` branch → PR with `Closes #N` → squash merge; one migration per PR), and `CHANGELOG.md` with `[Unreleased]`.
 - `CLAUDE.md` follows BB's short "Before you… read…" table format. `docs/` gets architecture, gotchas, testing, deployment, delegation, status and a new `content-authoring.md`. `RUNBOOK.md` is also added.
-- `.claude/`: `settings.json` (allowlist, deny reading `.env`), the changelog-guard Stop hook, the agents (`sweeper`, `test-first`, `gotcha-auditor`, `release-prep`), the `/wrap` command, and the `verify` skill pointed at `localhost:5002`. A new `content-reviewer` agent checks drafted modules for accuracy and schema compliance.
+- `.claude/`: `settings.json` (allowlist, deny reading `.env`), the changelog-guard Stop hook, the agents (`sweeper`, `test-first`, `gotcha-auditor`, `release-prep`), the `/wrap` command, and the `verify` skill pointed at `localhost:5002`. A new `content-reviewer` agent checks a written module for accuracy and schema compliance before Sean plays it (#124).
 - BB's self-checking tests are ported: `test_pinned_dependencies`, `test_csp`, `test_hardening`, `test_doc_claims`, `test_deploy_pinning`.
 - The Playwright e2e tests (Pyodide challenge, HTMX quiz flow) are new. Playwright is preferred over Claude in Chrome.
 
@@ -140,7 +140,7 @@ These are copied from `/home/sean/Developer/personal-projects/budget-buddy` and 
 4. **v0.4.0 Hands-on and the desk** (shipped 2026-10-09, added after planning): a simulated station console with a task in nine of Unit 1.1's modules, and the visual novel's first form: a pixel-art desk with the app on its monitor and the crew on a comms log. Desktop only.
 5. **v0.5.0 Practice** (shipped 2026-10-10): SM-2 flashcards as MERIDIAN's watch drill, self-hosted Pyodide (Web Worker, `'wasm-unsafe-eval'` only) and the first code challenge. The same release added a laptop with a closing lid, the station map drawn as the *Meridian*, and unit briefings on show.
 6. **v0.6.0 Bash scripting** (re-sequenced 2026-10-10, ahead of labs): the console learns control flow, functions, `nano`/`man`/cron and `find`/`tar` (#64–#67), and Unit 1.2's ten modules are written on it (#68–#77). Content had become the bottleneck, and these unlock Python for operations and Ansible.
-7. **v0.7.0 Labs and AI:** labs with verify checks, Claude lab review, hints, the budget cap, `draft_module.py`, the `content-reviewer` agent.
+7. **v0.7.0 Labs and AI:** labs with verify checks, Claude lab review, hints, the budget cap, the `content-reviewer` agent, and Unit 1.3 (Git) as the first unit built on labs.
 8. **Ongoing:** writing units ahead of Sean's progress. Follow-ups: TOTP MFA, async SQLAlchemy refactor, PWA/push reminders reusing BB's `push.js`, and a stats page.
 
 ## 9. Bootstrap steps (done in the first session)

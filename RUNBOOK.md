@@ -87,6 +87,8 @@ tested in `tests/test_security_headers.py`. Do not add duplicates here.
 | `COOKIE_SECURE` | `1` |
 | `DB_APP_USER` / `DB_APP_PASSWORD` | `orbit_app` / a generated password (below) |
 | `SECRET_KEY` | `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `ANTHROPIC_API_KEY` | an Anthropic API key for this app alone (Console → API keys), so it can be revoked on its own. Empty turns every AI feature off: the readout shows **Uplink offline** |
+| `AI_MONTHLY_BUDGET_CENTS` | `500` unless Sean says otherwise. A calendar month in `APP_TIMEZONE`; spend is in the `ai_requests` table |
 
 **The least-privilege role.** Migration `0002` creates `orbit_app` with DML on every table (and,
 through default privileges, every future table) but no DDL, no TRUNCATE, and **no password** —
@@ -118,7 +120,7 @@ Until those two keys are set the app connects as the owner, which works but is n
 
 **Deploy** = publish a GitHub Release `vX.Y.Z` (see `VERSIONING.md`). `release.yml` builds and
 pushes the image, boots it against a scratch Postgres (migrations + `/healthz`), waits for your
-approval, then over SSH: pins `TAG` in `.env`, takes a verified `pg_dump`, pulls `web`, runs
+approval, then over SSH: pins `TAG` in `.env`, takes a verified `pg_dump` (`scripts/backup_db.sh`), pulls `web`, runs
 `alembic upgrade head` from the **new** image, `up -d`, and checks the running `APP_VERSION`
 and the public `/healthz` both report the new version.
 
@@ -133,8 +135,12 @@ recreate `db`. To change the `db` service deliberately:
 
 ```bash
 cd /opt/orbit-ops && set -a && . ./.env && set +a
-docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" | gzip > backups/pre-db-change.sql.gz
-gzip -t backups/pre-db-change.sql.gz
+( set -o pipefail
+  docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" | gzip > backups/pre-db-change.sql.gz ) \
+  && gzip -dc backups/pre-db-change.sql.gz | tail -n 20 | grep 'dump complete'
+# Go on only if that printed "-- PostgreSQL database dump complete" (#116). A valid gzip
+# alone proves nothing: a failed pg_dump still leaves one. (20 lines: a `\unrestrict` line
+# follows the marker.)
 # copy the new docker-compose.yml up (scp), then:
 docker compose up -d db && docker compose ps
 curl -s http://127.0.0.1:5002/healthz
@@ -143,6 +149,10 @@ curl -s http://127.0.0.1:5002/healthz
 ## 6. Backups and restore
 
 - Every deploy writes `backups/pre-deploy-<timestamp>.sql.gz`; the newest 14 are kept.
+- A deploy's dump counts only if `pg_dump` exited 0 **and** the dump ends with `PostgreSQL
+  database dump complete`; otherwise the deploy stops before migrating and no file is kept
+  (`scripts/backup_db.sh`, #116). It writes `<file>.partial` first, so a dump that died midway
+  can leave at most a `.partial`, which is safe to delete.
 - Off-box copies: add `/opt/orbit-ops/backups` to whatever already copies Budget Buddy's
   backups off the droplet (see that RUNBOOK §7).
 

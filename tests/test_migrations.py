@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
-from app.models import ActivityDay, BadgeEarned, CardState, XpEvent
+from app.models import ActivityDay, AiRequest, BadgeEarned, CardState, ExerciseAttempt, XpEvent
 
 ROLE = "orbit_app"
 
@@ -20,10 +20,10 @@ def _tables() -> list[str]:
 
 
 def test_there_are_tables_to_check():
-    assert {"users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned", "card_state"} <= set(_tables())
+    assert {"users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned", "card_state", "ai_requests"} <= set(_tables())
 
 
-@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned", "card_state"])
+@pytest.mark.parametrize("table", ["users", "module_progress", "exercise_attempts", "xp_events", "activity_days", "badges_earned", "card_state", "ai_requests"])
 def test_app_role_has_dml_but_not_truncate_on_every_table(table):
     # The later tables get their grants from 0002's ALTER DEFAULT PRIVILEGES,
     # not from a GRANT in their own migration. This is what proves that works.
@@ -44,7 +44,7 @@ def test_app_role_cannot_touch_alembic_version_or_create_tables():
 
 def test_app_role_can_use_the_new_sequences():
     with SessionLocal() as db:
-        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq", "activity_days_id_seq", "badges_earned_id_seq", "card_state_id_seq"):
+        for seq in ("module_progress_id_seq", "exercise_attempts_id_seq", "xp_events_id_seq", "activity_days_id_seq", "badges_earned_id_seq", "card_state_id_seq", "ai_requests_id_seq"):
             assert db.scalar(text("SELECT has_sequence_privilege(:r, :s, 'USAGE')"), {"r": ROLE, "s": seq})
 
 
@@ -129,3 +129,47 @@ def test_a_schedule_sm2_could_not_produce_is_refused(make_user, column, value):
         db.add(_card(user.id, **{column: value}))
         with pytest.raises(IntegrityError):
             db.commit()
+
+
+def _ai_request(user_id, **overrides):
+    values = {"purpose": "hint", "model": "claude-haiku-5-5", "input_tokens": 1000, "output_tokens": 200, "cost_microcents": 20_000}
+    return AiRequest(user_id=user_id, **(values | overrides))
+
+
+def test_spend_outlives_the_user_who_spent_it(make_user):
+    user = make_user()
+    with SessionLocal() as db:
+        row = _ai_request(user.id)
+        db.add(row)
+        db.commit()
+        assert (row.cache_read_tokens, row.cache_write_tokens) == (0, 0)
+        db.execute(text("DELETE FROM users WHERE id = :u"), {"u": user.id})
+        db.commit()
+        db.refresh(row)
+        assert row.user_id is None  # SET NULL: the month's total doesn't shrink
+        db.delete(row)
+        db.commit()
+
+
+@pytest.mark.parametrize(("column", "value"), [("input_tokens", -1), ("output_tokens", -1), ("cache_read_tokens", -1), ("cost_microcents", -1)])
+def test_a_negative_bill_is_refused(make_user, column, value):
+    user = make_user()
+    with SessionLocal() as db:
+        db.add(_ai_request(user.id, **{column: value}))
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+def test_an_attempt_has_no_review_until_one_is_written(make_user):
+    """0009: existing and new rows are NULL; a lab's review is a JSON object (#122)."""
+    user = make_user()
+    with SessionLocal() as db:
+        plain = ExerciseAttempt(user_id=user.id, module_slug="m", kind="quiz", item=0, submitted=["1"], correct=True)
+        reviewed = ExerciseAttempt(
+            user_id=user.id, module_slug="m", kind="lab", item=0, submitted={"boxes": []}, correct=True,
+            review={"score": 80, "strengths": ["Clear subjects."], "issues": []},
+        )
+        db.add_all([plain, reviewed])
+        db.commit()
+        assert db.scalar(text("SELECT review IS NULL FROM exercise_attempts WHERE id = :i"), {"i": plain.id})
+        assert db.scalar(text("SELECT review->>'score' FROM exercise_attempts WHERE id = :i"), {"i": reviewed.id}) == "80"

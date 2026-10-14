@@ -145,6 +145,66 @@ challenge:
 - The checks reach the page (the browser runs them), so a determined learner can read them.
   That's the trade for never running learner code on the server.
 
+### A lab (optional)
+
+Work done on the learner's **own machine** (real `git` from Unit 1.3, later Docker and a
+cluster), checked by what they paste back (#121). The server never runs anything; it reads the
+text. It's worth 40 XP the first time it passes, and doesn't gate completion: the quiz does that.
+
+```yaml
+lab:
+  from: okafor             # optional: the cast member asking, shown as "Okafor asks:"
+  task: |-                 # Markdown: what to do, step by step
+    Put `airmix.conf` under version control in two commits …
+  setup: |-                # optional: a shell snippet that builds a known starting point.
+    mkdir -p ~/meridian && cd ~/meridian   # shown to copy; it must run as-is in ubuntu:24.04
+  boxes:                   # 1–4 paste boxes, each with its own checks
+    - prompt: The output of `git log --oneline`.      # Markdown
+      checks:
+        - {lines: {min: 2, max: 2}, says: "Two commits", hint: "Did the second commit happen?"}
+        - {regex: '^[0-9a-f]{7,} ', says: "Short hashes from git log --oneline"}
+        - {contains: "Track airmix.conf", says: "The first commit's message"}
+        - {not_contains: "Untracked files", says: "Nothing left untracked"}
+      example: |           # a REAL run's output, pasted. CI requires it to pass every check;
+        3f1c2ab Set the O2 floor to 19.5%                # never sent to the page
+        9e0d1f7 Track airmix.conf
+```
+
+- **Checks never depend on what differs between machines.** Hashes, dates, times, usernames,
+  hostnames, paths under `$HOME` and git's default branch name all vary, which is why there is
+  no exact-match check. Match the shape (`^[0-9a-f]{7,} `), or text the task fixed (a commit
+  message the steps dictate, a file the `setup` created).
+- **`contains` is case-sensitive; `regex` is Python `re` with `MULTILINE`** (`^`/`$` at each
+  line). `lines` counts non-blank lines. A Windows paste's `\r\n` is read as `\n`.
+- **`says` is listed after every submit**, passed or failed, so write it as what's being
+  checked. **`hint` shows only on a failure**: make it the likely mistake ("did the merge
+  fast-forward?"), never the answer.
+- **The `example` comes from a real run**, the steps followed in `ubuntu:24.04` as a sudo-capable
+  non-root user, with output pasted, not written from memory. If a check fails it, the check
+  or the steps are wrong.
+- ⚠️ **Quote `says` and `hint`** in the `{…}` form. A flow mapping breaks on a `?`, a `,` or a
+  `: ` in unquoted text (`hint: Did it happen?}` is a YAML error), the same trap as comms `text`.
+- `comms.lab_done` (below) is the crew's reply to the first pass.
+
+**Claude's review (optional, #122).** For work a check can't judge (are the commit messages any
+good, is the Dockerfile sensible?), add a rubric and Claude reviews the lab once it passes:
+
+```yaml
+lab:
+  ai_review: true
+  rubric:                  # 1–8 lines, each one thing good work does; required with ai_review
+    - Each commit subject says what the change does, in the imperative.
+    - The body says why, not what the diff already shows.
+  boxes: …
+```
+
+- The checks still decide pass or fail. The review is feedback and a bonus of `round(score/5)`
+  XP, at most 20, once per lab. It runs on Sonnet 5.5 through the app's budget-checked key, so
+  without a key or budget the lab passes and the review waits ("Ask Claude for a review").
+- Write the rubric as what good looks like, not as a checklist the checks already cover. The
+  model is told to judge only the rubric.
+- Keep it to labs whose work has a quality to judge. Most labs don't need one.
+
 ### Flashcards
 
 In the story, review is **MERIDIAN's watch drill** (#82). MERIDIAN's readout heads it, and when
@@ -330,7 +390,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   block's comment or the Try it doesn't count (`tests/test_content.py` checks it). The ideas
   behind the commands ("the last argument is the destination", "`..` needs its slash", "check
   that TERM worked") are listed per module in `NEEDS` in `tests/test_lesson_needs.py`, with the
-  words the lesson uses for each. A new module with a console task adds its entry. Point the
+  words the lesson uses for each. A new module with a console task or a lab adds its entry. Point the
   task at the right section if it helps, but don't hand over the answer: an example in the
   lesson should use a different file or directory from the task's.
 - **Say when the console lacks something.** A lesson section that mentions a key or command
@@ -342,9 +402,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 
 ### Comms: the crew's messages (optional)
 
-A module can send messages to the comms log on the desk's laptop, at three beats: `open`
+A module can send messages to the comms log on the desk's laptop, at four beats: `open`
 (the briefing, on the first visit; it replaces the italic `story` on the page), `console_done`
-(the first time its console task passes) and `complete` (the debrief). A beat can also play a
+(the first time its console task passes), `lab_done` (the first time its lab passes) and
+`complete` (the debrief). A beat can also play a
 window event outside the desk's window.
 
 ```yaml
@@ -361,9 +422,9 @@ comms:
 
 - `from` is a slug from `cast:` in `syllabus.yml` (Okafor, MERIDIAN, Mission Control), or
   validation fails naming the file and the character. `text` is inline Markdown.
-- `console_done` needs a `terminal:` exercise in the same module.
+- `console_done` needs a `terminal:` exercise in the same module, and `lab_done` a `lab:`.
 - A window event plays once, when its beat happens: `open` on the first visit, `console_done`
-  with the console's first pass, `complete` with the completing answer. Unit 1.1 uses
+  with the console's first pass, `lab_done` with the lab's, `complete` with the completing answer. Unit 1.1 uses
   `relay-pass` (02 open), `shuttle-dock` (04 complete), `debris-drift` (06 open) and `aurora`
   (10 complete, the end of the unit).
 - **If MERIDIAN quotes a number** (CPU, attempts, a time), it must be true of the exercise:
@@ -394,6 +455,37 @@ Raw HTML in lessons is **disabled**: it renders as literal text. Use Markdown.
 
 Formatting inside a code block is literal, so `*word*` in a ```text diagram shows the asterisks.
 
+### Hints (nothing to write)
+
+Every unanswered question, console task, challenge and unpassed lab gets a **Hint** button
+(#123). Claude writes the hint from what the learner can see. So the lesson is what makes a good
+hint possible: if the idea a task needs isn't in the lesson's prose (the #101 rule), the hint
+can't point at it.
+
+- The model never gets a quiz `answer` or `explain`, a console `solution` or `checks`, a
+  challenge's check code or `solution`, or a lab's `example`. A challenge's check `says` and a
+  lab check's `says` *are* sent: the learner sees them after a submit anyway.
+- A reply containing the answer is replaced by a pointer back to the lesson. For a question,
+  "the answer" is a fill-in spelling or the right option's text, however short. So a right
+  option of `3` or `/` will sometimes catch an innocent hint. That's the safe side to err on.
+
+## Before Sean plays it
+
+Modules are written with Claude in Claude Code sessions, one issue and one PR each. Before a
+module's PR, in this order:
+
+1. **Write it**, with the `NEEDS` entry for a console task or a lab.
+2. **Run the `content-reviewer` agent** on it (`.claude/agents/content-reviewer.md`, #124).
+   It reads the module against this file and reports: the #101 rule (for a **lab**, `NEEDS` is the
+   only test of it, since no test parses a lab's steps), the quiz against the lesson, claims against
+   the repo, lab checks that hold on any machine, and the Try it script to run. Fix what it
+   finds, or say in the PR why not.
+3. **Run the Try it** in a fresh `ubuntu:24.04` container as a sudo-capable non-root user, plus
+   whatever the reviewer couldn't confirm. For a lab, follow its steps there and paste the real
+   output into each box's `example`.
+4. **Play it in the browser** as `verify-bot`: the console solution, the challenge, the lab.
+5. **Open the PR.** Sean plays it before it merges.
+
 ## Writing guidelines
 
 - **15–20 minutes, all in.** About 500–900 words of lesson, a quiz of 3–5 questions, and a
@@ -409,5 +501,5 @@ Formatting inside a code block is literal, so `*word*` in a ```text diagram show
   collapses into one line: put it in `code:`.
 - **Quiz the idea, not the trivia.** Every `explain` should teach something, including why the
   wrong options are wrong when that's useful.
-- **Fact-check AI drafts like code.** A drafted module is a starting point, not a source.
-  Run every command in "Try it" yourself before merging.
+- **Fact-check every draft like code.** A drafted module is a starting point, not a source.
+  Run every command in "Try it" yourself before merging (see "Before Sean plays it").

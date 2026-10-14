@@ -2,7 +2,7 @@
 
 A badge's definition (name, emblem, rule) lives in syllabus.yml. Its rule names
 one of the evaluators below, so content chooses the rule and its argument but
-can't run code. A new kind of badge (v0.6.0's labs and hints) is a new rule
+can't run code. A new kind of badge (like #121's labs_completed) is a new rule
 model in app/content/schema.py plus a case in qualifies().
 
 Earning is idempotent: (user_id, badge_slug) is unique in badges_earned and
@@ -22,7 +22,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.content import Catalog
-from app.content.schema import BadgeSpec, FirstPerfectQuizRule, StreakRule, UnitCompleteRule
+from app.content.schema import BadgeSpec, FirstPerfectQuizRule, LabsCompletedRule, StreakRule, UnitCompleteRule
 from app.models import BadgeEarned, ModuleProgress
 from app.progress import unit_complete
 
@@ -34,6 +34,7 @@ class Facts:
     completed: set[str]  # completed module slugs
     streak: int  # the current streak's length in days
     perfect_quiz: bool  # some module was completed with a 100% quiz
+    labs_passed: int = 0  # modules whose lab has passed (#121)
 
 
 def qualifies(catalog: Catalog, badge: BadgeSpec, facts: Facts) -> bool:
@@ -44,6 +45,8 @@ def qualifies(catalog: Catalog, badge: BadgeSpec, facts: Facts) -> bool:
             return facts.streak >= days
         case FirstPerfectQuizRule():
             return facts.perfect_quiz
+        case LabsCompletedRule(labs_completed=n):
+            return facts.labs_passed >= n
     return False
 
 

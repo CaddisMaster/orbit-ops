@@ -182,12 +182,97 @@ NEEDS = {
         "tar -tzf lists an archive": "lis**t** what's inside",
         "ln -sf replaces a link": "replacing a link that's already called NAME",
     },
+    # Labs (#121) are checked by what's pasted, so no parser reads their steps: NEEDS is
+    # the only test that the lesson teaches them.
+    "your-first-repository": {
+        "install git on your own machine": "`sudo apt update`, then `sudo apt install git`",
+        "check whether a name is set": "prints nothing if it isn't set",
+        "set a name and email before the first commit": "`git config --global user.name`",
+        "git init makes a repository": "`git init` turns the current directory into a **repository**",
+        "add, then commit": "**`git add` first, then `git commit`**",
+        "an editor to change the file with": "`nano FILE` opens one",
+        "an edited file is added again before its commit": "Changes not staged for commit changed since the last commit, but not added yet",
+        "commit -m gives the message": "`git commit -m \"message\"`",
+        "log --oneline is a line per commit": "`git log --oneline` shows one line each",
+        "a clean status means everything is committed": "nothing to commit, working tree clean",
+    },
+    "staging-and-diffs": {
+        "git diff shows what isn't staged": "what you **haven't staged** yet",
+        "git add -p asks about each hunk": "shows you its changes a hunk at a time and asks about each one",
+        "- is how it was, + is how it is now": "A line starting with `-` is how it was, `+` is how it is now",
+        "y stages a hunk": "stage this hunk",
+        "n leaves a hunk unstaged, in the file": "don't stage this hunk; it stays in your working tree",
+        "check git diff --staged before committing": "**Check `git diff --staged` before every commit.**",
+        "git show HEAD prints the last commit": "the last commit: its message, then its diff",
+        "status --short: left is the index, right the working tree": "the left is the index, the right is the working tree",
+    },
+    "reading-history": {
+        "git blame names the last commit to change each line": "labelled by the **last commit that changed it**",
+        "what blame names may only have touched the line": "Always `git show` the commit blame names",
+        "git show HASH prints one commit": "`git show HASH` prints one commit in full",
+        "a short hash is enough": "the seven characters `--oneline` shows are enough",
+        "git log -S finds where text was added or removed": "**where it was added or removed**",
+        "search for what changed, not the line as it reads today": "Search for **what changed**",
+        "--oneline is a line per commit": "a line per commit: short hash and message",
+        "-S combines with --oneline": "`--oneline` or `-p` to see the result briefly or in full",
+        "blame's first column is the hash to show": "That's the commit's short hash",
+    },
+    "branches-and-merging": {
+        "switch -c makes a branch and switches to it": "creates a branch called NAME, where you are, and switches to it",
+        "switch NAME goes back to a branch": "switches to NAME: your files change to match its newest commit",
+        "merge from the branch you're landing on": "switch to `main` first, then merge the branch",
+        "both moved: a merge commit": "a new commit with **two parents**",
+        "--no-edit keeps git's message": "`--no-edit` keeps it without opening the editor",
+        "leaving vi": "type `:wq` and Enter",
+        "--graph --all draws every branch": "draws every branch, newest at the top",
+        "branch -d deletes a merged branch": "deletes the name NAME, if its commits are merged",
+    },
+    "merge-conflicts": {
+        "the top half is your branch, the bottom the one merging in": "the version on the branch **you're on**",
+        "the answer can be neither side": "often a third value",
+        "delete every marker line": "**Delete every marker line**",
+        "an editor to resolve in": "`nano FILE` opens it",
+        "git add marks it resolved": "**`git add FILE`** marks it resolved",
+        "git commit finishes the merge, -m says how": "**`git commit`** makes the merge commit. Use `-m` to say how you settled it",
+        "clean changes merge by themselves": "Changes to **different** parts of a file merge by themselves",
+    },
+    "remotes": {
+        "git clone URL DIR copies a repository": "copies the repository at URL (a web address or a path) into DIR",
+        "git remote -v shows where origin points": "lists the remotes and where they point",
+        "git push sends your commits": "sends your branch's new commits to the remote",
+        "git fetch changes none of your files": "**without touching your files**",
+        "git pull is fetch then merge": "`git fetch`, then merges what it fetched into your branch",
+        "status -sb: ahead means push, behind means pull": "one commit you haven't pushed",
+        "fetch before trusting status": "**`git fetch` before you trust it**",
+        "sh FILE runs a script that isn't executable": "runs with `sh FILE`, even when it isn't executable",
+    },
+    "undoing-things": {
+        "git reflog lists every commit HEAD was on": "lists **every commit `HEAD` has been on**",
+        "reset --hard HASH brings a lost commit back": "**`git reset --hard HASH`** moves your branch back to it",
+        "only if nothing's been committed since": "If nothing has been committed since",
+        "git revert makes a new, opposite commit": "makes a **new commit that does the opposite** of HASH",
+        "--no-edit keeps revert's message": "`--no-edit` keeps it",
+        "revert is the safe undo for pushed work": "the safe way to undo anything already pushed",
+        "reset --hard throws away what's after HASH": "**thrown away**, files and all",
+    },
+    "working-together": {
+        ".gitignore lists what to keep out": "lists them, one pattern per line, and is committed",
+        "a directory pattern ends in /": "a directory called `build`, and everything in it",
+        "status --ignored --short lists ignored files": "lists them with `!!`",
+        "a second -m is the body": "each `-m` is a paragraph",
+        "the body says why": "**why**: the reason, which the diff can't show",
+        "subjects are imperative and capitalised": "**imperative and capitalised**",
+        "one change per commit": "One change per commit",
+        "git rebase main replays the branch on top": "replays your commits **on top of** where `main` is now",
+        "rebase is run from the branch": "run on your branch, replays your commits",
+        "main.. and the %s/%b format": "`git log main..` lists the commits on your branch that `main` doesn't have",
+    },
 }
 
 
 def _modules_with_tasks():
-    catalog = load_catalog()
-    return [m for m in catalog.unit_modules("linux-shell") + catalog.unit_modules("bash-scripting") if m.terminal]
+    """Every module with a console task or a lab."""
+    return [m for m in load_catalog().ordered_modules() if m.terminal or m.lab]
 
 
 @pytest.mark.criterion(101, "Every console task's needs are written down")
