@@ -268,7 +268,7 @@ def test_no_console_task_needs_an_untaught_command():
 
     taught = ""
     catalog = load_catalog()
-    for module in catalog.unit_modules("linux-shell") + catalog.unit_modules("bash-scripting"):
+    for module in [m for unit in ("linux-shell", "bash-scripting", "git", "networking") for m in catalog.unit_modules(unit)]:
         taught += " " + _prose_text(module)  # this module's lesson, and every earlier one
         if not module.terminal:
             continue

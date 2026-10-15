@@ -1,4 +1,184 @@
 {
+ "addresses-and-ports": {
+  "solution": [
+   "ip addr",
+   "ip route",
+   "ss -tlnp",
+   "sudo ss -tlnp",
+   "meridian",
+   "sudo ss -tnp",
+   "echo \"address 10.4.1.23/24\" > ~/network.txt",
+   "echo \"gateway 10.4.1.1\" >> ~/network.txt",
+   "echo \"listen 8080 relayd 0.0.0.0\" >> ~/network.txt",
+   "echo \"listen 3000 telemetryd 127.0.0.1\" >> ~/network.txt",
+   "echo \"connected relayd 10.4.1.20:5432\" >> ~/network.txt",
+   "cat ~/network.txt"
+  ],
+  "source": "core/networking/01-addresses-and-ports.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/network.txt",
+     "text": "address 10.4.1.23/24"
+    },
+    {
+     "contains": "/home/cadet/network.txt",
+     "text": "gateway 10.4.1.1"
+    },
+    {
+     "contains": "/home/cadet/network.txt",
+     "text": "listen 8080 relayd 0.0.0.0"
+    },
+    {
+     "contains": "/home/cadet/network.txt",
+     "text": "listen 3000 telemetryd 127.0.0.1"
+    },
+    {
+     "contains": "/home/cadet/network.txt",
+     "text": "connected relayd 10.4.1.20:5432"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\nrelay:x:991:\ntelemetry:x:992:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nrelay:x:991:991:Relay service:/var/lib/relay:/usr/sbin/nologin\ntelemetry:x:992:992:Telemetry dashboard:/var/lib/telemetry:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "network": {
+    "connections": [
+     {
+      "local_port": null,
+      "process": "relayd",
+      "remote": "10.4.1.20:5432"
+     },
+     {
+      "local_port": 22,
+      "process": "sshd",
+      "remote": "10.4.1.5:51874"
+     }
+    ],
+    "gateway": "10.4.1.1",
+    "hosts": [
+     {
+      "address": "10.4.1.20",
+      "filtered": [],
+      "name": "relay-db",
+      "ping": true,
+      "services": [
+       {
+        "port": 5432,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.1.5",
+      "filtered": [],
+      "name": "ops-desk",
+      "ping": true,
+      "services": [
+       {
+        "port": 22,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     }
+    ],
+    "interfaces": [
+     {
+      "address": "10.4.1.23/24",
+      "name": "eth0"
+     }
+    ],
+    "listening": [
+     {
+      "address": "0.0.0.0",
+      "port": 8080,
+      "process": "relayd",
+      "proto": "tcp"
+     },
+     {
+      "address": "127.0.0.1",
+      "port": 3000,
+      "process": "telemetryd",
+      "proto": "tcp"
+     }
+    ]
+   },
+   "password": "meridian",
+   "processes": [
+    {
+     "command": "/usr/local/bin/relayd -c /etc/relay/relayd.conf",
+     "cpu": 0.4,
+     "ignores": [],
+     "mem": 0.1,
+     "user": "relay"
+    },
+    {
+     "command": "/usr/local/bin/telemetryd",
+     "cpu": 1.1,
+     "ignores": [],
+     "mem": 2.3,
+     "user": "telemetry"
+    }
+   ],
+   "success": "Okafor reads network.txt twice, and stops at the telemetry line. \"127.0.0.1,\" he says. \"It's been talking to itself all along.\"",
+   "user": "cadet"
+  }
+ },
  "arguments-and-input": {
   "solution": [
    "ls /station/bin",

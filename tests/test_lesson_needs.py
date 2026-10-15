@@ -177,6 +177,16 @@ NEEDS = {
         "ls and cat read them": "every system job, one file after another",
         "grep over several files names each match's file": "**its file's name in front**",
     },
+    "addresses-and-ports": {
+        "ip addr's inet line is the address with its prefix": "**`inet` line is its IPv4 address, with the prefix**",
+        "the default route's via is the gateway": "**default route's `via` is the gateway**",
+        "ss -tlnp lists what's listening": "**`ss -tlnp` lists what's listening**",
+        "-n shows port numbers, not names": "numbers: show `8080`, not the name `http-alt`",
+        "ss -tnp lists established connections": "**`ss -tnp` lists the established connections**",
+        "Peer Address:Port is the other end": "**Peer Address:Port** is the other machine's end",
+        "other users' processes need sudo": "**The Process column is empty for other users' sockets.**",
+        "the Local Address column is the address it listens on": "**Local Address column says which address a program listens on**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
