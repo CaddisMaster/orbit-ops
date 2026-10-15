@@ -166,6 +166,9 @@ def client_spec(exercise: TerminalExercise) -> dict:
             if (m := exercise.memory)
             else {}
         ),
+        # Only when set, so exercises without one keep their exact shape; the
+        # console's DEFAULT_NETWORK is NetworkSpec's defaults.
+        **({"network": exercise.network.model_dump()} if exercise.network else {}),
         "fs": exercise.starting_fs(),
         "processes": [
             {"command": p.command, "user": p.user or exercise.user, "cpu": p.cpu, "mem": p.mem, "ignores": p.ignores}

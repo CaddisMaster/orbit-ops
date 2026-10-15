@@ -76,6 +76,7 @@
     });
     this.disk = spec.disk || { size: 20 * GiB, base: Math.round(4.2 * GiB) }; // for df: the drive, and what the OS uses
     this.memory = spec.memory || { total: 2 * GiB, used: 820 * MiB, cache: 640 * MiB, shared: 12 * MiB };
+    this.net = buildNetwork(spec.network || DEFAULT_NETWORK); // #164: addresses, sockets, other hosts
     // The environment: shell variables, and which of them are exported.
     this.vars = {
       HOME: this.home, USER: this.user, LOGNAME: this.user, SHELL: "/bin/bash", HOSTNAME: "meridian",
@@ -2954,6 +2955,7 @@
         "  processes: ps pgrep pkill kill sleep jobs fg bg\n" +
         "  editing:   nano less man crontab\n" +
         "  disk:      find du df free tar gzip gunzip zcat ln readlink\n" +
+        "  network:   ip ss ping nc hostname\n" +
         "  console:   clear help exit\n" +
         "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
         "  robust:    name() { … }, local return shift, set -euo pipefail, trap, <<EOF, mktemp\n" +
@@ -4541,6 +4543,456 @@
 
   COMMANDS.awk = function (args, stdin) { return runAwk(this, args, stdin); };
   COMMANDS.sed = function (args, stdin) { return runSed(this, args, stdin); };
+
+  // --- the station network (#164) -------------------------------------------------------
+  // The console's interfaces, its own sockets and the other hosts come from the
+  // exercise's `network:` (app/content/schema.py NetworkSpec). Nothing real is
+  // touched: ip, ss, ping and nc read this, and print what Ubuntu 24.04's do
+  // (iproute2 6.1, iputils 20240117, OpenBSD netcat 1.226), checked against
+  // the real ones. DEFAULT_NETWORK is NetworkSpec's defaults; a test keeps
+  // them equal.
+  var DEFAULT_NETWORK = {"interfaces": [{"name": "eth0", "address": "10.4.0.12/24"}], "gateway": "10.4.0.1", "listening": [], "connections": [], "hosts": []};
+  var HOSTNAME_ADDRESS = "127.0.1.1"; // the console's own name, as Ubuntu's /etc/hosts has it
+
+  // Port names, as /etc/services on Ubuntu 24.04 has them (ss without -n, nc's [tcp/NAME]).
+  var SERVICES = {
+    tcp: "1 tcpmux 7 echo 9 discard 11 systat 13 daytime 15 netstat 17 qotd 19 chargen 20 ftp-data 21 ftp 22 ssh 23 telnet 25 smtp 37 time 43 whois 49 tacacs 53 domain 70 gopher 79 finger 80 http 88 kerberos 102 iso-tsap 104 acr-nema 110 pop3 111 sunrpc 113 auth 119 nntp 135 epmap 139 netbios-ssn 143 imap2 161 snmp 162 snmp-trap 163 cmip-man 164 cmip-agent 174 mailq 179 bgp 199 smux 209 qmtp 210 z3950 345 pawserv 346 zserv 369 rpc2portmap 370 codaauth2 389 ldap 427 svrloc 443 https 444 snpp 445 microsoft-ds 464 kpasswd 465 submissions 487 saft 554 rtsp 607 nqs 628 qmqp 631 ipp 646 ldp 512 exec 513 login 514 shell 515 printer 538 gdomap 540 uucp 543 klogin 544 kshell 548 afpovertcp 563 nntps 587 submission 636 ldaps 655 tinc 706 silc 749 kerberos-adm 853 domain-s 873 rsync 989 ftps-data 990 ftps 992 telnets 993 imaps 995 pop3s 1080 socks 1093 proofd 1094 rootd 1194 openvpn 1099 rmiregistry 1352 lotusnote 1433 ms-sql-s 1524 ingreslock 1645 datametrics 1646 sa-msg-port 1649 kermit 1677 groupwise 1812 radius 1813 radius-acct 2000 cisco-sccp 2049 nfs 2086 gnunet 2101 rtcm-sc104 2119 gsigatekeeper 2135 gris 2401 cvspserver 2430 venus 2431 venus-se 2432 codasrv 2433 codasrv-se 2583 mon 2628 dict 2792 f5-globalsite 2811 gsiftp 2947 gpsd 3050 gds-db 3205 isns 3260 iscsi-target 3306 mysql 3389 ms-wbt-server 3493 nut 3632 distcc 3689 daap 3690 svn 4031 suucp 4094 sysrqd 4190 sieve 4369 epmd 4373 remctl 4353 f5-iquery 4460 ntske 4691 mtn 4899 radmin-port 5060 sip 5061 sip-tls 5222 xmpp-client 5269 xmpp-server 5308 cfengine 5432 postgresql 5556 freeciv 5671 amqps 5672 amqp 6000 x11 6001 x11-1 6002 x11-2 6003 x11-3 6004 x11-4 6005 x11-5 6006 x11-6 6007 x11-7 6346 gnutella-svc 6347 gnutella-rtr 6379 redis 6444 sge-qmaster 6445 sge-execd 6446 mysql-proxy 6697 ircs-u 7000 bbs 7100 font-service 8080 http-alt 8140 puppet 9101 bacula-dir 9102 bacula-fd 9103 bacula-sd 9667 xmms2 10809 nbd 10050 zabbix-agent 10051 zabbix-trapper 10080 amanda 11112 dicom 11371 hkp 17500 db-lsp 22125 dcap 22128 gsidcap 22273 wnn6 750 kerberos4 751 kerberos-master 754 krb-prop 2121 iprop 871 supfilesrv 1127 supfiledbg 106 poppassd 775 moira-db 777 moira-update 783 spamd 1178 skkserv 1236 rmtcfg 1313 xtel 1314 xtelw 2600 zebrasrv 2601 zebra 2602 ripd 2603 ripngd 2604 ospfd 2605 bgpd 2606 ospf6d 2607 ospfapi 2608 isisd 4557 fax 4559 hylafax 4949 munin 5666 nrpe 5667 nsca 5680 canna 6514 syslog-tls 6566 sane-port 6667 ircd 8021 zope-ftp 8081 tproxy 8088 omniorb 8990 clc-build-daemon 9098 xinetd 9418 git 9673 zope 10000 webmin 10081 kamanda 10082 amandaidx 10083 amidxtape 17004 sgi-cad 24554 binkp 27374 asp 30865 csync2 57000 dircproxy 60177 tfido 60179 fido",
+    udp: "7 echo 9 discard 13 daytime 19 chargen 21 fsp 37 time 49 tacacs 53 domain 67 bootps 68 bootpc 69 tftp 88 kerberos 111 sunrpc 123 ntp 137 netbios-ns 138 netbios-dgm 161 snmp 162 snmp-trap 163 cmip-man 164 cmip-agent 177 xdmcp 213 ipx 319 ptp-event 320 ptp-general 369 rpc2portmap 370 codaauth2 371 clearcase 389 ldap 427 svrloc 443 https 464 kpasswd 500 isakmp 554 rtsp 623 asf-rmcp 646 ldp 512 biff 513 who 514 syslog 517 talk 518 ntalk 520 route 538 gdomap 546 dhcpv6-client 547 dhcpv6-server 636 ldaps 655 tinc 853 domain-s 1194 openvpn 1434 ms-sql-m 1645 datametrics 1646 sa-msg-port 1701 l2f 1812 radius 1813 radius-acct 2049 nfs 2086 gnunet 2101 rtcm-sc104 2430 venus 2431 venus-se 2432 codasrv 2433 codasrv-se 2583 mon 3130 icpv2 3205 isns 3493 nut 4500 ipsec-nat-t 4569 iax 5060 sip 5061 sip-tls 5353 mdns 6346 gnutella-svc 6347 gnutella-rtr 6696 babel 7000 afs3-fileserver 7001 afs3-callback 7002 afs3-prserver 7003 afs3-vlserver 7004 afs3-kaserver 7005 afs3-volser 7007 afs3-bos 7008 afs3-update 7009 afs3-rmtsys 750 kerberos4 751 kerberos-master 752 passwd-server 2102 zephyr-srv 2103 zephyr-clt 2104 zephyr-hm 779 moira-ureg 1210 predict 5555 rplay 17001 sgi-cmsd 17002 sgi-crsd 17003 sgi-gcd 27374 asp",
+  };
+  Object.keys(SERVICES).forEach(function (proto) {
+    var words = SERVICES[proto].split(" ");
+    var names = {};
+    for (var i = 0; i + 1 < words.length; i += 2) names[words[i]] = words[i + 1];
+    SERVICES[proto] = names;
+  });
+  function serviceName(port, proto) { return SERVICES[proto][port]; }
+
+  function parseIPv4(text) {
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(text || "");
+    if (!m) return null;
+    var n = 0;
+    for (var i = 1; i <= 4; i++) {
+      if (+m[i] > 255) return null;
+      n = n * 256 + +m[i];
+    }
+    return n;
+  }
+  function formatIPv4(n) { return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."); }
+  function prefixMask(prefix) { return prefix ? (0xffffffff << (32 - prefix)) >>> 0 : 0; }
+
+  function buildNetwork(spec) {
+    var ifaces = spec.interfaces.map(function (i, k) {
+      var parts = i.address.split("/");
+      var address = parseIPv4(parts[0]);
+      var prefix = +parts[1];
+      var mask = prefixMask(prefix);
+      var mac = [0x52, 0x54, 0x00, (address >>> 16) & 255, (address >>> 8) & 255, address & 255];
+      // The link-local IPv6 address the kernel derives from the MAC (EUI-64).
+      var eui = [((mac[0] ^ 2) << 8) | mac[1], (mac[2] << 8) | 0xff, 0xfe00 | mac[3], (mac[4] << 8) | mac[5]];
+      return {
+        name: i.name, index: k + 2, address: address, prefix: prefix, mask: mask,
+        network: (address & mask) >>> 0, broadcast: ((address & mask) | ~mask) >>> 0,
+        mac: mac.map(function (b) { return (b < 16 ? "0" : "") + b.toString(16); }).join(":"),
+        linkLocal: "fe80::" + eui.map(function (g) { return g.toString(16); }).join(":"),
+      };
+    });
+    return {
+      ifaces: ifaces,
+      gateway: spec.gateway ? parseIPv4(spec.gateway) : null,
+      listening: spec.listening || [],
+      connections: spec.connections || [],
+      hosts: (spec.hosts || []).map(function (h) {
+        return { name: h.name, address: parseIPv4(h.address), up: h.up !== false, ping: h.ping !== false, services: h.services || [], filtered: h.filtered || [] };
+      }),
+    };
+  }
+
+  // Names the console can resolve: localhost and its own name, as a fresh
+  // Ubuntu server's /etc/hosts has them. Everything else has no DNS to ask yet.
+  Shell.prototype.resolveName = function (name) {
+    if (parseIPv4(name) !== null) return { address: parseIPv4(name), numeric: true };
+    if (name === "localhost") return { address: parseIPv4("127.0.0.1") };
+    if (name === "meridian") return { address: parseIPv4(HOSTNAME_ADDRESS) };
+    if (/^[\d.]+$/.test(name)) return { error: "Name or service not known" };
+    return { error: "Temporary failure in name resolution" };
+  };
+
+  Shell.prototype.isLocal = function (addr) {
+    return addr >>> 24 === 127 || this.net.ifaces.some(function (i) { return i.address === addr; });
+  };
+
+  // Where a packet to `addr` goes: {local}, {unreachable} (no route), or the
+  // interface it leaves by, `via` the gateway unless it's on that subnet, and
+  // the host that answers (null when no machine has that address).
+  Shell.prototype.route = function (addr) {
+    var net = this.net;
+    if (this.isLocal(addr)) return { local: true };
+    var onlink = net.ifaces.filter(function (i) { return ((addr & i.mask) >>> 0) === i.network; })[0];
+    var iface = onlink || (net.gateway !== null && net.ifaces.filter(function (i) { return ((net.gateway & i.mask) >>> 0) === i.network; })[0]);
+    if (!iface) return { unreachable: true };
+    var host = net.hosts.filter(function (h) { return h.address === addr; })[0] || null;
+    if (!host && addr === net.gateway) host = { name: "gateway", address: addr, up: true, ping: true, services: [], filtered: [] };
+    return { iface: iface, via: onlink ? null : net.gateway, host: host };
+  };
+
+  // The console's own sockets, held by its live processes: kill the process
+  // and its sockets go too. sshd listens on 22, as on any server.
+  Shell.prototype.sockets = function () {
+    var sh = this, net = this.net, fds = {}, out = [];
+    function add(socket, name) {
+      var proc = sh.procs.filter(function (p) { return p.alive && procName(p.command) === name; })[0];
+      if (!proc) return;
+      fds[proc.pid] = (fds[proc.pid] || 2) + 1;
+      socket.proc = proc;
+      socket.fd = fds[proc.pid];
+      out.push(socket);
+    }
+    add({ proto: "tcp", state: "LISTEN", local: "0.0.0.0", port: 22, peer: "0.0.0.0", peerPort: "*" }, "sshd");
+    net.listening.forEach(function (s) {
+      var proto = s.proto || "tcp";
+      add({ proto: proto, state: proto === "tcp" ? "LISTEN" : "UNCONN", local: s.address || "0.0.0.0", port: s.port, peer: "0.0.0.0", peerPort: "*" }, s.process);
+    });
+    add({ proto: "tcp", state: "LISTEN", local: "[::]", port: 22, peer: "[::]", peerPort: "*", v6: true }, "sshd");
+    net.connections.forEach(function (c, i) {
+      var at = c.remote.lastIndexOf(":");
+      var remote = parseIPv4(c.remote.slice(0, at));
+      var route = sh.route(remote);
+      var src = route.iface ? formatIPv4(route.iface.address) : "127.0.0.1";
+      // An outgoing connection's own port is an ephemeral one, picked by the kernel.
+      var port = c.local_port || 32768 + ((i + 1) * 15485 + +c.remote.slice(at + 1) * 31) % 28232;
+      add({ proto: "tcp", state: "ESTAB", local: src, port: port, peer: c.remote.slice(0, at), peerPort: +c.remote.slice(at + 1) }, c.process);
+    });
+    return out;
+  };
+
+  // Is something on the console listening on tcp `port` at `addr`?
+  Shell.prototype.listensOn = function (addr, port) {
+    return this.sockets().some(function (s) {
+      if (s.proto !== "tcp" || s.state !== "LISTEN" || s.port !== port) return false;
+      return s.local === "0.0.0.0" || s.local === "[::]" || parseIPv4(s.local) === addr;
+    });
+  };
+
+  // Options a real command has and the console doesn't, said in so many words.
+  function netFlags(cmd, args, supported, real, valued) {
+    var p = flags(cmd, args, real, valued);
+    Object.keys(p.opts).forEach(function (f) {
+      if (supported.indexOf(f) === -1) throw new Error("-" + f + " isn't supported on this console");
+    });
+    return p;
+  }
+
+  // --- ip -----------------------------------------------------------------------------
+  function ipFlags(iface) {
+    return iface ? "<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP" : "<LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN";
+  }
+  function ipHeader(iface, link) {
+    var head = iface ? iface.index + ": " + iface.name + ": " : "1: lo: ";
+    return head + ipFlags(iface) + (link ? " mode DEFAULT" : "") + " group default qlen 1000\n";
+  }
+  function ipLinkLine(iface) {
+    return iface ? "    link/ether " + iface.mac + " brd ff:ff:ff:ff:ff:ff\n" : "    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n";
+  }
+  var FOREVER = "       valid_lft forever preferred_lft forever\n";
+
+  Shell.prototype.ipAddr = function (o, dev, link) {
+    var list = [null].concat(this.net.ifaces); // null is lo
+    if (dev !== null) {
+      list = list.filter(function (i) { return (i ? i.name : "lo") === dev; });
+      if (!list.length) return { out: "", err: 'Device "' + dev + '" does not exist.\n', code: 1 };
+    }
+    var out = "";
+    list.forEach(function (i) {
+      var name = i ? i.name : "lo";
+      var v4 = i ? [formatIPv4(i.address) + "/" + i.prefix] : ["127.0.0.1/8"];
+      var v6 = i ? [i.linkLocal + "/64"] : ["::1/128"];
+      if (o.brief) {
+        var state = i ? "UP" : "UNKNOWN";
+        var rest = link
+          ? (i ? i.mac : "00:00:00:00:00:00") + " <" + ipFlags(i).slice(1, ipFlags(i).indexOf(">")) + "> "
+          : (o.family === 6 ? [] : v4).concat(o.family === 4 ? [] : v6).map(function (a) { return a + " "; }).join("");
+        out += padRight(name, 16) + " " + padRight(state, 14) + " " + rest + "\n";
+        return;
+      }
+      out += ipHeader(i, link);
+      if (link) { out += ipLinkLine(i); return; }
+      if (!o.family) out += ipLinkLine(i);
+      if (o.family !== 6) {
+        out += i ? "    inet " + v4[0] + " brd " + formatIPv4(i.broadcast) + " scope global " + name + "\n" : "    inet 127.0.0.1/8 scope host lo\n";
+        out += FOREVER;
+      }
+      if (o.family !== 4) {
+        out += i ? "    inet6 " + v6[0] + " scope link \n" : "    inet6 ::1/128 scope host noprefixroute \n";
+        out += FOREVER;
+      }
+    });
+    return ok(out);
+  };
+
+  Shell.prototype.ipRoute = function (words) {
+    var net = this.net;
+    var verb = words[0] || "show";
+    if (/^g(e(t)?)?$/.test(verb)) {
+      var target = words[1];
+      if (target === "to") target = words[2];
+      if (target === undefined) return { out: "", err: "need at least a destination address\n", code: 1 };
+      var addr = parseIPv4(target);
+      if (addr === null) return { out: "", err: 'Error: any valid prefix is expected rather than "' + target + '".\n', code: 1 };
+      var uid = this.account(this.user) ? this.account(this.user).uid : 1000;
+      if (this.isLocal(addr)) return ok("local " + target + " dev lo src " + target + " uid " + uid + " \n    cache <local> \n");
+      var r = this.route(addr);
+      if (r.unreachable) return { out: "", err: "RTNETLINK answers: Network is unreachable\n", code: 2 };
+      return ok(target + (r.via !== null ? " via " + formatIPv4(r.via) : "") + " dev " + r.iface.name + " src " + formatIPv4(r.iface.address) + " uid " + uid + " \n    cache \n");
+    }
+    if (!/^(s(h(o(w)?)?)?|l(i(s(t)?)?)?|lst)$/.test(verb)) return this.ipChange(verb, "route");
+    var only = words[1];
+    if (only !== undefined && only !== "default") throw new Error("ip route show " + only + " isn't supported on this console; try ip route, or ip route get ADDRESS");
+    var out = "";
+    if (net.gateway !== null) {
+      var gw = net.ifaces.filter(function (i) { return ((net.gateway & i.mask) >>> 0) === i.network; })[0];
+      out += "default via " + formatIPv4(net.gateway) + " dev " + gw.name + " proto static \n";
+    }
+    if (only !== "default") {
+      net.ifaces.forEach(function (i) {
+        out += formatIPv4(i.network) + "/" + i.prefix + " dev " + i.name + " proto kernel scope link src " + formatIPv4(i.address) + " \n";
+      });
+    }
+    return ok(out);
+  };
+
+  // Changing the network: a normal user isn't allowed, as on a real server;
+  // root is, there, but this console's network is the exercise's.
+  Shell.prototype.ipChange = function (verb, object) {
+    if (["add", "del", "delete", "change", "replace", "flush", "set", "append"].indexOf(verb) === -1) {
+      return { out: "", err: 'Command "' + verb + '" is unknown, try "ip ' + object + ' help".\n', code: 255 };
+    }
+    if (this.user !== "root") return { out: "", err: "RTNETLINK answers: Operation not permitted\n", code: 2 };
+    throw new Error("changing the network isn't supported on this console");
+  };
+
+  COMMANDS.ip = function (args) {
+    var o = { family: 0, brief: false };
+    var i = 0;
+    for (; i < args.length && args[i][0] === "-"; i++) {
+      var a = args[i].replace(/^--?/, "-");
+      if (a === "-4") o.family = 4;
+      else if (a === "-6") o.family = 6;
+      else if (/^-br(i(e(f)?)?)?$/.test(a)) o.brief = true;
+      else if (/^-c(o(l(o(r)?)?)?)?(=.*)?$/.test(a)) continue; // colour: the console prints plain text
+      else if (/^-h(e(l(p)?)?)?$/.test(a)) return ok(renderUsage("ip"));
+      else throw new Error(args[i] + " isn't supported on this console");
+    }
+    var object = args[i];
+    var words = args.slice(i + 1);
+    if (object === undefined) return { out: "", err: renderUsage("ip"), code: 255 };
+    var objects = ["address", "addrlabel", "link", "route", "rule", "neighbour", "neighbor", "ntable", "tunnel", "maddress", "monitor", "netns", "help"];
+    var full = objects.filter(function (w) { return w.indexOf(object) === 0; })[0];
+    if (!full) return { out: "", err: 'Object "' + object + '" is unknown, try "ip help".\n', code: 1 };
+    if (full === "help") return ok(renderUsage("ip"));
+    if (full === "route") return this.ipRoute(words);
+    if (full !== "address" && full !== "link") throw new Error("ip " + full + " isn't supported on this console; try ip addr, ip link or ip route");
+    var verb = words[0] || "show";
+    if (!/^(s(h(o(w)?)?)?|l(i(s(t)?)?)?|lst)$/.test(verb)) return this.ipChange(verb, full);
+    var rest = words.slice(1);
+    if (rest[0] === "dev") rest = rest.slice(1);
+    if (rest[0] === "dev" || rest.length > 1) throw new Error("ip " + full + " show takes one device name on this console");
+    if (words.length > 1 && !rest.length) return { out: "", err: "Command line is not complete. Try option \"help\"\n", code: 255 };
+    return this.ipAddr(o, rest.length ? rest[0] : null, full === "link");
+  };
+
+  // --- ss -----------------------------------------------------------------------------
+  // Columns as ss lays them out when its output isn't a terminal: each as wide
+  // as its widest entry (the header's too), addresses right-aligned against
+  // their ports. The console has no screen width to spread them over.
+  var SS_COLUMNS = [
+    { header: "Netid", delim: "" }, { header: "State", delim: " " }, { header: "Recv-Q", delim: " " }, { header: "Send-Q", delim: " " },
+    { header: "Local Address:", delim: " ", right: true }, { header: "Port", delim: "" },
+    { header: "Peer Address:", delim: " ", right: true }, { header: "Port", delim: "" }, { header: "Process", delim: "" },
+  ];
+  function renderSs(rows, withNetid, header) {
+    var cols = SS_COLUMNS.map(function (c, k) { return { header: c.header, delim: c.delim, right: c.right, on: k > 0 || withNetid }; });
+    var lines = (header ? [cols.map(function (c) { return c.header; })] : []).concat(rows);
+    var first = true;
+    cols.forEach(function (c, k) {
+      if (!c.on) return;
+      var max = Math.max.apply(null, lines.map(function (l) { return l[k].length; }));
+      c.width = !first && max ? max + c.delim.length : max;
+      if (c.width) first = false;
+    });
+    return lines.map(function (l) {
+      var line = "", started = false;
+      cols.forEach(function (c, k) {
+        if (!c.on) return;
+        var printed = started ? c.delim.length : 0;
+        line += started ? c.delim : "";
+        started = true;
+        if (c.right) line += new Array(Math.max(0, c.width - l[k].length - printed) + 1).join(" ") + l[k];
+        else line += l[k] + new Array(Math.max(0, c.width - printed - l[k].length) + 1).join(" ");
+      });
+      return line + "\n";
+    }).join("");
+  }
+
+  COMMANDS.ss = function (args) {
+    var p = netFlags("ss", args, "tulanp46H", "hVHnraloempisEZzb460tuwSxdMKOfAFDN", "fAFDN");
+    if (p.args.length) throw new Error("filters (" + p.args.join(" ") + ") aren't supported on this console; pipe ss to grep instead");
+    var o = p.opts;
+    var sh = this;
+    var protos = o.t || o.u ? [o.u && "udp", o.t && "tcp"].filter(Boolean) : ["udp", "tcp"]; // ss lists UDP first
+    var root = this.user === "root";
+    var rows = [];
+    protos.forEach(function (proto) {
+      sh.sockets().forEach(function (s) {
+        if (s.proto !== proto) return;
+        if ((o["4"] && s.v6) || (o["6"] && !s.v6)) return;
+        var listening = s.state === "LISTEN" || s.state === "UNCONN";
+        if (!o.a && (o.l ? !listening : listening)) return;
+        var port = function (n) { return n === "*" || o.n ? String(n) : serviceName(n, proto) || String(n); };
+        rows.push([
+          proto, s.state, padRight("0", 6), padRight(s.state === "LISTEN" ? "4096" : "0", 6),
+          s.local + ":", port(s.port), s.peer + ":", port(s.peerPort),
+          // Only root sees other users' processes.
+          o.p && (root || s.proc.user === sh.user) ? ' users:(("' + procName(s.proc.command) + '",pid=' + s.proc.pid + ",fd=" + s.fd + "))" : "",
+        ]);
+      });
+    });
+    return ok(renderSs(rows, protos.length > 1, !o.H));
+  };
+
+  // --- ping ---------------------------------------------------------------------------
+  // Round trips are made up but steady: the same host and sequence number
+  // always take the same time, so output can be checked.
+  function rttFor(addr, seq, base) {
+    var h = (((addr >>> 0) ^ Math.imul(seq, 2654435761)) >>> 0) % 1000 / 1000;
+    return base * (0.8 + 0.6 * h);
+  }
+  function pingTime(ms) {
+    return ms >= 100 ? String(Math.round(ms)) : ms >= 10 ? ms.toFixed(1) : ms >= 1 ? ms.toFixed(2) : ms.toFixed(3);
+  }
+
+  COMMANDS.ping = function (args, stdin, io) {
+    var p = netFlags("ping", args, "cqW4", "aAbBc:dDefhHi:I:l:LmM:nOp:qQ:rRs:S:t:T:UvVw:W:4".replace(/:/g, ""), "ciIlMpQsStTwW");
+    var o = p.opts;
+    if (!p.args.length) return { out: "", err: "ping: usage error: Destination address required\n", code: 1 };
+    if (o.c === undefined) return { out: "", err: "ping: give it a count on this console: ping -c 4 " + p.args[p.args.length - 1] + " (a real ping runs until Ctrl-C)\n", code: 2 };
+    if (!/^\d+$/.test(o.c)) return { out: "", err: "ping: invalid argument: '" + o.c + "'\n", code: 1 };
+    var count = parseInt(o.c, 10);
+    if (count < 1) return { out: "", err: "ping: invalid argument: '" + o.c + "': out of range: 1 <= value <= 9223372036854775807\n", code: 1 };
+    if (count > 100) throw new Error("-c " + count + " is more than this console will send; 100 at most");
+    var name = p.args[p.args.length - 1];
+    var found = this.resolveName(name);
+    if (found.error) return { out: "", err: "ping: " + name + ": " + found.error + "\n", code: 2 };
+    var addr = found.address;
+    var shown = formatIPv4(addr);
+    var who = found.numeric ? shown : name + " (" + shown + ")";
+    var route = this.route(addr);
+    if (route.unreachable) return { out: "", err: "ping: connect: Network is unreachable\n", code: 2 };
+    if (route.iface && addr === route.iface.broadcast) return { out: "", err: "ping: Do you want to ping broadcast? Then -b. If not, check your local firewall rules\n", code: 2 };
+    var host = route.host;
+    var answers = route.local || (host && host.up && host.ping);
+    var noArp = !route.local && route.via === null && !(host && host.up); // nothing on the wire answers for the address
+    io.out.write("PING " + (found.numeric ? shown : name) + " (" + shown + ") 56(84) bytes of data.\n");
+    var times = [], errors = 0;
+    for (var seq = 1; seq <= count; seq++) {
+      if (answers) {
+        var ms = rttFor(addr, seq, route.local ? 0.04 : route.via === null ? 0.45 : 24);
+        times.push(ms);
+        if (!o.q) io.out.write("64 bytes from " + who + ": icmp_seq=" + seq + " ttl=" + (route.via === null || route.local ? 64 : 63) + " time=" + pingTime(ms) + " ms\n");
+      } else if (noArp) {
+        // The kernel gives up asking who has the address after three tries.
+        if (seq === 4) { io.err.write("ping: sendmsg: No route to host\n"); continue; }
+        errors++;
+        if (!o.q) io.out.write("From " + formatIPv4(route.iface.address) + " icmp_seq=" + seq + " Destination Host Unreachable\n");
+      }
+    }
+    this.clock += count;
+    this.reap();
+    var received = times.length;
+    var elapsed = count === 1 ? 0 : (count - 1) * 1000 + (answers ? 2 * count : 20 + 24 * (count - 1));
+    var out = "\n--- " + name + " ping statistics ---\n" + count + " packets transmitted, " + received + " received, " +
+      (errors ? "+" + errors + " errors, " : "") + Math.round(100 - (received * 100) / count) + "% packet loss, time " + elapsed + "ms\n";
+    var tail = [];
+    if (received) {
+      var sum = times.reduce(function (a, b) { return a + b; }, 0), sq = times.reduce(function (a, b) { return a + b * b; }, 0);
+      var avg = sum / received;
+      tail.push("rtt min/avg/max/mdev = " + [Math.min.apply(null, times), avg, Math.max.apply(null, times), Math.sqrt(Math.max(0, sq / received - avg * avg))]
+        .map(function (n) { return n.toFixed(3); }).join("/") + " ms");
+    }
+    var pipe = noArp ? Math.min(count, 3) : 1;
+    if (pipe > 1) tail.push("pipe " + pipe);
+    io.out.write(out + tail.join(", ") + "\n");
+    return { out: "", err: "", code: received ? 0 : 1 };
+  };
+
+  // --- nc -----------------------------------------------------------------------------
+  // nc -z: is anything listening? Three answers, and the lesson is telling
+  // them apart: succeeded, refused (the host said no), and timed out or no
+  // route (nothing said anything). Debian's nc reports success even without
+  // -v, and says all of it on stderr.
+  COMMANDS.nc = function (args, stdin, io) {
+    var p = netFlags("nc", args, "zvwn4", "46CDdFhI:i:klM:m:NnO:P:p:q:rSs:T:tUuV:vW:w:X:x:Zz".replace(/:/g, ""), "IiMmOPpqsTVWwXx");
+    var o = p.opts;
+    if (!o.z) throw new Error("this console's nc only checks ports: nc -zv HOST PORT");
+    if (o.w !== undefined && !/^\d+$/.test(o.w)) return { out: "", err: "nc: timeout invalid: " + o.w + "\n", code: 1 };
+    var name = p.args[0];
+    if (name === undefined) throw new Error("usage: nc -zv HOST PORT");
+    if (p.args.length < 2) return { out: "", err: "nc: missing port number\n", code: 1 };
+    var ports = [];
+    for (var k = 1; k < p.args.length; k++) {
+      var m = /^(\d+)(?:-(\d+))?$/.exec(p.args[k]);
+      if (!m) return { out: "", err: "nc: port number invalid: " + p.args[k] + "\n", code: 1 };
+      var lo = +m[1], hi = m[2] === undefined ? lo : +m[2];
+      if (hi > 65535 || lo > 65535) return { out: "", err: "nc: port number too large: " + (lo > 65535 ? m[1] : m[2]) + "\n", code: 1 };
+      if (lo < 1 || hi < lo) return { out: "", err: "nc: port range not valid: " + p.args[k] + "\n", code: 1 };
+      if (hi - lo > 1000) throw new Error("ranges of more than 1000 ports aren't supported on this console");
+      for (var n = lo; n <= hi; n++) ports.push(n);
+    }
+    var found = this.resolveName(name);
+    if (found.error) return { out: "", err: 'nc: getaddrinfo for host "' + name + '" port ' + p.args[1] + ": " + found.error + "\n", code: 1 };
+    var addr = found.address;
+    var who = found.numeric ? name : name + " (" + formatIPv4(addr) + ")";
+    var route = this.route(addr);
+    var opened = false;
+    var sh = this;
+    ports.forEach(function (port) {
+      var outcome;
+      var host = route.host;
+      if (route.local) outcome = sh.listensOn(addr, port) ? "open" : "refused";
+      else if (route.unreachable) outcome = "unreachable";
+      else if (!host || !host.up) outcome = route.via === null ? "noroute" : "timeout";
+      else if (host.services.some(function (s) { return s.port === port && (s.proto || "tcp") === "tcp"; })) outcome = "open";
+      else if (host.filtered.indexOf(port) !== -1) outcome = "timeout";
+      else outcome = "refused";
+      var fail = "nc: connect to " + who + " port " + port + " (tcp) ";
+      if (outcome === "open") {
+        opened = true;
+        io.err.write("Connection to " + who + " " + port + " port [tcp/" + (serviceName(port, "tcp") || "*") + "] succeeded!\n");
+      } else if (outcome === "timeout") {
+        // With -w, nc gives up when it says; without, the kernel does, after
+        // its SYN retries: two minutes and more.
+        sh.clock += o.w !== undefined ? +o.w : 134;
+        if (o.v) io.err.write(fail + (o.w !== undefined ? "timed out: Operation now in progress\n" : "failed: Connection timed out\n"));
+      } else if (o.v) {
+        if (outcome === "noroute") sh.clock += 3;
+        io.err.write(fail + "failed: " + { refused: "Connection refused", noroute: "No route to host", unreachable: "Network is unreachable" }[outcome] + "\n");
+      }
+    });
+    this.reap();
+    return { out: "", err: "", code: opened ? 0 : 1 };
+  };
+
+  // --- hostname -----------------------------------------------------------------------
+  COMMANDS.hostname = function (args) {
+    var p = netFlags("hostname", args, "Iisf", "aAbdfFhiIsvVy", "F");
+    var o = p.opts;
+    if (p.args.length) {
+      if (this.user !== "root") return { out: "", err: "hostname: you must be root to change the host name\n", code: 1 };
+      throw new Error("renaming the station isn't supported on this console");
+    }
+    if (o.I) return ok(this.net.ifaces.map(function (i) { return formatIPv4(i.address) + " "; }).join("") + "\n");
+    if (o.i) return ok(HOSTNAME_ADDRESS + "\n");
+    return ok("meridian\n");
+  };
 
   function headTail(cmd, rawArgs, stdin) {
     var args = rawArgs.map(function (a) { return /^-\d+$/.test(a) ? "-n" + a.slice(1) : a; });

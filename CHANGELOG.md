@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The station console has a network (#164), for Unit 1.4. `ip addr` and `ip route` show the
+  console's address and gateway, and `ss -tlnp` and `ss -tnp` show what listens and who's
+  connected, held by the same processes `ps` lists. `ping` and `nc -zv` reach the other hosts an
+  exercise declares, and tell the outcomes apart the way the real tools do: a reply, refused,
+  no route, or a timeout. All of it is simulated in the browser and checked line for line
+  against Ubuntu 24.04's output. An exercise describes its network under `network:`, and the
+  loader rejects a bad address and names the host.
+
 ## [0.8.0] — 2026-10-14
 
 The desk fits any screen, and the lessons answer back. The app scales with the window and the
