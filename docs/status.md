@@ -85,6 +85,45 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 ## Sessions
 
+### 2026-10-15 — #164 and #167: the console's network, Unit 1.4 begun
+
+- **#164 (#179):** the station console has a network. A terminal exercise's `network:`
+  (`NetworkSpec`) gives the console's interfaces and gateway, its own sockets (each held by a
+  starting process, so `ss -p` and `ps` agree, and `kill` closes the socket), and other hosts
+  (`services`, `filtered`, `up`, `ping`).
+  - `shell.js` has `ip` (addr/link/route/route get), `ss`, `ping -c`, `nc -z` and `hostname`.
+  - Without `network:` the console uses `DEFAULT_NETWORK`, `10.4.0.12/24` via `10.4.0.1`, and a
+    test holds it equal to `NetworkSpec()`.
+  - Names don't resolve yet, except `localhost` and `meridian`. #165 extends `resolveName`.
+- **#167 (#180):** Unit 1.4 module 01, *Addresses and ports*. The relay console is at
+  `10.4.1.23/24`. `telemetryd` is on `127.0.0.1:3000`, and the services run as their own
+  accounts, so the task needs `sudo ss -tlnp`. `tests/test_networking.py` starts Unit 1.4's
+  tests, and the untaught-command check now covers Units 1.3 and 1.4.
+- **How it was checked:**
+  - Real output was captured first: `ip`/`ss` on the 24.04 VM, and `ping`/`nc` from two
+    `ubuntu:24.04` containers on a scratch `10.4.0.0/24` network (iptables DROP for a filtered
+    port).
+  - ss's column widths follow iproute2 v6.1.0 `ss.c`'s non-terminal layout, matched byte for
+    byte against the VM.
+  - `nc` with no `-w` on a filtered port takes 2 min 14 s of station time.
+- **Found on the way:**
+  - A `contains` check is a substring. `gateway 10.4.1.12` would have passed
+    `gateway 10.4.1.1`, so the console moved to `.23`, and `test_module_01_refuses_the_misreadings`
+    holds it.
+  - The content-reviewer caught the quiz quoting the task's figures (a test now forbids it) and a
+    crew line calling rebinding "a firewall job".
+  - `kill %1` in a Try it fails when it isn't run interactively, and `$!` is untaught, so the Try
+    it uses `pkill -f`. When testing a `pkill -f` Try it, run it from a script file: a
+    `bash -c "…"` wrapper matches its own pattern.
+  - A commit went in with a stale exercise fixture because the gate was `grep passed`, not the
+    exit status. Fixed in the PR before the merge.
+- Production is still **v0.8.0**. Nothing released.
+- **Next:**
+  1. #165, DNS on the console (`dig`, `host`, `getent`, `/etc/hosts`, through `resolveName`),
+     then #168 (module 02). The order after that: #169 → labs #170–#174 → #166 → #175 → #176.
+  2. On the desk: the first live hint and lab review, and open Review once (`0007` on prod).
+  3. The `su` gap in module 05 is still unfiled.
+
 ### 2026-10-14 (afternoon) — #105 finished, v0.8.0 shipped, Networking planned
 
 - **#105:**
