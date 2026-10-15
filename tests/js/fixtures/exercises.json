@@ -175,7 +175,7 @@
      "user": "telemetry"
     }
    ],
-   "success": "Okafor reads `network.txt` twice, and stops at the telemetry line. \"127.0.0.1,\" he says. \"It's been talking to itself all along.\"",
+   "success": "Okafor reads network.txt twice, and stops at the telemetry line. \"127.0.0.1,\" he says. \"It's been talking to itself all along.\"",
    "user": "cadet"
   }
  },
