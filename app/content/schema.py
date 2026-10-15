@@ -6,6 +6,7 @@ forbids unknown keys, so a typo'd field name is an error rather than a field
 that silently does nothing.
 """
 
+import ipaddress
 import re
 from datetime import datetime
 from typing import Annotated, Literal
@@ -306,6 +307,167 @@ class MemorySpec(_Strict):
         return self
 
 
+# The station network (#164): the console's addresses, its own sockets, and
+# the other hosts it can reach. All simulated by shell.js. Addresses come from
+# the private ranges or the documentation ones (RFC 5737), never a real
+# machine's (docs/story.md).
+Port = Annotated[int, Field(ge=1, le=65535)]
+Proto = Literal["tcp", "udp"]
+HostName = Annotated[str, Field(pattern=r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", max_length=253)]
+STATION_RANGES = tuple(
+    ipaddress.ip_network(n)
+    for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")
+)
+
+
+def station_address(text: str) -> ipaddress.IPv4Address:
+    """An IPv4 address in the station's ranges, or a ValueError saying why not."""
+    try:
+        address = ipaddress.IPv4Address(text)
+    except ValueError:
+        raise ValueError(f"{text} is not an IPv4 address") from None
+    if not any(address in n for n in STATION_RANGES):
+        raise ValueError(f"{text} is not a private or documentation address (10/8, 172.16/12, 192.168/16, 203.0.113/24 …)")
+    return address
+
+
+class InterfaceSpec(_Strict):
+    """One of the console's network interfaces. `lo` is always there too."""
+
+    name: Annotated[str, Field(pattern=r"^[a-z][a-z0-9]{0,14}$")] = "eth0"
+    address: Annotated[str, Field(max_length=18)]  # with its prefix: 10.4.0.12/24
+
+    def network(self) -> ipaddress.IPv4Interface:
+        return ipaddress.IPv4Interface(self.address)
+
+    @model_validator(mode="after")
+    def _valid(self):
+        if self.name == "lo":
+            raise ValueError("interface lo: the loopback interface is always there; don't list it")
+        address, _, prefix = self.address.partition("/")
+        try:
+            station_address(address)
+        except ValueError as exc:
+            raise ValueError(f"interface {self.name}: {exc}") from None
+        if not prefix.isdigit() or not 8 <= int(prefix) <= 30:
+            raise ValueError(f"interface {self.name}: {self.address} needs a prefix from /8 to /30, like 10.4.0.12/24")
+        if self.network().ip in (self.network().network.network_address, self.network().network.broadcast_address):
+            raise ValueError(f"interface {self.name}: {self.address} is its subnet's network or broadcast address")
+        return self
+
+
+class ServiceSpec(_Strict):
+    """A port another host listens on."""
+
+    port: Port
+    proto: Proto = "tcp"
+
+
+class HostSpec(_Strict):
+    """Another machine on the station network (or beyond it)."""
+
+    name: HostName
+    address: str
+    up: bool = True  # a host that's down answers nothing: unreachable
+    ping: bool = True  # False: up, but it drops ping (a blocked ping proves little)
+    services: Annotated[list[ServiceSpec], Field(max_length=20)] = []
+    filtered: Annotated[list[Port], Field(max_length=20)] = []  # TCP ports a firewall drops: nc times out
+
+    @model_validator(mode="after")
+    def _valid(self):
+        try:
+            station_address(self.address)
+        except ValueError as exc:
+            raise ValueError(f"host {self.name}: {exc}") from None
+        served = [(s.port, s.proto) for s in self.services]
+        if dupes := sorted({f"{p}/{proto}" for p, proto in served if served.count((p, proto)) > 1}):
+            raise ValueError(f"host {self.name}: {', '.join(dupes)} listed twice")
+        if both := sorted({s.port for s in self.services if s.proto == "tcp"} & set(self.filtered)):
+            raise ValueError(f"host {self.name}: port {both[0]} is both a service and filtered")
+        return self
+
+
+class ListenSpec(_Strict):
+    """A socket the console itself listens on, held by one of its processes."""
+
+    port: Port
+    proto: Proto = "tcp"
+    process: Annotated[str, Field(min_length=1, max_length=32)]  # a starting process's name, as ps shows it
+    address: str = "0.0.0.0"  # or 127.0.0.1 (this machine only), or one interface's address
+
+
+class ConnectionSpec(_Strict):
+    """An established TCP connection: out to a host's service, or, with
+    `local_port`, in to one of the console's listeners."""
+
+    process: Annotated[str, Field(min_length=1, max_length=32)]
+    remote: Annotated[str, Field(pattern=r"^[0-9.]+:\d{1,5}$")]  # 10.4.0.20:5432
+    local_port: Port | None = None
+
+    def remote_address(self) -> str:
+        return self.remote.rsplit(":", 1)[0]
+
+    def remote_port(self) -> int:
+        return int(self.remote.rsplit(":", 1)[1])
+
+
+class NetworkSpec(_Strict):
+    # The defaults are shell.js's DEFAULT_NETWORK (a test keeps them equal), so
+    # an exercise that never mentions the network still has one to look at.
+    interfaces: Annotated[list[InterfaceSpec], Field(min_length=1, max_length=4)] = [InterfaceSpec(address="10.4.0.12/24")]
+    gateway: str | None = "10.4.0.1"  # the default route; null for none
+    listening: Annotated[list[ListenSpec], Field(max_length=20)] = []
+    connections: Annotated[list[ConnectionSpec], Field(max_length=20)] = []
+    hosts: Annotated[list[HostSpec], Field(max_length=30)] = []
+
+    @model_validator(mode="after")
+    def _consistent(self):
+        names = [i.name for i in self.interfaces]
+        if dupes := sorted({n for n in names if names.count(n) > 1}):
+            raise ValueError(f"interface {dupes[0]} listed twice")
+        nets = [i.network() for i in self.interfaces]
+        mine = {str(n.ip) for n in nets}
+        if self.gateway is not None:
+            try:
+                gateway = station_address(self.gateway)
+            except ValueError as exc:
+                raise ValueError(f"gateway: {exc}") from None
+            if not any(gateway in n.network for n in nets):
+                raise ValueError(f"gateway: {self.gateway} isn't on any interface's subnet")
+            if str(gateway) in mine:
+                raise ValueError(f"gateway: {self.gateway} is the console's own address")
+        seen: dict[str, str] = {}
+        for host in self.hosts:
+            if host.name in seen.values():
+                raise ValueError(f"host {host.name}: listed twice")
+            if host.address in mine:
+                raise ValueError(f"host {host.name}: {host.address} is the console's own address")
+            if host.address in seen:
+                raise ValueError(f"host {host.name}: {host.address} is {seen[host.address]}'s address too")
+            seen[host.address] = host.name
+        sockets = [(s.port, s.proto) for s in self.listening]
+        for s in self.listening:
+            where = f"listening {s.port}/{s.proto}"
+            if sockets.count((s.port, s.proto)) > 1:
+                raise ValueError(f"{where}: listed twice")
+            if s.address not in mine and s.address != "0.0.0.0" and not s.address.startswith("127."):
+                raise ValueError(f"{where}: {s.address} is not 0.0.0.0, 127.0.0.1 or one of the console's addresses")
+            if s.port == 22 and s.proto == "tcp":
+                raise ValueError(f"{where}: sshd already listens on 22")
+        by_address = {h.address: h for h in self.hosts}
+        for c in self.connections:
+            where = f"connection {c.remote}"
+            host = by_address.get(c.remote_address())
+            if host is None:
+                raise ValueError(f"{where}: {c.remote_address()} is not one of the hosts")
+            if c.local_port is not None:
+                if (c.local_port, "tcp") not in sockets and c.local_port != 22:
+                    raise ValueError(f"{where}: nothing listens on local port {c.local_port}")
+            elif not any(s.port == c.remote_port() and s.proto == "tcp" for s in host.services):
+                raise ValueError(f"{where}: {host.name} has no TCP service on port {c.remote_port()}")
+        return self
+
+
 KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
 
 
@@ -341,6 +503,7 @@ class TerminalExercise(_Strict):
     cwd: AbsPath = "/station"
     disk: DiskSpec | None = None
     memory: MemorySpec | None = None
+    network: NetworkSpec | None = None  # #164; without it, NetworkSpec's defaults
     files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
     checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
     success: Text = "Okafor's voice crackles over the comm: \"Confirmed. Nice work, cadet.\""
@@ -433,6 +596,13 @@ class TerminalExercise(_Strict):
             if p.user and p.user not in users:
                 raise ValueError(f"processes: {p.command!r} runs as {p.user}, which is not an account")
         started = {proc_name(p.command) for p in self.processes}
+        if self.network:
+            for s in self.network.listening:
+                if s.process not in started | {"sshd"}:
+                    raise ValueError(f"network: listening {s.port}/{s.proto}: no starting process is called {s.process}")
+            for c in self.network.connections:
+                if c.process not in started | {"sshd"}:
+                    raise ValueError(f"network: connection {c.remote}: no starting process is called {c.process}")
         for i, check in enumerate(self.checks):
             if isinstance(check, StoppedCheck | SignalledCheck) and check_path(check) not in started:
                 raise ValueError(f"checks.{i} ({describe(check)}): no starting process is called {check_path(check)}")

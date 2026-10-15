@@ -431,6 +431,63 @@
       description: "Print the value of a symbolic link: where it points, as written. With -f, print the canonical path instead: every link on the way followed, and . and .. resolved.",
       options: [["-f, --canonicalize", "canonicalize by following every symlink in every component of the given name recursively"]],
     },
+    ip: {
+      summary: "show / manipulate routing, network devices, interfaces and tunnels",
+      synopsis: ["ip [OPTIONS] OBJECT { COMMAND | help }", "ip [-4 | -6] [-br] address [show [dev] NAME]", "ip link [show [dev] NAME]", "ip route [show] | ip route get ADDRESS"],
+      description: "Show the network: OBJECT is address (the addresses on each interface), link (the interfaces themselves) or route (where packets go). Any unique abbreviation works: ip a, ip r. lo is the loopback interface, 127.0.0.1, which never leaves the machine. The default route says which gateway gets packets for every address not on a local subnet. Changing the network needs root.",
+      options: [
+        ["-4, -6", "only IPv4, or only IPv6, addresses"],
+        ["-br, -brief", "one line per interface: name, state and addresses"],
+        ["route get ADDRESS", "show the route a packet to ADDRESS would take: which interface, and via which gateway"],
+      ],
+    },
+    ss: {
+      summary: "another utility to investigate sockets",
+      synopsis: ["ss [options]"],
+      description: "Dump socket statistics: the connections this machine has open, and the ports it listens on. By default ss lists established connections. The console has no Unix sockets, so without -t or -u it shows both TCP and UDP. A Local Address of 0.0.0.0 (or [::]) means every address the machine has; 127.0.0.1 means this machine only. Only root sees which process holds another user's socket.",
+      options: [
+        ["-t, --tcp", "display TCP sockets"],
+        ["-u, --udp", "display UDP sockets"],
+        ["-l, --listening", "display only listening sockets"],
+        ["-a, --all", "display both listening and non-listening sockets"],
+        ["-n, --numeric", "don't resolve service names: show 22, not ssh"],
+        ["-p, --processes", "show the process using the socket"],
+        ["-4, -6", "display only IPv4, or only IPv6, sockets"],
+        ["-H, --no-header", "suppress the header line"],
+      ],
+    },
+    ping: {
+      summary: "send ICMP ECHO_REQUEST to network hosts",
+      synopsis: ["ping -c COUNT [-q] [-W TIMEOUT] DESTINATION"],
+      description: "Send ICMP ECHO_REQUEST packets to DESTINATION and wait for each reply. A reply means the host is up and answers ping; no reply proves less than it seems, since many hosts and firewalls drop ping. \"Destination Host Unreachable\" means nothing on the local network answered for that address. A real ping runs until Ctrl-C; on this console, give it a count. Exit status: 0 if any reply came back, 1 if none did, 2 on other errors.",
+      options: [
+        ["-c COUNT", "stop after sending COUNT packets"],
+        ["-q", "quiet output: only the summary lines"],
+        ["-W TIMEOUT", "time to wait for a response, in seconds"],
+      ],
+    },
+    nc: {
+      summary: "arbitrary TCP and UDP connections and listens",
+      synopsis: ["nc -z [-v] [-n] [-w TIMEOUT] HOST PORT[-PORT]..."],
+      description: "With -z, nc only checks whether something is listening on each PORT: it connects, then closes. Three answers matter. \"succeeded!\": something is listening. \"Connection refused\": the host is up and said no, because nothing listens on that port. A timeout, or \"No route to host\": nothing answered at all, because the host is down, unreachable, or a firewall drops the connection. The console's nc only checks TCP ports. Exit status: 0 if any port succeeded.",
+      options: [
+        ["-z", "zero-I/O mode: just check that the port is listening"],
+        ["-v", "verbose: report each failure as well"],
+        ["-w TIMEOUT", "give up on a connection after TIMEOUT seconds"],
+        ["-n", "don't use DNS: HOST must be an address"],
+      ],
+    },
+    hostname: {
+      summary: "show the system's host name",
+      synopsis: ["hostname [-I | -i | -s | -f]"],
+      description: "Print the name of this machine. Changing it needs root.",
+      options: [
+        ["-I, --all-ip-addresses", "all addresses of the host, except loopback"],
+        ["-i, --ip-address", "the address the host name resolves to"],
+        ["-s, --short", "the short host name"],
+        ["-f, --fqdn", "the full name"],
+      ],
+    },
     "crontab.5": {
       section: 5,
       name: "crontab",

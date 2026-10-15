@@ -294,6 +294,38 @@ Sizes, dates, links, the disk and memory (#67):
 - **`type: link`** with a `target` (stored as written, so a relative target is relative to the
   link's directory). Dangling targets are allowed.
 
+The station network (#164). Every console has one; without `network:` it is the default below
+(`NetworkSpec` in `app/content/schema.py`, `DEFAULT_NETWORK` in `shell.js`, a test holds them equal):
+
+```yaml
+  network:
+    interfaces: [{name: eth0, address: 10.4.0.12/24}]   # the default; lo is always there too
+    gateway: 10.4.0.1           # the default route (null: none, so off-subnet is unreachable)
+    listening:                  # the console's own sockets; sshd on 22 is always there
+      - {port: 8080, process: python3}                    # tcp, on 0.0.0.0, by default
+      - {port: 5000, process: telemetry, address: 127.0.0.1}   # this machine only
+    connections:                # established TCP, shown by ss -tn
+      - {process: psql, remote: "10.4.0.20:5432"}         # out: the local port is ephemeral
+      - {process: sshd, remote: "10.4.0.5:51234", local_port: 22}   # in, to a listener
+    hosts:
+      - {name: db, address: 10.4.0.20, services: [{port: 5432}], filtered: [2222]}
+      - {name: beacon, address: 10.4.0.30, ping: false, services: [{port: 22}]}  # up, drops ping
+      - {name: md-3, address: 10.4.2.17, up: false}      # down: nothing answers
+```
+
+- **Addresses are private (`10/8`, `172.16/12`, `192.168/16`) or documentation ranges
+  (`203.0.113.0/24` for "outside"), never a real machine's.** The loader refuses anything else.
+- A socket's **`process` must be one of `processes:`** (by the name `ps` shows) or `sshd`. `ss -p`
+  then shows that process's real PID, killing it closes its sockets, and only root sees which
+  process holds a socket that isn't the learner's, as on a real server: a root-owned culprit
+  needs `sudo ss -tnp`.
+- What a host answers: a `services` port succeeds; a `filtered` port times out; any other port
+  is refused. A host that's `up: false`, or an address no host has, answers nothing. On the
+  console's subnet that's "No route to host" / "Destination Host Unreachable"; beyond the
+  gateway it's silence and a timeout.
+- **Names don't resolve yet**, except `localhost` and `meridian`: use addresses until #165
+  brings `/etc/hosts` and DNS.
+
 `/etc/passwd`, `/etc/group` and `/root` are generated from these unless you list them yourself.
 Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group is 1000.
 
@@ -364,6 +396,14 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     `gunzip (-k)`, `zcat`, `ln -s (-f -n -v)` (no hard links), `readlink (-f)`. Paths resolve
     through symlinks everywhere; `rm`, `mv`, `ls -l`, `find` and `test -L` act on the link
     itself, and `cd` through a link lands in the real directory (as `cd -P`).
+  - network (#164): `ip` (`addr`, `link`, `route`, `route get ADDR`, any abbreviation; `-4 -6
+    -br`), `ss` (`-t -u -l -a -n -p -4 -6 -H`, combined as `-tulpn`; no filters, and no Unix
+    sockets, so no `-t`/`-u` means both), `ping -c N (-q -W)` (a count is required: the console
+    can't run until Ctrl-C), `nc -z (-v -w N -n) HOST PORT[-PORT]…` (TCP only, all on stderr as
+    Debian's is, success printed even without `-v`), `hostname (-I -i -s -f)`. Output is
+    Ubuntu 24.04's, column for column (`ss` as when piped, which is how it sizes columns without
+    a terminal). Round-trip times are made up but fixed. Waiting is station time: `nc` without
+    `-w` on a filtered port takes 2 min 14 s, as the kernel's retries do.
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
     sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
     foreground `sleep N` jumps N.

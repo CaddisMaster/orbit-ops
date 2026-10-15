@@ -497,3 +497,90 @@ def test_the_station_clock_matches_the_console():
 
     shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
     assert f"var START_TIME = new Date({STATION_NOW.year}, {STATION_NOW.month - 1}, {STATION_NOW.day}, {STATION_NOW.hour}, {STATION_NOW.minute});" in shell
+
+
+# --- #164: the station network ---------------------------------------------------------------
+NETWORK = """terminal:
+  task: Find who's listening.
+  cwd: /station
+  processes:
+    - {command: "python3 -m http.server 8080"}
+    - {command: "psql -h 10.4.0.20 telemetry"}
+  network:
+    interfaces: [{name: eth0, address: 10.4.0.12/24}]
+    gateway: 10.4.0.1
+    listening: [{port: 8080, process: python3}]
+    connections: [{process: psql, remote: "10.4.0.20:5432"}]
+    hosts:
+      - {name: db, address: 10.4.0.20, services: [{port: 5432}], filtered: [2222]}
+      - {name: relay, address: 203.0.113.47, services: [{port: 443}]}
+  files:
+    - {path: /station, type: dir}
+  checks:
+    - {exists: /station/network.txt}
+  success: Logged.
+  solution:
+    - ss -tlnp > network.txt
+"""
+
+
+@pytest.mark.criterion(164, "The network is validated with the content")
+def test_a_host_with_an_invalid_address_fails_naming_the_file_and_the_host(tmp_path):
+    _write(tmp_path, NETWORK.replace("{name: db, address: 10.4.0.20,", "{name: db, address: 10.4.0.300,"))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    message = str(exc.value)
+    assert "core/shell/02-two.md: terminal.network.hosts.0:" in message
+    assert "host db: 10.4.0.300 is not an IPv4 address" in message
+
+
+@pytest.mark.parametrize(
+    ("replace", "with_", "expect"),
+    [
+        ("address: 203.0.113.47", "address: 8.8.8.8", "host relay: 8.8.8.8 is not a private or documentation address"),
+        ("gateway: 10.4.0.1", "gateway: 10.5.0.1", "gateway: 10.5.0.1 isn't on any interface's subnet"),
+        ("address: 10.4.0.12/24", "address: 10.4.0.12", "interface eth0: 10.4.0.12 needs a prefix"),
+        ("address: 10.4.0.12/24", "address: 10.4.0.0/24", "interface eth0: 10.4.0.0/24 is its subnet's network or broadcast address"),
+        ("{name: eth0,", "{name: lo,", "interface lo: the loopback interface is always there"),
+        ("{name: relay, address: 203.0.113.47", "{name: relay, address: 10.4.0.12", "host relay: 10.4.0.12 is the console's own address"),
+        ("{name: relay, address: 203.0.113.47", "{name: relay, address: 10.4.0.20", "host relay: 10.4.0.20 is db's address too"),
+        ("{name: relay,", "{name: db,", "host db: listed twice"),
+        ("filtered: [2222]", "filtered: [5432]", "host db: port 5432 is both a service and filtered"),
+        ("process: python3}", "process: nginx}", "network: listening 8080/tcp: no starting process is called nginx"),
+        ("process: python3}", "process: python3, address: 10.4.0.99}", "listening 8080/tcp: 10.4.0.99 is not 0.0.0.0"),
+        ("[{port: 8080, process: python3}]", "[{port: 22, process: python3}]", "sshd already listens on 22"),
+        ('remote: "10.4.0.20:5432"', 'remote: "10.4.0.20:5433"', "connection 10.4.0.20:5433: db has no TCP service on port 5433"),
+        ('remote: "10.4.0.20:5432"', 'remote: "10.4.0.99:5432"', "connection 10.4.0.99:5432: 10.4.0.99 is not one of the hosts"),
+        ('remote: "10.4.0.20:5432"}', 'remote: "10.4.0.20:51234", local_port: 9090}', "nothing listens on local port 9090"),
+        ("{port: 5432}]", "{port: 5432}, {port: 5432}]", "host db: 5432/tcp listed twice"),
+    ],
+)
+def test_bad_networks_are_reported(tmp_path, replace, with_, expect):
+    assert replace in NETWORK
+    _write(tmp_path, NETWORK.replace(replace, with_))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert "core/shell/02-two.md" in str(exc.value) and expect in str(exc.value)
+
+
+def test_the_network_reaches_the_console_only_when_the_exercise_has_one(tmp_path):
+    from app.terminal import client_spec
+
+    _write(tmp_path, NETWORK)
+    spec = client_spec(load_catalog(tmp_path).modules["two"].terminal)
+    assert spec["network"]["listening"] == [{"port": 8080, "proto": "tcp", "process": "python3", "address": "0.0.0.0"}]
+    assert spec["network"]["hosts"][0] == {
+        "name": "db", "address": "10.4.0.20", "up": True, "ping": True, "services": [{"port": 5432, "proto": "tcp"}], "filtered": [2222],
+    }
+    (tmp_path / "plain").mkdir()
+    _write(tmp_path / "plain")
+    assert "network" not in client_spec(load_catalog(tmp_path / "plain").modules["two"].terminal)
+
+
+def test_the_default_network_matches_the_console():
+    from app.content.schema import NetworkSpec
+
+    shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
+    found = re.search(r"^  var DEFAULT_NETWORK = (\{.*\});$", shell, re.M)
+    assert found, "shell.js has no one-line DEFAULT_NETWORK"
+    assert json.loads(found.group(1)) == NetworkSpec().model_dump()
