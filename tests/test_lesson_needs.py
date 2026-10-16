@@ -197,6 +197,17 @@ NEEDS = {
         "sed -i '/PATTERN/d' deletes matching lines": "**`sudo sed -i '/PATTERN/d' /etc/hosts`**",
         "delete a stale pin rather than correct it": "**Delete a stale pin rather than correcting it**",
     },
+    "is-it-reachable": {
+        "check the name, the route, the machine, then the port": "Check in order, from the\noutside in",
+        "getent hosts prints nothing when there's no address": "or nothing at all (exit status 2) when there isn't one",
+        "ip route get shows the way a packet goes": "**`ip route get ADDRESS` shows the way a packet to it would go**",
+        "ping -c COUNT": "**`ping -c COUNT HOST`**",
+        "a blocked ping proves little": "**A blocked ping proves little.**",
+        "nc -zv -w 3 checks a port": "**`nc -zv -w 3 HOST PORT` checks whether PORT on HOST accepts connections**",
+        "refused means the host is up and nothing listens": "**the host is up and said no**",
+        "timed out means nothing answered": "**nothing answered at all**",
+        "Name or service not known means no such name": "**the name doesn't resolve**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

@@ -30,6 +30,10 @@ and why it matters, not what the diff says.
   and TTLs. On the console, Mission Control's uplink doesn't answer because an old line in
   `/etc/hosts` pins it to an address DNS has never heard of: you find it by comparing
   `getent` with `dig`, then remove it.
+- Unit 1.4 module 03, *Is it reachable?* (#169): a method for "it doesn't connect" (name,
+  route, machine, port), `ping` and why a blocked ping proves little, `nc -zv -w`, and telling
+  "refused", "timed out" and "no such name" apart. On the console, Mission's ping monitor is
+  wrong about two of four relays, and you find each one's real fault.
 
 ## [0.8.0] — 2026-10-14
 
