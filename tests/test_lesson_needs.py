@@ -187,6 +187,16 @@ NEEDS = {
         "other users' processes need sudo": "**The Process column is empty for other users' sockets.**",
         "the Local Address column is the address it listens on": "**Local Address column says which address a program listens on**",
     },
+    "names-and-dns": {
+        "getent hosts shows what this machine will use": "**`getent hosts NAME` shows the address this machine will really use**",
+        "dig shows what DNS says": "**`dig` shows what DNS says**",
+        "dig +short prints only the answers": "**`dig +short NAME` prints only the answers**",
+        "dig -x is a reverse lookup": "**`dig -x ADDRESS` is a reverse lookup**",
+        "/etc/hosts is read before DNS": "**Programs look names up in `/etc/hosts` first, and only then ask DNS.**",
+        "editing /etc/hosts needs sudo": "`/etc/hosts` belongs to root, so changing it needs `sudo`",
+        "sed -i '/PATTERN/d' deletes matching lines": "**`sudo sed -i '/PATTERN/d' /etc/hosts`**",
+        "delete a stale pin rather than correct it": "**Delete a stale pin rather than correcting it**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

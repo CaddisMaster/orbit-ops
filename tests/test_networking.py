@@ -99,3 +99,79 @@ def test_module_01s_figures_match_the_console():
                       + [c.front_html + c.back_html for c in module.cards])
     for figure in (str(eth0.ip), net.gateway, out.remote_address()):
         assert figure not in quoted, figure
+
+
+# --- 02: Names and DNS (#168) -----------------------------------------------------------------
+NAMES = "/home/cadet/names.txt"
+HOSTS = "/etc/hosts"
+PROOF = "10.4.1.40       mission.meridian\n10.4.1.40\n"
+
+
+def _fixed_hosts(start, drop="10.4.1.14 mission.meridian\n"):
+    node = start[HOSTS]
+    return {**start, HOSTS: Node(**{**node.model_dump(), "contents": node.contents.replace(drop, "")})}
+
+
+@pytest.mark.criterion(168, "Module 02 of Unit 1.4 is complete content")
+def test_module_02_is_complete_content():
+    module = load_catalog().unit_modules("networking")[1]
+    assert module.slug == "names-and-dns"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(168, "Module 02's console task can be done")
+def test_module_02s_end_state_passes_on_the_server():
+    exercise = _module("names-and-dns").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _with_file(_fixed_hosts(start), NAMES, PROOF), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "proof",
+    [
+        "10.4.1.14       mission.meridian\n10.4.1.40\n",  # saved before fixing /etc/hosts
+        "10.4.1.40\n10.4.1.40       mission.meridian\n",  # the two the other way round
+        "10.4.1.40       mission.meridian\n",  # getent only
+    ],
+    ids=["before-the-fix", "wrong-order", "no-dig"],
+)
+def test_module_02_refuses_the_misreadings(proof):
+    exercise = _module("names-and-dns").terminal
+    assert not grade(exercise, _with_file(_fixed_hosts(_start(exercise)), NAMES, proof), exercise.cwd)
+
+
+def test_module_02_refuses_a_hosts_file_cleared_out():
+    exercise = _module("names-and-dns").terminal
+    start = _start(exercise)
+    emptied = {**start, HOSTS: Node(**{**start[HOSTS].model_dump(), "contents": ""})}
+    assert not grade(exercise, _with_file(emptied, NAMES, PROOF), exercise.cwd)
+
+
+def test_module_02s_figures_match_the_console():
+    module = _module("names-and-dns")
+    exercise = module.terminal
+    net = exercise.network
+    records = {(r.name, r.type): r.value for r in net.dns.records}
+    stale = "10.4.1.14"
+    right = records[("mission.meridian", "A")]
+    # /etc/hosts pins the uplink to an address no host has and DNS has no name for.
+    pinned = [line for line in next(f for f in exercise.files if f.path == HOSTS).contents.splitlines() if "mission.meridian" in line]
+    assert pinned == [f"{stale} mission.meridian"]
+    assert stale not in {h.address for h in net.hosts} and stale not in records.values()
+    assert not any(r.type == "PTR" and r.name.startswith("14.1.4.10") for r in net.dns.records)
+    # DNS's answer is a live host, and the proof the checks want is that answer twice.
+    assert right in {h.address for h in net.hosts if h.up}
+    assert exercise.checks[0].text == f"{right}       mission.meridian\n{right}\n"
+    # The resolver is the one the console asks.
+    assert net.resolver() == net.dns.server and net.dns.server in {h.address for h in net.hosts}
+    # What the crew say is true.
+    eth0 = ipaddress.IPv4Interface(net.interfaces[0].address)
+    assert f"RELAY CONSOLE {eth0.ip}" in _said(module, "open") and "<code>mission.meridian</code>" in _said(module, "open")
+    assert f"DNS {right} · /ETC/HOSTS {right}" in _said(module, "console_done")
+    # The lesson's examples use other names and numbers than the task's, and so do the quiz and cards.
+    body = module.body_html
+    assert "10.4.1." not in body and "mission.meridian" not in body
+    quoted = " ".join([q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+                      + [c.front_html + c.back_html for c in module.cards])
+    assert "10.4.1." not in quoted and "mission.meridian" not in quoted

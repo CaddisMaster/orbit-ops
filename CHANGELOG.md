@@ -25,6 +25,11 @@ and why it matters, not what the diff says.
   service on `127.0.0.1` answers only its own machine, with this app's own droplet as the
   example. On the console you map the relay console's network with `sudo ss` and find out why
   Mission Control can't reach the telemetry dashboard.
+- Unit 1.4 module 02, *Names and DNS* (#168): what DNS does, A, CNAME, MX and PTR records,
+  reading `dig` (and `+short`, `-x`), `/etc/hosts` and why it's read first, `/etc/resolv.conf`,
+  and TTLs. On the console, Mission Control's uplink doesn't answer because an old line in
+  `/etc/hosts` pins it to an address DNS has never heard of: you find it by comparing
+  `getent` with `dig`, then remove it.
 
 ## [0.8.0] — 2026-10-14
 

@@ -1703,6 +1703,249 @@
    "user": "cadet"
   }
  },
+ "names-and-dns": {
+  "solution": [
+   "ping -c 2 mission.meridian",
+   "getent hosts mission.meridian",
+   "dig +short mission.meridian",
+   "dig -x 10.4.1.14",
+   "cat /etc/hosts",
+   "sudo sed -i '/^10.4.1.14 /d' /etc/hosts",
+   "meridian",
+   "getent hosts mission.meridian > ~/names.txt",
+   "dig +short mission.meridian >> ~/names.txt",
+   "cat ~/names.txt",
+   "ping -c 1 mission.meridian"
+  ],
+  "source": "core/networking/02-names-and-dns.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/names.txt",
+     "text": "10.4.1.40       mission.meridian\n10.4.1.40\n"
+    },
+    {
+     "contains": "/etc/hosts",
+     "text": "127.0.0.1 localhost\n"
+    },
+    {
+     "contains": "/etc/hosts",
+     "text": "127.0.1.1 meridian\n"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n10.4.1.14 mission.meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.1.53\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "network": {
+    "connections": [],
+    "dns": {
+     "records": [
+      {
+       "name": "mission.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.40"
+      },
+      {
+       "name": "uplink.meridian",
+       "ttl": 300,
+       "type": "CNAME",
+       "value": "mission.meridian"
+      },
+      {
+       "name": "relay.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.23"
+      },
+      {
+       "name": "relay-db.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.20"
+      },
+      {
+       "name": "ops-desk.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.5"
+      },
+      {
+       "name": "ns1.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.53"
+      },
+      {
+       "name": "40.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "mission.meridian"
+      },
+      {
+       "name": "23.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay.meridian"
+      },
+      {
+       "name": "20.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay-db.meridian"
+      },
+      {
+       "name": "5.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "ops-desk.meridian"
+      },
+      {
+       "name": "53.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "ns1.meridian"
+      }
+     ],
+     "server": "10.4.1.53"
+    },
+    "gateway": "10.4.1.1",
+    "hosts": [
+     {
+      "address": "10.4.1.40",
+      "filtered": [],
+      "name": "mission",
+      "ping": true,
+      "services": [
+       {
+        "port": 443,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.1.53",
+      "filtered": [],
+      "name": "ns1",
+      "ping": true,
+      "services": [
+       {
+        "port": 53,
+        "proto": "udp"
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.1.20",
+      "filtered": [],
+      "name": "relay-db",
+      "ping": true,
+      "services": [
+       {
+        "port": 5432,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.1.5",
+      "filtered": [],
+      "name": "ops-desk",
+      "ping": true,
+      "services": [
+       {
+        "port": 22,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     }
+    ],
+    "interfaces": [
+     {
+      "address": "10.4.1.23/24",
+      "name": "eth0"
+     }
+    ],
+    "listening": []
+   },
+   "password": "meridian",
+   "processes": [],
+   "success": "Okafor pings the uplink himself and watches the replies come back from mission.meridian. \"Same name, same answer. That's all I wanted.\"",
+   "user": "cadet"
+  }
+ },
  "navigating": {
   "solution": [
    "cd /station/comms/relay",
