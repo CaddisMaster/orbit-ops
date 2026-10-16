@@ -1431,6 +1431,297 @@
    "user": "cadet"
   }
  },
+ "firewalls": {
+  "solution": [
+   "sudo ss -tlnp",
+   "meridian",
+   "ssh mission.meridian 'nc -zv -w 3 10.4.1.23 9100'",
+   "sudo ufw status numbered",
+   "sudo ufw delete deny 9100/tcp",
+   "sudo ufw allow from 10.4.1.40 to any port 9100 proto tcp",
+   "ssh mission.meridian 'nc -zv -w 3 10.4.1.23 9100'",
+   "ssh ops-desk.meridian 'nc -zv -w 3 10.4.1.23 9100'",
+   "ssh mission.meridian 'curl -s http://10.4.1.23:9100/feed' > ~/feed.txt",
+   "cat ~/feed.txt"
+  ],
+  "source": "core/networking/09-firewalls.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/etc/ufw/user.rules",
+     "text": "### tuple ### allow tcp 9100 0.0.0.0/0 any 10.4.1.40 in\n"
+    },
+    {
+     "contains": "/etc/ufw/ufw.conf",
+     "text": "ENABLED=yes\n"
+    },
+    {
+     "contains": "/home/cadet/feed.txt",
+     "text": "\"relay\":\"relay.meridian\",\"uplink\":\"ok\""
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\nrelay:x:991:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nrelay:x:991:991:Relay service:/var/lib/relay:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.1.53\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=yes\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-before-logging-input - [0:0]\n:ufw-before-logging-output - [0:0]\n:ufw-before-logging-forward - [0:0]\n:ufw-user-logging-input - [0:0]\n:ufw-user-logging-output - [0:0]\n:ufw-user-logging-forward - [0:0]\n:ufw-after-logging-input - [0:0]\n:ufw-after-logging-output - [0:0]\n:ufw-after-logging-forward - [0:0]\n:ufw-logging-deny - [0:0]\n:ufw-logging-allow - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n\n### tuple ### allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in\n-A ufw-user-input -p tcp --dport 22 -j ACCEPT\n\n### tuple ### deny tcp 9100 0.0.0.0/0 any 0.0.0.0/0 in\n-A ufw-user-input -p tcp --dport 9100 -j DROP\n\n### END RULES ###\n\n### LOGGING ###\n-A ufw-after-logging-input -j LOG --log-prefix \"[UFW BLOCK] \" -m limit --limit 3/min --limit-burst 10\n-A ufw-after-logging-forward -j LOG --log-prefix \"[UFW BLOCK] \" -m limit --limit 3/min --limit-burst 10\n-I ufw-logging-deny -m conntrack --ctstate INVALID -j RETURN -m limit --limit 3/min --limit-burst 10\n-A ufw-logging-deny -j LOG --log-prefix \"[UFW BLOCK] \" -m limit --limit 3/min --limit-burst 10\n-A ufw-logging-allow -j LOG --log-prefix \"[UFW ALLOW] \" -m limit --limit 3/min --limit-burst 10\n### END LOGGING ###\n\n### RATE LIMITING ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\n### END RATE LIMITING ###\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-before-logging-input - [0:0]\n:ufw6-before-logging-output - [0:0]\n:ufw6-before-logging-forward - [0:0]\n:ufw6-user-logging-input - [0:0]\n:ufw6-user-logging-output - [0:0]\n:ufw6-user-logging-forward - [0:0]\n:ufw6-after-logging-input - [0:0]\n:ufw6-after-logging-output - [0:0]\n:ufw6-after-logging-forward - [0:0]\n:ufw6-logging-deny - [0:0]\n:ufw6-logging-allow - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n\n### tuple ### allow tcp 22 ::/0 any ::/0 in\n-A ufw6-user-input -p tcp --dport 22 -j ACCEPT\n\n### tuple ### deny tcp 9100 ::/0 any ::/0 in\n-A ufw6-user-input -p tcp --dport 9100 -j DROP\n\n### END RULES ###\n\n### LOGGING ###\n-A ufw6-after-logging-input -j LOG --log-prefix \"[UFW BLOCK] \" -m limit --limit 3/min --limit-burst 10\n-A ufw6-after-logging-forward -j LOG --log-prefix \"[UFW BLOCK] \" -m limit --limit 3/min --limit-burst 10\n-I ufw6-logging-deny -m conntrack --ctstate INVALID -j RETURN -m limit --limit 3/min --limit-burst 10\n-A ufw6-logging-deny -j LOG --log-prefix \"[UFW BLOCK] \" -m limit --limit 3/min --limit-burst 10\n-A ufw6-logging-allow -j LOG --log-prefix \"[UFW ALLOW] \" -m limit --limit 3/min --limit-burst 10\n### END LOGGING ###\n\n### RATE LIMITING ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\n### END RATE LIMITING ###\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "network": {
+    "connections": [
+     {
+      "local_port": 22,
+      "process": "sshd",
+      "remote": "10.4.1.5:51874"
+     }
+    ],
+    "dns": {
+     "records": [
+      {
+       "name": "relay.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.23"
+      },
+      {
+       "name": "mission.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.40"
+      },
+      {
+       "name": "ops-desk.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.5"
+      },
+      {
+       "name": "ns1.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.53"
+      },
+      {
+       "name": "23.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay.meridian"
+      },
+      {
+       "name": "40.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "mission.meridian"
+      },
+      {
+       "name": "5.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "ops-desk.meridian"
+      }
+     ],
+     "server": "10.4.1.53"
+    },
+    "firewall": {
+     "enabled": true,
+     "rules": [
+      {
+       "action": "allow",
+       "port": 22,
+       "proto": "tcp",
+       "source": null
+      },
+      {
+       "action": "deny",
+       "port": 9100,
+       "proto": "tcp",
+       "source": null
+      }
+     ]
+    },
+    "gateway": "10.4.1.1",
+    "hosts": [
+     {
+      "address": "10.4.1.40",
+      "filtered": [],
+      "login": true,
+      "name": "mission",
+      "ping": true,
+      "services": [
+       {
+        "http": null,
+        "port": 22,
+        "proto": "tcp",
+        "tls": null
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.1.5",
+      "filtered": [],
+      "login": true,
+      "name": "ops-desk",
+      "ping": true,
+      "services": [
+       {
+        "http": null,
+        "port": 22,
+        "proto": "tcp",
+        "tls": null
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.1.53",
+      "filtered": [],
+      "login": false,
+      "name": "ns1",
+      "ping": true,
+      "services": [
+       {
+        "http": null,
+        "port": 53,
+        "proto": "udp",
+        "tls": null
+       }
+      ],
+      "up": true
+     }
+    ],
+    "interfaces": [
+     {
+      "address": "10.4.1.23/24",
+      "name": "eth0"
+     }
+    ],
+    "listening": [
+     {
+      "address": "0.0.0.0",
+      "http": [
+       {
+        "body": "{\"relay\":\"relay.meridian\",\"uplink\":\"ok\",\"queued\":0}\n",
+        "headers": {
+         "Content-Type": "application/json"
+        },
+        "method": "GET",
+        "path": "/feed",
+        "status": 200
+       }
+      ],
+      "port": 9100,
+      "process": "relay-feed",
+      "proto": "tcp"
+     }
+    ]
+   },
+   "password": "meridian",
+   "processes": [
+    {
+     "command": "/usr/local/bin/relay-feed --port 9100",
+     "cpu": 0.3,
+     "ignores": [],
+     "mem": 0.1,
+     "user": "relay"
+    }
+   ],
+   "success": "Okafor watches the feed scroll on Mission's side. \"Open to them, closed to everyone else. That's a firewall doing its job instead of just being in the way.\"",
+   "user": "cadet"
+  }
+ },
  "functions": {
   "solution": [
    "deck-readings",

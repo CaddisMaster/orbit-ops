@@ -267,6 +267,18 @@ NEEDS = {
         "LocalForward in ~/.ssh/config": "**`LocalForward LOCAL HOST:PORT`** is `-L`",
         "install rsync": "`sudo apt install rsync`",
     },
+    "firewalls": {
+        "incoming is denied unless a rule allows it": "**nothing gets in unless a rule allows it**",
+        "listening isn't reachable": "**a service can be listening on `0.0.0.0` and still unreachable**",
+        "test from another machine": "**test from another machine**",
+        "ssh OTHER 'COMMAND' runs the test there": "runs the test there\nand prints its answer here",
+        "ufw status shows the rules": "**`sudo ufw status` says whether the firewall is on, and lists its rules.**",
+        "status numbered numbers them": "**`sudo ufw status numbered`\nnumbers the rules**",
+        "allow one host to one port": "**TCP port 5432 from `10.6.0.8` only**",
+        "the first rule that matches decides": "**The first rule that matches decides.**",
+        "ufw delete RULE": "**`sudo ufw delete RULE` removes a rule, written the way it was added**",
+        "don't turn the firewall off": "**Don't fix a firewall by turning it off.**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

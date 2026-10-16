@@ -61,6 +61,11 @@ and why it matters, not what the diff says.
   `LocalForward` to reach a service that only listens on a server's localhost. You bring the
   relay's logs home between two local directories, dry-running first, and check a tunnel
   entry with `ssh -G`.
+- Unit 1.4 module 09, *Firewalls* (#175): what a host firewall does, default deny, why
+  "listening" isn't "reachable", `ufw status`, `allow`/`deny` and allowing one host, the
+  first-match rule, and not locking yourself out. On the console, the relay's feed listens and
+  Mission's host still gets silence: you test from outside with `ssh`, find an old deny above
+  everything, and open the port to Mission's host and no one else.
 
 ### Changed
 - The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and
