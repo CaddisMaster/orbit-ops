@@ -338,3 +338,57 @@ def test_module_04s_lab_refuses_the_likely_mistakes(box, paste):
     pastes = [HEAD, VERBOSE, TWO, FOLLOWED]
     pastes[box] = paste
     assert not _passes(_module("http-by-hand"), *pastes)
+
+
+# --- 05: APIs and JSON (#171) ---------------------------------------------------------------------
+NAME_BRANCH = "CaddisMaster/orbit-ops\nmain\n"
+TAGS = "v0.8.0\nv0.7.0\nv0.6.1\n"
+FIRST = "2026-10-08T18:46:54Z\n"
+
+
+@pytest.mark.criterion(171, "Module 05 of Unit 1.4 is complete content")
+def test_module_05_is_complete_content():
+    module = load_catalog().unit_modules("networking")[4]
+    assert module.slug == "apis-and-json"
+    _lab_content(module)
+
+
+@pytest.mark.criterion(171, "Module 05's lab can be done for real")
+def test_module_05s_examples_are_a_real_run_and_pass():
+    module = _module("apis-and-json")
+    assert _passes(module, *[box.example for box in module.lab.boxes])
+
+
+@pytest.mark.parametrize(
+    "pastes",
+    [
+        (NAME_BRANCH, TAGS, FIRST),
+        (NAME_BRANCH.replace("\n", "\r\n"), TAGS.replace("\n", "\r\n"), FIRST.replace("\n", "\r\n")),  # Windows
+        ("\n" + NAME_BRANCH + "\n", "\n" + TAGS + "\n", "\n  " + FIRST + "\n"),  # a loose paste
+        (NAME_BRANCH, "v1.2.0\nv1.1.10\nv1.1.9\n", FIRST),  # a year of releases later
+    ],
+    ids=["terminal", "windows", "loose", "later-releases"],
+)
+def test_module_05s_lab_passes_any_machines_output(pastes):
+    assert _passes(_module("apis-and-json"), *pastes)
+
+
+@pytest.mark.parametrize(
+    "box, paste",
+    [
+        (0, '"CaddisMaster/orbit-ops"\n"main"\n'),  # no -r
+        (0, '{\n  "full_name": "CaddisMaster/orbit-ops",\n  "default_branch": "main"\n}\n'),  # the JSON, not the values
+        (0, "CaddisMaster/orbit-ops\nmaster\n"),  # a guess at the branch
+        (1, "v0.8.0\nv0.7.0\nv0.6.1\nv0.6.0\nv0.5.0\nv0.4.0\nv0.3.0\nv0.2.0\nv0.1.0\n"),  # no per_page
+        (1, '"v0.8.0"\n"v0.7.0"\n"v0.6.1"\n'),  # no -r
+        (1, "v0.8.0\nv0.8.0\nhttps://github.com/CaddisMaster/orbit-ops/releases/tag/v0.8.0\n"),  # the wrong fields
+        (2, '"2026-10-08T18:46:54Z"\n'),  # no -r
+        (2, "2026-10-14T13:49:54Z\n"),  # the newest release's date, not v0.1.0's
+        (2, "2026-10-14T13:49:54Z\n2026-10-08T18:46:54Z\n"),  # every release's date: no select
+    ],
+    ids=["quoted-name", "json", "master", "no-per-page", "quoted-tags", "wrong-fields", "quoted-date", "newest-date", "no-select"],
+)
+def test_module_05s_lab_refuses_the_likely_mistakes(box, paste):
+    pastes = [NAME_BRANCH, TAGS, FIRST]
+    pastes[box] = paste
+    assert not _passes(_module("apis-and-json"), *pastes)

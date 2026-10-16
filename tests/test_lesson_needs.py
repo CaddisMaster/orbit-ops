@@ -220,6 +220,17 @@ NEEDS = {
         "%{url_effective} is where curl ended": "**`%{url_effective}`** is the address curl ended at",
         "-o /dev/null throws the body away": "`-o /dev/null` throws it away",
     },
+    "apis-and-json": {
+        "install jq": "install it with `sudo apt\ninstall jq`",
+        ".field takes an object's field": "**an object's field**",
+        ".[] gives each element of an array": "**each element of an array, in turn**",
+        "-r prints strings as plain text": "**`jq -r` prints strings as plain text.**",
+        "select keeps the ones that match": "**`select(CONDITION)` keeps only the things for which the condition is true**",
+        "== compares": "**`==`** (equal: two `=`)",
+        "a query string follows ?": "That's the **query string**",
+        "per_page asks for fewer or more": "unless **`per_page`** says otherwise",
+        "quote a URL with a query string": "**Put a URL with a query string in quotes**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

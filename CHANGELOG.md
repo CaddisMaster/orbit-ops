@@ -38,6 +38,10 @@ and why it matters, not what the diff says.
   methods, status codes, headers, redirects, and `curl` with `-v`, `-I`, `-L`, `-o` and `-w`.
   With real curl you read this app's own `/healthz`: Certbot's redirect from `http://`, the
   status line, and the headers Nginx and the app each send.
+- Unit 1.4 module 05, *APIs and JSON* (#171), a lab: reading JSON, `jq` (`.field`, `.[]`,
+  `|`, `select`, `-r`), and query strings. With real curl and jq you ask GitHub's public API
+  about this app's own repository: its name and branch, its newest releases, and the day the
+  first one shipped.
 
 ## [0.8.0] — 2026-10-14
 
