@@ -66,6 +66,21 @@ A per-session log, standing decisions and a release ledger. Newest first.
   Lab examples are captured through a TTY (`script`, with `GIT_PAGER=cat`).
 - **Unit 1.3 needs only Unit 1.1**, so a Git lab that edits a file names an editor (`nano`) in
   its own lesson (#149), rather than Git requiring Unit 1.2.
+- **Names on the console go `/etc/hosts`, then DNS** (#165), as `nsswitch.conf` says: `getent`,
+  `ping`, `nc`, `curl` and `ssh` read the file first, while `dig` and `host` ask the resolver only.
+  The records are the exercise's `network.dns`. A host's `name` isn't in DNS unless a record says so.
+- **The console's firewall is ufw's own files** (#166): `/etc/ufw/ufw.conf` and `user.rules`,
+  byte for byte as ufw 0.36.2 writes them, read live. **A firewall task is graded with
+  `contains` on the rule's `### tuple ###` line.** Rules apply only to connections into the
+  console from another host.
+- **"From another host" is `ssh HOST 'COMMAND'`** (#166), for hosts with `login: true`; only
+  `nc`, `curl`, `ping`, `hostname`, `echo`, `true` and `false` exist there. Real ssh, chosen
+  over an invented command.
+- **Labs that read live services check only what can't change** (#170–#173): a redirect's
+  `Location`, a certificate's subject and `O = Let's Encrypt` (never its intermediate or dates),
+  GitHub's permanent facts and published fingerprint, and the shape of anything that grows.
+- **The laptop screen's contents are drawn at 85%** (#188, Sean's pick from previews), with the
+  lesson column widened by the same factor. `docs/gotchas.md` has the zoom's JS trap.
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -84,6 +99,55 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-16 — #165, #166, #168–#175 and #188: Unit 1.4 nearly done
+
+- **Console platform:**
+  - **#165 (#182):** DNS. `dig` (full output, `+short`, `-x`, `@SERVER`), `host` and `getent hosts`,
+    a real `/etc/hosts` and `/etc/resolv.conf` in every console, read live. Checked against a
+    bind9 resolver in containers: 33 commands identical after masking id, time and date.
+  - **#166 (#192):** `curl` against routes declared on services and listeners (curl 8.5.0's
+    `-v`, errors and exit codes; no progress meter), `ufw` kept in its own files, and `ssh HOST
+    'COMMAND'`. `nc` now shares the connection model. ufw's files match real ones byte for byte
+    from both the Python writer and the console (fixtures in `tests/js/fixtures/`).
+- **Modules (8):**
+  - Console tasks: 02 *Names and DNS* (#183, a stale `/etc/hosts` pin), 03 *Is it reachable?*
+    (#184, four relays, the ping monitor wrong twice), 09 *Firewalls* (#193, an old `deny` above
+    everything; one host, one port, firewall on).
+  - Labs: 04 *HTTP by hand* (#185, this app's `/healthz`), 05 *APIs and JSON* (#186, GitHub's API
+    for this repo), 06 *TLS and certificates* (#187, the droplet's default certificate is Budget
+    Buddy's), 07 *SSH keys* (#190, GitHub's published host-key fingerprint), 08 *Copying files and
+    tunnels* (#191, rsync's trailing slash and `--delete`).
+  - 37 of about 170 modules are written.
+- **#188 (#189):** the screen's two panes have `zoom: 0.85`, and the column is widened to match.
+  From previews at 100/90/85%, Sean picked 85% (I'd recommended 90%). Body text is 13.6px at
+  1280×720, so the issue's floor moved to 13.5px.
+- **How it was checked:** every Try it, and every lab's steps, ran for real in a fresh
+  `ubuntu:24.04` as a sudo-capable non-root user. The labs' examples are those runs. Every console
+  task was played in the browser with a throwaway `verify-bot`.
+- **Found on the way:**
+  - `getent hosts` asks for IPv6 first, so an IPv4 pin doesn't show for a name with an AAAA
+    record. Module 02's Try it pins `github.com` for that reason.
+  - `sed -i` fails on Docker's mounted `/etc/hosts`; `nano` works. ufw needs a `--privileged`
+    container.
+  - The VM's network seems to intercept public DNS (NOERROR for missing names), so DNS captures
+    use containers.
+  - Recent macOS ships openrsync, and its built-in `openssl` is LibreSSL: the labs point Mac users
+    at Homebrew, and the TLS lab tolerates LibreSSL's spacing. Not tried on a real Mac.
+  - `RUNBOOK.md` §4 looks stale: it says the deploy secrets can be Budget Buddy's and that
+    `DROPLET_KNOWN_HOSTS` comes from `ssh-keyscan`. Left for Sean to confirm.
+- ⚠️ **The `content-reviewer` agent was not run on modules 02–09** (a standing decision above).
+  They had real runs, misreadings tests and figures tests instead. Run it over them before
+  cutting v0.9.0.
+- Sean reset his production password from the Mac with `scripts/create_user`.
+- Production is still **v0.8.0**. Nothing released.
+- **Next:**
+  1. #176, *Following a connection*: the unit's last module, the mystery's 1.4 clue
+     (`relay.depot-sync.net`), *Relays Restored*, and `docs/story.md`'s 1.4 row.
+  2. A `content-reviewer` pass over Unit 1.4 modules 02–09, then cut **v0.9.0** (a MINOR: new
+     console code). No migrations since v0.8.0.
+  3. Still open from before: the first live hint and lab review, opening Review once (`0007` on
+     prod), and the unfiled `su` gap in Unit 1.1 module 05.
 
 ### 2026-10-15 — #164 and #167: the console's network, Unit 1.4 begun
 
