@@ -509,3 +509,80 @@ def test_module_07s_lab_refuses_the_likely_mistakes(box, paste):
 def test_module_07s_github_fingerprint_is_the_one_github_publishes():
     # docs.github.com, "GitHub's SSH key fingerprints": SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU (ED25519)
     assert "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU" in GITHUB
+
+
+# --- 08: Copying files and tunnels (#174) -----------------------------------------------------------
+DRY = """sending incremental file list
+logs/
+logs/relay-1006.log
+logs/relay-1007.log
+logs/relay-1008.log
+
+sent 144 bytes  received 29 bytes  346.00 bytes/sec
+total size is 66  speedup is 0.38 (DRY RUN)
+"""
+REAL = """sending incremental file list
+relay-1006.log
+relay-1007.log
+relay-1008.log
+
+sent 317 bytes  received 73 bytes  780.00 bytes/sec
+total size is 66  speedup is 0.17
+"""
+DELETE = """sending incremental file list
+deleting notes.txt
+
+sent 118 bytes  received 32 bytes  300.00 bytes/sec
+total size is 66  speedup is 0.44 (DRY RUN)
+"""
+FORWARD = "user okafor\nhostname relay.meridian.example\nlocalforward 8080 [localhost]:8000\n"
+
+
+@pytest.mark.criterion(174, "Module 08 of Unit 1.4 is complete content")
+def test_module_08_is_complete_content():
+    module = load_catalog().unit_modules("networking")[7]
+    assert module.slug == "copying-and-tunnels"
+    _lab_content(module)
+
+
+@pytest.mark.criterion(174, "Module 08's lab can be done for real")
+def test_module_08s_examples_are_a_real_run_and_pass():
+    module = _module("copying-and-tunnels")
+    assert _passes(module, *[box.example for box in module.lab.boxes])
+
+
+@pytest.mark.parametrize(
+    "pastes",
+    [
+        (DRY, REAL, DELETE, FORWARD),
+        # Homebrew's rsync on a Mac (3.3), with another order; Windows line ends; 127.0.0.1 for the far end.
+        (DRY.replace("logs/relay-1006.log\nlogs/relay-1007.log\n", "logs/relay-1007.log\nlogs/relay-1006.log\n").replace("\n", "\r\n"), REAL, DELETE,
+         FORWARD.replace("[localhost]", "[127.0.0.1]")),
+        # Only the file lines and the summary, without the header.
+        (DRY.replace("sending incremental file list\n", ""), REAL.replace("sending incremental file list\n", ""), DELETE, FORWARD),
+    ],
+    ids=["terminal", "mac-and-windows", "trimmed"],
+)
+def test_module_08s_lab_passes_any_machines_output(pastes):
+    assert _passes(_module("copying-and-tunnels"), *pastes)
+
+
+@pytest.mark.parametrize(
+    "box, paste",
+    [
+        (0, DRY.replace("logs/", "").replace("\n\n", "\n")),  # with the slash: the files, not the directory
+        (0, DRY.replace(" (DRY RUN)", "")),  # not a dry run
+        (1, DRY.replace(" (DRY RUN)", "")),  # without the slash: logs/ made in home/
+        (1, REAL.replace("speedup is 0.17", "speedup is 0.17 (DRY RUN)")),  # still -n
+        (2, DELETE.replace(" (DRY RUN)", "")),  # ran --delete for real
+        (2, "sending incremental file list\n\nsent 114 bytes  received 12 bytes  252.00 bytes/sec\ntotal size is 66  speedup is 0.52 (DRY RUN)\n"),  # no --delete
+        (3, "user okafor\nhostname relay.meridian.example\nlocalforward 8000 [localhost]:8080\n"),  # the ports the wrong way round
+        (3, "user okafor\nhostname relay-admin\nlocalforward 8080 [localhost]:8000\n"),  # no HostName
+        (3, "user okafor\nhostname relay.meridian.example\n"),  # no LocalForward
+    ],
+    ids=["slash-in-step-2", "real-in-step-2", "no-slash-in-step-3", "dry-in-step-3", "deleted-for-real", "no-delete", "ports-swapped", "no-hostname", "no-forward"],
+)
+def test_module_08s_lab_refuses_the_likely_mistakes(box, paste):
+    pastes = [DRY, REAL, DELETE, FORWARD]
+    pastes[box] = paste
+    assert not _passes(_module("copying-and-tunnels"), *pastes)

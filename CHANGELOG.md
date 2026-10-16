@@ -50,6 +50,11 @@ and why it matters, not what the diff says.
   `authorized_keys` and `known_hosts`, the host key warning, and `~/.ssh/config` checked with
   `ssh -G`. You make a key, set up a config entry for the relay, and check GitHub's host key
   against the fingerprint GitHub publishes. No server needed.
+- Unit 1.4 module 08, *Copying files and tunnels* (#174), a lab: `scp`, `rsync` (`-a -v -n`,
+  `--delete`, and the trailing slash that decides what's copied), and `ssh -L` and
+  `LocalForward` to reach a service that only listens on a server's localhost. You bring the
+  relay's logs home between two local directories, dry-running first, and check a tunnel
+  entry with `ssh -G`.
 
 ### Changed
 - The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and
