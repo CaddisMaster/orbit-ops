@@ -255,6 +255,18 @@ NEEDS = {
         "ssh -G prints the settings": "**`ssh -G HOST` prints every setting ssh would use for HOST, without connecting**",
         "filter ssh -G with grep -E": "Filter\nit with `grep -E`",
     },
+    "copying-and-tunnels": {
+        "rsync copies only what differs": "**`rsync` copies only what differs**",
+        "-a is archive mode": "**archive mode**",
+        "-v lists each file": "**list each file it transfers**",
+        "-n is a dry run": "**dry run: show what it would do, change nothing**",
+        "--delete removes what isn't in the source": "**remove from the destination anything that isn't in the source**",
+        "the trailing slash on the source": "**The trailing slash on the source changes what's copied**",
+        "dry-run --delete first": "**Always dry-run an rsync with `--delete` first**",
+        "ssh -L carries a connection": "listens on your machine's port LOCAL, and sends each connection through",
+        "LocalForward in ~/.ssh/config": "**`LocalForward LOCAL HOST:PORT`** is `-L`",
+        "install rsync": "`sudo apt install rsync`",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
