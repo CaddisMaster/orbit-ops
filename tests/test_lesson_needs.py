@@ -231,6 +231,16 @@ NEEDS = {
         "per_page asks for fewer or more": "unless **`per_page`** says otherwise",
         "quote a URL with a query string": "**Put a URL with a query string in quotes**",
     },
+    "tls-and-certificates": {
+        "s_client opens a TLS connection": "**`openssl s_client -connect HOST:443 -servername HOST`** opens a TLS connection",
+        "openssl x509 reads a certificate": "**`openssl x509`** reads\na certificate",
+        "-servername sends the name as SNI": "**the name to send as SNI**",
+        "-noservername sends no name": "send no name at all",
+        "-subject -issuer -dates": "**who it's for, who signed it, and when it's valid**",
+        "-checkend SECONDS": "**says whether it will still be valid that many seconds from now**",
+        "SNI puts the name in the handshake": "**puts the site's name in the TLS handshake**",
+        "no name gets the default certificate": "**A client that sends no name gets the server's default certificate**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

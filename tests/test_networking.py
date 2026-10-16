@@ -392,3 +392,60 @@ def test_module_05s_lab_refuses_the_likely_mistakes(box, paste):
     pastes = [NAME_BRANCH, TAGS, FIRST]
     pastes[box] = paste
     assert not _passes(_module("apis-and-json"), *pastes)
+
+
+# --- 06: TLS and certificates (#172) ----------------------------------------------------------------
+CERT = """subject=CN = learn.seandesmet.com
+issuer=C = US, O = Let's Encrypt, CN = YE2
+notBefore=Oct  8 17:40:05 2026 GMT
+notAfter=Jan  6 17:40:04 2027 GMT
+"""
+DEFAULT = "subject=CN = budget.seandesmet.com\n"
+VALID = "Certificate will not expire\n"
+
+
+@pytest.mark.criterion(172, "Module 06 of Unit 1.4 is complete content")
+def test_module_06_is_complete_content():
+    module = load_catalog().unit_modules("networking")[5]
+    assert module.slug == "tls-and-certificates"
+    _lab_content(module)
+
+
+@pytest.mark.criterion(172, "Module 06's lab can be done for real")
+def test_module_06s_examples_are_a_real_run_and_pass():
+    module = _module("tls-and-certificates")
+    assert _passes(module, *[box.example for box in module.lab.boxes])
+
+
+@pytest.mark.parametrize(
+    "pastes",
+    [
+        (CERT, DEFAULT, VALID),
+        # After a renewal: new dates, another Let's Encrypt intermediate, a single-digit day.
+        (CERT.replace("CN = YE2", "CN = E7").replace("Oct  8 17:40:05 2026", "Dec  7 03:11:42 2026").replace("Jan  6 17:40:04 2027", "Mar  7 03:11:41 2027"), DEFAULT, VALID),
+        # LibreSSL on a Mac writes the names without spaces.
+        ("subject=CN=learn.seandesmet.com\nissuer=C=US, O=Let's Encrypt, CN=YE2\nnotBefore=Oct  8 17:40:05 2026 GMT\nnotAfter=Jan  6 17:40:04 2027 GMT\n", "subject=CN=budget.seandesmet.com\n", VALID),
+        (CERT.replace("\n", "\r\n"), "subject=CN = seandesmet.com\r\n", "\n" + VALID + "\n"),  # Windows; another default
+    ],
+    ids=["terminal", "after-a-renewal", "libressl", "windows-other-default"],
+)
+def test_module_06s_lab_passes_any_machines_output(pastes):
+    assert _passes(_module("tls-and-certificates"), *pastes)
+
+
+@pytest.mark.parametrize(
+    "box, paste",
+    [
+        (0, DEFAULT + "issuer=C = US, O = Let's Encrypt, CN = YE1\nnotBefore=Oct  8 17:40:05 2026 GMT\nnotAfter=Jan  6 17:40:04 2027 GMT\n"),  # no -servername
+        (0, "subject=CN = learn.seandesmet.com\nissuer=C = US, O = Let's Encrypt, CN = YE2\n"),  # no -dates
+        (1, "subject=CN = learn.seandesmet.com\n"),  # still named the site
+        (1, "budget.seandesmet.com\n"),  # not the subject line
+        (2, "Certificate will expire\n"),  # -checkend with too long a time, or an expired certificate
+        (2, "notAfter=Jan  6 17:40:04 2027 GMT\n"),  # the date, not -checkend's answer
+    ],
+    ids=["no-sni", "no-dates", "named-anyway", "not-a-subject", "will-expire", "date-not-checkend"],
+)
+def test_module_06s_lab_refuses_the_likely_mistakes(box, paste):
+    pastes = [CERT, DEFAULT, VALID]
+    pastes[box] = paste
+    assert not _passes(_module("tls-and-certificates"), *pastes)
