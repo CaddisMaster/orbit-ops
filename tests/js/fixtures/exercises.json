@@ -1458,6 +1458,14 @@
     {
      "contains": "/home/cadet/feed.txt",
      "text": "\"relay\":\"relay.meridian\",\"uplink\":\"ok\""
+    },
+    {
+     "lacks": "/etc/ufw/user.rules",
+     "text": "### tuple ### allow tcp 9100 0.0.0.0/0 any 0.0.0.0/0 in"
+    },
+    {
+     "lacks": "/etc/ufw/user.rules",
+     "text": "### tuple ### allow any 9100 0.0.0.0/0 any 0.0.0.0/0 in"
     }
    ],
    "cwd": "/home/cadet",

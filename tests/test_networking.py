@@ -9,7 +9,7 @@ import ipaddress
 import pytest
 
 from app.content import load_catalog
-from app.terminal import Node, Process, grade
+from app.terminal import Node, Process, grade, passes
 from tests.test_bash_scripting import _complete_content, _said, _start
 
 
@@ -635,8 +635,10 @@ def test_module_09s_end_state_passes_on_the_server():
         {"tuples": ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", "allow tcp 9100 0.0.0.0/0 any 10.4.1.5 in"]},  # the ops desk instead
         {"enabled": False},  # ufw disable
         {"feed": None},  # no proof
+        {"tuples": ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", NARROW.removeprefix("### tuple ### "), "allow tcp 9100 0.0.0.0/0 any 0.0.0.0/0 in"]},  # #200: Mission's, and everyone's
+        {"tuples": ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", NARROW.removeprefix("### tuple ### "), "allow any 9100 0.0.0.0/0 any 0.0.0.0/0 in"]},  # and ufw allow 9100
     ],
-    ids=["open-to-all", "tcp-and-udp", "wrong-host", "firewall-off", "no-feed"],
+    ids=["open-to-all", "tcp-and-udp", "wrong-host", "firewall-off", "no-feed", "mission-and-everyone", "mission-and-any"],
 )
 def test_module_09_refuses_the_misreadings(kwargs):
     exercise = _module("firewalls").terminal
@@ -784,3 +786,24 @@ def test_module_05s_hints_dont_give_the_filters_away():
     hints = [c.hint or "" for box in _module("apis-and-json").lab.boxes for c in box.checks]
     for filter_ in (".full_name", ".[]", "select", "tag_name", "== "):
         assert not any(filter_ in h for h in hints), filter_
+
+
+# --- #200: a check that text is absent --------------------------------------------------------
+@pytest.mark.criterion(200, "A console task can require that text is absent")
+def test_lacks_passes_only_when_the_file_is_there_without_the_text():
+    exercise = _module("firewalls").terminal
+    lacks = [c for c in exercise.checks if getattr(c, "lacks", None)]
+    start = _start(exercise)
+    assert lacks and all(passes(c, start, exercise.cwd) for c in lacks)  # a fresh rules file has no open 9100
+    opened = _firewall(start, ["allow tcp 9100 0.0.0.0/0 any 0.0.0.0/0 in"])
+    assert not passes(lacks[0], opened, exercise.cwd)
+    gone = {p: n for p, n in start.items() if p != RULES}
+    assert not passes(lacks[0], gone, exercise.cwd)  # a missing file isn't "without the text"
+
+
+@pytest.mark.criterion(200, "Module 09 refuses a port opened to everyone")
+def test_module_09_refuses_mission_plus_everyone():
+    exercise = _module("firewalls").terminal
+    both = ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", NARROW.removeprefix("### tuple ### "), "allow tcp 9100 0.0.0.0/0 any 0.0.0.0/0 in"]
+    assert grade(exercise, _fixed(_start(exercise)), exercise.cwd)
+    assert not grade(exercise, _fixed(_start(exercise), tuples=both), exercise.cwd)

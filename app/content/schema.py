@@ -200,6 +200,11 @@ class ContainsCheck(_Strict):
     text: Text
 
 
+class LacksCheck(_Strict):
+    lacks: AbsPath  # #200: the file is there and this text isn't in it
+    text: Text
+
+
 class CwdCheck(_Strict):
     cwd: AbsPath  # the console ends in this directory (for navigation tasks)
 
@@ -246,7 +251,7 @@ class SignalledCheck(_Strict):
 
 
 TerminalCheck = (
-    ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ExecutableCheck | ContainsCheck | CwdCheck
+    ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ExecutableCheck | ContainsCheck | LacksCheck | CwdCheck
     | RunningCheck | StoppedCheck | SignalledCheck | SymlinkCheck | FilesUnderCheck
 )
 
@@ -690,7 +695,7 @@ def check_path(check: TerminalCheck) -> str:
             return p
         case ExecutableCheck(executable=p):
             return p
-        case ContainsCheck(contains=p) | CwdCheck(cwd=p) | SymlinkCheck(symlink=p) | FilesUnderCheck(files_under=p):
+        case ContainsCheck(contains=p) | LacksCheck(lacks=p) | CwdCheck(cwd=p) | SymlinkCheck(symlink=p) | FilesUnderCheck(files_under=p):
             return p
         case RunningCheck(running=p) | StoppedCheck(stopped=p) | SignalledCheck(signalled=p):
             return p
@@ -841,7 +846,7 @@ class TerminalExercise(_Strict):
             if isinstance(check, StoppedCheck | SignalledCheck) and check_path(check) not in started:
                 raise ValueError(f"checks.{i} ({describe(check)}): no starting process is called {check_path(check)}")
         for i, check in enumerate(self.checks):
-            # A mode, owner or missing check reads something that must already be
+            # A mode, owner, missing or lacks check reads something that must already be
             # there; exists and contains may name what the learner creates.
             if isinstance(check, CwdCheck) and fs.get(check.cwd, {}).get("type") != "dir":
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.cwd} is not a directory in the starting filesystem")

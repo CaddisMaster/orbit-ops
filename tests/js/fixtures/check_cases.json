@@ -250,6 +250,38 @@
    "expect": false
   },
   {
+   "name": "lacks: the text isn't there",
+   "check": {
+    "lacks": "/s/f",
+    "text": "7732"
+   },
+   "expect": true
+  },
+  {
+   "name": "lacks: the text is there",
+   "check": {
+    "lacks": "/s/f",
+    "text": "7731"
+   },
+   "expect": false
+  },
+  {
+   "name": "lacks: a missing file fails",
+   "check": {
+    "lacks": "/s/nowhere",
+    "text": "7731"
+   },
+   "expect": false
+  },
+  {
+   "name": "lacks: a directory fails",
+   "check": {
+    "lacks": "/s/d",
+    "text": "anything"
+   },
+   "expect": false
+  },
+  {
    "name": "contains on a missing path",
    "check": {
     "contains": "/s/nope",

@@ -378,7 +378,7 @@ HTTP and logging in elsewhere (#166) hang off the same block:
 - **The firewall is ufw's own files:** `firewall:` becomes `/etc/ufw/ufw.conf` (`ENABLED=yes|no`)
   and `/etc/ufw/user.rules` (one `### tuple ###` line per rule), written byte for byte as ufw
   0.36.2 writes them, and the console reads them live. **Grade a firewall task with `contains`
-  on those files**: `ufw allow from 10.4.0.5 to any port 8080 proto tcp` writes
+  (and `lacks`, for a rule that mustn't be there) on those files**: `ufw allow from 10.4.0.5 to any port 8080 proto tcp` writes
   `### tuple ### allow tcp 8080 0.0.0.0/0 any 10.4.0.5 in`. The rules file is root's (640), so a
   learner needs `sudo cat`. Rules only touch connections *into* the console from another host;
   anything denied is dropped, so it times out. Ping always gets in.
@@ -397,14 +397,14 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   to.
 - **Checks:** `{mode: P, equals: "600"}`, `{owner: P, user: u, group: g}`, `{exists: P, type: file|dir}`,
   `{missing: P}`, `{executable: P}` (a file its owner can run: the owner's x bit, whatever
-  the rest of the mode, so `chmod +x`, `u+x` and `755` all pass; #70), `{contains: P, text: "…"}`, `{cwd: P}` (the console must end in directory
+  the rest of the mode, so `chmod +x`, `u+x` and `755` all pass; #70), `{contains: P, text: "…"}`, `{lacks: P, text: "…"}` (P is there and the text isn't in it, #200: how a task says "and no more"), `{cwd: P}` (the console must end in directory
   P, for navigation tasks), and for processes `{running: NAME}`, `{stopped: NAME}` and
   `{signalled: NAME, with: TERM}` (NAME is the program's file name, as `ps` shows it; `stopped`
   and `signalled` must name a starting process). For files on disk (#67): `{symlink: P, target:
   T}` (a link at P pointing at exactly T, as written) and `{files_under: DIR, name: "*.gz",
   max_size: 50M, max_age: 30}` (every file below DIR whose name matches, if `name` is given, is at
   most that big and changed at most that many days ago; it needs `max_size`, `max_age` or both,
-  and passes when nothing matches, so it reads "nothing in /var/log is over 50M"). `mode`, `owner` and `missing` must name a path in the starting
+  and passes when nothing matches, so it reads "nothing in /var/log is over 50M"). `mode`, `owner`, `missing` and `lacks` must name a path in the starting
   filesystem, and `cwd` a directory in it, or validation fails naming the check; `exists` and
   `contains` may name something the learner creates, and so may `symlink` and `executable`. `files_under` must
   name a starting directory.
