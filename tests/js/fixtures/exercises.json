@@ -1467,6 +1467,255 @@
    "user": "cadet"
   }
  },
+ "is-it-reachable": {
+  "solution": [
+   "cat /etc/relay/peers.conf",
+   "getent hosts relay-a.meridian",
+   "dig +short relay-a.meridian",
+   "nc -zv -w 3 relay-b.meridian 8443",
+   "ping -c 2 relay-b.meridian",
+   "nc -zv -w 3 relay-c.meridian 8443",
+   "ip route get 10.4.3.12",
+   "ping -c 2 relay-d.meridian",
+   "nc -zv -w 3 relay-d.meridian 8443",
+   "echo \"relay-a.meridian name\" > ~/relays.txt",
+   "echo \"relay-b.meridian refused\" >> ~/relays.txt",
+   "echo \"relay-c.meridian timeout\" >> ~/relays.txt",
+   "echo \"relay-d.meridian ok\" >> ~/relays.txt",
+   "cat ~/relays.txt"
+  ],
+  "source": "core/networking/03-is-it-reachable.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/relays.txt",
+     "text": "relay-a.meridian name\n"
+    },
+    {
+     "contains": "/home/cadet/relays.txt",
+     "text": "relay-b.meridian refused\n"
+    },
+    {
+     "contains": "/home/cadet/relays.txt",
+     "text": "relay-c.meridian timeout\n"
+    },
+    {
+     "contains": "/home/cadet/relays.txt",
+     "text": "relay-d.meridian ok\n"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/relay": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/relay/peers.conf": {
+     "contents": "# Far relays this console forwards to: name and relay port.\npeer relay-a.meridian 8443\npeer relay-b.meridian 8443\npeer relay-c.meridian 8443\npeer relay-d.meridian 8443\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.1.53\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "network": {
+    "connections": [],
+    "dns": {
+     "records": [
+      {
+       "name": "relay.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.23"
+      },
+      {
+       "name": "relay-b.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.3.11"
+      },
+      {
+       "name": "relay-c.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.3.12"
+      },
+      {
+       "name": "relay-d.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.3.13"
+      },
+      {
+       "name": "ns1.meridian",
+       "ttl": 300,
+       "type": "A",
+       "value": "10.4.1.53"
+      },
+      {
+       "name": "23.1.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay.meridian"
+      },
+      {
+       "name": "11.3.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay-b.meridian"
+      },
+      {
+       "name": "12.3.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay-c.meridian"
+      },
+      {
+       "name": "13.3.4.10.in-addr.arpa",
+       "ttl": 300,
+       "type": "PTR",
+       "value": "relay-d.meridian"
+      }
+     ],
+     "server": "10.4.1.53"
+    },
+    "gateway": "10.4.1.1",
+    "hosts": [
+     {
+      "address": "10.4.1.53",
+      "filtered": [],
+      "name": "ns1",
+      "ping": true,
+      "services": [
+       {
+        "port": 53,
+        "proto": "udp"
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.3.11",
+      "filtered": [],
+      "name": "relay-b",
+      "ping": true,
+      "services": [
+       {
+        "port": 22,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     },
+     {
+      "address": "10.4.3.12",
+      "filtered": [],
+      "name": "relay-c",
+      "ping": true,
+      "services": [],
+      "up": false
+     },
+     {
+      "address": "10.4.3.13",
+      "filtered": [],
+      "name": "relay-d",
+      "ping": false,
+      "services": [
+       {
+        "port": 22,
+        "proto": "tcp"
+       },
+       {
+        "port": 8443,
+        "proto": "tcp"
+       }
+      ],
+      "up": true
+     }
+    ],
+    "interfaces": [
+     {
+      "address": "10.4.1.23/24",
+      "name": "eth0"
+     }
+    ],
+    "listening": []
+   },
+   "password": null,
+   "processes": [],
+   "success": "Okafor runs his finger down relays.txt. \"One that doesn't exist, one that's up and not listening, one that's gone quiet. And one that was fine all along.\"",
+   "user": "cadet"
+  }
+ },
  "loops": {
   "solution": [
    "ls /var/log/sensors",

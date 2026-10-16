@@ -175,3 +175,87 @@ def test_module_02s_figures_match_the_console():
     quoted = " ".join([q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
                       + [c.front_html + c.back_html for c in module.cards])
     assert "10.4.1." not in quoted and "mission.meridian" not in quoted
+
+
+# --- 03: Is it reachable? (#169) ---------------------------------------------------------------
+RELAYS = "/home/cadet/relays.txt"
+VERDICTS = {"relay-a.meridian": "name", "relay-b.meridian": "refused", "relay-c.meridian": "timeout", "relay-d.meridian": "ok"}
+
+
+def _relays(verdicts):
+    return "".join(f"{name} {result}\n" for name, result in verdicts.items())
+
+
+@pytest.mark.criterion(169, "Module 03 of Unit 1.4 is complete content")
+def test_module_03_is_complete_content():
+    module = load_catalog().unit_modules("networking")[2]
+    assert module.slug == "is-it-reachable"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(169, "Module 03's console task can be done")
+def test_module_03s_end_state_passes_on_the_server():
+    exercise = _module("is-it-reachable").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _with_file(start, RELAYS, _relays(VERDICTS)), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    ("relay", "wrong"),
+    [
+        ("relay-b.meridian", "ok"),  # it answers ping, as the monitor said
+        ("relay-d.meridian", "timeout"),  # it drops ping, as the monitor said
+        ("relay-c.meridian", "refused"),  # the two people mix up
+        ("relay-b.meridian", "timeout"),
+        ("relay-a.meridian", "timeout"),
+    ],
+    ids=["trusted-the-ping-b", "trusted-the-ping-d", "timeout-as-refused", "refused-as-timeout", "no-name-as-timeout"],
+)
+def test_module_03_refuses_the_misreadings(relay, wrong):
+    exercise = _module("is-it-reachable").terminal
+    report = _relays({**VERDICTS, relay: wrong})
+    assert not grade(exercise, _with_file(_start(exercise), RELAYS, report), exercise.cwd)
+
+
+def test_module_03s_figures_match_the_console():
+    module = _module("is-it-reachable")
+    exercise = module.terminal
+    net = exercise.network
+    port = 8443
+    peers = next(f for f in exercise.files if f.path == "/etc/relay/peers.conf").contents
+    assert [line.split()[1:] for line in peers.splitlines() if line.startswith("peer ")] == [[name, str(port)] for name in VERDICTS]
+    a_records = {r.name: r.value for r in net.dns.records if r.type == "A"}
+    hosts = {h.address: h for h in net.hosts}
+    gateway = ipaddress.IPv4Address(net.gateway)
+    subnet = ipaddress.IPv4Interface(net.interfaces[0].address).network
+
+    def truth(name):
+        if name not in a_records:
+            return "name"
+        host = hosts[a_records[name]]
+        assert ipaddress.IPv4Address(host.address) not in subnet  # beyond the gateway: a dead host is silence
+        if not host.up:
+            return "timeout"
+        return "ok" if any(s.port == port and s.proto == "tcp" for s in host.services) else "refused"
+
+    assert {name: truth(name) for name in VERDICTS} == VERDICTS
+    assert gateway in subnet
+    # The checks are those verdicts.
+    assert {c.text for c in exercise.checks} == {f"{n} {r}\n" for n, r in VERDICTS.items()}
+    # The ping monitor is right where ping is: relay-b replies and relay-d drops ping.
+    monitor = _said(module, "open")
+    expected = {"relay-b.meridian": "UP", "relay-c.meridian": "DOWN", "relay-d.meridian": "DOWN"}
+    for name, said in expected.items():
+        host = hosts[a_records[name]]
+        assert (host.up and host.ping) == (said == "UP")
+        assert f"{name.split('.')[0]} {said}" in monitor
+    assert "relay-a ?" in monitor and "three of your four" in monitor
+    done = _said(module, "console_done")
+    assert f"relay-b {port} REFUSED" in done and f"relay-d {port} OPEN" in done
+    # The lesson, quiz and cards use none of the task's names or addresses.
+    body = module.body_html
+    quoted = " ".join([q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+                      + [c.front_html + c.back_html for c in module.cards])
+    for text in (body, quoted):
+        assert "relay-" not in text and "10.4.3." not in text and "8443" not in text
