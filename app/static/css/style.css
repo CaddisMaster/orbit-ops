@@ -710,8 +710,15 @@ body::before {
 }
 .screen.has-comms { grid-template-columns: minmax(0, 1fr) clamp(15rem, 24%, 20rem); }
 .screen > * { min-height: 0; }
+/* The screen's contents are drawn smaller than the room around them (#188), so
+   more of a lesson fits on the glass. zoom scales the panes' insides and not
+   the cells they fill, so the glass, the bezel and the 1/80 rule above are
+   untouched. The column is widened by the same factor, to keep today's width
+   on the glass and fit more words on a line, not only more lines. */
+.screen { --screen-scale: 0.85; }
+.screen > .screen-main, .screen > .comms { zoom: var(--screen-scale); }
 .screen-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.screen-main .container { flex: 1; }
+.screen-main .container { flex: 1; max-width: calc(47.5rem / var(--screen-scale)); }
 
 /* The comms log: one conversation, oldest at the top. */
 .comms {

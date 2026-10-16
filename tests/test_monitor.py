@@ -120,3 +120,28 @@ def test_the_shuttle_docks_at_the_drawn_port():
     px, py = room.DOCK_PORT
     assert _percent(shuttle, "top") == pytest.approx(100 * (py - 3) / room.H, abs=0.001)
     assert _percent(shuttle, "left") == pytest.approx(100 * (px + 1) / room.W, abs=0.1)
+
+
+# --- #188: the screen's contents are drawn smaller than the room ------------------------------
+SCREEN_SCALE = 0.85  # Sean's pick from screenshots at 100, 90 and 85% (2026-10-16)
+
+
+@pytest.mark.criterion(188, "More of a lesson fits on the laptop screen")
+def test_the_screen_contents_are_scaled_and_the_room_is_not():
+    assert f".screen {{ --screen-scale: {SCREEN_SCALE}; }}" in CSS
+    # Both panes are scaled, and nothing outside the screen is.
+    assert ".screen > .screen-main, .screen > .comms { zoom: var(--screen-scale); }" in CSS
+    assert CSS.count("zoom:") == 1
+    # The 1/80 rule the room is drawn to is untouched.
+    assert "font-size: clamp(16px, calc(min(100vw, 100vh * 16 / 9) / 80), 32px);" in CSS
+
+
+def test_the_lesson_column_keeps_its_width_on_the_glass():
+    base = float(re.search(r"^\.container \{[^}]*max-width: ([\d.]+)rem;", CSS, re.M).group(1))
+    assert f".screen-main .container {{ flex: 1; max-width: calc({base}rem / var(--screen-scale)); }}" in CSS
+
+
+@pytest.mark.criterion(188, "The text stays readable")
+def test_lesson_text_is_readable_at_the_smallest_desk():
+    # 1rem is 16px at 1280x720, and a lesson's paragraphs are 1rem.
+    assert 16 * SCREEN_SCALE >= 13.5
