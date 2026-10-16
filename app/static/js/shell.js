@@ -2962,7 +2962,7 @@
         "  processes: ps pgrep pkill kill sleep jobs fg bg\n" +
         "  editing:   nano less man crontab\n" +
         "  disk:      find du df free tar gzip gunzip zcat ln readlink\n" +
-        "  network:   ip ss ping nc hostname\n" +
+        "  network:   ip ss ping nc hostname dig host curl ufw ssh\n" +
         "  console:   clear help exit\n" +
         "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
         "  robust:    name() { … }, local return shift, set -euo pipefail, trap, <<EOF, mktemp\n" +

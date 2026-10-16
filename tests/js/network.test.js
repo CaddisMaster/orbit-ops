@@ -295,3 +295,10 @@ test("Without a network in the exercise, the console has the default one", () =>
   assert.match(out(sh, "ip route"), /^default via 10\.4\.0\.1 dev eth0 proto static \n/);
   assert.equal(out(sh, "type ss ping nc ip"), "ss is /usr/bin/ss\nping is /usr/bin/ping\nnc is /usr/bin/nc\nip is /usr/bin/ip\n");
 });
+
+test("help lists every network command (#199)", () => {
+  const line = out(station(), "help").split("\n").find((l) => l.trim().startsWith("network:"));
+  const listed = line.split(/: +/)[1].trim().split(" ");
+  assert.deepEqual(listed, ["ip", "ss", "ping", "nc", "hostname", "dig", "host", "curl", "ufw", "ssh"]);
+  for (const name of listed) assert.notEqual(status(station(), `${name} --help`).code, 127, `${name} is listed but unknown`);
+});
