@@ -449,3 +449,63 @@ def test_module_06s_lab_refuses_the_likely_mistakes(box, paste):
     pastes = [CERT, DEFAULT, VALID]
     pastes[box] = paste
     assert not _passes(_module("tls-and-certificates"), *pastes)
+
+
+# --- 07: SSH keys (#173) ----------------------------------------------------------------------------
+KEY_FP = "256 SHA256:0W3lTNI26hvTR6CpeNpd0sglyZgsLuPn2VusYl5Ta64 meridian-relay-lab (ED25519)\n"
+SSH_G = "user okafor\nhostname relay.meridian.example\nport 22\nidentityfile ~/.ssh/meridian_relay\n"
+GITHUB = "256 SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU github.com (ED25519)\n"
+
+
+@pytest.mark.criterion(173, "Module 07 of Unit 1.4 is complete content")
+def test_module_07_is_complete_content():
+    module = load_catalog().unit_modules("networking")[6]
+    assert module.slug == "ssh-keys"
+    _lab_content(module)
+
+
+@pytest.mark.criterion(173, "Module 07's lab can be done for real")
+def test_module_07s_examples_are_a_real_run_and_pass():
+    module = _module("ssh-keys")
+    assert _passes(module, *[box.example for box in module.lab.boxes])
+
+
+@pytest.mark.parametrize(
+    "pastes",
+    [
+        (KEY_FP, SSH_G, GITHUB),
+        # Another learner's key: any fingerprint, as long as it's this type and comment.
+        ("256 SHA256:Zq9+x/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789a meridian-relay-lab (ED25519)\n", SSH_G, GITHUB),
+        # Windows' OpenSSH writes the key's full path; a loose paste with CRLF.
+        (KEY_FP.replace("\n", "\r\n"), SSH_G.replace("~/.ssh/meridian_relay", "C:/Users/sean/.ssh/meridian_relay"), "\n" + GITHUB),
+    ],
+    ids=["terminal", "another-key", "windows"],
+)
+def test_module_07s_lab_passes_any_machines_output(pastes):
+    assert _passes(_module("ssh-keys"), *pastes)
+
+
+@pytest.mark.parametrize(
+    "box, paste",
+    [
+        (0, "3072 SHA256:0W3lTNI26hvTR6CpeNpd0sglyZgsLuPn2VusYl5Ta64 meridian-relay-lab (RSA)\n"),  # no -t ed25519
+        (0, "256 SHA256:0W3lTNI26hvTR6CpeNpd0sglyZgsLuPn2VusYl5Ta64 cadet@laptop (ED25519)\n"),  # no -C
+        (0, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7bq2x meridian-relay-lab\n"),  # the key, not its fingerprint
+        (0, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmU\n-----END OPENSSH PRIVATE KEY-----\n"),  # the private key
+        (1, "user cadet\nhostname relay\nport 22\nidentityfile ~/.ssh/id_rsa\n"),  # the entry isn't used: Host misspelt
+        (1, "user okafor\nhostname relay.meridian.example\nport 22\nidentityfile ~/.ssh/id_rsa\nidentityfile ~/.ssh/id_ed25519\n"),  # no IdentityFile
+        (1, "user okafor\nhostname relay.meridian.example\nport 22\nidentityfile ~/.ssh/meridian_relay.pub\n"),  # the public half
+        (2, "3072 SHA256:uNiVztksCsDhcc0u9e8BujQXVUpKZIDTMczCvj3tD2s github.com (RSA)\n"),  # every type, the wrong one pasted
+        (2, "256 SHA256:0W3lTNI26hvTR6CpeNpd0sglyZgsLuPn2VusYl5Ta64 meridian-relay-lab (ED25519)\n"),  # their own key again
+    ],
+    ids=["rsa", "no-comment", "public-key-line", "private-key", "host-misspelt", "no-identityfile", "pub-as-identity", "github-rsa", "own-key"],
+)
+def test_module_07s_lab_refuses_the_likely_mistakes(box, paste):
+    pastes = [KEY_FP, SSH_G, GITHUB]
+    pastes[box] = paste
+    assert not _passes(_module("ssh-keys"), *pastes)
+
+
+def test_module_07s_github_fingerprint_is_the_one_github_publishes():
+    # docs.github.com, "GitHub's SSH key fingerprints": SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU (ED25519)
+    assert "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU" in GITHUB

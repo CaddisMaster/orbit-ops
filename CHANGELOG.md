@@ -46,6 +46,10 @@ and why it matters, not what the diff says.
   and chains, Let's Encrypt, SNI, and telling an expired certificate from the wrong one. With
   `openssl` you read this app's certificate, then ask the same server without naming a site
   and get its neighbour's, which is exactly what SNI is for.
+- Unit 1.4 module 07, *SSH keys* (#173), a lab: key pairs, `ssh-keygen`, fingerprints,
+  `authorized_keys` and `known_hosts`, the host key warning, and `~/.ssh/config` checked with
+  `ssh -G`. You make a key, set up a config entry for the relay, and check GitHub's host key
+  against the fingerprint GitHub publishes. No server needed.
 
 ### Changed
 - The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and
