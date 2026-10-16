@@ -42,6 +42,10 @@ and why it matters, not what the diff says.
   `|`, `select`, `-r`), and query strings. With real curl and jq you ask GitHub's public API
   about this app's own repository: its name and branch, its newest releases, and the day the
   first one shipped.
+- Unit 1.4 module 06, *TLS and certificates* (#172), a lab: what TLS gives you, certificates
+  and chains, Let's Encrypt, SNI, and telling an expired certificate from the wrong one. With
+  `openssl` you read this app's certificate, then ask the same server without naming a site
+  and get its neighbour's, which is exactly what SNI is for.
 
 ## [0.8.0] — 2026-10-14
 
