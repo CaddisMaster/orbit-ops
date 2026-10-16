@@ -28,6 +28,7 @@ from app.content.schema import (
     ExecutableCheck,
     ExistsCheck,
     FilesUnderCheck,
+    LacksCheck,
     LinkTarget,
     MissingCheck,
     ModeCheck,
@@ -123,6 +124,9 @@ def passes(check: TerminalCheck, state: dict[str, Node], cwd: str, processes: li
         case ContainsCheck(contains=path, text=text):
             node = state.get(path)
             return node is not None and node.type == "file" and text in node.contents
+        case LacksCheck(lacks=path, text=text):
+            node = state.get(path)
+            return node is not None and node.type == "file" and text not in node.contents
         case SymlinkCheck(symlink=path, target=target):
             node = state.get(path)
             return node is not None and node.type == "link" and node.target == target

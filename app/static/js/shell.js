@@ -6162,6 +6162,10 @@
       var f = state[check.contains];
       return !!f && f.type === "file" && f.contents.indexOf(check.text) !== -1;
     }
+    if ("lacks" in check) {
+      var g = state[check.lacks];
+      return !!g && g.type === "file" && g.contents.indexOf(check.text) === -1;
+    }
     if ("symlink" in check) {
       var l = state[check.symlink];
       return !!l && l.type === "link" && l.target === check.target;

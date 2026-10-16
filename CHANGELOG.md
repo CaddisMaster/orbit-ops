@@ -72,6 +72,10 @@ and why it matters, not what the diff says.
   end, and writing it up before you stop anything. On the console, the Life Support mystery's
   1.4 clue: the 02:35 job `scrubber-flush` is still connected to `relay.depot-sync.net`, which
   isn't Mission Control. Finishing it earns *Relays Restored*.
+- A console task can check that a file **doesn't** contain something (#200): `{lacks: P, text:
+  …}`, graded the same in the browser and on the server. Module 09 (*Firewalls*) uses it, so
+  opening the feed's port to Mission's host *and* to everyone no longer passes, which is the
+  over-opening the lesson warns against.
 
 ### Changed
 - The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and

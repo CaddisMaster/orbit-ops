@@ -158,6 +158,8 @@ terminal:
     - {contains: /etc/ufw/user.rules, text: "### tuple ### allow tcp 9100 0.0.0.0/0 any 10.4.1.40 in\n"}
     - {contains: /etc/ufw/ufw.conf, text: "ENABLED=yes\n"}
     - {contains: /home/cadet/feed.txt, text: "\"relay\":\"relay.meridian\",\"uplink\":\"ok\""}
+    - {lacks: /etc/ufw/user.rules, text: "### tuple ### allow tcp 9100 0.0.0.0/0 any 0.0.0.0/0 in"}   # ufw allow 9100/tcp: everyone
+    - {lacks: /etc/ufw/user.rules, text: "### tuple ### allow any 9100 0.0.0.0/0 any 0.0.0.0/0 in"}   # ufw allow 9100
   success: |-
     Okafor watches the feed scroll on Mission's side. "Open to them, closed to everyone else. That's a firewall doing its job instead of just being in the way."
   solution:
