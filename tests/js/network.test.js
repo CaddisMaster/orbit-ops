@@ -198,7 +198,7 @@ test("ping's summary-only, its counts, and the lines it won't run", () => {
   assert.deepEqual(status(sh, "ping -c 0 10.4.0.20"), { output: "ping: invalid argument: '0': out of range: 1 <= value <= 9223372036854775807\n", code: 1 });
   assert.match(status(sh, "ping 10.4.0.20").output, /^ping: give it a count on this console: ping -c 4 10\.4\.0\.20/);
   assert.equal(out(sh, "ping -i 0.2 -c 1 10.4.0.20"), "ping: -i isn't supported on this console\n");
-  assert.deepEqual(status(sh, "ping -c 1 relay"), { output: "ping: relay: Temporary failure in name resolution\n", code: 2 });
+  assert.deepEqual(status(sh, "ping -c 1 relay"), { output: "ping: relay: Name or service not known\n", code: 2 });
   assert.deepEqual(status(sh, "ping -c 1 300.1.1.1"), { output: "ping: 300.1.1.1: Name or service not known\n", code: 2 });
   assert.equal(status(sh, "ping -c 1 10.4.0.255").output, "ping: Do you want to ping broadcast? Then -b. If not, check your local firewall rules\n");
 });
@@ -233,7 +233,7 @@ test("nc speaks on stderr, reports success without -v, and checks ranges", () =>
   assert.deepEqual(status(sh, "nc -zv 10.4.0.20"), { output: "nc: missing port number\n", code: 1 });
   assert.equal(out(sh, "nc -zv 10.4.0.20 abc"), "nc: port number invalid: abc\n");
   assert.equal(out(sh, "nc -zv 10.4.0.20 70000"), "nc: port number too large: 70000\n");
-  assert.equal(out(sh, "nc -zv db 5432"), 'nc: getaddrinfo for host "db" port 5432: Temporary failure in name resolution\n');
+  assert.equal(out(sh, "nc -zv db 5432"), 'nc: getaddrinfo for host "db" port 5432: Name or service not known\n');
   assert.equal(out(sh, "nc -zuv 10.4.0.20 53"), "nc: -u isn't supported on this console\n");
   assert.equal(out(sh, "nc 10.4.0.20 5432"), "nc: this console's nc only checks ports: nc -zv HOST PORT\n");
 });

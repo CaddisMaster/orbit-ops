@@ -313,7 +313,8 @@ class MemorySpec(_Strict):
 # machine's (docs/story.md).
 Port = Annotated[int, Field(ge=1, le=65535)]
 Proto = Literal["tcp", "udp"]
-HostName = Annotated[str, Field(pattern=r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", max_length=253)]
+HOST_NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$")
+HostName = Annotated[str, Field(pattern=HOST_NAME.pattern, max_length=253)]
 STATION_RANGES = tuple(
     ipaddress.ip_network(n)
     for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")
@@ -411,6 +412,68 @@ class ConnectionSpec(_Strict):
         return int(self.remote.rsplit(":", 1)[1])
 
 
+class DnsRecord(_Strict):
+    """One record the station's resolver answers with (#165). A PTR record's
+    name is the reverse form, 47.113.0.203.in-addr.arpa, as in a real zone."""
+
+    name: HostName
+    type: Literal["A", "CNAME", "MX", "TXT", "PTR"] = "A"
+    value: Annotated[str, Field(min_length=1, max_length=255)]  # MX: "10 mail.depot-sync.net"
+    ttl: Annotated[int, Field(ge=1, le=86400)] = 300
+
+    @model_validator(mode="after")
+    def _valid(self):
+        where = f"dns {self.name} {self.type}"
+        if self.type == "A":
+            try:
+                station_address(self.value)
+            except ValueError as exc:
+                raise ValueError(f"{where}: {exc}") from None
+        elif self.type in ("CNAME", "PTR") and not HOST_NAME.match(self.value):
+            raise ValueError(f"{where}: {self.value!r} is not a host name")
+        elif self.type == "MX":
+            pref, _, exchange = self.value.partition(" ")
+            if not pref.isdigit() or int(pref) > 65535 or not HOST_NAME.match(exchange):
+                raise ValueError(f"{where}: {self.value!r} should be a preference and a host name, like '10 mail.depot-sync.net'")
+        if self.type == "PTR":
+            octets = self.name.removesuffix(".in-addr.arpa").split(".")
+            try:
+                ipaddress.IPv4Address(".".join(reversed(octets)))
+            except ValueError:
+                raise ValueError(f"{where}: a PTR record's name is the address reversed, like 47.113.0.203.in-addr.arpa") from None
+        elif self.name.endswith(".in-addr.arpa"):
+            raise ValueError(f"{where}: only PTR records live under in-addr.arpa")
+        return self
+
+
+class DnsSpec(_Strict):
+    """The station's DNS: the resolver /etc/resolv.conf names, and its records.
+    A name that isn't here is NXDOMAIN; host names aren't added on their own."""
+
+    server: str | None = None  # the resolver's address; null for the gateway
+    records: Annotated[list[DnsRecord], Field(max_length=50)] = []
+
+    @model_validator(mode="after")
+    def _consistent(self):
+        if self.server is not None:
+            try:
+                station_address(self.server)
+            except ValueError as exc:
+                raise ValueError(f"dns server: {exc}") from None
+        aliases = {r.name: r.value for r in self.records if r.type == "CNAME"}
+        for name in aliases:
+            if sum(r.name == name for r in self.records) > 1:
+                raise ValueError(f"dns {name}: a name with a CNAME can't have any other record")
+        for start in aliases:
+            seen, name = {start}, aliases[start]
+            while name in aliases:
+                if name in seen:
+                    raise ValueError(f"dns {start}: its CNAMEs go round in a loop")
+                seen.add(name)
+                name = aliases[name]
+        return self
+
+
 class NetworkSpec(_Strict):
     # The defaults are shell.js's DEFAULT_NETWORK (a test keeps them equal), so
     # an exercise that never mentions the network still has one to look at.
@@ -419,6 +482,11 @@ class NetworkSpec(_Strict):
     listening: Annotated[list[ListenSpec], Field(max_length=20)] = []
     connections: Annotated[list[ConnectionSpec], Field(max_length=20)] = []
     hosts: Annotated[list[HostSpec], Field(max_length=30)] = []
+    dns: DnsSpec = DnsSpec()  # #165
+
+    def resolver(self) -> str | None:
+        """The nameserver /etc/resolv.conf starts with: the DNS server, or the gateway."""
+        return self.dns.server or self.gateway
 
     @model_validator(mode="after")
     def _consistent(self):
@@ -436,6 +504,8 @@ class NetworkSpec(_Strict):
                 raise ValueError(f"gateway: {self.gateway} isn't on any interface's subnet")
             if str(gateway) in mine:
                 raise ValueError(f"gateway: {self.gateway} is the console's own address")
+        if self.dns.server in mine:
+            raise ValueError(f"dns server: {self.dns.server} is the console's own address")
         seen: dict[str, str] = {}
         for host in self.hosts:
             if host.name in seen.values():
@@ -467,6 +537,15 @@ class NetworkSpec(_Strict):
                 raise ValueError(f"{where}: {host.name} has no TCP service on port {c.remote_port()}")
         return self
 
+
+# A fresh Ubuntu 24.04 server's /etc/hosts, with the console's name. shell.js
+# has the same text (ETC_HOSTS) for a filesystem without one; a test keeps them equal.
+ETC_HOSTS = (
+    "127.0.0.1 localhost\n127.0.1.1 meridian\n\n"
+    "# The following lines are desirable for IPv6 capable hosts\n"
+    "::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\n"
+    "ff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n"
+)
 
 KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
 
@@ -516,7 +595,13 @@ class TerminalExercise(_Strict):
         aren't listed exist anyway, owned by root, mode 755, as on a real system."""
         fs = {"/": {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""}}
         listed = {e.path for e in self.files}
-        for path, contents in (("/etc/passwd", self.passwd()), ("/etc/group", self.group_file())):
+        system = (
+            ("/etc/passwd", self.passwd()),
+            ("/etc/group", self.group_file()),
+            ("/etc/hosts", ETC_HOSTS),  # #165: checked before DNS, as nsswitch.conf's `hosts: files dns` says
+            ("/etc/resolv.conf", self.resolv_conf()),
+        )
+        for path, contents in system:
             if path not in listed:
                 fs.setdefault("/etc", {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
                 fs[path] = {"type": "file", "mode": 0o644, "owner": "root", "group": "root", "contents": contents}
@@ -560,6 +645,12 @@ class TerminalExercise(_Strict):
                 spare += 1
         gids.setdefault("sudo", 27)
         return gids
+
+    def resolv_conf(self) -> str:
+        # A plain one, naming the station's resolver. Ubuntu's own points at
+        # systemd-resolved's stub, 127.0.0.53, which the console doesn't have.
+        server = (self.network or NetworkSpec()).resolver()
+        return f"nameserver {server}\n" if server else "# no nameserver: the console has no gateway and no DNS server\n"
 
     def passwd(self) -> str:
         rows = [("root", 0, 0, "root", "/root", "/bin/bash")]

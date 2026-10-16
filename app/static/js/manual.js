@@ -195,7 +195,7 @@
     getent: {
       summary: "get entries from Name Service Switch libraries",
       synopsis: ["getent DATABASE [KEY]..."],
-      description: "Display entries from DATABASE (passwd or group) matching KEY, or all of them.",
+      description: "Display entries from DATABASE (passwd, group or hosts) matching KEY, or all of them. getent hosts looks names up the way programs do: /etc/hosts first, then DNS, as /etc/nsswitch.conf's \"hosts: files dns\" line says. A KEY can be a name or an address. Exit status 2 if a KEY wasn't found.",
     },
     usermod: {
       summary: "modify a user account",
@@ -476,6 +476,23 @@
         ["-w TIMEOUT", "give up on a connection after TIMEOUT seconds"],
         ["-n", "don't use DNS: HOST must be an address"],
       ],
+    },
+    dig: {
+      summary: "DNS lookup utility",
+      synopsis: ["dig [@SERVER] NAME [TYPE] [+short]", "dig -x ADDRESS [+short]"],
+      description: "Ask a DNS server about NAME and print its whole answer: the status (NOERROR, or NXDOMAIN when the name doesn't exist), the question, the ANSWER SECTION with each record's TTL, class, type and data, and which SERVER answered. Without @SERVER, dig asks the nameserver in /etc/resolv.conf. dig never reads /etc/hosts: it shows what DNS says, not what this machine will use. TYPE is A (the default), CNAME, MX, TXT, PTR or SOA. Exit status 0 when a server answered, even with NXDOMAIN; 9 when no server could be reached.",
+      options: [
+        ["@SERVER", "ask this server instead of the one in /etc/resolv.conf"],
+        ["+short", "print only the answers' data, one per line"],
+        ["-x ADDRESS", "reverse lookup: the PTR record for ADDRESS"],
+        ["-t TYPE", "the record type to ask for"],
+      ],
+    },
+    host: {
+      summary: "DNS lookup utility",
+      synopsis: ["host [-t TYPE] NAME [SERVER]"],
+      description: "Look NAME up in DNS and say what came back in a sentence: its address, any alias (CNAME) it is, and where its mail goes. Given an address, it finds the name (a PTR record). Like dig, host asks the nameserver in /etc/resolv.conf, or SERVER, and never reads /etc/hosts. Exit status 1 if the name doesn't exist.",
+      options: [["-t TYPE", "ask only for this record type: A, CNAME, MX, TXT, PTR or SOA"]],
     },
     hostname: {
       summary: "show the system's host name",
