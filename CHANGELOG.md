@@ -77,6 +77,9 @@ and why it matters, not what the diff says.
 - The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and
   the lesson column keeps its width, so a lesson is about a fifth shorter to scroll and each
   line holds more words. The room around the laptop is unchanged.
+- The console's `help` lists its network commands in full (#199): `dig`, `host`, `curl`, `ufw`
+  and `ssh` were missing, so a learner in Unit 1.4 who typed `help` didn't find the tool the
+  lesson was about.
 
 ## [0.8.0] — 2026-10-14
 
