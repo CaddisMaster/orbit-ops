@@ -47,6 +47,11 @@ and why it matters, not what the diff says.
   `openssl` you read this app's certificate, then ask the same server without naming a site
   and get its neighbour's, which is exactly what SNI is for.
 
+### Changed
+- The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and
+  the lesson column keeps its width, so a lesson is about a fifth shorter to scroll and each
+  line holds more words. The room around the laptop is unchanged.
+
 ## [0.8.0] — 2026-10-14
 
 The desk fits any screen, and the lessons answer back. The app scales with the window and the

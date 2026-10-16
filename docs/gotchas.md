@@ -48,6 +48,13 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   px is fine for borders, radii and outlines. An `<img>` or `<svg>` with `width`/`height`
   attributes needs a CSS size in rem as well (`.avatar`, `.emblem`, `.unit-emblem`).
 
+- **The screen's contents are zoomed** (#188): `.screen-main` and `.comms` have `zoom:
+  var(--screen-scale)` (0.85), so on the laptop 1rem draws as 0.85 of the room's rem. Size
+  things inside the screen in rem as usual and they follow. `getBoundingClientRect()` inside
+  it returns drawn (zoomed) pixels while `offsetHeight` and CSS lengths don't, so don't mix
+  the two in JS. A max-width meant to match the glass divides by `--screen-scale`, as
+  `.screen-main .container` does.
+
 - **The console's clock is the station's, not the browser's** (#67). Files are dated on a fixed
   clock that starts at 2026-10-08 09:00 and moves a second per command (`sh.now()`), so use it,
   never `new Date()`, for anything a learner can see or a check can read. The server's
