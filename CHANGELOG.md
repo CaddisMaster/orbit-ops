@@ -80,6 +80,10 @@ and why it matters, not what the diff says.
 - The console's `help` lists its network commands in full (#199): `dig`, `host`, `curl`, `ufw`
   and `ssh` were missing, so a learner in Unit 1.4 who typed `help` didn't find the tool the
   lesson was about.
+- Unit 1.1 module 01 now says what the shell is (#196). It opens with the terminal and the
+  shell, bash, how to read the prompt, a command and its arguments, and that the shell reads
+  the whole line before the command runs. Module 03's globs point back to it. Unit 1.1 had
+  used "the shell" without ever explaining it.
 
 ## [0.8.0] — 2026-10-14
 
