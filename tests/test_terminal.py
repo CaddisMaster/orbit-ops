@@ -584,3 +584,74 @@ def test_the_default_network_matches_the_console():
     found = re.search(r"^  var DEFAULT_NETWORK = (\{.*\});$", shell, re.M)
     assert found, "shell.js has no one-line DEFAULT_NETWORK"
     assert json.loads(found.group(1)) == NetworkSpec().model_dump()
+
+
+# --- #165: names, /etc/hosts and the station's DNS ---------------------------------------------
+DNS = NETWORK.replace(
+    "      - {name: relay, address: 203.0.113.47, services: [{port: 443}]}\n",
+    """      - {name: relay, address: 203.0.113.47, services: [{port: 443}]}
+    dns:
+      records:
+        - {name: relay.depot-sync.net, value: 203.0.113.47}
+        - {name: www.depot-sync.net, type: CNAME, value: relay.depot-sync.net}
+        - {name: depot-sync.net, type: MX, value: "10 mail.depot-sync.net"}
+        - {name: 47.113.0.203.in-addr.arpa, type: PTR, value: relay.depot-sync.net}
+""",
+)
+
+
+@pytest.mark.parametrize(
+    ("replace", "with_", "expect"),
+    [
+        ("value: 203.0.113.47}", "value: 8.8.8.8}", "dns relay.depot-sync.net A: 8.8.8.8 is not a private or documentation address"),
+        ('value: "10 mail.depot-sync.net"', "value: mail.depot-sync.net", "should be a preference and a host name"),
+        ("name: 47.113.0.203.in-addr.arpa", "name: relay.in-addr.arpa", "a PTR record's name is the address reversed"),
+        ("name: depot-sync.net, type: MX", "name: 9.113.0.203.in-addr.arpa, type: MX", "only PTR records live under in-addr.arpa"),
+        ("{name: www.depot-sync.net, type: CNAME", "{name: relay.depot-sync.net, type: CNAME", "a name with a CNAME can't have any other record"),
+        ("value: 203.0.113.47}\n", "value: 203.0.113.47}\n        - {name: a.meridian, type: CNAME, value: b.meridian}\n"
+         "        - {name: b.meridian, type: CNAME, value: a.meridian}\n", "its CNAMEs go round in a loop"),
+        ("    dns:\n", "    dns:\n      server: 10.4.0.12\n", "dns server: 10.4.0.12 is the console's own address"),
+        ("    dns:\n", "    dns:\n      server: 1.1.1.1\n", "dns server: 1.1.1.1 is not a private or documentation address"),
+    ],
+)
+def test_bad_dns_is_reported(tmp_path, replace, with_, expect):
+    assert replace in DNS
+    _write(tmp_path, DNS.replace(replace, with_))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert "core/shell/02-two.md" in str(exc.value) and expect in str(exc.value)
+
+
+def test_every_console_has_etc_hosts_and_resolv_conf(tmp_path):
+    from app.content.schema import ETC_HOSTS
+
+    _write(tmp_path, DNS)
+    fs = load_catalog(tmp_path).modules["two"].terminal.starting_fs()
+    assert fs["/etc/hosts"] == {"type": "file", "mode": 0o644, "owner": "root", "group": "root", "contents": ETC_HOSTS}
+    assert fs["/etc/resolv.conf"]["contents"] == "nameserver 10.4.0.1\n"  # the gateway, without a dns server
+    (tmp_path / "server").mkdir()
+    _write(tmp_path / "server", DNS.replace("    dns:\n", "    dns:\n      server: 10.4.0.53\n"))
+    assert load_catalog(tmp_path / "server").modules["two"].terminal.starting_fs()["/etc/resolv.conf"]["contents"] == "nameserver 10.4.0.53\n"
+    (tmp_path / "plain").mkdir()
+    _write(tmp_path / "plain")  # no network: the default one's gateway
+    assert load_catalog(tmp_path / "plain").modules["two"].terminal.starting_fs()["/etc/resolv.conf"]["contents"] == "nameserver 10.4.0.1\n"
+    (tmp_path / "alone").mkdir()
+    _write(tmp_path / "alone", NETWORK.replace("    gateway: 10.4.0.1\n", "    gateway: null\n").replace(
+        "      - {name: relay, address: 203.0.113.47, services: [{port: 443}]}\n", ""))
+    alone = load_catalog(tmp_path / "alone").modules["two"].terminal.starting_fs()["/etc/resolv.conf"]["contents"]
+    assert alone == "# no nameserver: the console has no gateway and no DNS server\n"
+
+
+def test_an_exercise_can_bring_its_own_etc_hosts(tmp_path):
+    _write(tmp_path, DNS.replace("    - {path: /station, type: dir}\n",
+                                 "    - {path: /station, type: dir}\n    - {path: /etc/hosts, owner: root, group: root, contents: \"10.4.0.99 mission.meridian\\n\"}\n"))
+    assert load_catalog(tmp_path).modules["two"].terminal.starting_fs()["/etc/hosts"]["contents"] == "10.4.0.99 mission.meridian\n"
+
+
+def test_the_station_hosts_file_matches_the_console():
+    from app.content.schema import ETC_HOSTS
+
+    shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
+    found = re.search(r'^  var ETC_HOSTS = (".*");$', shell, re.M)
+    assert found, "shell.js has no one-line ETC_HOSTS"
+    assert json.loads(found.group(1)) == ETC_HOSTS

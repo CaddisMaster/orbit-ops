@@ -14,6 +14,12 @@ and why it matters, not what the diff says.
   no route, or a timeout. All of it is simulated in the browser and checked line for line
   against Ubuntu 24.04's output. An exercise describes its network under `network:`, and the
   loader rejects a bad address and names the host.
+- The console resolves names (#165). `dig`, `host` and `getent hosts` answer from the station's
+  DNS, which an exercise fills with A, CNAME, MX, TXT and PTR records under `network.dns`. Every
+  console now has a real `/etc/hosts` and `/etc/resolv.conf`, read live. `getent`, `ping` and
+  `nc` check `/etc/hosts` before DNS and `dig` doesn't, so a stale line in that file shows up the
+  way it does on a real server: `dig` gives one address and `ping` goes to another. NXDOMAIN, a
+  resolver that times out or refuses, and reverse lookups all print what BIND 9.18's tools print.
 - Unit 1.4, Networking, begins (#167). *Addresses and ports* teaches IP addresses and
   subnets, `ip addr` and `ip route`, ports, and `ss -tlnp` and `ss -tnp`. It also covers why a
   service on `127.0.0.1` answers only its own machine, with this app's own droplet as the

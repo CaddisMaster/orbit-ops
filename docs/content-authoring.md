@@ -311,6 +311,14 @@ The station network (#164). Every console has one; without `network:` it is the 
       - {name: db, address: 10.4.0.20, services: [{port: 5432}], filtered: [2222]}
       - {name: beacon, address: 10.4.0.30, ping: false, services: [{port: 22}]}  # up, drops ping
       - {name: md-3, address: 10.4.2.17, up: false}      # down: nothing answers
+    dns:                        # #165: what the station's resolver answers
+      server: 10.4.0.1          # the default is the gateway (null); /etc/resolv.conf names it
+      records:                  # ttl: 300 unless given
+        - {name: relay.depot-sync.net, value: 203.0.113.47}              # type A by default
+        - {name: www.depot-sync.net, type: CNAME, value: relay.depot-sync.net}
+        - {name: depot-sync.net, type: MX, value: "10 mail.depot-sync.net"}
+        - {name: depot-sync.net, type: TXT, value: "v=spf1 mx -all"}
+        - {name: 47.113.0.203.in-addr.arpa, type: PTR, value: relay.depot-sync.net}
 ```
 
 - **Addresses are private (`10/8`, `172.16/12`, `192.168/16`) or documentation ranges
@@ -323,10 +331,20 @@ The station network (#164). Every console has one; without `network:` it is the 
   is refused. A host that's `up: false`, or an address no host has, answers nothing. On the
   console's subnet that's "No route to host" / "Destination Host Unreachable"; beyond the
   gateway it's silence and a timeout.
-- **Names don't resolve yet**, except `localhost` and `meridian`: use addresses until #165
-  brings `/etc/hosts` and DNS.
+- **Names (#165) come from `/etc/hosts`, then DNS**, as `nsswitch.conf`'s `hosts: files dns`
+  says. `getent`, `ping` and `nc` go through both; `dig` and `host` ask the resolver only, so a
+  name pinned in `/etc/hosts` gives different answers to the two, which is the lesson's trap.
+  A host's `name` is **not** in DNS on its own: add a record if it should resolve. A name with
+  no record is NXDOMAIN; a CNAME is followed; an MX answer brings its exchange's A record.
+  PTR records are written in the reverse form, and ping names its replies from them.
+- `/etc/hosts` (a fresh Ubuntu server's, with `meridian` on 127.0.1.1) and `/etc/resolv.conf`
+  (`nameserver` + the resolver) are in every console unless you list them, and both are read
+  live: edit one and the answers change. The resolver answers unless its host is listed as
+  `up: false`; any other host answers DNS only if it has `services: [{port: 53, proto: udp}]`,
+  and refuses otherwise. Waiting costs station time: 5 s per timed-out try (dig tries 3 times,
+  host and getaddrinfo twice).
 
-`/etc/passwd`, `/etc/group` and `/root` are generated from these unless you list them yourself.
+`/etc/passwd`, `/etc/group`, `/etc/hosts`, `/etc/resolv.conf` and `/root` are generated from these unless you list them yourself.
 Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group is 1000.
 
 - **Files you don't own are read-only to the learner.** The shell enforces permissions as a
@@ -400,8 +418,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     -br`), `ss` (`-t -u -l -a -n -p -4 -6 -H`, combined as `-tulpn`; no filters, and no Unix
     sockets, so no `-t`/`-u` means both), `ping -c N (-q -W)` (a count is required: the console
     can't run until Ctrl-C), `nc -z (-v -w N -n) HOST PORT[-PORT]…` (TCP only, all on stderr as
-    Debian's is, success printed even without `-v`), `hostname (-I -i -s -f)`. Output is
-    Ubuntu 24.04's, column for column (`ss` as when piped, which is how it sizes columns without
+    Debian's is, success printed even without `-v`), `hostname (-I -i -s -f)`, and for names (#165) `dig NAME [TYPE]
+    (+short, -x ADDR, -t TYPE, @SERVER)` (A, CNAME, MX, TXT, PTR and SOA; AAAA and NS are always
+    empty), `host [-t TYPE] NAME [SERVER]` and `getent hosts [NAME|ADDR]…`. Output is
+    Ubuntu 24.04's (dig and host as BIND 9.18's against a bind9 resolver), column for column (`ss` as when piped, which is how it sizes columns without
     a terminal). Round-trip times are made up but fixed. Waiting is station time: `nc` without
     `-w` on a filtered port takes 2 min 14 s, as the kernel's retries do.
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
