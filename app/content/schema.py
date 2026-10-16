@@ -357,11 +357,37 @@ class InterfaceSpec(_Strict):
         return self
 
 
+class RouteSpec(_Strict):
+    """What one URL on a host's HTTP service answers (#166). Anything not
+    listed is that server's 404."""
+
+    path: Annotated[str, Field(pattern=r"^/[^\s?#]*$", max_length=200)]  # the query string isn't matched
+    method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"] = "GET"
+    status: Annotated[int, Field(ge=100, le=599)] = 200
+    headers: dict[Annotated[str, Field(pattern=r"^[A-Za-z][A-Za-z0-9-]{0,40}$")], Annotated[str, Field(max_length=300)]] = {}
+    body: Annotated[str, Field(max_length=4000)] = ""
+
+
 class ServiceSpec(_Strict):
     """A port another host listens on."""
 
     port: Port
     proto: Proto = "tcp"
+    # #166: an HTTP server on this port, and what it answers. With `tls`, it's
+    # HTTPS, and its certificate is trusted or has expired (curl -v shows which).
+    http: Annotated[list[RouteSpec], Field(max_length=20)] | None = None
+    tls: Literal["trusted", "expired"] | None = None
+
+    @model_validator(mode="after")
+    def _valid(self):
+        if self.http is not None and self.proto != "tcp":
+            raise ValueError(f"service {self.port}/{self.proto}: HTTP runs over tcp")
+        if self.tls and self.http is None:
+            raise ValueError(f"service {self.port}: tls needs http routes")
+        routes = [(r.method, r.path) for r in self.http or []]
+        if dupes := sorted({f"{m} {p}" for m, p in routes if routes.count((m, p)) > 1}):
+            raise ValueError(f"service {self.port}: {dupes[0]} listed twice")
+        return self
 
 
 class HostSpec(_Strict):
@@ -373,6 +399,9 @@ class HostSpec(_Strict):
     ping: bool = True  # False: up, but it drops ping (a blocked ping proves little)
     services: Annotated[list[ServiceSpec], Field(max_length=20)] = []
     filtered: Annotated[list[Port], Field(max_length=20)] = []  # TCP ports a firewall drops: nc times out
+    # #166: `ssh NAME 'COMMAND'` runs COMMAND there (your key is already on it),
+    # so a task can test the console from outside, through its firewall.
+    login: bool = False
 
     @model_validator(mode="after")
     def _valid(self):
@@ -385,6 +414,8 @@ class HostSpec(_Strict):
             raise ValueError(f"host {self.name}: {', '.join(dupes)} listed twice")
         if both := sorted({s.port for s in self.services if s.proto == "tcp"} & set(self.filtered)):
             raise ValueError(f"host {self.name}: port {both[0]} is both a service and filtered")
+        if self.login and not any(s.port == 22 and s.proto == "tcp" for s in self.services):
+            raise ValueError(f"host {self.name}: login needs sshd, a service on 22/tcp")
         return self
 
 
@@ -395,6 +426,7 @@ class ListenSpec(_Strict):
     proto: Proto = "tcp"
     process: Annotated[str, Field(min_length=1, max_length=32)]  # a starting process's name, as ps shows it
     address: str = "0.0.0.0"  # or 127.0.0.1 (this machine only), or one interface's address
+    http: Annotated[list[RouteSpec], Field(max_length=20)] | None = None  # #166: what curl gets from it
 
 
 class ConnectionSpec(_Strict):
@@ -474,6 +506,42 @@ class DnsSpec(_Strict):
         return self
 
 
+class FirewallRule(_Strict):
+    """One ufw rule, as `ufw allow|deny [from ADDR to any port] PORT[/PROTO]` makes it."""
+
+    action: Literal["allow", "deny"] = "allow"
+    port: Port | None = None  # null: every port (a rule on `from` alone)
+    proto: Literal["tcp", "udp", "any"] = "any"
+    source: str | None = Field(default=None, alias="from")  # an address or a CIDR network; null for anywhere
+
+    @model_validator(mode="after")
+    def _valid(self):
+        if self.port is None and self.source is None:
+            raise ValueError("firewall rule: give a port, a from, or both")
+        if self.port is None and self.proto != "any":
+            raise ValueError("firewall rule: a protocol needs a port")
+        if self.source is not None:
+            try:
+                ipaddress.IPv4Network(self.source)
+            except ValueError:
+                raise ValueError(f"firewall rule: from {self.source} is not an IPv4 address or network") from None
+        return self
+
+    def tuple(self) -> str:
+        """The rule as ufw keeps it in user.rules: `### tuple ### allow tcp 22 …`."""
+        port = str(self.port) if self.port else "any"
+        src = self.source or "0.0.0.0/0"
+        return f"{self.action} {self.proto} {port} 0.0.0.0/0 any {src} in"
+
+
+class FirewallSpec(_Strict):
+    """ufw on the console (#166): off, as on a fresh Ubuntu server, unless the
+    exercise turns it on. It becomes /etc/ufw/ufw.conf and user.rules."""
+
+    enabled: bool = False
+    rules: Annotated[list[FirewallRule], Field(max_length=20)] = []
+
+
 class NetworkSpec(_Strict):
     # The defaults are shell.js's DEFAULT_NETWORK (a test keeps them equal), so
     # an exercise that never mentions the network still has one to look at.
@@ -483,6 +551,7 @@ class NetworkSpec(_Strict):
     connections: Annotated[list[ConnectionSpec], Field(max_length=20)] = []
     hosts: Annotated[list[HostSpec], Field(max_length=30)] = []
     dns: DnsSpec = DnsSpec()  # #165
+    firewall: FirewallSpec = FirewallSpec()  # #166
 
     def resolver(self) -> str | None:
         """The nameserver /etc/resolv.conf starts with: the DNS server, or the gateway."""
@@ -547,6 +616,71 @@ ETC_HOSTS = (
     "ff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n"
 )
 
+# ufw's own files (#166), as ufw 0.36.2 on Ubuntu 24.04 writes them. shell.js
+# reads them to decide what gets in, and writes them the same way (a test runs
+# the console's renderer over every exercise's and expects these bytes).
+def ufw_conf(enabled: bool) -> str:
+    return (
+        "# /etc/ufw/ufw.conf\n#\n\n"
+        "# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n"
+        "# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\n"
+        f"ENABLED={'yes' if enabled else 'no'}\n\n"
+        "# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n"
+        "# See 'man ufw' for details.\nLOGLEVEL=low\n"
+    )
+
+
+UFW_INSTALLED = (
+    "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n"
+    ":ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n"
+    '-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix "[UFW LIMIT BLOCK] "\n'
+    "-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n"
+)
+
+
+def ufw_rules(tuples: list[str], six: bool = False) -> str:
+    """user.rules (or user6.rules) holding these `allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in` tuples."""
+    chain = "ufw6" if six else "ufw"
+    out = "*filter\n" + "".join(
+        f":{chain}-{name} - [0:0]\n"
+        for name in (
+            "user-input", "user-output", "user-forward", "before-logging-input", "before-logging-output",
+            "before-logging-forward", "user-logging-input", "user-logging-output", "user-logging-forward",
+            "after-logging-input", "after-logging-output", "after-logging-forward", "logging-deny",
+            "logging-allow", "user-limit", "user-limit-accept",
+        )
+    )
+    out += "### RULES ###\n"
+    for t in tuples:
+        action, proto, port, _dst, _dport, src, _dir = t.split()
+        if six:
+            if src != "0.0.0.0/0":
+                continue  # an IPv4 source has no IPv6 rule
+            t = t.replace("0.0.0.0/0", "::/0")
+        out += f"\n### tuple ### {t}\n"
+        jump = "ACCEPT" if action == "allow" else "DROP"
+        source = f" -s {src}" if src not in ("0.0.0.0/0", "::/0") else ""
+        if port == "any":
+            out += f"-A {chain}-user-input{source} -j {jump}\n"
+        else:
+            for p in ("tcp", "udp") if proto == "any" else (proto,):
+                out += f"-A {chain}-user-input -p {p} --dport {port}{source} -j {jump}\n"
+    log = '-m limit --limit 3/min --limit-burst 10'
+    out += (
+        "\n### END RULES ###\n\n### LOGGING ###\n"
+        f'-A {chain}-after-logging-input -j LOG --log-prefix "[UFW BLOCK] " {log}\n'
+        f'-A {chain}-after-logging-forward -j LOG --log-prefix "[UFW BLOCK] " {log}\n'
+        f"-I {chain}-logging-deny -m conntrack --ctstate INVALID -j RETURN {log}\n"
+        f'-A {chain}-logging-deny -j LOG --log-prefix "[UFW BLOCK] " {log}\n'
+        f'-A {chain}-logging-allow -j LOG --log-prefix "[UFW ALLOW] " {log}\n'
+        "### END LOGGING ###\n\n### RATE LIMITING ###\n"
+        f'-A {chain}-user-limit -m limit --limit 3/minute -j LOG --log-prefix "[UFW LIMIT BLOCK] "\n'
+        f"-A {chain}-user-limit -j REJECT\n-A {chain}-user-limit-accept -j ACCEPT\n"
+        "### END RATE LIMITING ###\nCOMMIT\n"
+    )
+    return out
+
+
 KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
 
 
@@ -601,10 +735,19 @@ class TerminalExercise(_Strict):
             ("/etc/hosts", ETC_HOSTS),  # #165: checked before DNS, as nsswitch.conf's `hosts: files dns` says
             ("/etc/resolv.conf", self.resolv_conf()),
         )
+        firewall = (self.network or NetworkSpec()).firewall
+        tuples = [r.tuple() for r in firewall.rules]
+        system += (
+            ("/etc/ufw/ufw.conf", ufw_conf(firewall.enabled)),  # #166: ufw keeps its state in its files
+            ("/etc/ufw/user.rules", ufw_rules(tuples) if tuples else UFW_INSTALLED),
+            ("/etc/ufw/user6.rules", ufw_rules(tuples, six=True) if tuples else UFW_INSTALLED.replace("ufw-", "ufw6-")),
+        )
         for path, contents in system:
             if path not in listed:
-                fs.setdefault("/etc", {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
-                fs[path] = {"type": "file", "mode": 0o644, "owner": "root", "group": "root", "contents": contents}
+                for parent in ("/etc", "/etc/ufw") if path.startswith("/etc/ufw/") else ("/etc",):
+                    fs.setdefault(parent, {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
+                mode = 0o640 if path.endswith(".rules") else 0o644  # ufw's rules are root's to read
+                fs[path] = {"type": "file", "mode": mode, "owner": "root", "group": "root", "contents": contents}
         if "/root" not in listed:
             fs["/root"] = {"type": "dir", "mode": 0o700, "owner": "root", "group": "root", "contents": ""}
         for entry in self.files:

@@ -319,6 +319,32 @@ The station network (#164). Every console has one; without `network:` it is the 
         - {name: depot-sync.net, type: MX, value: "10 mail.depot-sync.net"}
         - {name: depot-sync.net, type: TXT, value: "v=spf1 mx -all"}
         - {name: 47.113.0.203.in-addr.arpa, type: PTR, value: relay.depot-sync.net}
+    firewall:                   # #166: ufw, off by default as on a fresh server
+      enabled: true
+      rules:                    # in order: the first that matches decides
+        - {port: 22, proto: tcp}                  # ufw allow 22/tcp
+        - {from: 10.4.0.5, port: 8080, proto: tcp}  # ufw allow from 10.4.0.5 to any port 8080 proto tcp
+```
+
+HTTP and logging in elsewhere (#166) hang off the same block:
+
+```yaml
+    listening:
+      - port: 8080
+        process: python3
+        http:                   # what curl gets from the console's own server
+          - {path: /, headers: {Content-Type: text/html}, body: "<h1>relay</h1>\n"}
+    hosts:
+      - name: relay
+        address: 203.0.113.47
+        services:
+          - port: 443
+            tls: trusted        # https: trusted, or expired (curl -v shows which; curl fails with 60)
+            http:
+              - {path: /status, headers: {Content-Type: application/json}, body: "{\"ok\":true}\n"}
+              - {path: /report, method: POST, status: 201}   # status 200 and GET by default
+              - {path: /old, status: 301, headers: {Location: "https://relay.depot-sync.net/status"}}
+      - {name: mission, address: 10.4.0.5, login: true, services: [{port: 22}]}   # ssh mission.… 'CMD' works
 ```
 
 - **Addresses are private (`10/8`, `172.16/12`, `192.168/16`) or documentation ranges
@@ -344,7 +370,25 @@ The station network (#164). Every console has one; without `network:` it is the 
   and refuses otherwise. Waiting costs station time: 5 s per timed-out try (dig tries 3 times,
   host and getaddrinfo twice).
 
-`/etc/passwd`, `/etc/group`, `/etc/hosts`, `/etc/resolv.conf` and `/root` are generated from these unless you list them yourself.
+- **HTTP (#166):** a service or listener with `http` routes is a web server. A path it doesn't list
+  is its `404` (`Not Found`), another method on a listed path is `405`, and a port with no
+  `http` gives curl's `(52) Empty reply from server`. Responses carry the route's headers and a
+  `Content-Length`, nothing more. `https://` needs `tls`; by address instead of name it fails
+  as a real certificate would.
+- **The firewall is ufw's own files:** `firewall:` becomes `/etc/ufw/ufw.conf` (`ENABLED=yes|no`)
+  and `/etc/ufw/user.rules` (one `### tuple ###` line per rule), written byte for byte as ufw
+  0.36.2 writes them, and the console reads them live. **Grade a firewall task with `contains`
+  on those files**: `ufw allow from 10.4.0.5 to any port 8080 proto tcp` writes
+  `### tuple ### allow tcp 8080 0.0.0.0/0 any 10.4.0.5 in`. The rules file is root's (640), so a
+  learner needs `sudo cat`. Rules only touch connections *into* the console from another host;
+  anything denied is dropped, so it times out. Ping always gets in.
+- **From another host:** `ssh HOST 'COMMAND'` runs one command on a host with `login: true` (by
+  a name DNS knows, or its address), and only `nc`, `curl`, `ping`, `hostname`, `echo`, `true`
+  and `false` exist there. From there the console is its interface address behind its firewall,
+  names come from DNS (not the console's `/etc/hosts`), and other hosts answer as their specs
+  say. Any other host refuses with `Permission denied (publickey)`.
+
+`/etc/passwd`, `/etc/group`, `/etc/hosts`, `/etc/resolv.conf`, `/etc/ufw/{ufw.conf,user.rules,user6.rules}` and `/root` are generated from these unless you list them yourself.
 Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group is 1000.
 
 - **Files you don't own are read-only to the learner.** The shell enforces permissions as a
@@ -420,8 +464,13 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     can't run until Ctrl-C), `nc -z (-v -w N -n) HOST PORT[-PORT]…` (TCP only, all on stderr as
     Debian's is, success printed even without `-v`), `hostname (-I -i -s -f)`, and for names (#165) `dig NAME [TYPE]
     (+short, -x ADDR, -t TYPE, @SERVER)` (A, CNAME, MX, TXT, PTR and SOA; AAAA and NS are always
-    empty), `host [-t TYPE] NAME [SERVER]` and `getent hosts [NAME|ADDR]…`. Output is
-    Ubuntu 24.04's (dig and host as BIND 9.18's against a bind9 resolver), column for column (`ss` as when piped, which is how it sizes columns without
+    empty), `host [-t TYPE] NAME [SERVER]` and `getent hosts [NAME|ADDR]…`; for HTTP (#166) `curl` (`-v -s -S
+    -I -i -L -f -k -o FILE -w FMT -X M -H H -d D -m N --connect-timeout N`; no progress meter,
+    `-w` knows `%{http_code} %{url_effective} %{remote_ip} %{num_redirects} %{content_type}`);
+    `ufw` (`status [verbose|numbered]`, `enable` (asks y/n), `disable`, `allow`/`deny PORT[/PROTO]`
+    and `from ADDR [to any port PORT [proto P]]`, `delete RULE|NUM`; root only); and `ssh HOST
+    'COMMAND'`. Output is
+    Ubuntu 24.04's (dig and host as BIND 9.18's against a bind9 resolver, curl 8.5.0's, ufw 0.36.2's), column for column (`ss` as when piped, which is how it sizes columns without
     a terminal). Round-trip times are made up but fixed. Waiting is station time: `nc` without
     `-w` on a filtered port takes 2 min 14 s, as the kernel's retries do.
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)

@@ -25,6 +25,12 @@ and why it matters, not what the diff says.
   service on `127.0.0.1` answers only its own machine, with this app's own droplet as the
   example. On the console you map the relay console's network with `sudo ss` and find out why
   Mission Control can't reach the telemetry dashboard.
+- The console speaks HTTP and has a firewall (#166). `curl` fetches from the station's own
+  services, which an exercise defines route by route, with `-v`, `-I`, `-L`, `-o`, `-w` and the
+  rest, and fails with curl's real errors (6 no such name, 7 refused, 28 timed out, 60 a bad
+  certificate). `ufw` turns the firewall on and off and adds and removes rules, keeping them in
+  ufw's own files, as the real one does. And `ssh HOST 'COMMAND'` runs a check from another
+  host, so a learner can see a port that `ss` says is listening and the firewall still blocks.
 - Unit 1.4 module 02, *Names and DNS* (#168): what DNS does, A, CNAME, MX and PTR records,
   reading `dig` (and `+short`, `-x`), `/etc/hosts` and why it's read first, `/etc/resolv.conf`,
   and TTLs. On the console, Mission Control's uplink doesn't answer because an old line in
