@@ -30,7 +30,7 @@ quiz:
       on the one port, is the narrowest fix. `ufw allow 5432` would open the database to
       everyone who can reach the machine, and disabling the firewall opens everything.
   - type: choice
-    q: "You added the second rule, and `10.6.2.7` still can't reach port 3000. Why?"
+    q: "You added the allow rule, and `10.6.2.7` still can't reach port 3000. Why?"
     code: |-
       $ sudo ufw status numbered
       Status: active
@@ -178,7 +178,7 @@ comms:
     - {from: okafor, text: "It's listening, and Mission gets silence. Find out what's swallowing it, and open it to Mission and nobody else."}
   console_done:
     - {from: meridian, text: "UFW · 9100/tcp ALLOW 10.4.1.40 · FROM mission.meridian: OPEN · FROM ops-desk.meridian: NO ANSWER"}
-    - {from: okafor, text: "A deny on 9100 sitting above everything else. Somebody closed it for the refit and never opened it again."}
+    - {from: okafor, text: "A deny on 9100, ahead of any allow for it. Somebody closed it for the refit and never opened it again."}
     - {from: okafor, text: "And you didn't just switch it off. Good. A firewall with one door open on purpose is worth ten turned off."}
   complete:
     - {from: mission, text: "*Meridian*, Mission Control. Relay feed live at our end. Queue's empty, uplink's clean."}

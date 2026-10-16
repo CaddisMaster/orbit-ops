@@ -1,6 +1,6 @@
 ---
-# No console task: a lab (#121). HTTP to a real site needs the real internet, which the
-# station console's network isn't (decided 2026-10-14).
+# No console task: a lab (#121). The console has curl since #166, but only for the station's
+# own simulated hosts; this module is about a real site, which needs the real internet.
 title: HTTP by hand
 minutes: 20
 story: |

@@ -148,7 +148,6 @@ terminal:
   success: |-
     Okafor pings the uplink himself and watches the replies come back from mission.meridian. "Same name, same answer. That's all I wanted."
   solution:
-    - ping -c 2 mission.meridian
     - getent hosts mission.meridian
     - dig +short mission.meridian
     - dig -x 10.4.1.14
@@ -158,7 +157,6 @@ terminal:
     - getent hosts mission.meridian > ~/names.txt
     - dig +short mission.meridian >> ~/names.txt
     - cat ~/names.txt
-    - ping -c 1 mission.meridian
 comms:
   open:
     - {from: mission, text: "*Meridian*, Mission Control. Our uplink is up and answering at `mission.meridian`. Some of your relays reach it and some don't."}

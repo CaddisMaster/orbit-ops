@@ -84,6 +84,11 @@ and why it matters, not what the diff says.
   shell, bash, how to read the prompt, a command and its arguments, and that the shell reads
   the whole line before the command runs. Module 03's globs point back to it. Unit 1.1 had
   used "the shell" without ever explaining it.
+- Unit 1.4 modules 02–09 had their content review (#198). Module 07's ssh-config question no
+  longer says a bad option logs you in (ssh stops first), and modules 07 and 08 say to add to
+  `~/.ssh/config` rather than replace it. Module 05's lab hints point at the mistake instead of
+  giving the jq filter, and module 06's `-checkend` example is no longer the lab's own answer.
+  Smaller wording fixes in 02, 04, 05, 08 and 09.
 
 ## [0.8.0] — 2026-10-14
 

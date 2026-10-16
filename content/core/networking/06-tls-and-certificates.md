@@ -131,7 +131,7 @@ lab:
         subject=CN = budget.seandesmet.com
     - prompt: What `openssl x509` says about the certificate a day from now.
       checks:
-        - {regex: '\A\s*Certificate will not expire\s*\Z', says: "It will still be valid in 24 hours", hint: "openssl x509 -checkend takes seconds: a day is 86400."}
+        - {regex: '\A\s*Certificate will not expire\s*\Z', says: "It will still be valid in 24 hours", hint: "openssl x509 -checkend takes seconds, not hours or days."}
       example: |
         Certificate will not expire
 comms:
@@ -229,7 +229,7 @@ openssl s_client -connect example.org:443 -servername example.org </dev/null 2>/
 | `-ext subjectAltName` | every name it covers |
 | **`-checkend SECONDS`** | **says whether it will still be valid that many seconds from now**: `Certificate will not expire`, or `Certificate will expire` |
 
-`-checkend 86400` (a day) or `2592000` (30 days) is how a script or monitor warns before a
+`-checkend 604800` (a week) or `2592000` (30 days) is how a script or monitor warns before a
 certificate runs out. Without the `x509` half, `s_client`'s own output ends with `Verify return
 code: 0 (ok)` when the chain checks out, or the reason it doesn't, like `10 (certificate has
 expired)`.

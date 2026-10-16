@@ -2874,7 +2874,6 @@
  },
  "names-and-dns": {
   "solution": [
-   "ping -c 2 mission.meridian",
    "getent hosts mission.meridian",
    "dig +short mission.meridian",
    "dig -x 10.4.1.14",
@@ -2883,8 +2882,7 @@
    "meridian",
    "getent hosts mission.meridian > ~/names.txt",
    "dig +short mission.meridian >> ~/names.txt",
-   "cat ~/names.txt",
-   "ping -c 1 mission.meridian"
+   "cat ~/names.txt"
   ],
   "source": "core/networking/02-names-and-dns.md",
   "spec": {
