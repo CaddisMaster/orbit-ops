@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-10-16
+
+The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of
+its own, with addresses, DNS, HTTP, a firewall and SSH to other hosts, all simulated in the
+browser and checked line for line against Ubuntu 24.04. The labs work on real sites, this app's
+included. The Life Support mystery takes its next step: the 02:35 job is still connected, and
+not to Mission Control. Unit 1.1 now says what the shell is, and the laptop's screen fits more.
+
 ### Added
 - The station console has a network (#164), for Unit 1.4. `ip addr` and `ip route` show the
   console's address and gateway, and `ss -tlnp` and `ss -tnp` show what listens and who's
