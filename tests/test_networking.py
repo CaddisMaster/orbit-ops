@@ -586,3 +586,86 @@ def test_module_08s_lab_refuses_the_likely_mistakes(box, paste):
     pastes = [DRY, REAL, DELETE, FORWARD]
     pastes[box] = paste
     assert not _passes(_module("copying-and-tunnels"), *pastes)
+
+
+# --- 09: Firewalls (#175) ------------------------------------------------------------------------------
+RULES = "/etc/ufw/user.rules"
+CONF = "/etc/ufw/ufw.conf"
+FEED = "/home/cadet/feed.txt"
+NARROW = "### tuple ### allow tcp 9100 0.0.0.0/0 any 10.4.1.40 in"
+
+
+def _firewall(start, tuples, enabled=True):
+    from app.content.schema import ufw_conf, ufw_rules
+
+    rules, conf = start[RULES], start[CONF]
+    return {
+        **start,
+        RULES: Node(**{**rules.model_dump(), "contents": ufw_rules(tuples)}),
+        CONF: Node(**{**conf.model_dump(), "contents": ufw_conf(enabled)}),
+    }
+
+
+def _fixed(start, tuples=None, enabled=True, feed='{"relay":"relay.meridian","uplink":"ok","queued":0}\n'):
+    tuples = ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", NARROW.removeprefix("### tuple ### ")] if tuples is None else tuples
+    state = _firewall(start, tuples, enabled)
+    return _with_file(state, FEED, feed) if feed is not None else state
+
+
+@pytest.mark.criterion(175, "Module 09 of Unit 1.4 is complete content")
+def test_module_09_is_complete_content():
+    module = load_catalog().unit_modules("networking")[8]
+    assert module.slug == "firewalls"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(175, "Module 09's console task can be done")
+def test_module_09s_end_state_passes_on_the_server():
+    exercise = _module("firewalls").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _fixed(start), exercise.cwd)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"tuples": ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", "allow any 9100 0.0.0.0/0 any 0.0.0.0/0 in"]},  # ufw allow 9100: everyone
+        {"tuples": ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", "allow any 9100 0.0.0.0/0 any 10.4.1.40 in"]},  # no proto: udp too
+        {"tuples": ["allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in", "allow tcp 9100 0.0.0.0/0 any 10.4.1.5 in"]},  # the ops desk instead
+        {"enabled": False},  # ufw disable
+        {"feed": None},  # no proof
+    ],
+    ids=["open-to-all", "tcp-and-udp", "wrong-host", "firewall-off", "no-feed"],
+)
+def test_module_09_refuses_the_misreadings(kwargs):
+    exercise = _module("firewalls").terminal
+    assert not grade(exercise, _fixed(_start(exercise), **kwargs), exercise.cwd)
+
+
+def test_module_09s_figures_match_the_console():
+    module = _module("firewalls")
+    exercise = module.terminal
+    net = exercise.network
+    hosts = {h.name: h for h in net.hosts}
+    feed = next(s for s in net.listening if s.process == "relay-feed")
+    # The trap: an earlier deny on the feed's port, so an allow added after it changes nothing.
+    rules = net.firewall.rules
+    assert net.firewall.enabled and [(r.action, r.port) for r in rules] == [("allow", 22), ("deny", feed.port)]
+    assert feed.address == "0.0.0.0"  # listening on every address: it's the firewall, not the bind
+    # The checks want exactly Mission's host on exactly that port, over TCP.
+    mission = hosts["mission"]
+    assert exercise.checks[0].text == f"### tuple ### allow tcp {feed.port} 0.0.0.0/0 any {mission.address} in\n"
+    assert mission.login and hosts["ops-desk"].login and hosts["ops-desk"].address != mission.address
+    assert feed.http[0].body.rstrip("\n").startswith("{" + exercise.checks[2].text)
+    eth0 = ipaddress.IPv4Interface(net.interfaces[0].address)
+    assert f"http://{eth0.ip}:{feed.port}/feed" in exercise.task
+    # What the crew say is true.
+    assert f"0.0.0.0:{feed.port} · LISTENING" in _said(module, "open") and f"port {feed.port}" in _said(module, "open")
+    assert f"{feed.port}/tcp ALLOW {mission.address}" in _said(module, "console_done")
+    # The lesson, quiz and cards use none of the task's numbers.
+    body = module.body_html
+    quoted = " ".join([q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+                      + [c.front_html + c.back_html for c in module.cards])
+    for text in (body, quoted):
+        assert "10.4.1." not in text and "mission.meridian" not in text and "relay-feed" not in text
