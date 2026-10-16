@@ -1,6 +1,6 @@
 ---
-# No console task: a lab (#121). A real API needs the real internet, which the station
-# console's network isn't (decided 2026-10-14).
+# No console task: a lab (#121). The console has curl since #166, but only for the station's
+# own simulated hosts; a real API needs the real internet.
 title: APIs and JSON
 minutes: 20
 story: |
@@ -110,7 +110,7 @@ lab:
     - prompt: The repository's full name and default branch, one per line.
       checks:
         - {lines: {min: 2, max: 2}, says: "Two lines", hint: "Just the two values, not the JSON around them."}
-        - {regex: '^CaddisMaster/orbit-ops\s*$', says: "The full name", hint: "full_name is a field of the repository's object: .full_name"}
+        - {regex: '^CaddisMaster/orbit-ops\s*$', says: "The full name", hint: "Which field holds the repository's name? Look for it in the JSON from step 2."}
         - {regex: '^main\s*$', says: "The default branch"}
         - {not_contains: '"', says: "Plain text, not JSON strings", hint: "Quotes in the answer? jq prints strings as JSON unless you ask for raw output."}
       example: |
@@ -119,14 +119,14 @@ lab:
     - prompt: The three newest releases' tag names, one per line.
       checks:
         - {lines: {min: 3, max: 3}, says: "Three releases", hint: "More than three? The server sends 30 unless the query string asks for fewer: ?per_page=3"}
-        - {regex: '\A\s*v\d+\.\d+\.\d+[ \t]*\n[ \t]*v\d+\.\d+\.\d+[ \t]*\n[ \t]*v\d+\.\d+\.\d+\s*\Z', says: "Each line is a tag, like v0.1.0, and nothing else", hint: "/releases is an array: .[] goes into it, and each release has a tag_name."}
+        - {regex: '\A\s*v\d+\.\d+\.\d+[ \t]*\n[ \t]*v\d+\.\d+\.\d+[ \t]*\n[ \t]*v\d+\.\d+\.\d+\s*\Z', says: "Each line is a tag, like v0.1.0, and nothing else", hint: "/releases is an array, not an object. Which filter goes into each element of one?"}
       example: |
         v0.8.0
         v0.7.0
         v0.6.1
     - prompt: When `v0.1.0` was published.
       checks:
-        - {regex: '\A\s*2026-10-08T18:46:54Z\s*\Z', says: "v0.1.0's published_at, and only that", hint: "select keeps only the releases whose tag_name == \"v0.1.0\". Quotes in the answer mean -r is missing."}
+        - {regex: '\A\s*2026-10-08T18:46:54Z\s*\Z', says: "v0.1.0's published_at, and only that", hint: "Keep only the release you want, then pick its field. Quotes in the answer mean -r is missing."}
       example: |
         2026-10-08T18:46:54Z
 comms:
@@ -187,9 +187,9 @@ the JSON, from a file or a pipe: `jq FILTER file.json`, or `curl -s URL | jq FIL
 
 | Filter | Gives | Here |
 |---|---|---|
-| `.` | everything, laid out and coloured | the whole feed |
+| `.` | everything, laid out (and coloured, in a terminal) | the whole feed |
 | **`.field`** | **an object's field** | `.station` → `"meridian"` |
-| `.a.b` | a field of a field | `.decks[0].name` → `"life-support"` |
+| `.a[N].b` | a path: each step goes one level in | `.decks[0].name` → `"life-support"` |
 | `.[N]` | an array's element N, counting from 0 | `.decks[0]` → the first deck |
 | **`.[]`** | **each element of an array, in turn** | `.decks[]` → three objects |
 | `A \| B` | B applied to each thing A gives | `.decks[] \| .name` → three names |

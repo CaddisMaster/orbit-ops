@@ -770,3 +770,17 @@ def test_module_10s_figures_match_the_console():
                       + [c.front_html + c.back_html for c in module.cards])
     for text in (module.body_html, quoted):
         assert relay_ip not in text and "depot" not in text and "10.4." not in text
+
+
+# --- #198: the content review's findings -----------------------------------------------------
+@pytest.mark.criterion(198, "Module 07's ssh-config question describes what ssh does")
+def test_module_07s_config_question_describes_what_ssh_does():
+    question = next(q for q in _module("ssh-keys").quiz if q.code and "Bad configuration option" in q.code)
+    assert "terminating" in question.code and "logs in" not in question.q  # ssh stops at a bad option
+
+
+@pytest.mark.criterion(198, "Module 05's lab hints don't give the filters away")
+def test_module_05s_hints_dont_give_the_filters_away():
+    hints = [c.hint or "" for box in _module("apis-and-json").lab.boxes for c in box.checks]
+    for filter_ in (".full_name", ".[]", "select", "tag_name", "== "):
+        assert not any(filter_ in h for h in hints), filter_

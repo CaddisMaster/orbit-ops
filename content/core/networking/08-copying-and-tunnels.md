@@ -110,9 +110,9 @@ lab:
        trailing slash on the source**. Paste its output in the first box.
     3. Now copy for real, but this time **with** the trailing slash on the source, so the log
        files land straight in `home/`. Paste its output in the second box.
-    4. `home/` has a file the relay doesn't. Do a **dry run** of the same copy with
+    4. `home/` has a file the relay doesn't. Do a **dry run** of step 3's copy (with the slash) with
        **`--delete`**, and paste it in the third box. Don't run it for real.
-    5. Add an entry to `~/.ssh/config` called **`relay-admin`**, for the user **`okafor`** at
+    5. Add an entry to `~/.ssh/config` (add to it, don't replace it) called **`relay-admin`**, for the user **`okafor`** at
        **`relay.meridian.example`**, that forwards **port 8080 on your machine to port 8000 on
        the relay's localhost**. Check it without connecting, and paste ssh's `user`, `hostname`
        and `localforward` lines in the last box.
@@ -268,7 +268,7 @@ and no shell.
 
 **On the real station:** the app on the droplet listens on `127.0.0.1:5002` and its database
 isn't published to the host at all (module 01), so from outside, Nginx on 443 is the only way
-in. A tunnel is how you'd reach the app around Nginx, for a look at what it says before Nginx
+in to the app. A tunnel is how you'd reach the app around Nginx, for a look at what it says before Nginx
 gets involved: `ssh -L 5002:127.0.0.1:5002` to the droplet, then `http://localhost:5002` on
 your own machine. The deploy copies files the other way, with plain ssh: it streams
 `docker-compose.yml` and its scripts over ssh's standard input (`ssh … "cat > …" <

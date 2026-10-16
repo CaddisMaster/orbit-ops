@@ -30,7 +30,7 @@ quiz:
       the line first and asking later is exactly what an attacker hopes you'll do. It says
       nothing about your own key.
   - type: choice
-    q: "`ssh archive` logs in as the wrong user and asks for a password. What does this tell you?"
+    q: "`ssh archive` stops before it connects. What does this tell you?"
     code: |-
       $ cat ~/.ssh/config
       Host archive
@@ -205,7 +205,8 @@ session. A key a program uses unattended, like a deploy, has none, and is protec
 everything around it instead.
 
 ssh is strict about permissions, because a readable private key is a stolen one:
-`~/.ssh` should be `700` and the private key `600`. ssh-keygen sets both for you.
+`~/.ssh` should be `700` and the private key `600`. ssh-keygen makes the key `600`, and makes
+`~/.ssh` `700` if it has to create it.
 
 To put your public key on a server you can already reach, `ssh-copy-id -i ~/.ssh/archive_key.pub
 user@host` adds it to that account's `authorized_keys`. Otherwise you send the `.pub` file to
@@ -267,7 +268,8 @@ is real, remove the old line with `ssh-keygen -R HOST` and connect again to acce
 ## `~/.ssh/config` and `ssh -G`
 
 Typing `ssh -i ~/.ssh/archive_key nakamura@archive.example.org` every time gets old.
-**`~/.ssh/config` gives a host a short name and its settings**:
+**`~/.ssh/config` gives a host a short name and its settings**. It may not exist yet, and if it
+does, add to it (`nano ~/.ssh/config`): `cat > ~/.ssh/config` would replace what's there.
 
 ```text
 Host archive
@@ -309,7 +311,7 @@ from a GitHub secret to `~/.ssh/deploy_key` with `chmod 600`, and connects with 
 ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes`. `BatchMode=yes` means never ask
 anything: no passwords and no "are you sure?". Because nobody is there to check a fingerprint,
 it never trusts a host key on first sight either. It writes `known_hosts` from another
-secret, `DROPLET_KNOWN_HOSTS`, holding the droplet's real host keys, so a server with any
+secret, `DROPLET_KNOWN_HOSTS`, holding the droplet's host keys, so a server with any
 other key fails the deploy instead of receiving it.
 
 ## Try it
