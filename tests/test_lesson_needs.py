@@ -279,6 +279,18 @@ NEEDS = {
         "ufw delete RULE": "**`sudo ufw delete RULE` removes a rule, written the way it was added**",
         "don't turn the firewall off": "**Don't fix a firewall by turning it off.**",
     },
+    "following-a-connection": {
+        "the peer column is the other end": "**Peer Address:Port: the other machine's end**",
+        "ss -p names only your own processes": "**As a normal user, the Process column is empty for every socket that isn't yours.**",
+        "sudo ss -tnp names them all": "**`sudo ss -tnp` names them all**",
+        "dig -x names an address": "**`dig -x ADDRESS +short` asks for the address's PTR record**",
+        "a PTR record is only a claim": "**a PTR record is only a claim**",
+        "look the name up to check it": "**check it the other way: look the name up, and see whether it\ngives the same address back**",
+        "compare with the expected machine's address": "**`dig NAME +short` for the machine you expected, and see whether the\naddresses match**",
+        "curl -v shows the Server header": "**The `Server:` header is what the server says it is**",
+        "use the name, not the address": "Use the name, not the address",
+        "write it down before stopping anything": "**Killing the process closes its\nconnection, and the peer, the PID and the command line go with it.**",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

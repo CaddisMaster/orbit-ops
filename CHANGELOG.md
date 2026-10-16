@@ -66,6 +66,12 @@ and why it matters, not what the diff says.
   first-match rule, and not locking yourself out. On the console, the relay's feed listens and
   Mission's host still gets silence: you test from outside with `ssh`, find an old deny above
   everything, and open the port to Mission's host and no one else.
+- Unit 1.4 module 10, *Following a connection* (#176), the unit's last module. It puts the
+  unit's tools in order: `sudo ss -tnp` for who holds a connection, `dig -x` and a forward
+  lookup to name the peer (a PTR record is only a claim), `curl -v` to ask what's at the other
+  end, and writing it up before you stop anything. On the console, the Life Support mystery's
+  1.4 clue: the 02:35 job `scrubber-flush` is still connected to `relay.depot-sync.net`, which
+  isn't Mission Control. Finishing it earns *Relays Restored*.
 
 ### Changed
 - The laptop's screen fits more (#188). Everything on it is drawn at 85% of its old size, and

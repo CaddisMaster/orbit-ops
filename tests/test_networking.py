@@ -9,7 +9,7 @@ import ipaddress
 import pytest
 
 from app.content import load_catalog
-from app.terminal import Node, grade
+from app.terminal import Node, Process, grade
 from tests.test_bash_scripting import _complete_content, _said, _start
 
 
@@ -669,3 +669,104 @@ def test_module_09s_figures_match_the_console():
                       + [c.front_html + c.back_html for c in module.cards])
     for text in (body, quoted):
         assert "10.4.1." not in text and "mission.meridian" not in text and "relay-feed" not in text
+
+
+# --- 10: Following a connection (#176) ------------------------------------------------------
+WRITEUP = "/home/cadet/scrubber-flush.txt"
+FOUND = [
+    "process scrubber-flush",
+    "peer 203.0.113.47:443",
+    "name relay.depot-sync.net",
+    "server depot-relay",
+    "mission 10.4.1.40",
+]
+
+
+def _alive(exercise, alive=True):
+    """The starting processes, as the console reports them, with scrubber-flush alive or not."""
+    return [
+        Process(pid=400 + i, user=p.user or exercise.user, command=p.command, alive=alive or "scrubber-flush" not in p.command)
+        for i, p in enumerate(exercise.processes)
+    ]
+
+
+def _written_up(start, lines=FOUND):
+    return _with_file(start, WRITEUP, "\n".join(lines) + "\n")
+
+
+@pytest.mark.criterion(176, "Module 10 of Unit 1.4 is complete content")
+def test_module_10_is_complete_content():
+    module = load_catalog().unit_modules("networking")[9]
+    assert module.slug == "following-a-connection"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(176, "Module 10's console task can be done")
+def test_module_10s_end_state_passes_on_the_server():
+    exercise = _module("following-a-connection").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd, _alive(exercise))
+    assert grade(exercise, _written_up(start), exercise.cwd, _alive(exercise))
+
+
+@pytest.mark.parametrize(
+    ("wrong", "right"),
+    [
+        ("peer 10.4.2.5:49239", "peer 203.0.113.47:443"),  # its own end, not the peer
+        ("process telemetry-link", "process scrubber-flush"),  # the decoy: the connection to Mission
+        ("peer 10.4.1.40:443", "peer 203.0.113.47:443"),  # the decoy's peer
+        ("server mission-uplink", "server depot-relay"),  # asked Mission's host instead
+        ("mission 203.0.113.47", "mission 10.4.1.40"),  # took the relay for Mission
+    ],
+    ids=["local-end", "telemetry", "telemetry-peer", "asked-mission", "relay-as-mission"],
+)
+def test_module_10_refuses_the_misreadings(wrong, right):
+    exercise = _module("following-a-connection").terminal
+    lines = [wrong if line == right else line for line in FOUND]
+    assert not grade(exercise, _written_up(_start(exercise), lines), exercise.cwd, _alive(exercise))
+
+
+def test_module_10_wants_the_job_left_running():
+    exercise = _module("following-a-connection").terminal
+    assert not grade(exercise, _written_up(_start(exercise)), exercise.cwd, _alive(exercise, alive=False))
+
+
+def test_module_10s_figures_match_the_console():
+    module = _module("following-a-connection")
+    exercise = module.terminal
+    net = exercise.network
+    hosts = {h.address: h for h in net.hosts}
+    records = {(r.name, r.type): r.value for r in net.dns.records}
+    conns = {c.process: c for c in net.connections}
+    assert all(len(p.command.rsplit("/", 1)[-1].split()[0]) <= 15 for p in exercise.processes)  # ss -p shows comm, 15 at most
+    flush = next(p for p in exercise.processes if p.command.endswith("/scrubber-flush"))
+    # docs/story.md's 1.4 clue: the job, root's, connects to relay.depot-sync.net at 203.0.113.47.
+    assert flush.user == "root" and conns["scrubber-flush"].remote == "203.0.113.47:443"
+    relay_ip, port = conns["scrubber-flush"].remote.split(":")
+    assert ipaddress.IPv4Address(relay_ip) in ipaddress.IPv4Network("203.0.113.0/24")  # outside, RFC 5737
+    ptr = ipaddress.IPv4Address(relay_ip).reverse_pointer
+    assert records[(ptr, "PTR")] == "relay.depot-sync.net" and records[("relay.depot-sync.net", "A")] == relay_ip  # it points back
+    # The decoy goes to Mission, which isn't the relay.
+    mission = records[("mission.meridian", "A")]
+    assert conns["telemetry-link"].remote == f"{mission}:443" and mission != relay_ip
+    relay = hosts[relay_ip].services[0]
+    assert relay.port == int(port) and relay.tls == "trusted"
+    page = relay.http[0]
+    assert page.path == "/" and page.headers["Server"] == "depot-relay"
+    # The cron job is 1.2's, word for word.
+    assert "35 2 * * *  root  /usr/local/sbin/scrubber-flush" in next(f for f in exercise.files if f.path == "/etc/cron.d/scrubber-maint").contents
+    # The checks are the figures above.
+    texts = [c.text for c in exercise.checks if getattr(c, "text", None)]
+    assert texts == ["process scrubber-flush\n", f"peer {relay_ip}:{port}\n", "name relay.depot-sync.net",
+                     f"server {page.headers['Server']}\n", f"mission {mission}\n"]
+    # What the crew say is true.
+    assert "OWNER ROOT · ITS CONNECTIONS: 1" in _said(module, "open")
+    assert sum(c.process == "scrubber-flush" for c in net.connections) == 1
+    done = _said(module, "console_done")
+    assert f"{relay_ip}:{port} · RELAY.DEPOT-SYNC.NET · MISSION.MERIDIAN: {mission}" in done
+    assert "Awaiting controller state from scrubber B." in done and page.body == "awaiting controller state from meridian/scrubber-b\n"
+    # The lesson, quiz and cards use none of the task's numbers.
+    quoted = " ".join([q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+                      + [c.front_html + c.back_html for c in module.cards])
+    for text in (module.body_html, quoted):
+        assert relay_ip not in text and "depot" not in text and "10.4." not in text
