@@ -91,9 +91,9 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.8.0** is in production (2026-10-14), with the app's own Anthropic key on
-the droplet. Open: milestone **v0.9.0 — Networking** (#164–#176): the console learns a simulated
-station network, then Unit 1.4's ten modules, with the Life Support mystery's next clue
-(`docs/story.md`).
+the droplet. Open: milestone **v0.9.0 — Networking**. The console's network, DNS, curl, ufw and
+`ssh HOST 'CMD'` are merged, with Unit 1.4 modules 01–09; left is #176, the unit's last module
+and the Life Support mystery's 1.4 clue (`docs/story.md`).
 
 ## Maintainer notes (local only)
 
