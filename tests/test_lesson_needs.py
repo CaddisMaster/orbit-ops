@@ -208,6 +208,18 @@ NEEDS = {
         "timed out means nothing answered": "**nothing answered at all**",
         "Name or service not known means no such name": "**the name doesn't resolve**",
     },
+    "http-by-hand": {
+        "install curl on your own machine": "`sudo apt install\ncurl`",
+        "curl -I prints only the headers": "**sends `HEAD` and prints only the response's headers**",
+        "curl -v shows the whole conversation": "**shows the whole conversation**",
+        "the status line comes first": "with a **status line** first",
+        "Content-Type says what the body is": "**what kind of data the body is**",
+        "Location says where a redirect goes": "**where a redirect goes**",
+        "curl follows redirects only with -L": "**curl doesn't follow\na redirect unless you give it `-L`**",
+        "-w prints what you ask for after the transfer": "**after the transfer, prints what you ask for**",
+        "%{url_effective} is where curl ended": "**`%{url_effective}`** is the address curl ended at",
+        "-o /dev/null throws the body away": "`-o /dev/null` throws it away",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
