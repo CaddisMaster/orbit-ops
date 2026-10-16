@@ -568,9 +568,10 @@ def test_the_network_reaches_the_console_only_when_the_exercise_has_one(tmp_path
 
     _write(tmp_path, NETWORK)
     spec = client_spec(load_catalog(tmp_path).modules["two"].terminal)
-    assert spec["network"]["listening"] == [{"port": 8080, "proto": "tcp", "process": "python3", "address": "0.0.0.0"}]
+    assert spec["network"]["listening"] == [{"port": 8080, "proto": "tcp", "process": "python3", "address": "0.0.0.0", "http": None}]
     assert spec["network"]["hosts"][0] == {
-        "name": "db", "address": "10.4.0.20", "up": True, "ping": True, "services": [{"port": 5432, "proto": "tcp"}], "filtered": [2222],
+        "name": "db", "address": "10.4.0.20", "up": True, "ping": True,
+        "services": [{"port": 5432, "proto": "tcp", "http": None, "tls": None}], "filtered": [2222], "login": False,
     }
     (tmp_path / "plain").mkdir()
     _write(tmp_path / "plain")
@@ -655,3 +656,89 @@ def test_the_station_hosts_file_matches_the_console():
     found = re.search(r'^  var ETC_HOSTS = (".*");$', shell, re.M)
     assert found, "shell.js has no one-line ETC_HOSTS"
     assert json.loads(found.group(1)) == ETC_HOSTS
+
+
+# --- #166: HTTP services, the firewall, and logging in to another host --------------------------
+HTTP = NETWORK.replace(
+    "      - {name: relay, address: 203.0.113.47, services: [{port: 443}]}\n",
+    """      - name: relay
+        address: 203.0.113.47
+        services:
+          - port: 443
+            tls: trusted
+            http:
+              - {path: /, headers: {Content-Type: text/plain}, body: "FLUSH\\n"}
+              - {path: /report, method: POST, status: 201}
+      - {name: mission, address: 10.4.0.5, login: true, services: [{port: 22}]}
+    firewall:
+      enabled: true
+      rules:
+        - {port: 22, proto: tcp}
+        - {from: 10.4.0.5, port: 8080, proto: tcp}
+""",
+)
+FIXTURES = Path(__file__).resolve().parent / "js" / "fixtures"
+
+
+@pytest.mark.parametrize(
+    ("replace", "with_", "expect"),
+    [
+        ("tls: trusted\n            http:", "tls: trusted\n            proto: udp\n            http:", "HTTP runs over tcp"),
+        ("            http:\n              - {path: /, headers: {Content-Type: text/plain}, body: \"FLUSH\\n\"}\n              - {path: /report, method: POST, status: 201}\n", "", "tls needs http routes"),
+        ("{path: /report, method: POST, status: 201}", "{path: /, method: GET, status: 201}", "GET / listed twice"),
+        ("{path: /report,", "{path: report,", "path"),
+        ("{name: mission, address: 10.4.0.5, login: true, services: [{port: 22}]}", "{name: mission, address: 10.4.0.5, login: true}", "host mission: login needs sshd"),
+        ("{from: 10.4.0.5, port: 8080, proto: tcp}", "{from: 10.4.0.300, port: 8080}", "from 10.4.0.300 is not an IPv4 address or network"),
+        ("{from: 10.4.0.5, port: 8080, proto: tcp}", "{proto: tcp}", "give a port, a from, or both"),
+        ("{from: 10.4.0.5, port: 8080, proto: tcp}", "{from: 10.4.0.5, proto: tcp}", "a protocol needs a port"),
+    ],
+)
+def test_bad_http_and_firewalls_are_reported(tmp_path, replace, with_, expect):
+    assert replace in HTTP
+    _write(tmp_path, HTTP.replace(replace, with_))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert "core/shell/02-two.md" in str(exc.value) and expect in str(exc.value)
+
+
+def test_the_firewall_is_ufws_own_files(tmp_path):
+    from app.content.schema import UFW_INSTALLED, ufw_conf
+
+    _write(tmp_path, HTTP)
+    fs = load_catalog(tmp_path).modules["two"].terminal.starting_fs()
+    assert fs["/etc/ufw/ufw.conf"]["contents"] == ufw_conf(True) and "ENABLED=yes\n" in ufw_conf(True)
+    rules = fs["/etc/ufw/user.rules"]
+    assert (rules["mode"], rules["owner"]) == (0o640, "root")  # root's to read, as on Ubuntu
+    assert "### tuple ### allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in\n" in rules["contents"]
+    assert "### tuple ### allow tcp 8080 0.0.0.0/0 any 10.4.0.5 in\n-A ufw-user-input -p tcp --dport 8080 -s 10.4.0.5 -j ACCEPT\n" in rules["contents"]
+    assert "10.4.0.5" not in fs["/etc/ufw/user6.rules"]["contents"]  # an IPv4 source has no IPv6 rule
+    # Without a firewall: ufw as installed, and off.
+    (tmp_path / "plain").mkdir()
+    _write(tmp_path / "plain")
+    plain = load_catalog(tmp_path / "plain").modules["two"].terminal.starting_fs()
+    assert plain["/etc/ufw/user.rules"]["contents"] == UFW_INSTALLED and "ENABLED=no\n" in plain["/etc/ufw/ufw.conf"]["contents"]
+
+
+def test_ufws_rule_files_are_written_as_ufw_writes_them():
+    from app.content.schema import FirewallRule, ufw_rules
+
+    # The rules in the order a real ufw 0.36.2 was given them; the fixtures are its files.
+    rules = [
+        FirewallRule(port=22, proto="tcp"), FirewallRule(port=8080), FirewallRule(port=53, proto="udp"),
+        FirewallRule(**{"from": "10.4.0.5"}), FirewallRule(port=9000, proto="tcp", **{"from": "10.4.0.5"}),
+        FirewallRule(action="deny", port=3000, proto="tcp"), FirewallRule(port=3000, **{"from": "10.4.0.0/24"}),
+    ]
+    tuples = [r.tuple() for r in rules]
+    assert ufw_rules(tuples) == (FIXTURES / "ufw-user.rules").read_text()
+    assert ufw_rules(tuples, six=True) == (FIXTURES / "ufw-user6.rules").read_text()
+
+
+def test_routes_reach_the_console(tmp_path):
+    from app.terminal import client_spec
+
+    _write(tmp_path, HTTP)
+    spec = client_spec(load_catalog(tmp_path).modules["two"].terminal)
+    relay = next(h for h in spec["network"]["hosts"] if h["name"] == "relay")
+    assert relay["services"][0]["tls"] == "trusted"
+    assert relay["services"][0]["http"][0] == {"path": "/", "method": "GET", "status": 200, "headers": {"Content-Type": "text/plain"}, "body": "FLUSH\n"}
+    assert next(h for h in spec["network"]["hosts"] if h["name"] == "mission")["login"] is True
