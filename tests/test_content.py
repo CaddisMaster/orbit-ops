@@ -363,3 +363,29 @@ def test_every_real_card_points_at_its_lesson_section():
     for module in load_catalog().ordered_modules():
         for card in module.cards:
             assert card.section_anchor and f'id="{card.section_anchor}"' in module.body_html, card.id
+
+
+# --- #196: what the shell is ------------------------------------------------------
+SHELL_SECTION = "The shell: what reads your commands"
+
+
+@pytest.mark.criterion(196, "Module 01 says what the shell is")
+def test_module_01_says_what_the_shell_is():
+    first = load_catalog().unit_modules("linux-shell")[0]
+    body = " ".join(first.body_html.split())
+    assert body.index(f">{SHELL_SECTION}</h2>") < body.index(">One tree, one root</h2>")
+    section = body[body.index(SHELL_SECTION) : body.index(">One tree, one root</h2>")]
+    for says in ("the <strong>shell</strong>", "<strong>bash</strong>", "<strong>prompt</strong>",
+                 "<strong>The shell reads the whole line before the command runs</strong>"):
+        assert says in section, says
+    assert any(c.id == "the-filesystem/shell-vs-terminal" and c.section_html == SHELL_SECTION for c in first.cards)
+    # The prompt question is last, so the earlier questions keep the index their attempts are stored by.
+    assert first.quiz[-1].code and first.quiz[-1].code.endswith("$")
+
+
+@pytest.mark.criterion(196, "Module 03's globs point back to it")
+def test_module_03s_globs_point_back_to_module_01():
+    third = load_catalog().unit_modules("linux-shell")[2]
+    body = " ".join(third.body_html.split())
+    globs = body[body.index(">Globs: patterns the shell expands</h2>") :]
+    assert "In module 01, the shell reads the whole line before the command runs" in globs.split("</h2>", 2)[1]

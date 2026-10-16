@@ -147,8 +147,9 @@ first, and `rm -i` asks before each file. Only an answer starting with `y` means
 | `[abc]` | one of those characters | `[ab]*.md` → names starting with a or b |
 | `[0-9]` | one character in the range | `dump-[0-9].core` |
 
-The important part is **who** does the matching. The shell replaces the pattern with the list of
-matching names *before* the command runs:
+The important part is **who** does the matching. In module 01, the shell reads the whole line
+before the command runs, and can rewrite parts of it first. This is what that's for: the shell
+replaces the pattern with the list of matching names *before* the command runs:
 
 ```bash
 echo *.log        # see exactly what a glob expands to, safely

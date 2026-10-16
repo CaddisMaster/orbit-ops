@@ -36,6 +36,20 @@ quiz:
     explain: >-
       Absolute paths start at the root, `/`. A path without a leading `/` (like `logs/app.log`)
       is relative to your current directory.
+  - type: choice
+    q: What does this prompt tell you?
+    code: |-
+      okafor@relay:/var/log$
+    options:
+      - "You're `okafor`, on the machine `relay`, in `/var/log`, as a normal user"
+      - "You're logged in as `relay`, in Okafor's home directory"
+      - "The last command failed in `/var/log`"
+      - "You're root, on a machine called `okafor`"
+    answer: 0
+    explain: >-
+      A prompt reads user@machine:directory, then `$` for a normal user (`#` would mean root).
+      It's worth a glance before every command: it tells you where a relative path will start
+      from, and which machine you're about to change.
 terminal:
   task: |
     Configuration lives under `/etc` and logs live under `/var/log`. Find the directory that
@@ -97,7 +111,34 @@ cards:
     section: "Absolute and relative paths"
     front: Absolute vs relative path?
     back: Absolute starts at `/` and means the same thing from anywhere. Relative is resolved from your current directory.
+  - id: shell-vs-terminal
+    section: "The shell: what reads your commands"
+    front: The terminal versus the shell?
+    back: The terminal is the window. The shell (usually bash) is the program in it that reads each line you type and runs it.
 ---
+
+## The shell: what reads your commands
+
+The **terminal** is the window you type into. The program inside it that reads what you type
+and runs it is the **shell**. Most Linux machines, Ubuntu servers included, give you **bash**,
+and the station console works like it.
+
+The shell shows a **prompt** when it's ready for the next command:
+
+```text
+cadet@meridian:/etc$
+```
+
+That's **who you are** (`cadet`), **which machine** (`meridian`), and **where you are**
+(`/etc`; `~` means your home directory). It ends in `$` for a normal user and `#` for root.
+
+You type a line and press Enter. **The first word is the command and the rest are its
+arguments**: in `ls /home`, the command is `ls` and its argument is `/home`. **The shell
+reads the whole line before the command runs**, and can rewrite parts of it first. Module 03
+shows what that's for.
+
+An error tells you who's complaining. `bash: cd: /nowhere: No such file or directory` is the
+shell itself, since `cd` is part of bash. `ls: cannot access '/nowhere'` is the `ls` program.
 
 ## One tree, one root
 
