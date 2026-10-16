@@ -259,3 +259,82 @@ def test_module_03s_figures_match_the_console():
                       + [c.front_html + c.back_html for c in module.cards])
     for text in (body, quoted):
         assert "relay-" not in text and "10.4.3." not in text and "8443" not in text
+
+
+# --- 04: HTTP by hand (#170) ---------------------------------------------------------------------
+from tests.test_git import _complete_content as _lab_content  # noqa: E402
+from tests.test_git import _passes  # noqa: E402
+
+HEAD = """HTTP/1.1 301 Moved Permanently
+Server: nginx/1.24.0 (Ubuntu)
+Date: Fri, 16 Oct 2026 12:52:57 GMT
+Content-Type: text/html
+Content-Length: 178
+Connection: keep-alive
+Location: https://learn.seandesmet.com/healthz
+"""
+VERBOSE = """> GET /healthz HTTP/1.1
+> Host: learn.seandesmet.com
+> User-Agent: curl/8.5.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Content-Type: application/json
+< x-frame-options: DENY
+<
+* Connection #0 to host learn.seandesmet.com left intact
+{"status":"ok","version":"0.8.0","commit":"542844a"}
+"""
+TWO = "< HTTP/1.1 200 OK\n< Content-Type: application/json\n"
+FOLLOWED = "200 https://learn.seandesmet.com/healthz\n"
+
+
+@pytest.mark.criterion(170, "Module 04 of Unit 1.4 is complete content")
+def test_module_04_is_complete_content():
+    module = load_catalog().unit_modules("networking")[3]
+    assert module.slug == "http-by-hand"
+    _lab_content(module)
+
+
+@pytest.mark.criterion(170, "Module 04's lab can be done for real")
+def test_module_04s_examples_are_a_real_run_and_pass():
+    module = _module("http-by-hand")
+    assert _passes(module, *[box.example for box in module.lab.boxes])
+
+
+@pytest.mark.parametrize(
+    "pastes",
+    [
+        (HEAD, VERBOSE, TWO, FOLLOWED),
+        # A piped run: curl's progress meter and data notes are in the paste.
+        (HEAD, "  % Total    % Received\n} [5 bytes data]\n" + VERBOSE.replace("< HTTP", "{ [5 bytes data]\n< HTTP"), TWO, FOLLOWED),
+        # Windows line ends, and a curl that spoke HTTP/2 (lowercase headers, as HTTP/2 sends them).
+        (HEAD.replace("\n", "\r\n"), VERBOSE.replace("HTTP/1.1 200 OK", "HTTP/2 200 ").replace("> GET /healthz HTTP/1.1", "> GET /healthz HTTP/2").replace("> Host:", "> host:"),
+         "< HTTP/2 200 \r\n< content-type: application/json\r\n", FOLLOWED.replace("\n", "\r\n")),
+        # The two lines copied without curl's markers.
+        (HEAD, VERBOSE, "HTTP/1.1 200 OK\nContent-Type: application/json\n", FOLLOWED),
+    ],
+    ids=["terminal", "piped", "windows-and-http2", "markers-dropped"],
+)
+def test_module_04s_lab_passes_any_machines_output(pastes):
+    assert _passes(_module("http-by-hand"), *pastes)
+
+
+@pytest.mark.parametrize(
+    "box, paste",
+    [
+        (0, HEAD.replace("HTTP/1.1 301 Moved Permanently", "HTTP/1.1 200 OK").replace("Location: https://learn.seandesmet.com/healthz\n", "")),  # https:// instead
+        (0, HEAD + "\nHTTP/1.1 200 OK\nContent-Type: application/json\n"),  # with -L: past the redirect
+        (1, VERBOSE.replace("HTTP/1.1 200 OK", "HTTP/1.1 301 Moved Permanently").replace('{"status":"ok","version":"0.8.0","commit":"542844a"}', "<html>")),  # http://
+        (1, '{"status":"ok","version":"0.8.0","commit":"542844a"}\n'),  # without -v: only the body
+        (2, "> GET /healthz HTTP/1.1\n< Content-Type: application/json\n"),  # the request line, not the status line
+        (2, "< HTTP/1.1 200 OK\n< Content-Length: 52\n"),  # the wrong header
+        (3, "301 http://learn.seandesmet.com/healthz\n"),  # without -L
+    ],
+    ids=["https-in-step-2", "followed-in-step-2", "http-in-step-3", "no-verbose", "request-line", "wrong-header", "no-follow"],
+)
+def test_module_04s_lab_refuses_the_likely_mistakes(box, paste):
+    pastes = [HEAD, VERBOSE, TWO, FOLLOWED]
+    pastes[box] = paste
+    assert not _passes(_module("http-by-hand"), *pastes)

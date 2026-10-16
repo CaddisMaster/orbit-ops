@@ -34,6 +34,10 @@ and why it matters, not what the diff says.
   route, machine, port), `ping` and why a blocked ping proves little, `nc -zv -w`, and telling
   "refused", "timed out" and "no such name" apart. On the console, Mission's ping monitor is
   wrong about two of four relays, and you find each one's real fault.
+- Unit 1.4 module 04, *HTTP by hand* (#170), the unit's first lab: requests and responses,
+  methods, status codes, headers, redirects, and `curl` with `-v`, `-I`, `-L`, `-o` and `-w`.
+  With real curl you read this app's own `/healthz`: Certbot's redirect from `http://`, the
+  status line, and the headers Nginx and the app each send.
 
 ## [0.8.0] — 2026-10-14
 
