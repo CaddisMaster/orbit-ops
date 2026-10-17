@@ -88,6 +88,7 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.9.0 | 2026-10-17 | Unit 1.4 Networking complete (10 modules, *Relays Restored*): the console's network, DNS, curl, ufw and `ssh HOST 'CMD'` (#164–#166); the mystery's 1.4 clue (#176); Unit 1.1 says what the shell is (#196); the `lacks` check (#200); the screen at 85% (#188). No migrations |
 | 0.8.0 | 2026-10-14 | The desk scales with the screen and fills wide windows (#105); quiz retries (#103); typed, sourced flashcards (#104); the crew notice promotions and badges (#83); the Life Support mystery's 1.2 and 1.3 clues (#84, #160). No migrations |
 | 0.7.0 | 2026-10-14 | Labs and AI: Unit 1.3 Git (8 modules, labs on your own machine), Claude hints and lab review behind a monthly budget, the AI gate and **Uplink** readout, the verified pre-deploy backup; migrations `0008`, `0009` |
 | 0.6.1 | 2026-10-12 | Unit 1.2 modules 05–10 (conditionals → cron): Bash scripting complete, *Routine Automated*; GNU-style `tar` cannot-open message. PATCH, no migrations |
@@ -99,6 +100,63 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-17 — #176, #196, #198–#200 and v0.9.0: Unit 1.4 done and shipped
+
+- **#176 (#195):** module 10, *Following a connection*, the unit's last.
+  - The lesson covers `sudo ss -tnp`, `dig -x` and checking that the name points back (a PTR
+    record is only a claim), `curl -v` and the `Server:` header (a valid certificate proves the
+    name, not the intent), and writing it up before you kill anything.
+  - Console: the mystery's 1.4 clue. `scrubber-flush` is still running as root and holds
+    `203.0.113.47:443` (`relay.depot-sync.net`, which points back), while Mission Control is
+    `10.4.1.40`. The relay says `Server: depot-relay` and "awaiting controller state from
+    meridian/scrubber-b". A decoy `telemetry-link` connects to Mission, and a `running` check
+    keeps the job alive: it's evidence.
+  - `docs/story.md`'s 1.4 row is *written*. Unit 1.4 has all 10 modules, and completing it earns
+    *Relays Restored*.
+- **#196 (#197), found by Sean playing 1.1 module 03:** no lesson said what the shell was. Module
+  01 now opens with the terminal and the shell, bash, reading the prompt, a command and its
+  arguments, and the shell reading the line first. Module 03's globs point back to it.
+  ⚠️ **Quiz attempts are stored by question index** (`exercise_attempts.item`), so a new question
+  goes **last**. Inserting one shifts the production answers. A test holds it.
+- **The `content-reviewer` pass over Unit 1.4 modules 02–09** (owed from last session): nothing
+  blocking, and three issues:
+  - **#198 (#201), content:**
+    - Module 07's quiz said a bad ssh option logs in as the wrong user (ssh stops first).
+    - Modules 07 and 08 now say add to `~/.ssh/config`, don't replace it.
+    - Module 05's lab hints gave the jq filters away.
+    - Module 06's `-checkend` example was the lab's answer.
+    - Smaller wording fixes.
+  - **#199 (#202):** `help` now lists `dig host curl ufw ssh`.
+  - **#200 (#203):** a terminal check `{lacks: P, text}`, in both graders with shared parity cases.
+    Module 09 refuses opening 9100 to everyone as well as to Mission. It doesn't catch a second
+    narrow rule, which would need a counting check.
+- **Shipped v0.9.0** on Sean's go. The four PRs were merged one at a time with rebases (CHANGELOG
+  and test-file conflicts only). Release-prep said GO, the CHANGELOG cut went in as #204, and the
+  release was published on `4497664`. Run `38972057984`: the smoke test passed, Sean approved, the
+  backup was taken, there were no migrations, and the release reported `running version 0.9.0`
+  then "Deployed and healthy". The public `/healthz` reports `0.9.0`, and Budget Buddy still
+  answers 200. Milestone v0.9.0 is closed.
+- **How it was checked:**
+  - The module 10 and #196 Try its ran in a fresh `ubuntu:24.04` as a sudo-capable user. Two module
+    10 comments were corrected to the real output: `ss` lists itself, and a closed connection
+    shows `FIN-WAIT-1` first.
+  - Module 10 and its quiz were played as `verify-bot`.
+  - The content-reviewer ran on every changed module.
+- **Found on the way:**
+  - The console's `curl -v` names `Meridian Station CA` as every certificate's issuer, the depot
+    relay's included. That's odd for the story. Not filed. It would be a per-host `issuer` in the
+    console.
+  - Real `ss -p` truncates process names to 15 characters, and a module 10 test now holds the
+    console's names to that.
+  - `RUNBOOK.md` §4 still says the deploy secrets can be Budget Buddy's. Sean still needs to
+    confirm it.
+- **Next:**
+  1. Plan **Unit 1.5, systemd & services** (6 modules in `docs/roadmap.md`), the last of Life
+     Support and the mystery's reveal (`journalctl` at 02:30–02:45, `docs/story.md`). It needs a
+     milestone (v0.10.0) and its issues, and probably console `systemctl` and `journalctl` first.
+  2. Still open from before: the first live hint and lab review, opening Review once (`0007` on
+     prod), the unfiled `su` gap in Unit 1.1 module 05, and RUNBOOK §4.
 
 ### 2026-10-16 — #165, #166, #168–#175 and #188: Unit 1.4 nearly done
 
