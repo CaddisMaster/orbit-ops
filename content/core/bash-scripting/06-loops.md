@@ -4,7 +4,7 @@ minutes: 20
 story: |
   **Mission log, day 16.** Every deck has a CO2 sensor, and every sensor writes its own log in
   `/var/log/sensors`. That's twelve files. Okafor wants each deck's latest reading at every
-  shift change. "Not twelve `tail`s," she says. "One script that does it for us."
+  shift change. "Not twelve `tail`s," he says. "One script that does it for us."
 quiz:
   - type: choice
     q: "One of the logs is called `hydroponics bay.log`. What goes wrong?"

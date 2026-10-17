@@ -18,6 +18,8 @@ and why it matters, not what the diff says.
   digits in a table, and shows the trap Sean hit: `chmod 700` on a shared script takes the
   group's access away, and `chmod u+x` doesn't. The task now says to look at the modes first
   and to change nothing else, and a last quiz question asks about exactly that.
+- Okafor is "he" everywhere (#207). Seven lines across Unit 1.2 and Git had called him "she",
+  while Unit 1.4 and the story said "he". A test now holds it.
 ## [0.9.0] — 2026-10-16
 
 The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of
