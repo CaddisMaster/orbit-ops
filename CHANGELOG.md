@@ -37,6 +37,13 @@ and why it matters, not what the diff says.
   that most commands, `kill` included, print nothing when they work. The example no longer
   uses `/dev/null` and `;`, which the next module teaches, and the quiz's `$?` question now asks
   what you type after `echo`.
+- Unit 1.1 module 07, *Pipes and redirection*, is rewritten for a beginner (#216). It says in
+  plain words what stdin, stdout and stderr are and what a file descriptor is, and uses real
+  commands (`ls /etc/hosts /nope`) instead of a `cmd` placeholder. It shows that `>` is `1>`,
+  explains `2>&1` piece by piece, including the `&` and why order matters, and gives
+  `/dev/null` and "only stdout goes through a pipe" a sentence each. `tee` is explained and
+  practised in Try it. The section on pipeline failure moved out: *Robust scripts* teaches
+  `pipefail` where scripts are.
 ## [0.9.0] — 2026-10-16
 
 The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of

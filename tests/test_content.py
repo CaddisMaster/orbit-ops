@@ -5,6 +5,7 @@ broken lesson fail CI rather than production), and the validator is exercised
 against small throwaway trees built in tmp_path.
 """
 
+import html
 import re
 import textwrap
 from pathlib import Path
@@ -499,6 +500,50 @@ def test_module_06_says_silence_means_success():
     _, body = _processes()
     assert "print <strong>nothing</strong> when they work" in body
     assert "A <code>kill</code> that delivers its signal says nothing at all, and <code>echo $?</code> afterwards shows <code>0</code>" in body
+
+
+# --- #216: module 07 reads for a beginner -----------------------------------------------
+def _pipes():
+    module = load_catalog().modules["pipes-and-redirection"]
+    return module, " ".join(module.body_html.split())
+
+
+@pytest.mark.criterion(216, "The lesson says what the three streams are")
+def test_module_07_says_what_the_streams_are():
+    _, body = _pipes()
+    assert "<strong>stdin</strong>, standard input" in body and "what the program reads" in body
+    assert "its normal results" in body and "its error messages" in body
+    assert "The number is the channel's <strong>file descriptor</strong> (FD)" in body
+
+
+@pytest.mark.criterion(216, "No placeholder commands")
+def test_module_07_has_no_placeholder_commands():
+    module, body = _pipes()
+    quiz = " ".join(q.q + " " + q.explain + " " + " ".join(getattr(q, "options", [])) for q in module.quiz)
+    cards = " ".join(c.front_html + " " + c.back_html for c in module.cards)
+    assert not re.search(r"\bcmd\b", body + " " + quiz + " " + cards)
+
+
+@pytest.mark.criterion(216, "2>&1 is explained piece by piece")
+def test_module_07_explains_2_and_1():
+    _, body = _pipes()
+    assert "<code>&gt;</code> is short for <code>1&gt;</code>" in body
+    assert "The <code>&amp;</code> says <code>1</code> is a channel number" in body
+
+
+@pytest.mark.criterion(216, "Every quiz answer is in the lesson's prose")
+def test_module_07_says_its_quiz_answers_in_prose():
+    _, body = _pipes()
+    prose = re.sub(r"<pre.*?</pre>", " ", body, flags=re.S)
+    assert "<code>/dev/null</code> is a special file that throws away whatever is written to it" in prose
+    assert "<strong>Only stdout goes through a pipe.</strong> Errors skip it" in prose
+
+
+@pytest.mark.criterion(216, "tee is practised")
+def test_module_07_practises_tee():
+    module, body = _pipes()
+    try_it = body.split('id="sec-try-it"')[1]
+    assert "| tee " in html.unescape(re.sub(r"<[^>]+>", "", try_it))
 
 
 # --- #207: Okafor is he --------------------------------------------------------------

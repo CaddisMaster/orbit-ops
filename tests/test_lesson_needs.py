@@ -91,7 +91,10 @@ NEEDS = {
     "pipes-and-redirection": {
         "ls takes several paths": "`ls` takes several paths",
         "errors go to stderr, a separate stream": "they're **separate streams**",
-        "> file 2>&1 sends both into one file": "both end up in `out.log`",
+        "> is short for 1>": "**`>` is short for `1>`**",
+        "> file 2>&1 sends both into one file": "In the first line both end up in `out.txt`",
+        "2>&1 means stderr goes where stdout goes now": "send channel 2 to wherever channel 1 is going **right now**",
+        "redirections are read left to right": "redirections **left to right**",
         "grep keeps only matching lines": "prints only the lines of FILE that contain WORD",
     },
     "text-tools": {
