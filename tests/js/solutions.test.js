@@ -33,3 +33,29 @@ test("The browser's checks agree with the server's on every shared case", () => 
     assert.equal(passes(c.check, parity.state, parity.cwd, parity.processes), c.expect, c.name);
   }
 });
+
+// The console's status line counts the checks that pass (#208), the case Sean
+// hit in module 04: one file right, the other `chmod 700` where 744 was wanted.
+const { progressNote } = require("../../app/static/js/shell.js");
+
+test("The console counts the checks that pass, and doesn't say which", () => {
+  const { spec } = exercises.permissions;
+  const sh = new Shell(spec);
+  sh.run("chmod 600 scrubber.conf");
+  sh.run("chmod 700 purge.sh");
+  assert.equal(sh.progress(spec.checks), 1);
+  const note = progressNote(sh.progress(spec.checks), spec.checks.length, true);
+  assert.equal(note, "1 of 2 done");
+  assert.doesNotMatch(note, /purge|scrubber|744|600/);
+  sh.run("chmod 744 purge.sh");
+  assert.equal(sh.progress(spec.checks), 2);
+  assert.equal(sh.solved(spec.checks), true);
+});
+
+test("The status line stays empty before a change, once done, and for one-check tasks", () => {
+  assert.equal(progressNote(0, 2, false), "");
+  assert.equal(progressNote(1, 2, false), "");
+  assert.equal(progressNote(0, 2, true), "0 of 2 done");
+  assert.equal(progressNote(2, 2, true), "");
+  assert.equal(progressNote(0, 1, true), "");
+});
