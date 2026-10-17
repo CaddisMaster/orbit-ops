@@ -40,13 +40,13 @@ quiz:
       it on purpose and has nothing else.
 terminal:
   task: |
-    The airlock controller only takes orders from members of the `airlock` group. Add
-    yourself to it, and **append**: if you replace your groups instead, you'll lose `sudo` with
-    them. Your password for `sudo` is `meridian`.
-
-    Then Okafor wants to know which login shell the `airlock` service account has. Write it,
-    and nothing else, to `airlock-shell.txt` in your home directory. It's field 7 of the
-    account's line in `/etc/passwd`.
+    1. The airlock controller only takes orders from members of the `airlock` **group**. Add
+       yourself to it, and **append**: if you replace your groups instead, you'll lose `sudo`
+       with them. Your password for `sudo` is `meridian`.
+    2. Okafor wants to know which login shell the `airlock` service **account** has. That's not
+       the group you just joined but the account of the same name, with its own line in
+       `/etc/passwd`. Write its login shell, and nothing else, to `airlock-shell.txt` in your
+       home directory. *Who am I?* shows which field that is and how to pull it out.
   cwd: /home/cadet
   groups: [sudo]
   password: meridian
@@ -116,10 +116,23 @@ files:
 ```bash
 grep sean /etc/passwd
 # sean:x:1000:1000:Sean:/home/sean:/bin/bash
-# name:pw:UID:GID:comment:home:shell        (the password hash lives in /etc/shadow)
 ```
 
-To pull out one field, cut the line at each `:` and keep the one you want. Field 7 is the shell:
+Each line is one account, seven fields separated by `:`:
+
+| Field | In `sean`'s line | Means |
+|---|---|---|
+| 1 | `sean` | the account's name |
+| 2 | `x` | the password is elsewhere: its hash lives in `/etc/shadow` |
+| 3 | `1000` | the UID |
+| 4 | `1000` | the GID of the account's main group |
+| 5 | `Sean` | a comment, usually a full name |
+| 6 | `/home/sean` | the home directory |
+| 7 | `/bin/bash` | the **login shell**: the program that runs when this account logs in |
+
+`grep TEXT FILE` prints only the lines of FILE that contain TEXT, which is how you pick one
+account's line out of the whole file. To pull out one field, cut the line at each `:` and keep
+the one you want. Field 7 is the login shell:
 
 ```bash
 grep sean /etc/passwd | cut -d: -f7              # /bin/bash
@@ -148,15 +161,30 @@ Who may use it is set in `/etc/sudoers`. On Ubuntu, membership of the `sudo` gro
 
 Always edit sudo rules with **`visudo`**, which refuses to save a file with a syntax error.
 
+You'll also meet **`su`** (switch user), the older way. `su - NAME` starts a shell as NAME and
+asks for **NAME's** password, and plain `su` means root, so it wants root's password. Ubuntu
+sets no root password, so there `su` just says `Authentication failure`, and `sudo -i` is the
+way to a root shell. `sudo` is preferred because nobody has to share root's password, and every
+command is logged against the person who ran it. The station console doesn't have `su`.
+
 ## Groups
 
 ```bash
-groups                           # my groups
+groups                           # the groups this login started with
+groups sean                      # sean's groups as /etc/group says now
 sudo usermod -aG docker sean     # add sean to docker (append!)
 ```
 
-Without `-a`, `usermod -G` *replaces* your groups, and you can lose `sudo` this way. Group changes
-apply at your **next login**.
+Without `-a`, `usermod -G` *replaces* your groups, and you can lose `sudo` this way.
+
+Group changes apply at your **next login**. Until then, plain `groups` and `id` show the groups
+you logged in with, so right after `usermod` the new group looks missing, as if it had failed.
+It hasn't. `groups NAME` and `id NAME` read `/etc/group` as it is now, so check with those:
+
+```bash
+groups               # sean sudo                (this login, unchanged)
+groups sean          # sean : sean sudo docker  (the files, changed)
+```
 
 ## Service accounts
 
@@ -169,6 +197,20 @@ Not every user is a person. On the droplet that runs this app:
 
 Each has just enough access for its one job. That's the **principle of least privilege**, and
 you'll see it again in the database role the app connects as.
+
+Nobody should ever log in as a service account, so its login shell is usually
+**`/usr/sbin/nologin`**: a program that prints `This account is currently not available.` and
+exits. The account can still own files and run its service; it just can't give anyone a shell.
+
+```bash
+grep www-data /etc/passwd
+# www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+```
+
+An account usually has **a group of the same name**, made along with it. They're two separate
+things that happen to share a name: the user `www-data` (in `/etc/passwd`) and the group
+`www-data` (in `/etc/group`). `id www-data` shows both: `uid=33(www-data) gid=33(www-data)`.
+Adding someone to a group never touches the account of the same name.
 
 > ⚠️ **The `docker` group is root in disguise.** The Docker daemon runs as root, so anyone who can
 > talk to it can mount the host's `/` into a container. Grant it as carefully as `sudo`.

@@ -24,6 +24,14 @@ and why it matters, not what the diff says.
   and to change nothing else, and a last quiz question asks about exactly that.
 - Okafor is "he" everywhere (#207). Seven lines across Unit 1.2 and Git had called him "she",
   while Unit 1.4 and the story said "he". A test now holds it.
+- Unit 1.1 module 05, *Users, groups and sudo*, explains what its second task asks for (#210).
+  The lesson now reads an `/etc/passwd` line field by field and says field 7 is the login
+  shell. It says service accounts usually get `/usr/sbin/nologin`, and that a user and a group
+  can share a name and still be separate things. It explains why plain `groups` doesn't show a
+  group you've just been added to until your next login, while `groups NAME` does. A paragraph
+  on `su` now backs the `sudo` vs `su` card. The task's two parts are numbered, and the second
+  says it means the `airlock` account, not the group.
+
 ## [0.9.0] — 2026-10-16
 
 The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of

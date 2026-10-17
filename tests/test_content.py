@@ -439,6 +439,46 @@ def test_module_04_doesnt_hand_over_its_quiz_answers():
         assert answer not in body, answer
 
 
+# --- #210: module 05's second task is findable ------------------------------------------
+def _users_and_sudo():
+    module = load_catalog().modules["users-and-sudo"]
+    return module, " ".join(module.body_html.split())
+
+
+@pytest.mark.criterion(210, "The lesson explains what part 2 finds")
+def test_module_05_explains_login_shells_and_nologin():
+    _, body = _users_and_sudo()
+    assert "the <strong>login shell</strong>: the program that runs when this account logs in" in body
+    assert "its login shell is usually <strong><code>/usr/sbin/nologin</code></strong>" in body
+    assert "<strong>a group of the same name</strong>" in body and "two separate things" in body
+    assert "airlock" not in body  # the lesson shows other accounts' lines, never the task's
+
+
+@pytest.mark.criterion(210, "The lesson explains why groups doesn't show the new group")
+def test_module_05_explains_why_groups_lags():
+    _, body = _users_and_sudo()
+    assert "plain <code>groups</code> and <code>id</code> show the groups you logged in with" in body
+    assert "<code>groups NAME</code> and <code>id NAME</code> read <code>/etc/group</code> as it is now" in body
+
+
+@pytest.mark.criterion(210, "The task says which airlock it means")
+def test_module_05s_task_says_which_airlock():
+    module, _ = _users_and_sudo()
+    task = " ".join(module.terminal.task.split())
+    assert task.startswith("1. ") and " 2. " in task
+    assert "service **account**" in task and "not the group you just joined" in task
+    assert "line in `/etc/passwd`" in task
+
+
+@pytest.mark.criterion(210, "The su card has a lesson behind it")
+def test_module_05_teaches_su_before_its_card():
+    module, body = _users_and_sudo()
+    card = next(c for c in module.cards if c.id == "users-and-sudo/sudo-vs-su")
+    section = body.split(f'id="{card.section_anchor}"')[1].split("<h2")[0]
+    assert "<code>su - NAME</code>" in section and "<strong>NAME's</strong> password" in section
+    assert "plain <code>su</code> means root" in section
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.

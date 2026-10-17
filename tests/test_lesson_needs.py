@@ -70,7 +70,13 @@ NEEDS = {
     "users-and-sudo": {
         "sudo asks for your own password": "asks for **your own** password",
         "usermod -aG appends, -G replaces": "Without `-a`, `usermod -G` *replaces* your groups",
-        "field 7 of /etc/passwd is the shell": "Field 7 is the shell",
+        "grep picks out the lines that contain a word": "prints only the lines of FILE that contain TEXT",
+        "field 7 of /etc/passwd is the login shell": "Field 7 is the login shell",
+        "a login shell is what runs when the account logs in": "the program that runs when this account logs in",
+        "service accounts usually have nologin": "its login shell is usually **`/usr/sbin/nologin`**",
+        "an account and a group can share a name": "two separate things that happen to share a name",
+        "groups shows the login's groups until the next login": "plain `groups` and `id` show the groups you logged in with",
+        "groups NAME shows the change now": "`groups NAME` and `id NAME` read `/etc/group` as it is now",
         "cut -d: -f7 pulls a field out": "cut the line at each `:` and keep the one you want",
         "> writes a command's output to a file": "`>` writes output to a file",
     },
@@ -420,6 +426,7 @@ def test_the_lesson_says_what_its_task_needs(module):
 # mentions one must also say "station console", so nobody tries it there and wonders why.
 CONSOLE_LACKS = {
     "Ctrl-R": r"Ctrl-R",
+    "su": r"<code>su( [^<]*)?</code>",
     "ls -t": r"\bls -t\b",
     "Ctrl-Z": r"Ctrl-Z",
     "grep -r": r"\bgrep -r\b",
