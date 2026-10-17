@@ -85,6 +85,8 @@ NEEDS = {
         "kill and pkill send TERM by default": "SIGTERM to every process whose name matches",
         "pkill -9 sends KILL by name": "SIGKILL by name",
         "check whether TERM worked before KILL": "Check that it worked",
+        "$? holds the last command's exit status": "The shell keeps the last command's exit status in a variable named `?`",
+        "kill prints nothing when it works": "A `kill` that delivers its signal says nothing at all",
     },
     "pipes-and-redirection": {
         "ls takes several paths": "`ls` takes several paths",
