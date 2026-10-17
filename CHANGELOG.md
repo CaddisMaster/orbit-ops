@@ -11,6 +11,10 @@ and why it matters, not what the diff says.
   mode as a number and as letters side by side (`640 -rw-r----- secrets.txt`), the same as GNU
   stat on Ubuntu 24.04. `man chmod` now explains the three classes and how each digit adds up
   r=4, w=2 and x=1.
+- The station console says how much of a task is done (#208). Once you've changed something,
+  a task with two or more checks shows `1 of 2 done` under the console after each command, so
+  fixing one file of two no longer looks the same as fixing none. It never says which check is
+  left, since that would give the answer away; the Hint button is for that.
 
 ### Changed
 - Unit 1.1 module 04, *Permissions and ownership*, shows how the numbers are worked out (#206).
