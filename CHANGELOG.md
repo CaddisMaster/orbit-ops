@@ -32,6 +32,11 @@ and why it matters, not what the diff says.
   on `su` now backs the `sudo` vs `su` card. The task's two parts are numbered, and the second
   says it means the `airlock` account, not the group.
 
+- Unit 1.1 module 06, *Processes and signals*, says what `$?` is (#214): the variable holding
+  the last command's exit status. It explains that its `$` is typed, unlike the prompt's, and
+  that most commands, `kill` included, print nothing when they work. The example no longer
+  uses `/dev/null` and `;`, which the next module teaches, and the quiz's `$?` question now asks
+  what you type after `echo`.
 ## [0.9.0] — 2026-10-16
 
 The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of

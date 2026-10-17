@@ -479,6 +479,28 @@ def test_module_05_teaches_su_before_its_card():
     assert "plain <code>su</code> means root" in section
 
 
+# --- #214: module 06 says what $? is ---------------------------------------------------
+def _processes():
+    module = load_catalog().modules["processes-and-signals"]
+    return module, " ".join(module.body_html.split())
+
+
+@pytest.mark.criterion(214, "The lesson says what $? is")
+def test_module_06_says_what_dollar_question_is():
+    _, body = _processes()
+    assert "The shell keeps the last command's exit status in a variable named <code>?</code>" in body
+    assert "you type it. It's a different <code>$</code> from the one at the end of the prompt" in body
+    exit_codes = body.split('id="sec-exit-codes"')[1].split("<h2")[0]
+    assert "/dev/null" not in exit_codes  # redirection is the next module's
+
+
+@pytest.mark.criterion(214, "Silence means success")
+def test_module_06_says_silence_means_success():
+    _, body = _processes()
+    assert "print <strong>nothing</strong> when they work" in body
+    assert "A <code>kill</code> that delivers its signal says nothing at all, and <code>echo $?</code> afterwards shows <code>0</code>" in body
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.

@@ -20,8 +20,8 @@ quiz:
       The kernel ends the process immediately on `SIGKILL` (9), with no chance to save state or
       clean up. Use it only after `SIGTERM` has had a fair chance.
   - type: fill
-    q: Which shell variable holds the exit status of the last command?
-    answer: ["$?"]
+    q: What do you type after `echo` to print the last command's exit status?
+    answer: ["$?", "echo $?"]
     explain: >-
       `echo $?` right after a command prints its exit status: `0` means success, anything else is
       a failure code. Scripts and CI pipelines decide what to do next based on it.
@@ -138,12 +138,25 @@ lock files happen. Always try `TERM` first.
 
 ## Exit codes
 
-When a process ends it returns a number: **0 means success**, anything else is failure.
+When a process ends it returns a number, its **exit status**: **0 means success**, anything
+else is failure. It isn't printed. The shell keeps the last command's exit status in a variable
+named `?`, and `echo $?` prints it. Every command replaces it, `echo` included, so check it
+straight after the command you care about.
+
+The `$` in front of a name means "the value of this variable", and you type it. It's a different
+`$` from the one at the end of the prompt, which the shell prints and you never type.
+*Environment variables and PATH* covers variables properly.
 
 ```bash
-ls /etc > /dev/null; echo $?      # 0
-ls /nope;            echo $?      # 2
+cd /etc
+echo $?          # 0
+cd /nope         # bash: cd: /nope: No such file or directory
+echo $?          # 1
 ```
+
+Many commands, `kill` and `cd` among them, print **nothing** when they work. A `kill` that delivers its signal says nothing at
+all, and `echo $?` afterwards shows `0`. That only means the signal was delivered, so still check
+that it worked, as above. An error message or a non-zero `$?` usually means it failed.
 
 `&&` runs the next command only if the previous one succeeded, and `||` only if it failed. The
 deploy commands in this app's release workflow chain steps that way so a failed backup stops
