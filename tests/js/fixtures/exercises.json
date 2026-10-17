@@ -3343,9 +3343,10 @@
  "permissions": {
   "solution": [
    "ls -l",
+   "stat -c '%a %A %n' *",
    "chmod 600 scrubber.conf",
    "chmod u+x purge.sh",
-   "ls -l"
+   "stat -c '%a %A %n' *"
   ],
   "source": "core/linux-shell/04-permissions.md",
   "spec": {

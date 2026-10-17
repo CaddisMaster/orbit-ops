@@ -389,3 +389,49 @@ def test_module_03s_globs_point_back_to_module_01():
     body = " ".join(third.body_html.split())
     globs = body[body.index(">Globs: patterns the shell expands</h2>") :]
     assert "In module 01, the shell reads the whole line before the command runs" in globs.split("</h2>", 2)[1]
+
+
+# --- #206: module 04 says how to work the numbers out -----------------------------
+def _permissions():
+    module = load_catalog().modules["permissions"]
+    return module, " ".join(module.body_html.split())
+
+
+@pytest.mark.criterion(206, "The lesson says a number replaces all three classes")
+def test_module_04_says_a_number_replaces_all_three_classes():
+    _, body = _permissions()
+    assert "An octal mode sets all three classes" in body and "A symbolic one changes only what it names" in body
+    assert "664 -rw-rw-r-- build.sh" in body and "700 -rwx------ build.sh" in body  # a number taking the group's rw away
+    assert "a private directory or script" not in body  # 700 isn't offered as the mode for a script
+
+
+@pytest.mark.criterion(206, "The task says what it wants")
+def test_module_04s_task_says_what_it_wants():
+    module, _ = _permissions()
+    task = " ".join(module.terminal.task.split())
+    assert "look at both files' modes" in task and "change **nothing else**" in task
+    assert "Okafor" not in task  # the script is the learner's to run
+
+
+@pytest.mark.criterion(206, "The quiz asks about the mistake")
+def test_module_04s_last_question_is_the_mistake():
+    module, _ = _permissions()
+    last = module.quiz[-1]
+    assert last.code and "stat -c '%a %A %n' report.sh" in last.code and "-rw-rw----" in last.code
+    assert "`chmod u+x report.sh`" in last.options and "`chmod 700 report.sh`" in last.options
+    assert module.quiz[0].q.startswith("After `chmod 640 secrets.txt`")  # the old questions keep their places
+
+
+@pytest.mark.criterion(206, "The lesson decodes a number")
+def test_module_04_decodes_a_number_it_doesnt_otherwise_list():
+    module, body = _permissions()
+    assert "So <code>751</code> is <code>rwxr-x--x</code>" in body
+    asked = " ".join(q.q + str(getattr(q, "answer", "")) for q in module.quiz)
+    assert "751" not in asked and "rwxr-x---" not in asked  # the worked number isn't a question's, and Q2's isn't in the table
+
+
+@pytest.mark.criterion(206, "The lesson decodes a number")
+def test_module_04_doesnt_hand_over_its_quiz_answers():
+    module, body = _permissions()
+    for answer in ("640", "rw-r----- secrets", "754", "rwxr-xr--", "760"):  # Q1, Q2, the last question
+        assert answer not in body, answer

@@ -61,6 +61,11 @@ NEEDS = {
         "600 is read and write for the owner only": "secrets",
         "u+x adds execute for the owner only": "adds execute for the user (the owner) only",
         "ls -l shows the permission string": "The first column of `ls -l` is ten characters",
+        "read the string in threes": "**Skip the first character, then read the rest in threes**",
+        "each digit adds 4, 2 and 1": "**To turn letters into a digit, add up the values of the letters that are there.**",
+        "stat -c shows the mode as a number": "**`stat -c '%a %A %n' FILE` prints a file's mode both ways**",
+        "a number replaces all three classes": "**An octal mode sets all three classes, including\nthe ones you weren't thinking about. A symbolic one changes only what it names.**",
+        "look before you change it": "**look at the mode before you change it**",
     },
     "users-and-sudo": {
         "sudo asks for your own password": "asks for **your own** password",
