@@ -2,8 +2,8 @@
 title: Your first script
 minutes: 20
 story: |
-  **Mission log, day 13.** Okafor sticks a note to your console: the commands she types at the
-  start of every shift, in the order she types them. "Make the station type them," she says.
+  **Mission log, day 13.** Okafor sticks a note to your console: the commands he types at the
+  start of every shift, in the order he types them. "Make the station type them," he says.
   "I'd like to drink my coffee while it's hot."
 quiz:
   - type: choice

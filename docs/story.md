@@ -41,7 +41,7 @@ Who sent `FLUSH`, and how a poisoned update got through the depot, is left open.
 
 ## How the crew carry it
 
-- **Okafor** suspects early and says little. He keeps evidence rather than deleting it ("If
+- **Okafor** (he/him, decided 2026-10-17, #207) suspects early and says little. He keeps evidence rather than deleting it ("If
   it's what I think it is, it's evidence").
 - **MERIDIAN** reports facts in readouts (`/ETC/CRON.D/SCRUBBER-MAINT · 02:35 · ROOT ·
   AUTHOR: NONE ON RECORD`) and never speculates.

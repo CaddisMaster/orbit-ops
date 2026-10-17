@@ -107,9 +107,9 @@ lab:
        first.
     2. Keep `report/` and `secrets.env` out of the repository with a `.gitignore`, and commit it.
     3. Okafor's two changes to `lighting.conf`, **one commit each**:
-       - `corridor_night_pct` from `60` to **`20`**. *Her reason: the night shift sleeps off the
+       - `corridor_night_pct` from `60` to **`20`**. *His reason: the night shift sleeps off the
          corridors, and at 60% the light under the doors keeps them awake.*
-       - `night_starts` from `22:00` to **`21:00`**. *Her reason: the night shift now starts an
+       - `night_starts` from `22:00` to **`21:00`**. *His reason: the night shift now starts an
          hour earlier, and the lights should change with it.*
     4. Every commit gets a subject and a body that says why, in your own words.
     5. Nakamura has added a commit to `main` since the branch started. Rebase `night-lighting`

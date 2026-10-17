@@ -17,7 +17,7 @@ quiz:
     options:
       - "Only that Petrov's commit last changed that line. Whoever chose 1100 may be earlier: `git log -S 1100` finds them"
       - "Petrov set it to 1100 on 30 September"
-      - "Okafor set it, since the file's first commit is hers"
+      - "Okafor set it, since the file's first commit is his"
       - "Nothing: `git blame` only works on code, not settings"
     answer: 0
     explain: >-

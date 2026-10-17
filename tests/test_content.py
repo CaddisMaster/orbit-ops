@@ -5,12 +5,14 @@ broken lesson fail CI rather than production), and the validator is exercised
 against small throwaway trees built in tmp_path.
 """
 
+import re
 import textwrap
 from pathlib import Path
 
 import pytest
 
 from app.content import ContentError, load_catalog
+from app.content.loader import CONTENT_DIR
 
 SYLLABUS = """
 tracks:
@@ -435,3 +437,21 @@ def test_module_04_doesnt_hand_over_its_quiz_answers():
     module, body = _permissions()
     for answer in ("640", "rw-r----- secrets", "754", "rwxr-xr--", "760"):  # Q1, Q2, the last question
         assert answer not in body, answer
+
+
+# --- #207: Okafor is he --------------------------------------------------------------
+SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
+# The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
+SHE_IS = {"variables-and-quoting": "the auditor", "remotes": "Nakamura"}
+
+
+@pytest.mark.criterion(207, "Okafor is he")
+def test_okafor_is_he():
+    for path in sorted(CONTENT_DIR.rglob("*.md")):
+        slug = path.stem.split("-", 1)[1]
+        text = " ".join(path.read_text().split())
+        if slug not in SHE_IS:
+            assert not SHE.search(text), f"{slug}: {SHE.search(text).group(0)!r}, and its only she is Okafor, who is he"
+            continue
+        for sentence in re.split(r"(?<=[.!?\"])\s+", text):  # the auditor's or Nakamura's, never Okafor's
+            assert not ("Okafor" in sentence and SHE.search(sentence)), f"{slug}: {sentence}"
