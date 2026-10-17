@@ -101,6 +101,40 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 ## Sessions
 
+### 2026-10-17 (later): v0.9.1 opened, from Sean playing Unit 1.1
+
+Sean played Unit 1.1 modules 03–05 on production and hit three gaps. Milestone **v0.9.1** holds
+the fixes.
+
+- **#206 (#209), merged:** module 04's `chmod` task. He answered `chmod 700` where `744` was
+  wanted, and couldn't work out quiz Q1's `640`. The lesson went from letters to numbers only,
+  offered `700` for a script, and never showed a number removing permissions. It now:
+  - reads the string in threes;
+  - works a mode both ways, every step shown (`751`), with a dash for a value that doesn't fit;
+  - has a table of all eight digits;
+  - shows `chmod 700` against `u+x` on a shared `664` script.
+  - Also: the task says to look first and change nothing else, Q2 is now `754`, and a new last
+    question asks about the mistake. No quiz answer appears on the page (a test holds it).
+  - **The console has `stat -c`** (`%a %A %n %U %G %s %F`, `-L`), byte for byte with coreutils
+    9.4. Plain `stat` is refused. `man chmod` explains the 4/2/1 sums.
+- **#207 (#211), open, waiting for Sean's word:** Okafor is **he** (Sean's decision). Eight lines
+  across Bash 03/04/06/07 and Git 03/08 change. The auditor and Nakamura keep "she". The cast and
+  `docs/story.md` record it, and `test_okafor_is_he` refuses she/her outside those two modules. It
+  was mutation-checked three ways.
+- **#208, filed:** the console says `N of M done` for tasks with two or more checks, never which
+  one is left.
+- **#210, filed:** module 05's second part (the `airlock` account's login shell). "Login shell"
+  and `nologin` are never explained, the account and the group share a name without a word,
+  `groups` hides a new group until the next login, and the `sudo-vs-su` card tests `su`, which no
+  lesson teaches. This is the "`su` gap" carried since earlier sessions, now filed.
+- ⚠️ **`./test.sh FILE…` with a pattern that matches nothing runs no tests and prints "no tests
+  ran"**, which looks like a pass if you only read the last line. Check the exit status, and
+  prefer the full suite.
+- **Next:**
+  1. Merge #211 on Sean's word, then #208 (console) and #210 (module 05), then cut **v0.9.1**
+     (a PATCH: content plus small console fixes, no migrations).
+  2. Then plan Unit 1.5, systemd, as before.
+
 ### 2026-10-17 — #176, #196, #198–#200 and v0.9.0: Unit 1.4 done and shipped
 
 - **#176 (#195):** module 10, *Following a connection*, the unit's last.

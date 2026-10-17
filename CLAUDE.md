@@ -91,9 +91,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.9.0** is in production (2026-10-17): Unit 1.4 Networking is complete,
-and the console has a network, DNS, curl, ufw and `ssh HOST 'CMD'`. No milestone is open. Next is
-planning Unit 1.5, systemd & services, the last unit of Life Support and the mystery's reveal
-(`docs/story.md`).
+and the console has a network, DNS, curl, ufw and `ssh HOST 'CMD'`. Open: milestone **v0.9.1**, fixes
+from playing Unit 1.1: #209 merged, #211 (Okafor is he) awaiting merge, then #208 and #210.
+After that, plan Unit 1.5, systemd & services, the last unit of Life Support and the mystery's
+reveal (`docs/story.md`).
 
 ## Maintainer notes (local only)
 
