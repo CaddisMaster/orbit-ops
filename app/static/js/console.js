@@ -40,7 +40,7 @@
     var pagerFind = root.querySelector(".pager-find");
     var pagerInput = root.querySelector(".pager-input");
     var PAGER_ROWS = 16;
-    var sh, history, at, reported;
+    var sh, history, at, reported, before, changed;
     var editor = null, pager = null, clipboard = "", leaving = false;
 
     function print(text, cls) {
@@ -84,6 +84,18 @@
         input.focus();
       }
       if (!reported && sh.solved(spec.checks)) report();
+      else if (!reported) showProgress();
+    }
+
+    // What the task's checks can see: once it differs from the start, the
+    // learner has changed something, and the status line counts the checks.
+    function snapshot() {
+      return JSON.stringify([sh.state(), sh.cwd, sh.processes()]);
+    }
+
+    function showProgress() {
+      if (!changed) changed = snapshot() !== before;
+      status.textContent = OrbitShell.progressNote(sh.progress(spec.checks), spec.checks.length, changed);
     }
 
     function openEditor(ed) {
@@ -226,6 +238,8 @@
       history = [];
       at = 0;
       reported = false;
+      before = snapshot();
+      changed = false;
       log.textContent = "";
       status.textContent = "";
       editor = pager = null;

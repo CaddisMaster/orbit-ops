@@ -6244,12 +6244,25 @@
     });
   };
 
-  Shell.prototype.solved = function (checks) {
+  // How many of the checks pass (#208).
+  Shell.prototype.progress = function (checks) {
     var state = this.state();
     var cwd = this.cwd;
     var procs = this.processes();
-    return checks.every(function (c) { return passes(c, state, cwd, procs); });
+    return checks.filter(function (c) { return passes(c, state, cwd, procs); }).length;
   };
 
-  return { Shell: Shell, Nano: Nano, Pager: Pager, parse: parse, applyMode: applyMode, passes: passes, checkCrontab: checkCrontab };
+  Shell.prototype.solved = function (checks) {
+    return this.progress(checks) === checks.length;
+  };
+
+  // The console's status line while a task isn't done (#208): how many checks
+  // pass, never which, since a check is the task restated. Nothing before the
+  // first change, and nothing for a one-check task, where it could only say 0.
+  function progressNote(done, total, changed) {
+    if (!changed || total < 2 || done === total) return "";
+    return done + " of " + total + " done";
+  }
+
+  return { Shell: Shell, Nano: Nano, Pager: Pager, parse: parse, applyMode: applyMode, passes: passes, checkCrontab: checkCrontab, progressNote: progressNote };
 });
