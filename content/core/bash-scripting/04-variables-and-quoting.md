@@ -171,7 +171,7 @@ terminal:
     - {contains: /station/bin/cargo-report, text: "$(("}
     - {executable: /station/bin/cargo-report}
   success: |-
-    Okafor runs her finger down the report. "Forty-five, and every one of them counted. The auditor can read that."
+    Okafor runs his finger down the report. "Forty-five, and every one of them counted. The auditor can read that."
   solution:
     - cargo-report
     - cat /station/cargo/report.txt

@@ -171,7 +171,7 @@ terminal:
     - {missing: /station/bin/galley-report}
     - {missing: /station/bin/lab-report}
   success: |-
-    Okafor deletes a note from her console. "One script, every deck, and it tells you how to use it. No more copies."
+    Okafor deletes a note from his console. "One script, every deck, and it tells you how to use it. No more copies."
   solution:
     - ls /station/bin
     - cat /station/bin/galley-report /station/bin/lab-report
