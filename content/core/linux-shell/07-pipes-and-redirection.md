@@ -13,8 +13,8 @@ quiz:
       `>>` appends, so the file is created if missing and kept if present. A single `>` truncates
       the file first, which is how logs get wiped by accident.
   - type: choice
-    q: Which line sends both normal output **and** errors to `out.log`?
-    options: ["`cmd > out.log 2>&1`", "`cmd 2>&1 > out.log`", "`cmd | out.log`", "`cmd > out.log`"]
+    q: Which line sends both the listing **and** the error to `out.log`?
+    options: ["`ls /etc /nope > out.log 2>&1`", "`ls /etc /nope 2>&1 > out.log`", "`ls /etc /nope | out.log`", "`ls /etc /nope > out.log`"]
     answer: 0
     explain: >-
       Redirections apply left to right. `> out.log` points stdout at the file, then `2>&1` points
@@ -24,7 +24,7 @@ quiz:
     q: What is the special file that discards everything written to it?
     answer: ["/dev/null"]
     explain: >-
-      `cmd > /dev/null 2>&1` runs a command silently. Reading from `/dev/null` gives an immediate
+      `ls /etc /nope > /dev/null 2>&1` runs `ls` silently, output and errors both thrown away. Reading from `/dev/null` gives an immediate
       end-of-file.
   - type: choice
     q: What does a pipe (`|`) connect?
@@ -35,8 +35,8 @@ quiz:
       - "Two files"
     answer: 1
     explain: >-
-      Only stdout goes through the pipe. Errors still appear on your terminal unless you add
-      `2>&1` before the `|` (or use `|&` in Bash).
+      Only stdout goes through the pipe. In `ls /etc /nope | wc -l` the error still appears on
+      your terminal, and `wc` counts only the listing, unless you add `2>&1` before the `|`.
 terminal:
   task: |
     The reactor monitor needs a status report for the bridge, in your home directory:
@@ -95,88 +95,137 @@ cards:
   - id: tee
     section: "tee: a T-junction"
     front: Save output to a file AND see it on screen
-    back: "`cmd | tee out.log` (`tee -a` to append)."
+    back: "`ls /etc | tee etc-list.txt` (`tee -a` to append)."
 ---
 
 ## Three streams
 
-Every process starts with three open **file descriptors**:
+A running program has three standard channels for talking to the world outside it. "Std" is
+short for standard:
 
-| FD | Name | Default |
-|---|---|---|
-| 0 | stdin | your keyboard |
-| 1 | stdout | your terminal |
-| 2 | stderr | your terminal |
+| Number | Name | What it's for | Where it goes unless you say otherwise |
+|---|---|---|---|
+| 0 | **stdin**, standard input | what the program reads | your keyboard |
+| 1 | **stdout**, standard output | its normal results | your terminal |
+| 2 | **stderr**, standard error | its error messages | your terminal |
 
-Normal output and error messages both land on your screen, but they're **separate streams**,
-and you can send them to different places. One command can produce both: `ls /etc /nope` lists
-`/etc` on stdout and complains about `/nope` on stderr, because `ls` takes several paths and
-deals with each in turn.
+The number is the channel's **file descriptor** (FD), the number the program uses for it. "FD 1"
+just means channel 1, normal output, and "FD 2" means channel 2, errors.
+
+Normal output and error messages both land on your screen, so they look like one stream. But
+they're **separate streams**, and you can send them to different places. One command can produce
+both: `ls` takes several paths and deals with each in turn, so `ls /etc/hosts /nope` writes the
+name `/etc/hosts` to stdout and complains about `/nope` on stderr.
+
+```bash
+ls /etc/hosts /nope
+# ls: cannot access '/nope': No such file or directory     ← stderr, channel 2
+# /etc/hosts                                               ← stdout, channel 1
+```
 
 ## Redirection
 
+`>` sends a channel's output to a file in place of your screen. With no number in front, it
+means channel 1: **`>` is short for `1>`**. That's also how to tell the two streams apart.
+Redirect stdout, and whatever is still on your screen came from stderr:
+
 ```bash
-ls /etc > files.txt          # stdout to a file (truncates it first)
-ls /etc >> files.txt         # stdout appended
-ls /nope 2> errors.txt       # stderr to a file
-cmd > out.log 2>&1           # both into one file (order matters!)
-cmd &> out.log               # Bash shorthand for the line above
-sort < names.txt             # stdin from a file
-cmd > /dev/null 2>&1         # silence: throw everything away
+ls /etc/hosts /nope > out.txt
+# ls: cannot access '/nope': No such file or directory     ← still on screen: stderr
+cat out.txt
+# /etc/hosts                                               ← stdout went into the file
 ```
 
-### Why `2>&1` order matters
+| You type | What happens |
+|---|---|
+| `ls /etc > files.txt` | stdout to a file, which is emptied first (truncated) |
+| `ls /etc >> files.txt` | stdout added to the end of the file (appended) |
+| `ls /nope 2> errors.txt` | stderr, channel 2, to a file |
+| `ls /etc/hosts /nope > out.txt 2>&1` | both into one file: see below |
+| `ls /etc/hosts /nope &> out.txt` | Bash's shorthand for the line above (you'll mostly see `2>&1`) |
+| `cat < files.txt` | stdin read from a file, in place of the keyboard |
 
-Redirections are processed **left to right**, and `2>&1` means "make FD 2 point wherever FD 1
-points *right now*". So `cmd > out.log 2>&1` first points stdout at the file, then points
-stderr at the same place: both end up in `out.log`.
+### `2>&1`, piece by piece
+
+`2>&1` sends errors to the same place as normal output. In pieces:
+
+- `2>` redirects channel 2, stderr;
+- `&1` sends it to channel 1. The `&` says `1` is a channel number. Without it, `2>1` would write
+  the errors into a file called `1`.
+
+So `2>&1` means "send channel 2 to wherever channel 1 is going **right now**". The shell reads
+redirections **left to right**, one step at a time, so their order matters:
+
+| You type | First | Then | Result |
+|---|---|---|---|
+| `ls /etc/hosts /nope > out.txt 2>&1` | channel 1 → `out.txt` | channel 2 → where 1 goes now: `out.txt` | both in the file |
+| `ls /etc/hosts /nope 2>&1 > out.txt` | channel 2 → where 1 goes now: your screen | channel 1 → `out.txt` | the error still on screen |
+
+In the first line both end up in `out.txt`. In the second, channel 2 copied where channel 1 was
+going before it moved, so the error never reaches the file.
+
+### Throwing output away
+
+`/dev/null` is a special file that throws away whatever is written to it. It never fills up and
+never keeps anything. Send output there when you want a command to run but don't want to see
+what it says:
 
 ```bash
-cmd > out.log 2>&1     # 1 → file, then 2 → (where 1 is) file          ✓ both in file
-cmd 2>&1 > out.log     # 2 → (where 1 is) terminal, then 1 → file      ✗ errors on screen
+ls /etc > /dev/null                      # the listing vanishes
+ls /etc/hosts /nope > /dev/null 2>&1     # silent: output and errors both gone
 ```
 
 ## Pipes
 
-A pipe connects one command's **stdout** to the next command's **stdin**, and they run at the
-same time:
-
-```bash
-ps aux | grep uvicorn
-cat /var/log/syslog | tail -n 50      # works, but `tail -n 50 /var/log/syslog` is simpler
-docker compose logs web 2>&1 | grep -i error     # include stderr in what grep sees
-```
-
-Two small tools get you a long way, here and in the console:
+A pipe, `|`, connects one command's **stdout** to the next command's **stdin**. What the left
+command would have printed on your screen becomes what the right command reads, and the two run
+at the same time. Two small tools get you a long way with pipes, here and in the console:
 
 | Command | Does |
 |---|---|
 | `grep WORD FILE` | prints only the lines of FILE that contain WORD (or of stdin, after a `\|`) |
 | `wc -l FILE` | counts the lines (`wc -l < FILE` prints just the number) |
 
-So `grep ALERT core.log > alerts.txt` keeps every line with `ALERT` in it, and nothing else.
-Small tools that each do one thing, chained together, is the core Unix idea. Next module is the
-tools that make it powerful.
+```bash
+ls /etc | wc -l          # wc counts the listing's lines: you see only the number
+ps aux | grep sshd       # only the lines of ps's output that mention sshd
+```
+
+**Only stdout goes through a pipe.** Errors skip it and still land on your screen:
+
+```bash
+ls /etc/hosts /nope | wc -l
+# ls: cannot access '/nope': No such file or directory     ← stderr, straight to the screen
+# 1                                                        ← wc counted stdout's one line
+ls /etc/hosts /nope 2>&1 | wc -l
+# 2                                                        ← 2>&1 first: both went through
+```
+
+So `grep sshd auth.log > ssh-lines.txt` keeps every line of `auth.log` with `sshd` in it, and
+nothing else.
+Small tools that each do one thing, chained together, is the core Unix idea. The next module is
+the tools that make it powerful.
 
 ## tee: a T-junction
 
-`tee` writes its input to a file **and** passes it on:
+Once output goes into a pipe or a file, you no longer see it. `tee` is named after a T-shaped
+pipe fitting: it writes what it reads into a file **and** passes it on, to your screen or to the
+next command. So you can watch something and keep a copy at the same time. `tee -a` appends
+instead of emptying the file first.
 
 ```bash
-./test.sh 2>&1 | tee test-run.log      # watch it live and keep a copy
+ls /etc | tee etc-list.txt            # see the listing, and keep it in etc-list.txt
+ls /etc/hosts /nope 2>&1 | tee both.log   # see both lines, error included, and keep them
 ```
-
-## Pipelines and failure
-
-By default a pipeline's exit status is the **last** command's. So `false | true` "succeeds".
-Scripts use `set -o pipefail` so any failing stage fails the whole pipeline. This app's
-`test.sh` starts with `set -euo pipefail` for exactly that reason.
 
 ## Try it
 
 ```bash
-ls /etc /nope > out.txt            # the error still shows: it's on stderr
-ls /etc /nope > out.txt 2>&1       # now both are in the file
-wc -l < out.txt
-ls /etc | wc -l                    # how many entries in /etc?
+ls /etc/hosts /nope                  # two lines: which one is stderr?
+ls /etc/hosts /nope > out.txt        # the error still shows: it's on stderr
+cat out.txt                          # only /etc/hosts
+ls /etc/hosts /nope > out.txt 2>&1   # now both are in the file
+wc -l < out.txt                      # 2
+ls /etc/hosts /nope | wc -l          # the error skips the pipe, so wc counts 1
+ls /etc | tee etc-list.txt | wc -l   # tee keeps the listing and passes it on to wc
 ```
