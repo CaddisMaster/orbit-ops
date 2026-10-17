@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-10-17
+
+Fixes from playing Unit 1.1. Modules 04 to 07 now say plainly what their tasks and quizzes need:
+how permission numbers are worked out, what a login shell is and why `groups` lags after
+`usermod`, what `$?` holds, and what stdin, stdout, stderr and `2>&1` actually mean. The station
+console says how much of a task is done (`1 of 2 done`) and has `stat -c`. Okafor is "he"
+everywhere.
+
 ### Added
 - The station console has `stat -c FORMAT` (#206): `stat -c '%a %A %n' FILE` prints a file's
   mode as a number and as letters side by side (`640 -rw-r----- secrets.txt`), the same as GNU
@@ -31,10 +39,9 @@ and why it matters, not what the diff says.
   group you've just been added to until your next login, while `groups NAME` does. A paragraph
   on `su` now backs the `sudo` vs `su` card. The task's two parts are numbered, and the second
   says it means the `airlock` account, not the group.
-
 - Unit 1.1 module 06, *Processes and signals*, says what `$?` is (#214): the variable holding
   the last command's exit status. It explains that its `$` is typed, unlike the prompt's, and
-  that most commands, `kill` included, print nothing when they work. The example no longer
+  that many commands, `kill` included, print nothing when they work. The example no longer
   uses `/dev/null` and `;`, which the next module teaches, and the quiz's `$?` question now asks
   what you type after `echo`.
 - Unit 1.1 module 07, *Pipes and redirection*, is rewritten for a beginner (#216). It says in
@@ -44,6 +51,7 @@ and why it matters, not what the diff says.
   `/dev/null` and "only stdout goes through a pipe" a sentence each. `tee` is explained and
   practised in Try it. The section on pipeline failure moved out: *Robust scripts* teaches
   `pipefail` where scripts are.
+
 ## [0.9.0] — 2026-10-16
 
 The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of
