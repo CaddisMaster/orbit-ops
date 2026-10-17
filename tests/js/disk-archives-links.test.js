@@ -217,3 +217,29 @@ test("tar that can't write its archive says so as GNU tar does, and reports noth
   );
   assert.equal(out(sh, "ls /srv/backups"), "");
 });
+
+// stat -c (#206), against GNU coreutils 9.4 in ubuntu:24.04: the same files made the same way
+// (f.txt chmod 640, a link to it, an empty file, a sticky directory) printed exactly this.
+test("stat -c prints a mode as a number and as letters, as GNU stat does", () => {
+  const sh = station({
+    "/station/f.txt": file("hi\n", { mode: 0o640 }),
+    "/station/l": { type: "link", target: "f.txt", mode: 0o777, owner: "cadet", group: "crew", contents: "" },
+    "/station/e": file("", { mode: 0o664 }),
+    "/station/d": dir("cadet", 0o1777),
+  });
+  const run = (line) => { const { output } = sh.run(line); return [output, sh.lastStatus]; };
+  assert.deepEqual(run("stat -c '%a %A %n' f.txt d l e"), ["640 -rw-r----- f.txt\n1777 drwxrwxrwt d\n777 lrwxrwxrwx l\n664 -rw-rw-r-- e\n", 0]);
+  assert.deepEqual(run("stat -L -c '%a %A %n' l"), ["640 -rw-r----- l\n", 0]);
+  assert.deepEqual(run("stat -c '%a %%' f.txt"), ["640 %\n", 0]);
+  assert.deepEqual(run("stat -c '%n is %a' f.txt"), ["f.txt is 640\n", 0]);
+  assert.deepEqual(run("stat --format=%a f.txt"), ["640\n", 0]);
+  assert.deepEqual(run("stat -c %a -L l"), ["640\n", 0]);
+  assert.deepEqual(run("stat -c %s f.txt"), ["3\n", 0]);
+  assert.deepEqual(run("stat -c %F f.txt d l e"), ["regular file\ndirectory\nsymbolic link\nregular empty file\n", 0]);
+  assert.deepEqual(run("stat -c %q f.txt"), ["?\n", 0]);
+  assert.deepEqual(run("stat -c %a nope f.txt"), ["stat: cannot statx 'nope': No such file or directory\n640\n", 1]);
+  assert.deepEqual(run("stat"), ["stat: missing operand\nTry 'stat --help' for more information.\n", 1]);
+  assert.deepEqual(run("stat -c"), ["stat: option requires an argument -- 'c'\nTry 'stat --help' for more information.\n", 1]);
+  assert.deepEqual(run("stat -x f.txt"), ["stat: invalid option -- 'x'\nTry 'stat --help' for more information.\n", 1]);
+  assert.match(run("stat f.txt")[0], /^stat: unsupported on the station console: /); // plain stat isn't simulated
+});

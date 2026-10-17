@@ -6,6 +6,18 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The station console has `stat -c FORMAT` (#206): `stat -c '%a %A %n' FILE` prints a file's
+  mode as a number and as letters side by side (`640 -rw-r----- secrets.txt`), the same as GNU
+  stat on Ubuntu 24.04. `man chmod` now explains the three classes and how each digit adds up
+  r=4, w=2 and x=1.
+
+### Changed
+- Unit 1.1 module 04, *Permissions and ownership*, shows how the numbers are worked out (#206).
+  It reads the string in threes, works a mode from letters to digits and back, gives all eight
+  digits in a table, and shows the trap Sean hit: `chmod 700` on a shared script takes the
+  group's access away, and `chmod u+x` doesn't. The task now says to look at the modes first
+  and to change nothing else, and a last quiz question asks about exactly that.
 ## [0.9.0] — 2026-10-16
 
 The relay network: Unit 1.4, Networking, all ten modules. The station console gets a network of

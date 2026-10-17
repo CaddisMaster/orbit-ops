@@ -415,7 +415,8 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   and commit `tests/js/fixtures/exercises.json`; a test fails while it's stale.
 - **What the console knows** (`help` lists it):
   - files: `pwd cd (incl. cd -) ls (-l -a -h -d) cat echo touch mkdir (-p) rmdir cp (-r -i) mv
-    (-i -f) rm (-r -f -i) chmod (octal and symbolic, -R) chown`. `-i` asks in GNU's words
+    (-i -f) rm (-r -f -i) chmod (octal and symbolic, -R) chown stat (-c FORMAT with %a %A %n %U %G %s
+    %F, and -L; plain `stat` is refused, #206)`. `-i` asks in GNU's words
     (`rm: remove regular file 'a.log'? `), and the last of `-f`/`-i` wins, as in coreutils.
   - text: `grep (-i -v -n -c -q -E) wc sort uniq head tail cut tee`, and small `awk` and `sed`:
     - awk: `-F SEP`; `pattern { print … }` rules with `BEGIN`/`END`; patterns of `/re/`,
@@ -504,7 +505,7 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     stripped), here-strings `<<<`, and `mktemp [-d] [TEMPLATE]` (600 / 700, in `/tmp`). At the
     prompt a `set -e` failure prints `logout` and a note, since the console can't close.
 
-  Anything else prints "command not found". Not yet: `set`, `printf`, `stat`, `top`. Don't set a task that needs more: add the
+  Anything else prints "command not found". Not yet: `set`, `printf`, `top`. Don't set a task that needs more: add the
   command to `app/static/js/shell.js` first, with a test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
   the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a

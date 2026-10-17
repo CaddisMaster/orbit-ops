@@ -2955,7 +2955,7 @@
       }
       return ok(
         "Station console commands:\n" +
-        "  files:     pwd cd ls cat echo touch mkdir rmdir cp mv rm chmod chown\n" +
+        "  files:     pwd cd ls cat echo touch mkdir rmdir cp mv rm chmod chown stat\n" +
         "  text:      grep wc sort uniq head tail cut tee awk sed (small subsets)\n" +
         "  users:     whoami id groups getent sudo usermod\n" +
         "  env:       export unset env printenv type which command source bash\n" +
@@ -3231,6 +3231,49 @@
         if (l.node && l.node.type === "link") out += l.node.target + "\n"; else code = 1;
       });
       return { out: out, err: "", code: code };
+    },
+    // stat -c FORMAT [-L] FILE... (#206): a file's mode as a number and as letters, as GNU
+    // coreutils 9.4 prints them. The plain form (inodes, devices, nanosecond times) isn't here.
+    stat: function (args) {
+      var usage = "Try 'stat --help' for more information.\n";
+      var format = null, follow = false, files = [];
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (a === "--") { files = files.concat(args.slice(i + 1)); break; }
+        if (a === "-L" || a === "--dereference") follow = true;
+        else if (a.indexOf("--format=") === 0) format = a.slice(9);
+        else if (a === "--format" || a === "-c") {
+          if (i + 1 >= args.length) return { out: "", err: (a === "-c" ? "stat: option requires an argument -- 'c'\n" : "stat: option '--format' requires an argument\n") + usage, code: 1 };
+          format = args[++i];
+        } else if (/^-c./.test(a)) format = a.slice(2);
+        else if (/^-L+$/.test(a)) follow = true;
+        else if (a.length > 1 && a[0] === "-") return { out: "", err: (a[1] === "-" ? "stat: unrecognized option '" + a + "'\n" : "stat: invalid option -- '" + a[1] + "'\n") + usage, code: 1 };
+        else files.push(a);
+      }
+      if (!files.length) return { out: "", err: "stat: missing operand\n" + usage, code: 1 };
+      if (format === null) return { out: "", err: "stat: unsupported on the station console: plain stat (devices, inodes and times); try stat -c '%a %A %n' FILE\n", code: 1 };
+      var sh = this, out = "", err = "", code = 0;
+      files.forEach(function (name) {
+        var f = sh.lookup(name, !follow);
+        if (f.error) { err += "stat: cannot statx '" + name + "': " + f.error + "\n"; code = 1; return; }
+        var n = f.node;
+        var mode = n.type === "link" ? 0o777 : n.mode & 0o7777;
+        out += format.replace(/%(.)?/g, function (m, c) {
+          switch (c) {
+            case "a": return mode.toString(8);
+            case "A": return modeString(n.type === "link" ? Object.assign({}, n, { mode: 0o777 }) : n);
+            case "n": return name;
+            case "U": return n.owner;
+            case "G": return n.group;
+            case "s": return String(size(n));
+            case "F": return n.type === "dir" ? "directory" : n.type === "link" ? "symbolic link" : size(n) ? "regular file" : "regular empty file";
+            case "%": return "%";
+            case undefined: return "%";
+            default: return "?";
+          }
+        }) + "\n";
+      });
+      return { out: out, err: err, code: code };
     },
     vi: function () { return { out: "", err: "vi: not on this console. Use nano FILE instead: ^O saves, ^X exits.\n", code: 127 }; },
     vim: function () { return { out: "", err: "vim: not on this console. Use nano FILE instead: ^O saves, ^X exits.\n", code: 127 }; },

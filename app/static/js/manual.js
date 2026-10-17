@@ -88,7 +88,7 @@
     chmod: {
       summary: "change file mode bits",
       synopsis: ["chmod [OPTION]... MODE[,MODE]... FILE...", "chmod [OPTION]... OCTAL-MODE FILE..."],
-      description: "Change the mode of each FILE to MODE. A symbolic mode is [ugoa][+-=][rwx], like u+x or go-w; an octal mode is digits, like 640 (owner rw, group r, others nothing).",
+      description: "Change the mode of each FILE to MODE. A mode says what three classes of user may do: u, the file's owner (user); g, members of the file's group; and o, everyone else (others). Each may read (r), write (w) and execute (x).\n\nAn octal mode is three digits, one per class in the order u, g, o. Each digit is the sum of r=4, w=2 and x=1: 7 is rwx, 6 is rw-, 5 is r-x, 4 is r--, 0 is ---. So 750 is rwxr-x---: the owner does everything, the group reads and runs, others nothing. An octal mode sets all three classes, so it can take away what you didn't mention.\n\nA symbolic mode is [ugoa][+-=][rwx], like u+x or go-w. + adds, - removes and = sets exactly, and it changes only the classes it names. To see a file's mode as a number, use stat -c '%a %n' FILE.",
       options: [["-R, --recursive", "change files and directories recursively"]],
     },
     chown: {
@@ -423,6 +423,15 @@
         ["-f, --force", "remove existing destination files"],
         ["-n, --no-dereference", "treat LINK_NAME as a normal file if it is a symbolic link to a directory"],
         ["-v, --verbose", "print name of each linked file"],
+      ],
+    },
+    stat: {
+      summary: "display file or file system status",
+      synopsis: ["stat -c FORMAT [-L] FILE..."],
+      description: "Print FORMAT for each FILE, followed by a newline. %a is the mode in octal (644), %A the same as ls -l writes it (-rw-r--r--), %n the file's name, %U and %G its owner and group, %s its size in bytes, %F its type, and %% a percent sign. Without -L, a symbolic link is described itself; with it, the file it points to. On the station console only -c works: plain stat, with its devices, inodes and times, isn't here.",
+      options: [
+        ["-c, --format=FORMAT", "use the specified FORMAT instead of the default; output a newline after each use of FORMAT"],
+        ["-L, --dereference", "follow links"],
       ],
     },
     readlink: {
