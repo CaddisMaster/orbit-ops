@@ -88,6 +88,7 @@ A per-session log, standing decisions and a release ledger. Newest first.
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.10.0 | 2026-10-17 | Fixes from playing Unit 1.1: modules 04–07 say plainly what tasks and quizzes need (#206, #210, #214, #216); the console's `N of M done` line (#208) and `stat -c` (#206); Okafor is he (#207). Planned as 0.9.1, a MINOR because it carries features. No migrations |
 | 0.9.0 | 2026-10-17 | Unit 1.4 Networking complete (10 modules, *Relays Restored*): the console's network, DNS, curl, ufw and `ssh HOST 'CMD'` (#164–#166); the mystery's 1.4 clue (#176); Unit 1.1 says what the shell is (#196); the `lacks` check (#200); the screen at 85% (#188). No migrations |
 | 0.8.0 | 2026-10-14 | The desk scales with the screen and fills wide windows (#105); quiz retries (#103); typed, sourced flashcards (#104); the crew notice promotions and badges (#83); the Life Support mystery's 1.2 and 1.3 clues (#84, #160). No migrations |
 | 0.7.0 | 2026-10-14 | Labs and AI: Unit 1.3 Git (8 modules, labs on your own machine), Claude hints and lab review behind a monthly budget, the AI gate and **Uplink** readout, the verified pre-deploy backup; migrations `0008`, `0009` |
@@ -100,6 +101,47 @@ A per-session log, standing decisions and a release ledger. Newest first.
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-17 (evening): v0.10.0 shipped, and a beginner audit planned
+
+- **Merged on Sean's word:**
+  - #211, Okafor is he.
+  - #213 (#208): the console's status line says `N of M done` for tasks with two or more checks,
+    once something has changed. It never says which check is left. The rule is a pure
+    `progressNote` in `shell.js`, so a Node test claims it.
+  - #215 (#210): module 05.
+    - Lesson: `/etc/passwd` field by field, the login shell, `nologin`, a user versus a
+      same-name group, why `groups` lags after `usermod`, a `su` paragraph, and what `grep` does.
+    - Task: two numbered parts.
+    - `su` is in `CONSOLE_LACKS`.
+  - #218 (#214): module 06 says what `$?` is, that its `$` is typed, and that silence means
+    success. Q3 was reworded in place.
+  - #219 (#216): module 07 rewritten for a beginner.
+    - The three streams in plain words, `>` is `1>`, and `2>&1` piece by piece.
+    - `/dev/null` and "only stdout goes through a pipe" each get a sentence.
+    - `tee` is practised in Try it.
+    - No `cmd` anywhere, and pipefail is left to *Robust scripts*.
+- **Shipped v0.10.0, not v0.9.1.** Release-prep pointed out that `stat -c` and the progress line
+  are features, and `VERSIONING.md` makes those a MINOR. Sean chose 0.10.0, so milestone v0.9.1
+  was renamed v0.10.0 (now closed) and the audit milestone became v0.11.0.
+  - CHANGELOG cut: #220.
+  - Run `39054223874`: backup ok, no migrations, `running version 0.10.0`, "Deployed and
+    healthy". The public `/healthz` reports `0.10.0` and Budget Buddy answers 200.
+  - ⚠️ `gh release create --target <short sha>` is refused ("not a valid tag"). Use `--target
+    main` or the full SHA.
+- **The finding behind it:** our checks test that a lesson is *right*, not that a beginner can
+  *find* the answer.
+  - `NEEDS` covers only the console task.
+  - The content-reviewer checks quiz answers for correctness.
+  - Sean couldn't find `$?`, `/dev/null` or what stdin is.
+  - The reviewer, told to read as a learner who had done only the earlier modules, caught module
+    07's `grep` example being the task's answer word for word.
+- **Next, milestone v0.11.0:**
+  1. **#217:** a `/beginner-audit` skill that reads one module end to end as a learner who has
+     done only the modules before it. It reports, and Claude files that module's issue.
+  2. **The audit:** Unit 1.1 from module 01, one module at a time, thoroughly. Each module gets
+     its own issue, filed with its findings, and its own PR.
+  3. Unit 1.5 (systemd) waits behind the audit.
 
 ### 2026-10-17 (later): v0.9.1 opened, from Sean playing Unit 1.1
 
