@@ -77,7 +77,7 @@ minutes: 15            # 5–30; aim for 15–20 including the quiz
 xp: 50                 # optional, default 50; awarded once on completion (+20 for a perfect quiz)
 story: |               # the mission-log briefing (Markdown)
   **Mission log, day 1.** …
-quiz:                  # 1–8 questions; aim for 3–5
+quiz:                  # 1–8 questions; aim for 3–5. ADD NEW ONES LAST: answers are stored by position
   - type: choice       # exactly one right option
     q: Which directory is the top of the filesystem?
     options: ["/home", "/", "/root", "~"]
@@ -645,6 +645,9 @@ module's PR, in this order:
   replaces the technical content.
 - **Tie it to something real.** Point at Budget Buddy's or Orbit Ops's own setup when it
   illustrates the point (the RUNBOOKs are full of examples).
+- **Add a question to a published module at the end of its quiz.** A learner's answers are
+  stored by the question's position (`exercise_attempts.item`), so a question inserted earlier
+  moves everyone's past answers onto the wrong questions (#196). Rewording one in place is fine.
 - **Give each module a scenario question** from Unit 1.2 on: a script or output in `code:`, then
   "what happens?" or "why does this fail?". `q` is inline Markdown, so a fenced block there
   collapses into one line: put it in `code:`.
