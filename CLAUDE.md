@@ -90,10 +90,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.10.0** is in production (2026-10-17): fixes from playing Unit 1.1
-(modules 04–07 rewritten to be findable) and the console's `N of M done` line. Open: milestone
-**v0.11.0**, the beginner audit: #217 (a `/beginner-audit` skill), then Unit 1.1 audited module
-by module from 01, one issue and PR each. Unit 1.5, systemd & services, waits behind it.
+See `docs/status.md`. **v0.10.0** is in production (2026-10-17). Open: milestone **v0.11.0**, the
+beginner audit. `/beginner-audit` (#217) and Unit 1.1 modules 01–05 are merged (2026-10-19),
+along with a console fix (#229). Next is module 06, one issue and PR each. Unit 1.5, systemd &
+services, waits behind it.
 
 ## Maintainer notes (local only)
 
