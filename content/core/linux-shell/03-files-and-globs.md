@@ -3,7 +3,7 @@ title: Making, moving and matching files
 minutes: 20
 story: |
   **Mission log, day 3.** The cargo bay's log directory is full of crash dumps from the
-  outage. "Move the ones from last week somewhere safe and delete the rest," Okafor says.
+  outage. "Move the ones from last week somewhere safe and delete the old ones," Okafor says.
   "Carefully. There's no undo on this station."
 quiz:
   - type: choice
@@ -12,7 +12,7 @@ quiz:
     answer: 1
     explain: >-
       `-p` creates any missing **p**arent directories, and doesn't complain if they already exist,
-      which also makes it safe to run twice in a script.
+      which also makes it safe to run twice.
   - type: multi
     q: Which statements about `rm` are true?
     options:
@@ -26,12 +26,12 @@ quiz:
       with `-i`. `-r` makes it recursive, so check the path twice before pressing Enter.
   - type: choice
     q: In `ls *.log`, what turns `*.log` into a list of file names?
-    options: ["`ls`", "The shell, before `ls` runs", "The kernel", "The filesystem"]
+    options: ["`ls`, after it starts", "The shell, before `ls` runs", "The file names themselves", "The filesystem"]
     answer: 1
     explain: >-
       The shell expands the pattern into matching names first, so `ls` receives
       `app.log error.log …` as separate arguments. That's why globs work the same with every
-      command, and why quoting (`'*.log'`) stops the expansion.
+      command, and why quoting (`echo '*.log'`) stops the expansion.
   - type: fill
     q: Type the command that renames `report.txt` to `final.txt` in the current directory.
     answer: ["mv report.txt final.txt"]
@@ -40,10 +40,17 @@ quiz:
       already exists, `mv` replaces it without asking (`mv -i` asks).
 terminal:
   task: |
-    The cargo bay's `logs` directory is full of crash dumps. Okafor wants the ones from
-    **October** kept, moved into a new directory `/station/cargo/archive`, and the
-    **September** ones deleted. Leave `app.log` where it is. Preview each glob with `echo`
-    before you hand it to `mv` or `rm`.
+    The cargo bay's `logs` directory is full of **crash dumps**: files a program writes when it
+    crashes, named by date. You start in `/station/cargo`, one level above `logs`.
+
+    1. Look inside `logs`.
+    2. Make a new directory, `/station/cargo/archive`.
+    3. **Move** the **October** dumps into `archive` (moved, not copied: they leave `logs`).
+    4. **Delete** the **September** dumps.
+    5. Leave `app.log` where it is.
+
+    Preview each glob with `echo` before you hand it to `mv` or `rm`. The console checks after
+    every command, so you're done the moment steps 2 to 5 are.
   cwd: /station/cargo
   files:
     - {path: /station, type: dir}
@@ -89,9 +96,9 @@ comms:
 cards:
   - id: copy-directory
     section: "Copying, moving, deleting"
-    accept: ["cp -r src dest"]
-    front: How do you copy a whole directory?
-    back: "`cp -r src dest`. Without `-r`, `cp` skips directories."
+    accept: ["cp -r reports reports-old"]
+    front: How do you copy the directory `reports`, and everything in it, to `reports-old`?
+    back: "`cp -r reports reports-old`. Without `-r`, `cp` refuses to copy a directory."
   - id: who-expands-globs
     section: "Globs: patterns the shell expands"
     front: Who expands `*` in a command?
@@ -106,10 +113,15 @@ cards:
 
 | Command | Does |
 |---|---|
-| `touch notes.txt` | creates an empty file (or updates its timestamp) |
+| `touch notes.txt` | creates an empty file (or updates its timestamp: the "last modified" date `ls -l` shows) |
 | `mkdir reports` | creates one directory |
-| `mkdir -p backups/2026/10` | creates a whole path, and doesn't complain if it exists |
-| `mkdir ../archive` | creates `archive` one level up, next to the directory you're in |
+| `mkdir -p backups/2026/10` | creates a whole path, and doesn't complain if it exists (`-p` for **p**arents) |
+| `mkdir ../backup` | creates `backup` one level up, next to the directory you're in |
+
+**The commands in this table and the next print nothing when they work**: `touch`, `mkdir`,
+`cp`, `mv`, `rm` and `rmdir`, like `cd` in module 01. Silence means it worked. Check with `ls`.
+The exceptions are on purpose: `-i` makes `cp`, `mv` and `rm` ask first, and `echo` (below)
+prints whatever it's given.
 
 ## Copying, moving, deleting
 
@@ -117,58 +129,75 @@ cards:
 |---|---|
 | `cp notes.txt notes.bak` | copies a file |
 | `cp -r reports reports-old` | copies a directory and everything in it (**r**ecursive) |
-| `mv notes.bak archive/` | moves a file into a directory |
-| `mv a.log b.log c.log archive/` | moves **several** files into a directory |
-| `mv *.log ../archive/` | the same with a glob, into `archive` one level up |
+| `mv notes.bak backup/` | moves a file into a directory |
+| `mv day1.txt day2.txt day3.txt backup/` | moves **several** files into a directory |
+| `mv *.txt ../backup/` | the same with a glob (`*` stands for any name; *Globs*, below, explains it), into `backup` one level up |
 | `mv draft.txt final.txt` | renames: a move within the same directory |
-| `rm final.txt` | deletes a file (`rm a b c` deletes several) |
+| `rm final.txt` | deletes a file (`rm day1.txt day2.txt` deletes several) |
 | `rm -r reports-old` | deletes a directory and its contents |
-| `rmdir empty-dir` | deletes a directory, only if it's empty |
+| `rmdir backup` | deletes a directory, only if it's empty |
 
 **`cp` and `mv` read their arguments the same way: everything before the last one is what to
 copy or move, and the last one is where it goes.** With two names, the last can be a new name
 (a rename). With more than two, the last must be a directory that already exists, or you get
-`target 'archive/': No such file or directory`. Make it first with `mkdir`.
+`target 'backup/': No such file or directory`. Make it first with `mkdir`.
+
+**A slash at the end of the destination, `backup/`, means "into the directory `backup`".** It's
+a safety catch. `mv notes.bak backup` when there's no `backup` directory quietly *renames* your
+file to `backup`. With the slash, `mv` stops instead:
+`mv: cannot move 'notes.bak' to 'backup/': Not a directory`.
+
+`cp` won't copy a directory without `-r`: `cp reports reports-old` answers
+`cp: -r not specified; omitting directory 'reports'`.
 
 > ⚠️ **There is no recycle bin.** `rm` is permanent and doesn't ask. Add `-i` to be prompted, and
 > read every `rm -r` back to yourself before pressing Enter. One stray space turns
 > `rm -r ~/scratch` into `rm -r ~ /scratch`: two arguments, the first being your entire home
-> directory. (GNU `rm` does refuse `rm -r /` itself, but nothing protects `~`.)
+> directory. (Linux's `rm` does refuse `rm -r /` itself, but nothing protects `~`.)
 
 `cp` and `mv` will also **overwrite** an existing destination silently. `-i` makes them ask
 first, and `rm -i` asks before each file. Only an answer starting with `y` means yes.
 
 ## Globs: patterns the shell expands
 
-| Pattern | Matches | Example |
+A **glob** is a file name with wildcards in it. The shell **expands** it: it swaps the pattern
+for every file name that matches, then runs the command.
+
+| Pattern | Matches | For example |
 |---|---|---|
-| `*` | any characters, including none | `*.log` → `app.log`, `error.log` |
-| `?` | exactly one character | `day?.txt` → `day1.txt`, not `day10.txt` |
-| `[abc]` | one of those characters | `[ab]*.md` → names starting with a or b |
-| `[0-9]` | one character in the range | `dump-[0-9].core` |
+| `*` | any characters, including none | `*.log` matches `app.log` and `error.log` |
+| `?` | exactly one character | `day?.txt` matches `day1.txt`, not `day10.txt` |
+| `[abc]` | one of those characters | `[ab]*.md` matches names starting with a or b |
+| `[0-9]` | one character in the range | `dump-[0-9].core` matches `dump-3.core`, not `dump-12.core` |
 
 The important part is **who** does the matching. In module 01, the shell reads the whole line
-before the command runs, and can rewrite parts of it first. This is what that's for: the shell
-replaces the pattern with the list of matching names *before* the command runs:
+before the command runs. This is why: the shell replaces the pattern with the list of matching
+names *before* the command runs, and the command never sees the pattern:
 
 ```bash
 echo *.log        # see exactly what a glob expands to, safely
-rm *.log          # rm receives: app.log error.log ... (never the pattern itself)
+rm *.log          # rm receives: app.log error.log ... (the names, when any match)
 ```
 
 So **preview a destructive glob with `echo` first**. `echo` prints whatever it's given, so
 `echo *.log` shows exactly the list `rm *.log` would receive. Narrow a pattern by writing more of
-the name yourself: `crash-*` matches every crash file, and `crash-2026-10-*` only October's.
+the name yourself: `day*` matches every day file, and `day1*` only the ones starting `day1`.
+
+**A glob matches names in the directory you're in**, unless you put a path in front of it:
+`echo reports/*.txt` matches the `.txt` files inside `reports`, from wherever you stand.
 
 **A pattern that matches nothing is left as it is.** `echo crash-09*` prints `crash-09*` back
-when no name starts with `crash-09`. That's your sign the pattern is wrong, and it's why
-`rm *.lgo` complains about a file literally named `*.lgo`.
+when no name starts with `crash-09`. That's your sign the pattern is wrong. It's also why a typo
+like `rm *.lgo` (for `*.log`) complains about a file literally named `*.lgo`.
 
-Quotes stop expansion: `grep '*.log' file` searches for the literal text `*.log`.
+Quotes stop expansion: `echo '*.log'` prints `*.log` itself. Unit 1.2 covers quoting properly.
 
 ### Braces aren't globs (but they're handy)
 
 `{a,b}` is **brace expansion**: it generates words whether or not files exist.
+`project/{src,tests,docs}` becomes `project/src project/tests project/docs`. A range works too:
+`day{1..3}.txt` becomes `day1.txt day2.txt day3.txt`. An empty choice counts as a choice, so
+`config.yml{,.bak}` becomes `config.yml config.yml.bak`.
 
 ```bash
 mkdir -p project/{src,tests,docs}     # three directories at once
@@ -177,13 +206,35 @@ cp config.yml{,.bak}                  # cp config.yml config.yml.bak
 
 ## Try it
 
-In a scratch directory you can safely mess up:
+In a scratch directory you can safely mess up, on a Linux machine or in the station console.
+Run them one at a time:
 
 ```bash
-mkdir -p ~/scratch && cd ~/scratch
+mkdir -p ~/scratch
+cd ~/scratch
 touch day{1..12}.txt
-echo day?.txt          # only day1 … day9
-echo day1*.txt         # day1, day10, day11, day12
-mkdir old && mv day1?.txt old/
+ls
+echo day?.txt
+echo day1*.txt
+echo day[12].txt
+mkdir old
+mv day1?.txt old/
 ls old
+cp -r old old-copy
+mv day1.txt first.txt
+rm -i day2.txt
+rm -r old-copy
+mv old/* .
+rmdir old
+ls
 ```
+
+- `touch day{1..12}.txt` makes twelve empty files, and `ls` shows them.
+- The three `echo` lines show what each glob matches: `day?.txt` only `day1` to `day9`;
+  `day1*.txt` `day1`, `day10`, `day11` and `day12`; `day[12].txt` only `day1` and `day2`.
+- `mv day1?.txt old/` moves `day10` to `day12` into `old`, and `ls old` proves it.
+- `cp -r` copies the whole of `old`, `mv` renames `day1.txt`, and `rm -i` asks first: type `y`
+  and Enter. `rm -r` deletes the copy.
+- `mv old/* .` moves everything in `old` back here (`.` is "this directory", from module 01),
+  so `rmdir old` can remove it: `rmdir` only takes an empty directory. The last `ls` shows
+  what's left.

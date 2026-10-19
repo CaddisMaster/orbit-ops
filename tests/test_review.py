@@ -321,14 +321,14 @@ def test_a_typed_answer_is_shown_beside_the_back(logged_in, user):
 @pytest.mark.criterion(104, "An exact answer is recognised")
 def test_an_accepted_answer_is_matched_and_preselects_good(logged_in, user):
     _complete(user.id, "files-and-globs")
-    part = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp  -r src dest").text  # spaces don't matter
+    part = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp  -r reports reports-old").text  # spaces don't matter
     assert "✓ matched" in part
     assert re.search(r'<button type="submit" name="grade" value="good" class="primary" autofocus>', part)
-    near = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp -R src dest").text
-    assert "✓ matched" not in near and "<code>cp -R src dest</code>" in near
+    near = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp -R reports reports-old").text
+    assert "✓ matched" not in near and "<code>cp -R reports reports-old</code>" in near
 
 
 def test_show_answer_ignores_anything_typed(logged_in, user):
     _complete(user.id, "files-and-globs")
-    part = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp -r src dest", show="1").text
+    part = _reveal(logged_in, "files-and-globs/copy-directory", typed="cp -r reports reports-old", show="1").text
     assert "Your answer" not in part and "✓ matched" not in part

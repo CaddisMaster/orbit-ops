@@ -18,6 +18,12 @@ and why it matters, not what the diff says.
   options, that `ls -a` also lists `.` and `..`, that the dot is part of a hidden file's name,
   and that `cd -` is the one `cd` that prints something. The task's steps are numbered and say
   where the relative path starts. Try it is one command per line, with no `&&` or pipes.
+- Unit 1.1 module 03, *Making, moving and matching files*, audited the same way (#228). Its
+  examples no longer spell out the task's answer (`crash-2026-10-*`, an `archive` one level
+  up). It says what a glob is, that a glob can have a path in front (`logs/*.log`), that these
+  commands print nothing when they work, and what the slash in `backup/` protects you from.
+  Brace ranges are explained, `grep` and `&&` are gone, and Try it has you type `cp -r`, a
+  rename, `rm -i`, `rm -r` and `rmdir`, all of which the quiz and cards ask about.
 
 ## [0.10.0] — 2026-10-17
 

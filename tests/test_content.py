@@ -674,6 +674,77 @@ def test_module_02s_ls_d_uses_a_real_path():
     assert "\nls -ld ~\n" in _navigating()[1]
 
 
+# --- #228: module 03 reads for a beginner who has done 01 and 02 --------------------------
+def _globs():
+    module = load_catalog().modules["files-and-globs"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), html.unescape(re.sub(r"<[^>]+>", "", try_it))
+
+
+@pytest.mark.criterion(228, "The lesson doesn't hand over the task's answer")
+def test_module_03s_examples_are_not_the_task():
+    _, _, lesson, _ = _globs()
+    assert "crash-2026-10-*" not in lesson and "archive" not in lesson
+
+
+@pytest.mark.criterion(228, "Globs with a path are taught")
+def test_module_03_teaches_a_glob_with_a_path():
+    _, prose, _, _ = _globs()
+    assert "A glob matches names in the directory you're in , unless you put a path in front of it" in prose
+    assert "echo reports/*.txt matches the .txt files inside reports" in prose
+
+
+@pytest.mark.criterion(228, "Silent commands are named")
+def test_module_03_names_its_silent_commands():
+    _, prose, _, _ = _globs()
+    assert "print nothing when they work : touch , mkdir , cp , mv , rm and rmdir" in prose
+    assert "Silence means it worked. Check with ls" in prose
+
+
+@pytest.mark.criterion(228, "Everything quizzed or carded is typed somewhere")
+def test_module_03s_try_it_types_what_the_quiz_and_cards_ask():
+    _, _, _, try_it = _globs()
+    for line in ("cp -r old old-copy", "mv day1.txt first.txt", "rm -i day2.txt", "rm -r old-copy"):
+        assert f"\n{line}\n" in try_it, line
+
+
+@pytest.mark.criterion(228, "The copy-directory card matches the lesson")
+def test_module_03s_copy_directory_card_uses_the_lessons_names():
+    module, prose, _, _ = _globs()
+    card = next(c for c in module.cards if c.id == "files-and-globs/copy-directory")
+    assert card.accept == ("cp -r reports reports-old",) and "src" not in card.back_html
+    assert "cp won't copy a directory without -r" in prose and "cp -r reports reports-old" in _globs()[2]
+
+
+@pytest.mark.criterion(228, "Nothing is borrowed from later modules")
+def test_module_03_borrows_nothing_from_later():
+    _, prose, lesson, try_it = _globs()
+    assert "grep" not in lesson + try_it and "&&" not in lesson + try_it
+    assert "day{1..3}.txt becomes day1.txt day2.txt day3.txt" in prose
+    assert "config.yml{,.bak} becomes config.yml config.yml.bak" in prose
+    assert "project/{src,tests,docs} becomes project/src project/tests project/docs" in prose
+
+
+@pytest.mark.criterion(228, "The task reads as steps")
+def test_module_03s_task_is_numbered():
+    module, _, _, _ = _globs()
+    task = " ".join(module.terminal_task_html.split())
+    assert "<ol>" in task and "Make a new directory" in task
+    assert "you're done the moment steps 2 to 5 are" in task
+
+
+@pytest.mark.criterion(228, "The trailing slash is explained")
+def test_module_03_explains_the_trailing_slash():
+    _, prose, _, _ = _globs()
+    assert 'A slash at the end of the destination, backup/ , means "into the directory backup "' in prose
+    assert "quietly renames your file to backup" in prose
+    assert "mv: cannot move 'notes.bak' to 'backup/': Not a directory" in prose
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
