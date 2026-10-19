@@ -412,7 +412,7 @@ def test_module_04_says_a_number_replaces_all_three_classes():
 def test_module_04s_task_says_what_it_wants():
     module, _ = _permissions()
     task = " ".join(module.terminal.task.split())
-    assert "look at both files' modes" in task and "change **nothing else**" in task
+    assert "look at the files' modes" in task and "change **nothing else**" in task
     assert "Okafor" not in task  # the script is the learner's to run
 
 
@@ -743,6 +743,76 @@ def test_module_03_explains_the_trailing_slash():
     assert 'A slash at the end of the destination, backup/ , means "into the directory backup "' in prose
     assert "quietly renames your file to backup" in prose
     assert "mv: cannot move 'notes.bak' to 'backup/': Not a directory" in prose
+
+
+# --- #232: module 04 reads for a beginner who has done 01 to 03 ---------------------------
+def _perms_plain():
+    module = load_catalog().modules["permissions"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), html.unescape(re.sub(r"<[^>]+>", "", try_it))
+
+
+@pytest.mark.criterion(232, "Owner, group and mode are explained before they're used")
+def test_module_04_explains_owner_group_and_mode_first():
+    _, prose, _ = _perms_plain()
+    first = prose.split("Reading the permission string", 1)[0]
+    for says in ("Every file has an owner : the user who created it", "It also has a group , a named set of users",
+                 "is others", "A file's mode is what each of those three may do with it", "you own the files in the task"):
+        assert says in first, says
+
+
+@pytest.mark.criterion(232, "stat's format is readable")
+def test_module_04_says_what_the_stat_codes_print():
+    _, prose, _ = _perms_plain()
+    for row in ("%a the mode as a number", "%A the mode as letters", "%n the file's name", "%U its owner", "%G its group"):
+        assert row in prose, row
+
+
+@pytest.mark.criterion(232, "Silent commands are named")
+def test_module_04_says_chmod_is_silent():
+    _, prose, _ = _perms_plain()
+    assert "chmod prints nothing when it works" in prose
+
+
+@pytest.mark.criterion(232, "chown's syntax and sudo are taught in prose")
+def test_module_04_teaches_chown_and_introduces_sudo():
+    _, prose, _ = _perms_plain()
+    assert "chown OWNER:GROUP FILE sets a file's owner and group" in prose
+    section = prose.split("Changing ownership: chown", 1)[1]
+    assert "put it in front of a command to run that one command as root" in section
+    assert section.index("sudo") < section.index("Module 05 covers it properly")
+
+
+@pytest.mark.criterion(232, "Symbolic chmod's comma and empty = are explained")
+def test_module_04_explains_the_comma_and_empty_equals():
+    _, prose, _ = _perms_plain()
+    assert "A comma joins two changes" in prose and "= with nothing after it takes everything away" in prose
+    assert "the group and others get nothing" in prose
+
+
+@pytest.mark.criterion(232, "Try it uses only what's been taught")
+def test_module_04s_try_it_has_no_redirect_or_and():
+    _, _, try_it = _perms_plain()
+    assert ">" not in try_it and "&&" not in try_it
+
+
+@pytest.mark.criterion(232, "Every carded section is practised")
+def test_module_04s_try_it_practises_directories_and_chown():
+    _, _, try_it = _perms_plain()
+    for line in ("chmod u-x locked", "cd locked", "chmod u+x locked", "sudo chown root:root key.txt"):
+        assert f"\n{line}\n" in try_it, line
+
+
+@pytest.mark.criterion(232, "The task's wording matches the console")
+def test_module_04s_task_matches_its_three_files():
+    module, _, _ = _perms_plain()
+    task = " ".join(module.terminal.task.split())
+    assert "both files" not in task and "Leave `README` as it is" in task
+    assert "The console checks after every command" in task
 
 
 # --- #207: Okafor is he --------------------------------------------------------------
