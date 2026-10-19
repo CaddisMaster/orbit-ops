@@ -6,6 +6,13 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Fixed
+- The station console no longer renames a file when you move or copy it into a directory that
+  isn't there (#229). `mv notes.bak backup/` with no `backup` directory used to leave a file
+  called `backup`, the very mistake the slash exists to prevent. Now it refuses as real `mv`
+  and `cp` do (`cannot move 'notes.bak' to 'backup/': Not a directory`), and the file stays
+  put. A directory can still be renamed that way, as on Linux.
+
 ### Changed
 - Unit 1.1 module 01, *The filesystem tree*, audited as a first-day beginner would read it
   (#224). The console task is three numbered steps, and finding the directory no longer hands
