@@ -264,6 +264,25 @@ test("Several files into a missing or non-directory target fail as GNU's do (#10
   assert.equal(out(sh, "ls archive"), "a  b\n");
 });
 
+// A slash on the target means "into this directory": a file is never renamed to `nope`
+// (#229). Messages as coreutils 9.4 gives them, checked in ubuntu:24.04.
+test("A file into a missing or non-directory target with a slash is refused (#229)", () => {
+  const sh = station();
+  sh.run("touch f g");
+  assert.equal(out(sh, "mv f nope/; echo $?"), "mv: cannot move 'f' to 'nope/': Not a directory\n1\n");
+  assert.equal(out(sh, "cp f nope/; echo $?"), "cp: cannot create regular file 'nope/': Not a directory\n1\n");
+  assert.equal(out(sh, "mv f g/; echo $?"), "mv: cannot stat 'g/': Not a directory\n1\n");
+  assert.equal(out(sh, "cp f g/; echo $?"), "cp: cannot stat 'g/': Not a directory\n1\n");
+  assert.equal(out(sh, "ls f g nope"), "ls: cannot access 'nope': No such file or directory\nf  g\n");
+});
+
+test("A directory can still be renamed or copied to a new name with a slash (#229)", () => {
+  const sh = station();
+  sh.run("mkdir d e");
+  assert.equal(out(sh, "mv d newd/; cp -r e newe/; echo $?"), "0\n");
+  assert.equal(out(sh, "ls -d newd newe"), "newd  newe\n");
+});
+
 // Prompts and answers as GNU coreutils 9.4 gives them (checked in ubuntu:24.04).
 test("rm -i, mv -i and cp -i ask first, and only y means yes (#101)", () => {
   const sh = station({ "/station/empty": { type: "file", mode: 0o644, owner: "cadet", group: "crew", contents: "" } });

@@ -6103,6 +6103,13 @@
       if (s.error) { out.err += cmd + ": cannot stat '" + src + "': " + s.error + "\n"; continue; }
       if (s.node.type === "dir" && !recursive) { out.err += "cp: -r not specified; omitting directory '" + src + "'\n"; continue; }
       if (!move && !sh.can(s.node, 4)) { out.err += "cp: cannot open '" + src + "' for reading: Permission denied\n"; continue; }
+      // `dest/` means "into this directory": a file is never renamed to it (#229). A
+      // directory may still be, as GNU allows `mv d newd/`.
+      if (/\/$/.test(dest) && !intoDir && s.node.type !== "dir") {
+        if (destFound.node || destFound.error === "Not a directory") out.err += cmd + ": cannot stat '" + dest + "': Not a directory\n";
+        else out.err += (move ? "mv: cannot move '" + src + "' to '" : "cp: cannot create regular file '") + dest + "': Not a directory\n";
+        continue;
+      }
       var target = intoDir ? join(destFound.path, baseName(s.path)) : destFound.path;
       if (target === s.path) { out.err += cmd + ": '" + src + "' and '" + dest + "' are the same file\n"; continue; }
       if (target.indexOf(s.path + "/") === 0) { out.err += cmd + ": cannot " + (move ? "move" : "copy") + " '" + src + "' to a subdirectory of itself\n"; continue; }
