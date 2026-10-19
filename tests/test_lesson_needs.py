@@ -60,6 +60,8 @@ NEEDS = {
         "narrow a glob by writing more of the name": "Narrow a pattern by writing more of the name yourself",
         "a glob that matches nothing is left as it is": "A pattern that matches nothing is left as it is",
         "rm deletes without a bin": "There is no recycle bin",
+        "a glob can have a path in front of it": "unless you put a path in front of it",
+        "a trailing slash means into an existing directory": "means \"into the directory `backup`\"",
     },
     "permissions": {
         "600 is read and write for the owner only": "secrets",
