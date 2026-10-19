@@ -546,6 +546,74 @@ def test_module_07_practises_tee():
     assert "| tee " in html.unescape(re.sub(r"<[^>]+>", "", try_it))
 
 
+# --- #224: module 01 reads for a day-1 beginner ------------------------------------------
+def _filesystem():
+    module = load_catalog().modules["the-filesystem"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), try_it
+
+
+@pytest.mark.criterion(224, "The task says when it's done and doesn't answer itself")
+def test_module_01s_task_is_numbered_and_keeps_the_time_for_the_log():
+    module, _, _, _ = _filesystem()
+    task = " ".join(module.terminal_task_html.split())
+    assert "<ol>" in task and "the task is done the moment you're in it" in task
+    said = [beat_html for beat in module.comms_html.values() for _, beat_html in beat]
+    assert "02:40" not in module.terminal.success and not any("02:40" in s for s in said)
+
+
+@pytest.mark.criterion(224, "/var is taught in the lesson")
+def test_module_01_says_what_var_is():
+    _, prose, _, _ = _filesystem()
+    assert "Variable data: files the system writes while it runs" in prose
+    assert "It rarely changes unless someone edits it" in prose
+
+
+@pytest.mark.criterion(224, "root the user is explained")
+def test_module_01_says_root_is_a_user():
+    _, prose, _, _ = _filesystem()
+    assert "Here root is a user : the administrator account" in prose
+    assert "Same word, two meanings" in prose
+
+
+@pytest.mark.criterion(224, "The path shortcuts are in prose or a table")
+def test_module_01s_shortcuts_are_a_table():
+    _, prose, _, _ = _filesystem()
+    for row in ("~ your home directory", ". the directory you're in", ".. the directory above it"):
+        assert row in prose, row
+    assert "The directory you're in is your current directory , and the prompt always shows it" in prose
+
+
+@pytest.mark.criterion(224, "Placeholders and silent success are explained")
+def test_module_01_explains_placeholders_and_silent_cd():
+    _, prose, lesson, _ = _filesystem()
+    assert "a word in capitals, like DIR or FILE , stands for a real directory or file" in prose
+    assert "cd prints nothing when it works" in prose
+    reading = lesson.split("Looking, moving and reading", 1)[1]
+    assert "/var/log" not in reading and "life-support" not in reading
+
+
+@pytest.mark.criterion(224, "Try it runs for a day-1 beginner")
+def test_module_01s_try_it_needs_no_pipes_or_jupiter():
+    _, _, _, try_it = _filesystem()
+    text = html.unescape(re.sub(r"<[^>]+>", "", try_it))
+    assert "jupiter" not in text and "|" not in text
+    assert "less passwd" in text and "station console" in text
+
+
+@pytest.mark.criterion(224, "Smaller wording")
+def test_module_01s_smaller_wording():
+    module, prose, lesson, _ = _filesystem()
+    assert "Six commands" in prose and len(re.findall(r"<tr>\s*<td><code>(ls|cd|cat|less|head)", module.body_html)) == 5
+    assert "/home/sean" not in lesson and "package manager" not in lesson
+    assert "means /bin is a shortcut to /usr/bin" in prose
+    assert "programs that run in the background all the time" in prose
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.

@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- Unit 1.1 module 01, *The filesystem tree*, audited as a first-day beginner would read it
+  (#224). The console task is three numbered steps, and finding the directory no longer hands
+  you the scrubber's time: you read it in the log. The lesson says the root *user* is the
+  administrator (not the directory `/`), what `/var` is for, that `cd` prints nothing when it
+  works, and what `PATH` and `FILE` in the table stand for. `~`, `.` and `..` are a table rather
+  than code comments. Try it has no pipes yet, and it practises `less` and `tail`.
+
 ## [0.10.0] — 2026-10-17
 
 Fixes from playing Unit 1.1. Modules 04 to 07 now say plainly what their tasks and quizzes need:

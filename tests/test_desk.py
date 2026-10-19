@@ -274,7 +274,10 @@ def test_the_stations_figures_match_the_exercises():
     assert f"{len(logins)} LOGIN ATTEMPTS" in said("text-tools")
     assert f"{sum(' 401 ' in line for line in logins)} FAILED" in said("text-tools")
     scrubbers = client_spec(catalog.modules["the-filesystem"].terminal)["fs"]["/var/log/life-support/scrubbers.log"]["contents"]
-    assert "02:40 scrubber B: offline" in scrubbers and "OFFLINE SINCE 02:40" in said("the-filesystem")
+    assert f"{len(scrubbers.splitlines())} ENTRIES" in said("the-filesystem")
+    # The time is the log's to tell, not the comms' (#224): they arrive on the cd, before the cat.
+    assert "02:40 scrubber B: offline" in scrubbers and "02:40" not in said("the-filesystem")
+    assert "02:40" not in catalog.modules["the-filesystem"].terminal.success
     core = client_spec(catalog.modules["pipes-and-redirection"].terminal)["fs"]["/station/reactor/core.log"]["contents"]
     assert f"{core.count('ALERT')} ALERTS" in said("pipes-and-redirection")
     diag = next(p for p in catalog.modules["processes-and-signals"].terminal.processes if "o2-diagnostics" in p.command)

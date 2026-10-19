@@ -4931,7 +4931,7 @@
    "groups": [],
    "password": null,
    "processes": [],
-   "success": "\"Found it,\" Okafor says. \"Scrubber B went offline at 02:40. Remember where the logs live; you'll be back.\"",
+   "success": "\"Found it,\" Okafor says. \"Now read the scrubbers' log: when did B go down? Remember where the logs live; you'll be back.\"",
    "user": "cadet"
   }
  },
