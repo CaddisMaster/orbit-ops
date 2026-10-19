@@ -614,6 +614,66 @@ def test_module_01s_smaller_wording():
     assert "programs that run in the background all the time" in prose
 
 
+# --- #226: module 02 reads for a beginner who has done module 01 --------------------------
+def _navigating():
+    module = load_catalog().modules["navigating"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), html.unescape(re.sub(r"<[^>]+>", "", try_it))
+
+
+@pytest.mark.criterion(226, "Try it uses only what's been taught")
+def test_module_02s_try_it_has_one_command_per_line():
+    _, try_it = _navigating()
+    assert "&&" not in try_it and "|" not in try_it
+    assert "\ncd\npwd\n" in try_it
+
+
+@pytest.mark.criterion(226, "Flags are options")
+def test_module_02_says_flags_are_options():
+    prose, _ = _navigating()
+    assert "Its options (also called flags" in prose
+    assert "ls -lah is -l , -a and -h written together" in prose
+
+
+@pytest.mark.criterion(226, "ls -a's . and .. are explained")
+def test_module_02_explains_dot_and_dot_dot_in_ls_a():
+    prose, _ = _navigating()
+    assert "ls -a also lists two entries named . and .. . They aren't files" in prose
+    assert "The dot is part of the name. To read .bashrc you type cat .bashrc" in prose
+
+
+@pytest.mark.criterion(226, "The console's ls limits are stated correctly")
+def test_module_02_says_ls_t_is_not_on_the_console():
+    prose, _ = _navigating()
+    assert "ls -t (newest first) is handy too, but it isn't on the station console" in prose
+
+
+@pytest.mark.criterion(226, "One home, one starting point")
+def test_module_02s_cd_table_has_one_start_and_cadets_home():
+    prose, _ = _navigating()
+    assert "Every row starts from the same place, /var/log , and home is /home/cadet" in prose
+    assert "cd home (the same as cd ~ ) /home/cadet" in prose and "/home/sean" not in prose
+
+
+@pytest.mark.criterion(226, "The long-listing line is explained or deferred")
+def test_module_02_explains_or_defers_the_long_listing():
+    prose, _ = _navigating()
+    assert "Owner and group are module 04's subject" in prose and "ignore the link count" in prose
+    assert "prints a total line first" in prose
+    assert "4.0K (4 kilobytes)" in prose and "12M (12 megabytes)" in prose
+
+
+@pytest.mark.criterion(226, "ls -d is real or gone")
+def test_module_02s_ls_d_uses_a_real_path():
+    prose, _ = _navigating()
+    assert "ls -ld /etc one long line for /etc itself" in prose and "ls -d dir" not in prose
+    assert "\nls -ld ~\n" in _navigating()[1]
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.

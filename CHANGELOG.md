@@ -13,6 +13,11 @@ and why it matters, not what the diff says.
   administrator (not the directory `/`), what `/var` is for, that `cd` prints nothing when it
   works, and what `PATH` and `FILE` in the table stand for. `~`, `.` and `..` are a table rather
   than code comments. Try it has no pipes yet, and it practises `less` and `tail`.
+- Unit 1.1 module 02, *Finding your way around*, audited the same way (#226). It says how to
+  work out a relative path (up to the directory both paths share, then down), that flags are
+  options, that `ls -a` also lists `.` and `..`, that the dot is part of a hidden file's name,
+  and that `cd -` is the one `cd` that prints something. The task's steps are numbered and say
+  where the relative path starts. Try it is one command per line, with no `&&` or pipes.
 
 ## [0.10.0] — 2026-10-17
 

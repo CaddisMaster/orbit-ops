@@ -48,6 +48,8 @@ NEEDS = {
         "each .. goes up one level, and needs its slash": "`..` is a step like any other directory name",
         "a relative path goes up and back down": "up two, then down into",
         "a bare cd returns to where the console started": "home is the directory the task starts in",
+        "the dot is part of a hidden file's name": "**The dot is part of the name.**",
+        "a relative path climbs to the shared directory, then down": "go up with `..` until you reach a directory both paths share",
     },
     "files-and-globs": {
         "mkdir makes the archive directory": "creates one directory",
