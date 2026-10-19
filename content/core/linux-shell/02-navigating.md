@@ -17,7 +17,8 @@ quiz:
     answer: 1
     explain: >-
       `-a` shows **all** entries, including hidden dotfiles like `.bashrc` and `.env`. `-l` is
-      the long format, `-h` makes sizes human-readable, and `-R` recurses into subdirectories.
+      the long format, `-h` makes sizes human-readable, and `-R` (not in this lesson) lists
+      every subdirectory too.
   - type: choice
     q: What does `cd -` do?
     options: ["Goes up one level", "Returns to the directory you were in before", "Goes to your home directory", "Lists the current directory"]
@@ -33,9 +34,12 @@ quiz:
       always gives the full absolute path.
 terminal:
   task: |
-    Okafor left you a message in a **hidden** file somewhere in `/station/comms/relay`. Find
-    it, read it (`cat` prints a file), and go where it says. Try getting there with a
-    **relative** path.
+    Okafor left you a message in a **hidden** file in `/station/comms/relay`.
+
+    1. Go to `/station/comms/relay`, find the file, and read it (`cat` prints a file).
+    2. From `/station/comms/relay`, go where it says. Try a **relative** path; an absolute one
+       works too. The console checks only where you end up, so you're done the moment you
+       arrive.
   cwd: /home/cadet
   files:
     - {path: /home/cadet, type: dir}
@@ -87,21 +91,28 @@ cards:
 
 ## Where am I?
 
-The shell always has a **current working directory**. Every relative path you type is resolved
-from there. `pwd` (**p**rint **w**orking **d**irectory) prints it as a full path, and the
+The shell always has a **current working directory**: module 01's current directory, by its
+full name. Every relative path you type is resolved from there. `pwd` (**p**rint **w**orking **d**irectory) prints it as a full path, and the
 prompt shows it too.
 
 ## Moving: `cd`
 
-| Command | Takes you to | From `/var/log/nginx`, that's |
+Every row starts from the same place, `/var/log`, and home is `/home/cadet`:
+
+| Command | Takes you to | From `/var/log`, that's |
 |---|---|---|
-| `cd /var/log` | an absolute path: the same place from anywhere | `/var/log` |
-| `cd nginx` | a relative path: a directory inside where you are | (from `/var/log`) `/var/log/nginx` |
-| `cd ..` | up one level | `/var/log` |
-| `cd ../..` | up two levels: each `..` is one step up | `/var` |
-| `cd ../../lib/apt` | up two, then down into `lib/apt` | `/var/lib/apt` |
-| `cd -` | back to where you just were | wherever you came from |
-| `cd` | home (the same as `cd ~`) | `/home/sean` |
+| `cd /etc` | an absolute path: the same place from anywhere | `/etc` |
+| `cd nginx` | a relative path: a directory inside where you are | `/var/log/nginx` |
+| `cd ..` | up one level | `/var` |
+| `cd ../..` | up two levels: each `..` is one step up | `/` |
+| `cd ../lib/apt` | up one, then down into `lib/apt` | `/var/lib/apt` |
+| `cd ../../etc/nginx` | up two, then down into `etc/nginx` | `/etc/nginx` |
+| `cd -` | back to the directory you were in before this one, and prints its path: the one `cd` that isn't silent | wherever you came from |
+| `cd` | home (the same as `cd ~`) | `/home/cadet` |
+
+**To work out a relative path between two places**, go up with `..` until you reach a directory
+both paths share, then go down from there. From `/var/log` to `/var/lib/apt`, the directory they
+share is `/var`: one `..` gets you there, then `lib/apt` goes down, so it's `cd ../lib/apt`.
 
 A path is a list of steps separated by `/`. `..` is a step like any other directory name, so it
 needs its slash too: `../archive`, never `..archive`.
@@ -112,17 +123,20 @@ the full path.
 
 ## Looking: `ls`
 
-On its own `ls` lists names. Its flags are where it gets useful:
+On its own `ls` lists names. Its options (also called **flags**, the word most people use) are
+where it gets useful:
 
 | Command | Shows |
 |---|---|
-| `ls -l` | long format: permissions, owner, size, date |
-| `ls -a` | **all** entries, including hidden dotfiles |
-| `ls -h` | with `-l`, sizes like `4.0K` and `12M` instead of bytes |
-| `ls -t` | newest first (add `-r` to reverse; not on the station console) |
-| `ls -d dir` | the directory itself, not its contents |
+| `ls -l` | long format: permissions and owner (module 04), size, date |
+| `ls -a` | **all** entries, including hidden dotfiles (see below) |
+| `ls -h` | with `-l`, sizes like `4.0K` (4 kilobytes) and `12M` (12 megabytes) instead of bytes |
+| `ls -ld /etc` | one long line for `/etc` itself, not for what's inside it |
 
-Flags combine, so `ls -lah` is the one you'll type most. Here's what a line of it means:
+Flags combine: **`ls -lah` is `-l`, `-a` and `-h` written together**, and it's the one you'll
+type most. `ls -t` (newest first) is handy too, but it isn't on the station console.
+
+Here's what a line of `ls -l` means:
 
 ```text
 -rw------- 1 deploy deploy 293 Oct  8 18:34 .env
@@ -135,29 +149,52 @@ Flags combine, so `ls -lah` is the one you'll type most. Here's what a line of i
 └ type and permissions (next modules)
 ```
 
-That's a real line from the droplet that runs this app. The `.env` file starts with a dot, so a
-plain `ls` would not show it at all.
+It's a line like the one the server that runs this app shows for its settings file. Owner and group are module 04's
+subject, and you can ignore the link count for now. `ls -l` also prints a `total` line first,
+which you can ignore too. The `.env` file starts with a dot, so a plain `ls` would not show it
+at all.
 
 ## Hidden files
 
-Any name beginning with `.` is hidden. There's no special attribute; it's purely a naming
-convention that `ls` (and most file browsers) respect. Configuration often lives in dotfiles
-(`~/.bashrc`, `~/.ssh/`, `.gitignore`, `.env`), so get in the habit of `ls -a` when something
-"should be there".
+Any name beginning with `.` is hidden. Such a file is called a **dotfile**. There's no special
+attribute; it's purely a naming convention that `ls` (and most file browsers) respect.
+Configuration often lives in dotfiles (`~/.bashrc` holds your shell's settings, and `.env` an app's), so get in the habit
+of `ls -a` when something "should be there".
+
+**The dot is part of the name.** To read `.bashrc` you type `cat .bashrc`; `cat bashrc` is a
+different file, which probably doesn't exist.
+
+`ls -a` also lists two entries named `.` and `..`. They aren't files: they're module 01's
+shortcuts for "this directory" and "the one above", and every directory has them.
 
 ## Typing less
 
-- **Tab** completes file and directory names. Press it twice to see all the matches.
+- **Tab** completes file and directory names: type the start of one and press Tab. If several
+  names match, press it twice to see them all.
 - **↑** recalls earlier commands. On a real shell **Ctrl-R** also searches your history as you
   type (the station console has ↑ and Tab, not Ctrl-R).
 
 ## Try it
 
+Run these one at a time, on a Linux machine or in the station console:
+
 ```bash
-cd /etc && pwd
-ls -lah | head
-cd - && pwd
+cd /etc
+pwd
+cd -
+pwd
+cd
+pwd
+ls ~
 ls -a ~
+ls -lah ~
+ls -ld ~
 ```
 
-Notice how many dotfiles your home directory has once you add `-a`.
+- `cd -` takes you back to where you were before `/etc`, and prints that path. A bare `cd` takes you home.
+  `pwd` after each one shows where you landed.
+- `ls ~` and `ls -a ~` list the same directory. Count how many more names `-a` shows, and spot
+  `.` and `..` among them. (In the station console your home is empty, so `ls ~` prints
+  nothing and `-a` adds only `.` and `..`.)
+- `ls -ld ~` prints one line, for your home directory itself.
+- For Tab, type `cd /e` and press Tab: the shell finishes `/etc/` for you.
