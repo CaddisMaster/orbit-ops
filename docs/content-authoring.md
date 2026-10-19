@@ -630,11 +630,18 @@ module's PR, in this order:
    only test of it, since no test parses a lab's steps), the quiz against the lesson, claims against
    the repo, lab checks that hold on any machine, and the Try it script to run. Fix what it
    finds, or say in the PR why not.
-3. **Run the Try it** in a fresh `ubuntu:24.04` container as a sudo-capable non-root user, plus
+3. **Run `/beginner-audit <slug>`** (`.claude/skills/beginner-audit/`, #217). It reads the module
+   end to end as a learner who has done only the modules before it, and reports what a beginner
+   couldn't find: a term used before it's explained, a quiz answer or task need found only in a
+   code block, comment, `explain` or Try it, placeholders like `cmd`, labels in place of
+   explanations, a card nothing teaches, ambiguous task wording, a command that succeeds silently
+   without the lesson saying so. The reviewer checks the module is *right*; this checks a beginner
+   can *find* it. Fix what it finds, or say in the PR why not.
+4. **Run the Try it** in a fresh `ubuntu:24.04` container as a sudo-capable non-root user, plus
    whatever the reviewer couldn't confirm. For a lab, follow its steps there and paste the real
    output into each box's `example`.
-4. **Play it in the browser** as `verify-bot`: the console solution, the challenge, the lab.
-5. **Open the PR.** Sean plays it before it merges.
+5. **Play it in the browser** as `verify-bot`: the console solution, the challenge, the lab.
+6. **Open the PR.** Sean plays it before it merges.
 
 ## Writing guidelines
 
