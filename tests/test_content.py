@@ -815,6 +815,89 @@ def test_module_04s_task_matches_its_three_files():
     assert "The console checks after every command" in task
 
 
+# --- #234: module 05 reads for a beginner who has done 01 to 04 ---------------------------
+def _sudo_plain():
+    module = load_catalog().modules["users-and-sudo"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), plain(try_it)
+
+
+@pytest.mark.criterion(234, "The cut syntax the task needs is in prose")
+def test_module_05_explains_cut_in_prose():
+    _, prose, lesson, _ = _sudo_plain()
+    assert "-d: says the fields are separated by : (the d elimiter), and -fN keeps f ield N" in prose
+    assert "cut -d: -f6" in lesson and "cut -d: -f7" not in lesson  # the task's own field stays the task's
+
+
+@pytest.mark.criterion(234, "Docker is explained before Q4 relies on it")
+def test_module_05_explains_docker_before_the_callout():
+    _, prose, _, _ = _sudo_plain()
+    assert prose.index("runs programs in sealed-off boxes called containers") < prose.index("root in disguise")
+    assert "Its daemon , the service in the background that does the work, runs as root" in prose
+
+
+@pytest.mark.criterion(234, "usermod is written out and its silence is warned about")
+def test_module_05_writes_out_usermod():
+    _, prose, _, _ = _sudo_plain()
+    assert "sudo usermod -aG GROUP USER adds USER to GROUP: the group comes first, then the user" in prose
+    assert "-G sets the user's extra groups to exactly GROUP: the main group stays, but any extra group you didn't list, sudo included, is gone" in prose
+    assert "-a makes it a dd to them instead" in prose
+    assert "usermod prints nothing when it works" in prose
+
+
+@pytest.mark.criterion(234, "No term is used before it is explained")
+def test_module_05_explains_its_terms_first():
+    _, prose, _, _ = _sudo_plain()
+    for term, says in (("process", "process (a running program"), ("kernel", "kernel , the core of Linux"),
+                       ("UID", "UID (user ID)"), ("GID", "GID (group ID)"), ("/etc/group", "/etc/group every group")):
+        assert says in prose, says
+        assert prose.index(says) <= prose.index(term) + len(says), term
+    assert "hash" not in prose and "GitHub Actions" not in prose and "workers" not in prose
+    assert "refresh the list of software you can install; module 10" in prose
+
+
+@pytest.mark.criterion(234, "/etc/group's line is explained")
+def test_module_05_explains_an_etc_group_line():
+    _, prose, _, _ = _sudo_plain()
+    for row in ("1 sudo the group's name", "3 27 the GID", "4 sean its members, separated by commas"):
+        assert row in prose, row
+
+
+@pytest.mark.criterion(234, "sudo's flags, prompt and -l are in prose")
+def test_module_05_explains_sudos_flags_prompt_and_l():
+    _, prose, lesson, _ = _sudo_plain()
+    assert "sudo -u www-data whoami prints www-data" in prose and "postgres psql" not in lesson
+    assert "[sudo] password for sean:" in lesson
+    assert "On Ubuntu nothing appears as you type, not even dots" in prose and "The station console shows dots instead" in prose
+    assert "(ALL : ALL) ALL means any command, as any user" in prose
+
+
+@pytest.mark.criterion(234, "su and visudo can be practised")
+def test_module_05s_try_it_practises_su_and_visudo():
+    _, _, _, try_it = _sudo_plain()
+    assert "On a Linux machine only (not the station console)" in try_it
+    assert "su sudo visudo -c" in try_it or ("su" in try_it.split() and "sudo visudo -c" in try_it)
+
+
+@pytest.mark.criterion(234, "Try it says where to run and what to expect")
+def test_module_05s_try_it_says_where_and_what():
+    _, _, _, try_it = _sudo_plain()
+    assert try_it.startswith("Run these one at a time, on a Linux machine or in the station console")
+    assert "your sudo password is meridian" in try_it
+    assert "sudo whoami prints root" in try_it
+
+
+@pytest.mark.criterion(234, "The task says when it's done")
+def test_module_05s_task_says_when_its_done():
+    module, _, _, _ = _sudo_plain()
+    task = " ".join(module.terminal.task.split())
+    assert "The console checks after every command" in task and "`cat airlock-shell.txt`" in task
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
