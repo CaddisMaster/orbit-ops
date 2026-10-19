@@ -31,6 +31,13 @@ and why it matters, not what the diff says.
   commands print nothing when they work, and what the slash in `backup/` protects you from.
   Brace ranges are explained, `grep` and `&&` are gone, and Try it has you type `cp -r`, a
   rename, `rm -i`, `rm -r` and `rmdir`, all of which the quiz and cards ask about.
+- Unit 1.1 module 04, *Permissions and ownership*, audited the same way (#232). It now says
+  what a file's owner, group and mode are before using them, and that you own the task's
+  files. It also explains what `stat -c`'s `%a %A %n %U %G` print, what the comma and an empty
+  `=` do in `u=rw,go=`, how to change one class's digit, and what a script is. `chmod` and
+  `chown` are silent when they work, and `sudo` gets one sentence ahead of module 05. Try it
+  takes `x` off a directory to show `Permission denied`, has you try `chown` (refused, as you
+  aren't root), and gives a file to root and back on a machine with `sudo`.
 
 ## [0.10.0] — 2026-10-17
 

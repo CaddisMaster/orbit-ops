@@ -32,7 +32,7 @@ quiz:
       names needs `r`, and creating or deleting entries inside needs `w`.
   - type: multi
     q: Which commands leave a file readable and writable by its owner only, and not executable?
-    options: ["`chmod 600 file`", "`chmod 644 file`", "`chmod u=rw,go= file`", "`chmod 700 file`"]
+    options: ["`chmod 600 .env`", "`chmod 644 .env`", "`chmod u=rw,go= .env`", "`chmod 700 .env`"]
     answer: [0, 2]
     explain: >-
       `600` and `u=rw,go=` are the same thing written two ways. `644` lets everyone read it, and
@@ -51,15 +51,16 @@ quiz:
       everyone else run it too, which nobody asked for.
 terminal:
   task: |
-    First, look at both files' modes (`ls -l`, or `stat -c '%a %A %n' *` to see them as
-    numbers too).
+    You're `cadet`, and you own the files here. First, look at the files' modes (`ls -l`, or
+    `stat -c '%a %A %n' *` to see them as numbers too).
 
     - `scrubber.conf` holds the life-support override code, and right now every crew member
-      can read it. Make it **readable and writable by you only**.
+      can read it. Make it **readable and writable by you only**, and runnable by nobody.
     - `purge.sh` is the filter purge you'll run next shift. Make it **executable by you**, and
       change **nothing else**: whoever can read it now should still be able to.
 
-    Check the modes again when you're done.
+    Check the modes again when you're done. Leave `README` as it is. The console checks after
+    every command, so you're done the moment both modes are right.
   cwd: /station/life-support
   files:
     - {path: /station, type: dir}
@@ -116,31 +117,46 @@ cards:
   - id: chown
     section: "Changing ownership: `chown`"
     front: Change a file's owner and group in one command
-    back: "`chown user:group file` (needs root, so usually `sudo chown …`)."
+    back: "`chown OWNER:GROUP FILE`, for example `sudo chown deploy:deploy /opt/orbit-ops`. Only root can give a file away, hence `sudo`."
 ---
+
+## Owner, group and others
+
+Every file has an **owner**: the user who created it, unless someone changed it since. It also
+has a **group**, a named set of users (module 05 shows how to join one). Everyone who is
+neither the owner nor in the group is **others**.
+
+A file's **mode** is what each of those three may do with it: **read** it (see what's in it),
+**write** it (change it) and **execute** it (run it as a program). That's three permissions for
+each of the three, nine in all, and each one is called a **bit**: one permission, either
+granted or not. A **script** is a text file of commands, usually named with `.sh` at the end:
+with execute set, you can run it like a program. Unit 1.2 is where you write them. On the station console you are `cadet`, and you
+own the files in the task, so "you" means the owner.
 
 ## Reading the permission string
 
 The first column of `ls -l` is ten characters:
 
 ```text
--rw-r-----  1 sean   ops    4096 Oct  8 18:34 report.csv
+-rw-r-----  1 cadet  ops    4096 Oct  8 18:34 report.csv
 │└┬┘└┬┘└┬┘
 │ │  │  └ others: ---  (everyone else)
 │ │  └ group:  r--  (members of the file's group)
-│ └ user:   rw-  (the file's owner)
+│ └ user:   rw-  (the owner, u)
 └ type: - file, d directory, l symlink
 ```
 
 **Skip the first character, then read the rest in threes**: the owner's three, the group's
 three, everyone else's three. Each three is always in the same order, **r**ead, **w**rite,
 e**x**ecute, and a dash means "not granted". So `r--` is "read only", and `rw-` is "read and
-write, not execute".
+write, not execute". The `l` type is a link, a shortcut to another file; it comes in Unit 1.2,
+so you can ignore it for now.
 
 ## Octal: the numbers
 
-The same permissions are often written as three digits, like `644`: **one digit per class, in
-the same order (owner, group, others)**. Each digit is a sum:
+The same permissions are often written as three digits, like `644`. That's **octal**, counting
+in eights: each digit is 0 to 7. There is **one digit per class, in the same order (owner,
+group, others)**, and each digit is a sum:
 
 | Letter | Value |
 |---|---|
@@ -181,18 +197,30 @@ working against:
 | 3 | `-wx` | 7 | `rwx` |
 
 **`stat -c '%a %A %n' FILE` prints a file's mode both ways**, so you can check your
-arithmetic (it works on the station console too):
+arithmetic (it works on the station console too). Give it several names, or a glob like `*`,
+and it prints a line for each:
 
 ```text
 $ stat -c '%a %A %n' notes.txt
 644 -rw-r--r-- notes.txt
 ```
 
+`-c` says "print in this format", and each `%` code is one fact about the file. The quotes keep
+the codes and spaces together as one argument:
+
+| Code | Prints |
+|---|---|
+| `%a` | the mode as a number (`644`) |
+| `%A` | the mode as letters (`-rw-r--r--`) |
+| `%n` | the file's name |
+| `%U` | its owner |
+| `%G` | its group |
+
 Some modes you'll see again and again:
 
 | Mode | String | Typical use |
 |---|---|---|
-| `600` | `rw-------` | secrets: `.env`, SSH private keys |
+| `600` | `rw-------` | secrets, like `.env` |
 | `644` | `rw-r--r--` | ordinary files everyone may read |
 | `700` | `rwx------` | a private directory, or a script only you may read |
 | `750` | `rwxr-x---` | a directory shared with one group |
@@ -207,8 +235,13 @@ Some modes you'll see again and again:
 | `chmod go-w shared.txt` | removes write from group and others |
 | `chmod u=rw,go= .env` | sets exactly: the same as 600 |
 
-The symbolic form uses `u` (user/owner), `g` (group), `o` (others), `a` (all), with `+`, `-`
-or `=`.
+The symbolic form uses `u` (user/owner), `g` (group), `o` (others), `a` (all), with `+` (add),
+`-` (take away) or `=` (set exactly). **A comma joins two changes**, and **`=` with nothing after
+it takes everything away**, so in `u=rw,go=` the owner gets read and write, and the group and
+others get nothing.
+
+**`chmod` prints nothing when it works**, like the commands in module 03. Check with `ls -l` or
+`stat`.
 
 ### A number replaces everything; a letter changes one thing
 
@@ -234,7 +267,8 @@ $ stat -c '%a %A %n' build.sh
 `chmod 700` did make it runnable, and it also took read and write away from the group, which
 nobody asked for. That's how a shared script ends up locked away from the team. **When the job
 is "add this, change nothing else", use the symbolic form**, or work out the new number from
-the old one. Either way, **look at the mode before you change it**: you can't know what to
+the old one. **To change one class with a number, change only that class's digit**: adding the
+owner's `x` (1) to `664` changes only the first digit, 6 + 1 = 7, so it's `764`. Either way, **look at the mode before you change it**: you can't know what to
 keep until you've seen it.
 
 ## Directories are different
@@ -245,30 +279,72 @@ keep until you've seen it.
 | `w` | change the contents | create, rename or delete entries inside |
 | `x` | run it as a program | enter it and reach the files inside |
 
-A directory with `r` but no `x` lets you see names but not open anything.
+A directory with `r` but no `x` lets you see names but not open anything. Take `x` away from a
+directory and even its owner gets `Permission denied` on `cd`. The Try it below does exactly that.
 
 ## Changing ownership: `chown`
 
-```bash
-sudo chown deploy:deploy /opt/orbit-ops      # owner and group
-sudo chown -R deploy /opt/orbit-ops/backups  # recursively, owner only
-```
+**`chown OWNER:GROUP FILE` sets a file's owner and group**: the owner, a colon, then the group.
+`chown OWNER FILE` sets only the owner. `-R` (a capital R here, unlike `cp -r`) does a whole
+directory and everything in it. Like `chmod`, it prints nothing when it works.
 
-Only root can give a file away, which is why `chown` almost always needs `sudo`.
+Only root can give a file away, so `chown` almost always needs **`sudo`**: put it in front of a
+command to run that one command as root, the administrator from module 01. It asks for your
+own password. Module 05 covers it properly. The station console can't `sudo` in this task.
+
+```bash
+sudo chown deploy:deploy /opt/orbit-ops      # owner deploy, group deploy
+sudo chown -R deploy /opt/orbit-ops/backups  # a whole directory, owner only
+```
 
 > **On the real station:** setting up this app's server used `install -d -o deploy -g deploy
 > -m 750 /opt/orbit-ops` (create a directory with owner, group and mode in one step), and wrote
-> `.env` under `umask 077` so it was born `600`. The `umask` subtracts permissions from every new
+> `.env` under `umask 077` so it was born `600`. The `umask` takes permissions away from every new
 > file. Files start from `666`, so a normal Ubuntu user (umask `002`) gets `664`, and root (umask
-> `022`) gets `644`. Run `umask` to see yours.
+> `022`) gets `644`: each digit of the umask is taken away from the same digit of `666`. Run
+> `umask` on a Linux machine to see yours (the station console doesn't have it).
 
 ## Try it
 
+Run these one at a time, on a Linux machine or in the station console:
+
 ```bash
-mkdir -p ~/scratch && cd ~/scratch
-echo "top secret" > key.txt
-ls -l key.txt            # -rw-rw-r-- (or -rw-r--r--): anyone on the machine can read it
+mkdir -p ~/scratch
+cd ~/scratch
+touch key.txt
+ls -l key.txt
 chmod 600 key.txt
-ls -l key.txt            # -rw-------
-stat -c '%a %U:%G %n' key.txt    # the octal mode, owner and group
+ls -l key.txt
+stat -c '%a %U:%G %n' key.txt
+chown root key.txt
+mkdir locked
+chmod u-x locked
+cd locked
+chmod u+x locked
+cd locked
+cd ..
 ```
+
+- The first `ls -l` shows `-rw-rw-r--` or `-rw-r--r--`: anyone on the machine can read the
+  file. (Which one depends on your `umask`; see *On the real station*.) After `chmod 600`, it's
+  `-rw-------`.
+- `stat -c '%a %U:%G %n'` prints the mode as a number, then the owner and group with a colon
+  between them (the colon is just text in the format), then the name.
+- `chown root key.txt` answers `Operation not permitted`: only root can give a file away, and
+  you aren't root.
+- With `x` taken off `locked`, `cd locked` answers `Permission denied`, though you own it. Put
+  `x` back and it works.
+
+On a Linux machine where you can use `sudo` (not the station console), give the file away and
+take it back. `YOU` is your own username: the part of your prompt before the `@`. On Ubuntu each user also
+has a group with the same name (module 05), so `YOU:YOU` puts both back.
+
+```bash
+sudo chown root:root key.txt
+ls -l key.txt
+cat key.txt
+sudo chown YOU:YOU key.txt
+```
+
+Now root owns it with mode `600`, so you're "others" and get nothing: `cat` answers
+`Permission denied`. The last line gives it back.
