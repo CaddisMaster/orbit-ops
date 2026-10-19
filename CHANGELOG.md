@@ -38,6 +38,14 @@ and why it matters, not what the diff says.
   `chown` are silent when they work, and `sudo` gets one sentence ahead of module 05. Try it
   takes `x` off a directory to show `Permission denied`, has you try `chown` (refused, as you
   aren't root), and gives a file to root and back on a machine with `sudo`.
+- Unit 1.1 module 05, *Users, groups and sudo*, audited the same way (#234). It says what a
+  user, group, process, UID, GID and the kernel are before using them. It explains `cut -d:
+  -fN` in prose (the task's `cut` was only in a code block), what each field of an
+  `/etc/group` line is, a main group against extra groups, and `sudo usermod -aG GROUP USER`
+  (and that it's silent). It shows sudo's password prompt, warns that Ubuntu shows nothing as
+  you type, and says what Docker and a container are before quiz Q4 relies on them. Try it
+  says where to run it, has you type `id root`, and gives `su` and `sudo visudo -c` a
+  real-Linux-only block.
 
 ## [0.10.0] — 2026-10-17
 
