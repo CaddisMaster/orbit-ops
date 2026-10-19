@@ -39,6 +39,8 @@ NEEDS = {
         "ls takes a path, so you can look before you move": "lists what's in a directory, without going there",
         "cd takes an absolute path": "`cd` accepts any path, absolute or relative",
         "cat prints a file": "prints a whole file",
+        "cd prints nothing; the prompt shows where you are": "**`cd` prints nothing when it works**",
+        "a bare file name is a relative path": "A file's name on its own is a relative path too",
     },
     "navigating": {
         "ls -a shows hidden files": "**all** entries, including hidden dotfiles",

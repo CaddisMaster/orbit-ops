@@ -17,11 +17,11 @@ quiz:
       disks, hangs somewhere below it. `/root` is just the root *user's* home directory.
   - type: choice
     q: A service's configuration file is most likely to be found under…
-    options: ["/etc", "/bin", "/tmp", "/proc"]
+    options: ["/etc", "/bin", "/tmp", "/home"]
     answer: 0
     explain: >-
-      System-wide configuration lives in `/etc`, for example `/etc/nginx/` or
-      `/etc/ssh/sshd_config`.
+      System-wide configuration lives in `/etc`, for example `/etc/nginx/` (a web server's) or
+      `/etc/ssh/sshd_config` (the remote-login service's).
   - type: multi
     q: Which of these directories usually hold data that changes while the system runs?
     options: ["/var/log", "/usr/bin", "/tmp", "/etc"]
@@ -52,10 +52,14 @@ quiz:
       from, and which machine you're about to change.
 terminal:
   task: |
-    Configuration lives under `/etc` and logs live under `/var/log`. Find the directory that
-    holds the **life-support logs** and go there, so you're standing in it when Okafor checks
-    in. Look before you move: `ls` takes a path too. Then read the scrubbers' log with `cat`:
-    when did scrubber B go offline?
+    Configuration lives under `/etc` and logs live under `/var/log`.
+
+    1. **Look** inside `/var/log` without moving: `ls` takes a path too.
+    2. **Go to** the directory that holds the **life-support logs**. The console checks after
+       every command, so the task is done the moment you're in it. Your prompt shows where
+       you are.
+    3. **Then read** the scrubbers' log with `cat`: when did scrubber B go offline? Nothing
+       checks this step, but note the time. It matters later.
   cwd: /home/cadet
   files:
     - {path: /home/cadet, type: dir}
@@ -78,7 +82,7 @@ terminal:
   checks:
     - {cwd: /var/log/life-support}
   success: |-
-    "Found it," Okafor says. "Scrubber B went offline at 02:40. Remember where the logs live; you'll be back."
+    "Found it," Okafor says. "Now read the scrubbers' log: when did B go down? Remember where the logs live; you'll be back."
   solution:
     - ls /
     - ls /var/log
@@ -90,7 +94,7 @@ comms:
     - {from: okafor, text: "You're awake. Good. The outage took half the station dark and nobody's sure what still works."}
     - {from: okafor, text: "Before you touch anything, learn where things *live*. Every system on this station is a file somewhere."}
   console_done:
-    - {from: meridian, text: "SCRUBBER LOG FOUND · `/var/log/life-support/scrubbers.log` · SCRUBBER B OFFLINE SINCE 02:40"}
+    - {from: meridian, text: "SCRUBBER LOG FOUND · `/var/log/life-support/scrubbers.log` · 3 ENTRIES"}
     - {from: okafor, text: "That's the one. Logs in `/var/log`, config in `/etc`. Remember that and you're never lost."}
   complete:
     - {from: okafor, text: "Day one done. Get some sleep. Tomorrow we find out who else is still out there."}
@@ -102,11 +106,11 @@ cards:
   - id: etc
     section: "The directories you'll use most"
     front: What lives in `/etc`?
-    back: System-wide configuration files (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/`).
+    back: System-wide configuration files (e.g. `/etc/nginx/` for the web server).
   - id: var
     section: "The directories you'll use most"
     front: What lives in `/var`?
-    back: Variable data that changes while the system runs — logs (`/var/log`), caches, databases, mail.
+    back: Variable data the system writes while it runs — logs (`/var/log`), caches, databases.
   - id: absolute-vs-relative
     section: "Absolute and relative paths"
     front: Absolute vs relative path?
@@ -120,7 +124,7 @@ cards:
 ## The shell: what reads your commands
 
 The **terminal** is the window you type into. The program inside it that reads what you type
-and runs it is the **shell**. Most Linux machines, Ubuntu servers included, give you **bash**,
+and runs it is the **shell**. Most Linux machines, including Ubuntu (a popular version of Linux), give you **bash**,
 and the station console works like it.
 
 The shell shows a **prompt** when it's ready for the next command:
@@ -130,19 +134,26 @@ cadet@meridian:/etc$
 ```
 
 That's **who you are** (`cadet`), **which machine** (`meridian`), and **where you are**
-(`/etc`; `~` means your home directory). It ends in `$` for a normal user and `#` for root.
+(`/etc`). `~` means your **home directory**, `/home/cadet`, where your own files live. The directory you're in is your **current
+directory**, and the prompt always shows it.
+
+The prompt ends in `$` for a normal user and `#` for **root**. Here root is a *user*: the
+administrator account, the one allowed to change anything on the machine. The next section uses
+"root" for something else, the top directory `/`. Same word, two meanings.
 
 You type a line and press Enter. **The first word is the command and the rest are its
-arguments**: in `ls /home`, the command is `ls` and its argument is `/home`. **The shell
-reads the whole line before the command runs**, and can rewrite parts of it first. Module 03
-shows what that's for.
+arguments**: in `ls /home`, the command is `ls` and its argument is `/home`. (`ls` lists a
+directory and `cd` moves you into one. Both are explained below.) **The shell
+reads the whole line before the command runs**. Module 03 shows why that matters.
 
-An error tells you who's complaining. `bash: cd: /nowhere: No such file or directory` is the
-shell itself, since `cd` is part of bash. `ls: cannot access '/nowhere'` is the `ls` program.
+An error tells you who's complaining. `bash: cd: /nowhere: No such file or directory` starts
+with `bash`, so the shell itself is complaining. `ls: cannot access '/nowhere'` comes from the
+`ls` program.
 
 ## One tree, one root
 
-Windows gives every disk its own letter: `C:\`, `D:\`. Linux doesn't. There is **one tree**,
+A **directory** is what Windows and macOS call a folder. Windows gives every disk its own
+letter: `C:\`, `D:\`. Linux doesn't. There is **one tree**,
 and it starts at a single directory called **root**, written `/`. Every file on the machine,
 on every disk, has exactly one place in that tree.
 
@@ -151,14 +162,16 @@ on every disk, has exactly one place in that tree.
 ├── bin  → usr/bin       programs everyone can run
 ├── etc                  system configuration
 ├── home
-│   └── sean             your files
+│   └── cadet            your files
 ├── opt                  add-on software (and Orbit Ops itself: /opt/orbit-ops)
 ├── root                 the root user's home — not the same as /
 ├── tmp                  scratch space, often wiped on reboot
-├── usr                  installed programs and their libraries
+├── usr                  installed programs and the code they share
 └── var
     └── log              logs
 ```
+
+`bin → usr/bin` means `/bin` is a shortcut to `/usr/bin`: one directory, two names.
 
 Extra disks don't get letters. They are **mounted** onto a directory somewhere in the tree,
 like plugging a module into a socket on the station's wall.
@@ -167,17 +180,21 @@ like plugging a module into a socket on the station's wall.
 
 | Directory | What's in it | You'll go there to… |
 |---|---|---|
-| `/etc` | Configuration, as plain text | change how a service behaves |
+| `/etc` | Configuration, as plain text. It rarely changes unless someone edits it | change how a program is set up |
+| `/var` | **Variable** data: files the system writes while it runs, such as logs, caches and databases | see what's been happening |
 | `/var/log` | Logs | find out what went wrong |
-| `/home/<you>` | Your own files (`~` is shorthand) | work |
-| `/opt` | Software installed outside the package manager | find a deployed app |
-| `/tmp` | Throwaway files | stash something briefly |
+| `/home/cadet` | Your own files (`~` is shorthand for your home) | work |
+| `/opt` | Software someone installed by hand, rather than with the system's installer | find a deployed app |
+| `/tmp` | Throwaway files that programs create and delete as they run, often wiped on reboot | stash something briefly |
 | `/usr/bin` | Programs (`ls`, `python3`, `git`…) | see what's installed |
 
-This layout isn't random. It follows the **Filesystem Hierarchy Standard**, which is why an
-Ubuntu droplet and a Debian container feel the same once you know your way around.
+This layout isn't random. It follows the **Filesystem Hierarchy Standard**, which is why one
+Linux machine feels like another once you know your way around.
 
-> **On the real station:** the droplet that serves this app keeps its deploy files in
+Much of `/etc` configures **services**: programs that run in the background all the time,
+waiting for work, such as a web server.
+
+> **On the real station:** the droplet (the rented server) that serves this app keeps its deploy files in
 > `/opt/orbit-ops`, its web server config in `/etc/nginx/sites-available/`, and its logs under
 > `/var/log/nginx/`. That's three directories from the table above.
 
@@ -189,48 +206,64 @@ A **path** names a place in the tree.
   `/var/log/syslog`.
 - A **relative path** has no leading `/` and is resolved from your **current directory**: if
   you're in `/var`, then `log/syslog` means `/var/log/syslog`.
+- **A file's name on its own is a relative path too**: in `/etc`, `cat hostname` reads
+  `/etc/hostname`.
 
 Three shortcuts work in any path:
 
-```bash
-~      # your home directory, e.g. /home/sean
-.      # the directory you're in
-..     # the directory above it
-```
+| Shortcut | Means | From `/var/log`, it is… |
+|---|---|---|
+| `~` | your home directory | `/home/cadet` |
+| `.` | the directory you're in | `/var/log` |
+| `..` | the directory above it | `/var` |
 
-So from `/var/log`, the path `../lib` is `/var/lib`, and `~/notes.txt` is
-`/home/sean/notes.txt` wherever you are.
+So from `/var/log`, `ls ..` lists `/var`, and `~/notes.txt` is `/home/cadet/notes.txt`
+wherever you are. Module 02 puts all three to work.
 
 ## Looking, moving and reading
 
-Four more commands get you through this module's console task. The next modules go deeper.
+Six commands get you through this module's console task and its Try it. The next modules go
+deeper. In the table, a word in capitals, like `DIR` or `FILE`, stands for a real directory or
+file you type in its place. A word starting with `-` is an **option**: it changes what the
+command does. `-n 5` means "5 lines", and you can change the number.
 
 | Command | Does | Example |
 |---|---|---|
-| `ls PATH` | lists what's in a directory, without going there | `ls /var/log` |
-| `cd PATH` | moves you into a directory | `cd /var/log` |
+| `ls DIR` | lists what's in a directory, without going there | `ls /etc` |
+| `cd DIR` | moves you into a directory | `cd /etc` |
 | `cat FILE` | prints a whole file: right for anything short | `cat /etc/hostname` |
-| `less FILE` | pages through a long one (Space and b to move, `/word` to search, q to quit) | `less /var/log/syslog` |
+| `less FILE` | pages through a long one: Space goes forward and b goes back, `/` then a word to search, q to quit | `less /etc/passwd` |
 | `head -n 5 FILE` / `tail -n 5 FILE` | just the first or last 5 lines (in a log, the newest are at the end) | `tail -n 5 /etc/passwd` |
 
 `ls` on its own lists where you are. Give it a path and it lists that directory instead, so you
-can look before you move. `cd` accepts any path, absolute or relative.
+can look before you move. An empty directory lists as nothing at all. `cd` accepts any path, absolute or relative. **`cd` prints nothing
+when it works**: the only sign is the path in your prompt changing. Give it a file instead of a
+directory and it refuses with `Not a directory`.
 
 These are how you **read** a file. **nano** is for *editing* one, and it comes in Unit 1.2 along
 with the scripts you'll write.
 
 ## Try it
 
-On any Linux machine (or the `jupiter` VM), run:
+If you have a Linux machine, or a Linux server you can log in to, run these there. No Linux
+machine? The station console above takes all of them except `head -n 3 os-release`.
 
 ```bash
 ls /
-ls /etc | head
-ls -l /var/log | head
-cat /etc/hostname
-head -n 3 /etc/os-release
+ls /etc
+cd /etc
+ls ..
+ls ~
+cat hostname
+head -n 3 os-release
+tail -n 3 passwd
+less passwd
 ```
 
-The first shows the top of the tree. The second lists the first few config files. The third
-shows log files with their sizes and dates. You'll meet `ls -l` properly later in this unit. The
-last two read files: the machine's name, and the first lines describing which Linux it is.
+The first shows the top of the tree, and the second the config files. After `cd /etc`, watch
+your prompt change. `ls ..` lists the directory above (`/`) and `ls ~` your home, from where
+you stand. Then read three files by their names alone: the machine's name, the first lines
+describing which Linux it is, and the last three accounts. `less` opens the last one to page
+through: press Space, then b, then `/` and type `root` and Enter, then q to get back. A full
+Ubuntu install has `less`, but a bare container may answer `less: command not found`. If yours
+does, run `less /etc/passwd` in the station console, which has it.
