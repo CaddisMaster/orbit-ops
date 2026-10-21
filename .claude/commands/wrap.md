@@ -27,6 +27,9 @@ Do not work directly on `main`.
   (The `Stop` hook in `.claude/hooks/` will catch you if you forget, but it fires at the end —
   writing it here is cheaper.)
 - Open the PR with `Closes #<issue>`, one line per issue closed.
+- Add this session's entry to the top of `docs/status.md`'s *Sessions*, and update `CLAUDE.md`'s
+  *Current status*. Keep three sessions in `status.md`: move any older one, unchanged, to the
+  top of `docs/status-archive.md`'s list (#259).
 - **Batch by coherence, never by calendar.** A shared file surface, test surface, or one
   user-facing story. A schema migration **always stands alone** — bundling it obscures the deploy
   ordering it depends on (additive before the pull, drops after).
