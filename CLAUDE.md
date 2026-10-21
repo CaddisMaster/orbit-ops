@@ -91,8 +91,8 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.11.0** is in production (2026-10-21): the Unit 1.1 beginner audit,
-with modules 01–10 rewritten (#217). No milestone is open. Next is Unit 1.5, systemd & services,
-plus the follow-ups #247–#249.
+with modules 01–10 rewritten (#217). No milestone is open. Next is #255 (split `shell.js`),
+then Unit 1.5, systemd & services. Open small follow-ups: #248, #256–#258, #260.
 
 ## Maintainer notes (local only)
 

@@ -162,6 +162,12 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - #254 (#249): a `lacks` check may name a file the learner creates. Modules 07 and 08 now enforce "nothing else" and "three".
   - The `main` push CI fired normally for both, so the earlier gap looks like a one-off.
   - An outside architecture review produced #255–#260. The `shell.js` split (#255) goes before Unit 1.5.
+  - #261 (#259): this file keeps three sessions, and the rest are in `status-archive.md`. The wrap now says to keep it that way. `architecture.md`'s module table is one line a row.
+- **Next (supersedes the list above):**
+  1. #255, split `shell.js` by area, **before** any Unit 1.5 work. #257 (schema package) follows just before Unit 1.5's spec classes.
+  2. Then Unit 1.5, *systemd & services*: a milestone and its issues.
+  3. Quick ones that fit anywhere: #256 (Pyodide version once), #258 (non-negotiable #1's single-user note), #248 (audit scenario titles).
+  4. #260 waits on Sean's keep-or-drop decision for the unused agents. #222 (Dependabot) needs its own look.
 
 ### 2026-10-19: `/beginner-audit`, and Unit 1.1 modules 01–05 audited
 
