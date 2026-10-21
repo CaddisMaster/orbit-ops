@@ -1125,6 +1125,80 @@ def test_module_08s_smaller_fixes():
     assert "three noisiest" in module.story_html and "ten noisiest" not in module.story_html
 
 
+# --- #243: module 09 reads for a beginner who has done 01 to 08 ---------------------------
+def _env_plain():
+    module = load_catalog().modules["environment-and-path"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), plain(try_it)
+
+
+@pytest.mark.criterion(243, "Shell and environment variables are explained in prose")
+def test_module_09_explains_variables_and_the_environment_in_prose():
+    module, prose, _, _ = _env_plain()
+    says = "Every process also carries an environment : a set of named values"
+    assert says in prose and module.body_html.index("environment</strong>") < module.body_html.index("<pre")
+    assert "a script you run is a child of your shell. So is bash -c 'COMMAND'" in prose
+    assert "GREETING=hello COMMAND a variable for that one command COMMAND only: your shell is unchanged afterwards" in prose
+    assert "export GREETING=hello an environment variable this shell, and every child it starts" in prose
+
+
+@pytest.mark.criterion(243, "Q3's answer and the task's lookup are in prose")
+def test_module_09_tables_type_a_and_which():
+    _, prose, _, _ = _env_plain()
+    assert "type -a NAME every NAME on the PATH, in search order" in prose
+    assert "which NAME only the one that wins" in prose
+
+
+@pytest.mark.criterion(243, "The PATH format and the prepend line are explained")
+def test_module_09_takes_the_prepend_line_apart():
+    module, prose, _, _ = _env_plain()
+    assert "holds a list of directories, separated by : . When you type a command name" in prose
+    assert "searches those directories left to right" in prose
+    assert "$PATH is the old list" in prose and "/opt/nav/bin" not in module.body_html
+    assert "Leave out :$PATH and the old list is gone." in prose
+    assert "Get them back with export PATH=/usr/local/bin:/usr/bin:/bin , or open a new shell" in prose
+
+
+@pytest.mark.criterion(243, "Unit 1.2's rules this module needs are stated here")
+def test_module_09_states_the_equals_and_quoting_rules():
+    _, prose, _, _ = _env_plain()
+    assert "No spaces around = ." in prose
+    assert "Inside double quotes the shell still swaps $NAME for its value" in prose
+    assert "Inside single quotes it doesn't" in prose
+
+
+@pytest.mark.criterion(243, "Nothing in the quiz, cards or Try it is unexplained")
+def test_module_09s_quiz_cards_and_try_it_rest_on_the_lesson():
+    module, prose, _, _ = _env_plain()
+    assert "alias" not in module.quiz[3].q
+    card = next(c for c in module.cards if c.id == "environment-and-path/one-command-variable")
+    assert "ONEOFF=hi bash -c" in card.back_html and "pytest" not in card.back_html
+    assert "which starts a new shell that runs COMMAND and exits" in prose
+
+
+@pytest.mark.criterion(243, "What's taught is practised")
+def test_module_09s_try_it_practises_source_and_the_deploy_aside_is_short():
+    module, prose, _, try_it = _env_plain()
+    assert "source ~/.bashrc" in try_it and "./hi.sh" in try_it
+    assert 'id="sec-environment-in-real-deployments"' not in module.body_html
+    aside = re.search(r"<blockquote>.*?On the real station.*?</blockquote>", module.body_html, re.S).group(0)
+    assert "secrets manager" not in aside and "env_file" not in aside and "COOKIE_SECURE" not in aside
+
+
+@pytest.mark.criterion(243, "Silent and jargon lines are fixed")
+def test_module_09_says_export_is_silent_and_drops_jargon():
+    _, prose, _, _ = _env_plain()
+    assert "an assignment or an export prints nothing when it works" in prose
+    assert "export says nothing, so check with echo $PATH or which NAME" in prose
+    assert "one you type into, such as a new terminal window" in prose
+    assert "login shells" not in prose and "SSH sessions" not in prose
+    assert "exactly what this app's test.sh does" not in prose
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
