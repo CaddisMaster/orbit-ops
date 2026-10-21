@@ -78,6 +78,14 @@ and why it matters, not what the diff says.
   takes single quotes, and shows what the `.bashrc` append writes. Try it practises `source`
   and running a script with `./`. The deployment section is now a short *On the real station*
   note.
+- Unit 1.1 module 10, *Installing software with apt*, audited the same way (#245). Every quiz
+  answer and card was in a code comment; they're tables and prose now. It says what a package,
+  a repository and a dependency are, that `update` installs nothing, that `remove` keeps
+  `/etc` settings and neither touches your home, and what `Installed:` and `Candidate:` mean.
+  It explains signing keys, `systemctl status` (ahead of Unit 1.5), and images, `RUN` and
+  layers before the Dockerfile question, and which apt commands need `sudo` (and why a `RUN`
+  line doesn't). Try it says where to run it without an Ubuntu machine of your own, drops
+  `$( )`, and installs and removes `tree`, with a note on each line.
 
 ## [0.10.0] — 2026-10-17
 

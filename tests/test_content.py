@@ -1199,6 +1199,68 @@ def test_module_09_says_export_is_silent_and_drops_jargon():
     assert "exactly what this app's test.sh does" not in prose
 
 
+# --- #245: module 10 reads for a beginner who has done 01 to 09 ---------------------------
+def _packages_plain():
+    module = load_catalog().modules["packages"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), plain(try_it)
+
+
+@pytest.mark.criterion(245, "Quiz answers and cards are taught in prose")
+def test_module_10_teaches_its_quiz_and_cards_in_prose():
+    _, prose, lesson, _ = _packages_plain()
+    assert "sudo apt update downloads the latest lists of what each repository offers, and installs nothing" in prose
+    assert "sudo apt upgrade installs newer versions of everything you already have" in prose
+    assert "remove keeps a package's settings in /etc" in prose and "purge deletes them too. Neither touches your home directory." in prose
+    for row in ("dpkg -L nginx every file the package installed", "dpkg -S /usr/sbin/nginx which package owns that file",
+                "apt-cache policy nginx the version you have, the version you'd get"):
+        assert row in prose, row
+    assert "apt policy nginx is the same" in prose
+    assert "Installed: is the version you have" in prose and "Candidate: is the version install or upgrade would get you" in prose
+    assert "Candidate: 3.3.0-4build1" in lesson
+
+
+@pytest.mark.criterion(245, "The Dockerfile question has prose behind it")
+def test_module_10_explains_images_and_layers_before_q3():
+    _, prose, _, _ = _packages_plain()
+    docker = prose[prose.index("apt in a Dockerfile"):]
+    assert "A Dockerfile is the recipe for an image" in docker
+    assert "each RUN line in it runs a command and saves the files it changed as a layer" in docker
+    assert "rm -rf /var/lib/apt/lists/* deletes the package lists update downloaded" in docker
+
+
+@pytest.mark.criterion(245, "Try it uses only what has been taught")
+def test_module_10s_try_it_is_plain_and_annotated():
+    _, _, _, try_it = _packages_plain()
+    assert "$(" not in try_it
+    assert try_it.startswith("On an Ubuntu machine where you can use sudo . The station console has no apt .")
+    for line in ("sudo apt update", "sudo apt install tree", "sudo apt remove tree"):
+        assert line in try_it, line
+    assert "dpkg -S prints tree: /usr/bin/tree" in try_it and "2>/dev/null hides apt list 's warning" in try_it
+
+
+@pytest.mark.criterion(245, "Terms are explained where they first appear")
+def test_module_10_explains_its_terms():
+    _, prose, _, _ = _packages_plain()
+    assert "Packages come from repositories , servers that host thousands of them" in prose
+    assert "their dependencies , and apt works those out" in prose
+    assert "Each repository signs its package lists: it holds a secret key" in prose
+    assert "systemctl status NAME shows whether a service is running" in prose
+    assert "asks Do you want to continue? [Y/n]" in prose
+
+
+@pytest.mark.criterion(245, "Smaller fixes")
+def test_module_10s_smaller_fixes():
+    module, prose, _, _ = _packages_plain()
+    assert "CLI (command-line interface)" in prose
+    assert "skips recommended packages: extras" in prose and "-f (module 03 taught -r ) means don't ask" in prose
+    assert not re.search(r"\bpkg\b", module.quiz[3].explain) and "dpkg -L nginx" in module.quiz[3].explain
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
