@@ -898,6 +898,77 @@ def test_module_05s_task_says_when_its_done():
     assert "The console checks after every command" in task and "`cat airlock-shell.txt`" in task
 
 
+# --- #237: module 06 reads for a beginner who has done 01 to 05 ---------------------------
+def _signals_plain():
+    module = load_catalog().modules["processes-and-signals"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), plain(try_it)
+
+
+@pytest.mark.criterion(237, "Name matching is on the page")
+def test_module_06_says_what_a_name_is_and_how_it_matches():
+    _, prose, _, _ = _signals_plain()
+    assert "A process's name is its program's file name: the first word of COMMAND , without its path" in prose
+    assert "pgrep and pkill match any part of the name , so pgrep -a cron also finds anacron" in prose
+    assert prose.index("match any part of the name") < prose.index("A signal is a small numbered message")
+
+
+@pytest.mark.criterion(237, "Jobs are taught in prose")
+def test_module_06_teaches_jobs_in_a_table():
+    _, prose, _, _ = _signals_plain()
+    jobs = prose[prose.index("Foreground and background"):]
+    assert "A command in the foreground has the terminal" in jobs and "A job is a command started from your shell" in jobs
+    for row in ("sleep 300 waits 300 seconds", "sleep 300 & & at the end starts it in the background", "jobs lists your jobs",
+                "fg %1 brings job 1 to the foreground", "bg %1 resumes a suspended job 1", "kill %1 sends SIGTERM to job 1"):
+        assert row in jobs, row
+
+
+@pytest.mark.criterion(237, "Try it uses nothing unexplained")
+def test_module_06s_try_it_symbols_are_explained():
+    _, prose, _, try_it = _signals_plain()
+    assert "; runs one command, then the next, whatever happened" in prose
+    assert "kill %1 SIGTERM to job 1 ( % means a job number, not a PID" in prose
+    assert "ls exits with 2 when it can't find what you named" in prose and "# 2: ls couldn't find /nope" in try_it
+
+
+@pytest.mark.criterion(237, "ps output is readable")
+def test_module_06_shows_and_explains_ps_output():
+    _, prose, lesson, _ = _signals_plain()
+    assert "USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND" in lesson
+    assert "PID (process ID" in prose and "the CPU , the processor that runs every program" in prose
+    assert "aux has no dash" in prose and "--sort=-%cpu is a long option" in prose
+    assert "with no -n it keeps the first 10 lines. The header is one of them" in prose
+
+
+@pytest.mark.criterion(237, "Silence and permissions are warned about where they're taught")
+def test_module_06_warns_about_silence_and_permissions_in_signals():
+    _, prose, _, _ = _signals_plain()
+    signals = prose[prose.index("A signal is a small numbered message"):prose.index("When a process ends")]
+    assert "kill and pkill print nothing when they work." in signals
+    assert "You can signal only your own processes." in signals and "Operation not permitted" in signals
+
+
+@pytest.mark.criterion(237, "Every card is taught and practised")
+def test_module_06s_cards_are_taught_and_practised():
+    module, _, lesson, try_it = _signals_plain()
+    assert "On a Linux machine only (not the station console)" in try_it and "press Ctrl-C" in try_it
+    assert "ps aux | grep sleep" in try_it
+    card = next(c for c in module.cards if c.id == "processes-and-signals/find-a-process")
+    assert "pgrep -a" in lesson and "ps aux | grep" in try_it and "ps aux | grep" in card.back_html
+
+
+@pytest.mark.criterion(237, "The task says when it's done")
+def test_module_06s_task_says_when_its_done():
+    module, _, _, _ = _signals_plain()
+    task = " ".join(module.terminal.task.split())
+    assert "The console checks after every command" in task
+    assert "If you send KILL before TERM" in task and "**Reset**" in task
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
