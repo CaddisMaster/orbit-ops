@@ -16,5 +16,9 @@ services:
       - /app/.pytest_cache
     environment:
       TEMPLATES_AUTO_RELOAD: "1"
+    # The content catalog is loaded once at startup, so a lesson or syllabus
+    # edit needs a reload too (#247). The includes need watchfiles, which
+    # requirements-dev.txt installs; uvicorn's fallback watcher sees only *.py.
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload",
-              "--reload-dir", "app", "--reload-dir", "content"]
+              "--reload-dir", "app", "--reload-dir", "content",
+              "--reload-include", "*.md", "--reload-include", "*.yml"]

@@ -5,6 +5,7 @@ guards a rule that is easy to break in a one-line diff and silent when broken.""
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -64,3 +65,32 @@ def test_env_example_lists_every_setting():
         if field in {"app_version", "app_commit", "templates_auto_reload", "login_rate_limit"}:
             continue  # baked into the image or test-only knobs
         assert re.search(rf"^{field.upper()}=", example, flags=re.MULTILINE), f".env.example is missing {field.upper()}"
+
+
+def _dev_command():
+    return yaml.safe_load((ROOT / "docker-compose.override.yml").read_text())["services"]["web"]["command"]
+
+
+@pytest.mark.criterion(247, "Editing a lesson reloads the dev app")
+def test_the_dev_server_reloads_on_lesson_files():
+    command = _dev_command()
+    pairs = set(zip(command, command[1:], strict=False))
+    assert ("--reload-dir", "content") in pairs and ("--reload-include", "*.md") in pairs
+    # uvicorn ignores --reload-include without watchfiles: it falls back to a *.py-only poller.
+    assert any(line.startswith("watchfiles==") for line in _requirement_lines("requirements-dev.txt"))
+
+
+@pytest.mark.criterion(247, "Editing the syllabus reloads the dev app")
+def test_the_dev_server_reloads_on_the_syllabus():
+    command = _dev_command()
+    assert ("--reload-include", "*.yml") in set(zip(command, command[1:], strict=False))
+
+
+@pytest.mark.criterion(247, "Production is unchanged")
+def test_production_runs_no_reloader():
+    web = yaml.safe_load((ROOT / "docker-compose.yml").read_text())["services"]["web"]
+    assert "--reload" not in " ".join(web.get("command", []))
+    cmd = re.search(r"^CMD \[(.*?)\]", (ROOT / "Dockerfile").read_text(), re.S | re.M).group(1)
+    assert "--reload" not in cmd
+    assert not any(line.startswith("watchfiles==") for line in _requirement_lines("requirements.txt"))
+
