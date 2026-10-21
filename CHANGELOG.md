@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-10-21
+
+The Unit 1.1 beginner audit. All ten modules were read as a first-day learner would read them,
+and rewritten so everything a task, quiz question or card needs is on the page in plain
+sentences or tables, not in code comments. Terms are explained before they're used, examples
+no longer hand over the task's answer, every Try it says where to run it and what to expect,
+and every console task says when it's done. The station console no longer renames a file you
+move into a directory that isn't there.
+
 ### Fixed
 - The station console no longer renames a file when you move or copy it into a directory that
   isn't there (#229). `mv notes.bak backup/` with no `backup` directory used to leave a file
