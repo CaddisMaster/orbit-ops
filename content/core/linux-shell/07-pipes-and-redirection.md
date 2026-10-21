@@ -68,6 +68,7 @@ terminal:
     - {contains: /home/cadet/reactor.txt, text: core.log}
     - {contains: /home/cadet/reactor.txt, text: "cannot access '/station/reactor-b'"}
     - {contains: /home/cadet/alerts.txt, text: ALERT coolant pump 2 stalled}
+    - {lacks: /home/cadet/alerts.txt, text: nominal}
   success: |-
     "Errors and all, in one file," Okafor says. "That's the report I can actually use."
   solution:

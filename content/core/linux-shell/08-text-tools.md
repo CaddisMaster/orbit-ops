@@ -99,6 +99,8 @@ terminal:
     - {contains: /home/cadet/noisy.txt, text: 9 10.4.2.17}
     - {contains: /home/cadet/noisy.txt, text: 6 10.4.7.3}
     - {contains: /home/cadet/noisy.txt, text: 4 192.168.8.40}
+    - {lacks: /home/cadet/noisy.txt, text: 10.4.2.90}
+    - {lacks: /home/cadet/noisy.txt, text: 172.16.0.5}
   success: |-
     "10.4.2.17, nine attempts," Okafor reads. "That's the maintenance drone. Someone gave it the wrong password list."
   solution:

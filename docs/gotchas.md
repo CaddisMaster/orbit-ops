@@ -20,9 +20,10 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 - **`art/` edits don't reload the dev server either.** The map imports `art.ship`'s compartment
   positions, and uvicorn only watches `app/` and `content/`: after changing `art/ship.py`, run
   `python -m art.build` and `docker compose restart web`.
-- **Content edits don't reload the dev server.** `--reload-dir content` is set, but uvicorn
-  without `watchfiles` reloads on `*.py` only, so a `syllabus.yml` or lesson change needs
-  `docker compose restart web` (templates and CSS are picked up without it).
+- **Content edits reload the dev server only because `watchfiles` is installed** (#247). The
+  dev command adds `--reload-include *.md` and `*.yml`; uvicorn without `watchfiles` ignores
+  those and watches `*.py` alone. A dev image built before #247 needs `docker compose up -d
+  --build web` once.
 
 - **htmx does not swap 4xx/5xx responses** by default. A validation message returned with 422
   never appears; return 200 with the re-rendered fragment. Redirects out of an htmx request use

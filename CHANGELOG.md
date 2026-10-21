@@ -6,6 +6,13 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must
+  hold the ALERT lines **and nothing else**, so copying all of `core.log` into it no longer
+  passes. Module 08's `noisy.txt` must hold the **three** busiest addresses, not every address
+  with its count. A `lacks` check can now name a file the learner creates, failing until the
+  file exists, as the graders already did.
+
 ## [0.11.0] — 2026-10-21
 
 The Unit 1.1 beginner audit. All ten modules were read as a first-day learner would read them,
