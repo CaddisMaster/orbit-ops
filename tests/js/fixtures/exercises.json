@@ -4738,6 +4738,20 @@
      "mode": 420,
      "owner": "root",
      "type": "file"
+    },
+    "/var/log/nginx": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/var/log/nginx/access.log": {
+     "contents": "10.4.0.5 - - [08/Oct/2026:06:00:01 +0000] \"GET /status HTTP/1.1\" 200 312\n10.4.0.5 - - [08/Oct/2026:06:00:31 +0000] \"GET /reactor HTTP/1.1\" 502 0\n10.4.0.8 - - [08/Oct/2026:06:01:02 +0000] \"GET /status HTTP/1.1\" 200 312\n10.4.0.5 - - [08/Oct/2026:06:01:33 +0000] \"GET /favicon.ico HTTP/1.1\" 404 0\n10.4.0.12 - - [08/Oct/2026:06:02:04 +0000] \"GET /status HTTP/1.1\" 200 312\n10.4.0.8 - - [08/Oct/2026:06:02:35 +0000] \"GET /reactor HTTP/1.1\" 502 0\n10.4.0.5 - - [08/Oct/2026:06:03:06 +0000] \"GET /docs HTTP/1.1\" 200 2048\n10.4.0.12 - - [08/Oct/2026:06:03:37 +0000] \"GET /status HTTP/1.1\" 200 312\n10.4.0.8 - - [08/Oct/2026:06:04:08 +0000] \"GET /favicon.ico HTTP/1.1\" 404 0\n10.4.0.5 - - [08/Oct/2026:06:04:39 +0000] \"GET /reactor HTTP/1.1\" 200 1024\n10.4.0.12 - - [08/Oct/2026:06:05:10 +0000] \"GET /status HTTP/1.1\" 200 312\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
     }
    },
    "group": "crew",
