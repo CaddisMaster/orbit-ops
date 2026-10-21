@@ -7,6 +7,11 @@ pytest==9.1.1
 # Parallel runs. Safe because tests create uniquely named rows per test
 # (tests/conftest.py `make_user`) rather than sharing fixtures across workers.
 pytest-xdist==3.8.0
+# The dev server's file watcher (#247). Without it uvicorn falls back to a
+# stat poller that sees only *.py, so --reload-include '*.md' in the dev
+# override is ignored and lesson edits need a restart. Its one dependency,
+# anyio, is pinned in requirements.txt.
+watchfiles==1.3.0
 # ⚠️ THE ONLY RUFF PIN. CI's ruff-action reads it via `version-file:`.
 # Keep it a bare `ruff==X.Y.Z` line.
 ruff==0.16.10
