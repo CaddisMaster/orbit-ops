@@ -116,6 +116,12 @@ NEEDS = {
         "2>&1 means stderr goes where stdout goes now": "send channel 2 to wherever channel 1 is going **right now**",
         "redirections are read left to right": "redirections **left to right**",
         "grep keeps only matching lines": "prints only the lines of FILE that contain WORD",
+        "> creates the file if it's missing": "**`>` and `>>` create the file if it isn't there**",
+        "> on an existing file replaces it": "**`>` empties it without asking**",
+        "ls heads a directory's names with its name": "the listing gets a\nheading, the directory's name and a colon",
+        "the error prints first": "`ls` checks every path it's\ngiven before it lists any",
+        "ls writes one name per line into a file": "**one\nname per line**",
+        "> works on grep's output too": "`grep` (module 05) and `>` together keep just the lines you want",
     },
     "text-tools": {
         "awk prints a field": "splits each line into fields",

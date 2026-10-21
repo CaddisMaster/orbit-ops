@@ -53,6 +53,15 @@ and why it matters, not what the diff says.
   `-n`. Jobs (`sleep`, `&`, `jobs`, `fg`, `bg`, `kill %1`) are a table, not code comments, and
   `;`, `&&` and `||` each get an example. The console task says when it's done, and to press
   Reset after a KILL sent first. Try it adds Ctrl-C and `ps aux | grep` on a real machine.
+- Unit 1.1 module 07, *Pipes and redirection*, audited the same way (#239). It says `>` and
+  `>>` create a missing file, and that `>` empties an existing one without asking. It shows
+  what `ls` prints for a directory and a missing path (the error first, then a `DIR:` heading),
+  which is what the task's file holds. `2>&1` goes before the `|` in a pipeline, and the order
+  table says in words where each channel goes. It says the `&` in `2>&1` isn't module 06's
+  background `&`, and that `ls` writes one name per line into a file or a pipe. The `sshd` and
+  `auth.log` examples are replaced by ones the console can run. Try it says where to run it,
+  and has you type `>>`, `/dev/null` and the wrong `2>&1` order, which the quiz asks about.
+  The task says when it's done.
 
 ## [0.10.0] — 2026-10-17
 

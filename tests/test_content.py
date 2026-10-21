@@ -969,6 +969,72 @@ def test_module_06s_task_says_when_its_done():
     assert "If you send KILL before TERM" in task and "**Reset**" in task
 
 
+# --- #239: module 07 reads for a beginner who has done 01 to 06 ---------------------------
+def _pipes_plain():
+    module = load_catalog().modules["pipes-and-redirection"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), plain(try_it)
+
+
+def _section(text, start, end):
+    return text[text.index(start):text.index(end)]
+
+
+@pytest.mark.criterion(239, "The lesson says > creates a missing file and replaces an existing one")
+def test_module_07_says_what_greater_than_does_to_a_file():
+    _, prose, _, _ = _pipes_plain()
+    redirection = _section(prose, "sends a channel's output to a file", "piece by piece")
+    assert "> and >> create the file if it isn't there" in redirection
+    assert "> empties it without asking" in redirection
+
+
+@pytest.mark.criterion(239, "Everything the quiz and cards test is typed somewhere")
+def test_module_07s_try_it_types_append_and_dev_null():
+    _, _, _, try_it = _pipes_plain()
+    assert try_it.startswith("Run these one at a time, on a Linux machine or in the station console")
+    assert "echo second >> notes.txt" in try_it and "ls /etc/hosts /nope > /dev/null" in try_it
+
+
+@pytest.mark.criterion(239, "The task's output looks like something the lesson showed")
+def test_module_07_shows_a_directory_listed_with_a_missing_path():
+    _, prose, lesson, _ = _pipes_plain()
+    assert "ls /etc /nope" in lesson and "# /etc:" in lesson
+    assert "ls checks every path it's given before it lists any" in prose
+
+
+@pytest.mark.criterion(239, "Where 2>&1 goes in a pipeline is in prose")
+def test_module_07_says_where_2_and_1_goes_in_a_pipe():
+    _, prose, _, _ = _pipes_plain()
+    assert "To send errors down a pipe too, put 2>&1 before the | ." in _section(prose, "A pipe, | , connects", "tee: a T-junction")
+
+
+@pytest.mark.criterion(239, "No unexplained arrows")
+def test_module_07s_order_table_has_no_arrows():
+    module, _, _, _ = _pipes_plain()
+    table = module.body_html.split("piece by piece")[1].split("Throwing output away")[0]
+    assert "→" not in table and "channel 1 now goes to" in table
+
+
+@pytest.mark.criterion(239, "Every example can be run, and sits under the section it illustrates")
+def test_module_07s_examples_run_and_sit_in_their_section():
+    _, prose, lesson, _ = _pipes_plain()
+    assert "auth.log" not in lesson and "sshd" not in lesson
+    redirection = _section(prose, "sends a channel's output to a file", "piece by piece")
+    assert "grep root /etc/passwd > root-lines.txt" in redirection
+
+
+@pytest.mark.criterion(239, "The task says what done looks like")
+def test_module_07s_task_says_when_its_done():
+    module, _, _, _ = _pipes_plain()
+    task = " ".join(module.terminal.task.split())
+    assert "one `ls` command, given both paths" in task
+    assert "The console checks after every command, so you're done the moment both files are right" in task
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.
