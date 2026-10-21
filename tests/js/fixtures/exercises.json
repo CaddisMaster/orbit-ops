@@ -3506,6 +3506,10 @@
     {
      "contains": "/home/cadet/alerts.txt",
      "text": "ALERT coolant pump 2 stalled"
+    },
+    {
+     "lacks": "/home/cadet/alerts.txt",
+     "text": "nominal"
     }
    ],
    "cwd": "/home/cadet",
@@ -4615,6 +4619,14 @@
     {
      "contains": "/home/cadet/noisy.txt",
      "text": "4 192.168.8.40"
+    },
+    {
+     "lacks": "/home/cadet/noisy.txt",
+     "text": "10.4.2.90"
+    },
+    {
+     "lacks": "/home/cadet/noisy.txt",
+     "text": "172.16.0.5"
     }
    ],
    "cwd": "/home/cadet",

@@ -742,3 +742,66 @@ def test_routes_reach_the_console(tmp_path):
     assert relay["services"][0]["tls"] == "trusted"
     assert relay["services"][0]["http"][0] == {"path": "/", "method": "GET", "status": 200, "headers": {"Content-Type": "text/plain"}, "body": "FLUSH\n"}
     assert next(h for h in spec["network"]["hosts"] if h["name"] == "mission")["login"] is True
+
+
+# --- #249: a lacks check may name a file the learner creates ------------------------------
+def _made(exercise, **files):
+    """The starting filesystem plus files the learner wrote in their home directory."""
+    from app.terminal import Node
+
+    start = {p: Node(**n) for p, n in exercise.starting_fs().items()}
+    home = start[exercise.cwd]
+    made = {f"{exercise.cwd}/{name.replace('_', '.')}": home.model_copy(update={"type": "file", "mode": 0o664, "contents": text})
+            for name, text in files.items()}
+    return start | made
+
+
+@pytest.mark.criterion(249, "A lacks check may name a file the learner creates")
+def test_a_lacks_check_may_name_a_file_the_learner_creates(tmp_path):
+    _write(tmp_path, TERMINAL.replace('{mode: /station/scrubber.conf, equals: "600"}',
+                                      '{lacks: /station/report.txt, text: override}'))
+    load_catalog(tmp_path)  # loads: a learner's file is fair game, as for contains
+
+
+@pytest.mark.criterion(249, "A lacks check on a missing file fails in both graders")
+def test_a_lacks_check_on_a_missing_file_fails():
+    from app.content.schema import LacksCheck
+    from app.terminal import passes
+
+    assert not passes(LacksCheck(lacks="/home/cadet/nowhere.txt", text="x"), {}, "/home/cadet")
+    # The browser's grader runs the same case from check_cases.json (tests/js/).
+    cases = json.loads((FIXTURES / "check_cases.json").read_text())["cases"]
+    assert any(c["name"] == "lacks: a missing file fails" and c["expect"] is False for c in cases)
+
+
+@pytest.mark.criterion(249, "Module 07 enforces \"and nothing else\"")
+def test_module_07_refuses_the_whole_log_in_alerts():
+    from app.terminal import grade
+
+    exercise = load_catalog().modules["pipes-and-redirection"].terminal
+    log = next(f.contents for f in exercise.files if f.path == "/station/reactor/core.log")
+    listing = "ls: cannot access '/station/reactor-b': No such file or directory\n/station/reactor:\ncoolant.log\ncore.log\n"
+    alerts = "".join(line + "\n" for line in log.splitlines() if "ALERT" in line)
+    assert grade(exercise, _made(exercise, reactor_txt=listing, alerts_txt=alerts), exercise.cwd)
+    assert not grade(exercise, _made(exercise, reactor_txt=listing, alerts_txt=log), exercise.cwd)
+
+
+@pytest.mark.criterion(249, "Module 08 enforces \"three\"")
+def test_module_08_refuses_every_address_in_noisy():
+    from app.terminal import grade
+
+    exercise = load_catalog().modules["text-tools"].terminal
+    top = "      9 10.4.2.17\n      6 10.4.7.3\n      4 192.168.8.40\n"
+    rest = "      2 172.16.0.5\n      2 10.4.2.90\n      1 192.168.8.41\n      1 10.4.9.12\n"
+    assert grade(exercise, _made(exercise, noisy_txt=top), exercise.cwd)
+    assert not grade(exercise, _made(exercise, noisy_txt=top + rest), exercise.cwd)
+
+
+@pytest.mark.criterion(249, "The reference solutions still complete both tasks")
+def test_modules_07_and_08_solutions_are_still_proven():
+    # tests/js/solutions.test.js runs each solution through the real shell against these checks;
+    # here, the fixture it reads must carry the new lacks checks.
+    exercises = json.loads((FIXTURES / "exercises.json").read_text())
+    for slug in ("pipes-and-redirection", "text-tools"):
+        spec = next(e["spec"] for k, e in exercises.items() if slug in k)
+        assert any("lacks" in c for c in spec["checks"]), slug

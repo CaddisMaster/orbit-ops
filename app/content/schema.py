@@ -846,15 +846,16 @@ class TerminalExercise(_Strict):
             if isinstance(check, StoppedCheck | SignalledCheck) and check_path(check) not in started:
                 raise ValueError(f"checks.{i} ({describe(check)}): no starting process is called {check_path(check)}")
         for i, check in enumerate(self.checks):
-            # A mode, owner, missing or lacks check reads something that must already be
-            # there; exists and contains may name what the learner creates.
+            # A mode, owner or missing check reads something that must already be there.
+            # exists, contains and lacks may name what the learner creates: lacks fails
+            # until the file exists, so it reads "made, and without this" (#249).
             if isinstance(check, CwdCheck) and fs.get(check.cwd, {}).get("type") != "dir":
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.cwd} is not a directory in the starting filesystem")
             if isinstance(check, FilesUnderCheck) and fs.get(check.files_under, {}).get("type") != "dir":
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.files_under} is not a directory in the starting filesystem")
             if isinstance(check, RunningCheck | StoppedCheck | SignalledCheck):
                 continue
-            creatable = ExistsCheck | ExecutableCheck | ContainsCheck | CwdCheck | SymlinkCheck | FilesUnderCheck
+            creatable = ExistsCheck | ExecutableCheck | ContainsCheck | LacksCheck | CwdCheck | SymlinkCheck | FilesUnderCheck
             if not isinstance(check, creatable) and check_path(check) not in fs:
                 raise ValueError(
                     f"checks.{i} ({describe(check)}): {check_path(check)} is not in the starting filesystem"

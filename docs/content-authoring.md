@@ -404,9 +404,11 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   T}` (a link at P pointing at exactly T, as written) and `{files_under: DIR, name: "*.gz",
   max_size: 50M, max_age: 30}` (every file below DIR whose name matches, if `name` is given, is at
   most that big and changed at most that many days ago; it needs `max_size`, `max_age` or both,
-  and passes when nothing matches, so it reads "nothing in /var/log is over 50M"). `mode`, `owner`, `missing` and `lacks` must name a path in the starting
+  and passes when nothing matches, so it reads "nothing in /var/log is over 50M"). `mode`, `owner` and `missing` must name a path in the starting
   filesystem, and `cwd` a directory in it, or validation fails naming the check; `exists` and
-  `contains` may name something the learner creates, and so may `symlink` and `executable`. `files_under` must
+  `contains` may name something the learner creates, and so may `symlink`, `executable` and
+  `lacks` (#249). A `lacks` on a file that isn't there yet fails, so a pair of `contains` and
+  `lacks` on a learner's file reads "made, with this, and without that". `files_under` must
   name a starting directory.
 - **The `solution` is proven in CI.** `tests/js/solutions.test.js` runs it through the real
   shell and requires the task unsolved before and solved after, with no step needing an unknown
