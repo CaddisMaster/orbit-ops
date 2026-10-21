@@ -69,6 +69,15 @@ and why it matters, not what the diff says.
   braces do. The console has a second log, the bridge's web server's, so the lesson's
   examples run there without handing over the task's answer. The task says to put the count
   first, and the Python challenge says it's a bonus for anyone who already knows some.
+- Unit 1.1 module 09, *Environment variables and PATH*, audited the same way (#243). It says
+  what the environment and a child process are, and tables shell variables, `export` and the
+  one-command form instead of leaving them in comments. It says there are no spaces around `=`
+  and how double and single quotes treat `$`, that `PATH` is a `:`-separated list searched left
+  to right, and what `type -a` and `which` print. The prepend line is taken apart piece by
+  piece, with a warning (and the way back) for leaving out `:$PATH`. It says why `bash -c`
+  takes single quotes, and shows what the `.bashrc` append writes. Try it practises `source`
+  and running a script with `./`. The deployment section is now a short *On the real station*
+  note.
 
 ## [0.10.0] — 2026-10-17
 

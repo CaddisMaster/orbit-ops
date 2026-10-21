@@ -140,6 +140,12 @@ NEEDS = {
         "prepend a directory to make it win": "Prepend a directory to make its programs win",
         "~/.bashrc is read by every new shell": "every new interactive Bash shell",
         "append a line with >>": "**Appending** with `>>` matters",
+        "directories on PATH are separated by :": "list of directories, **separated by `:`**",
+        "$PATH in the new value keeps the old list": "`$PATH` is the old list",
+        "type -a lists every match in order": "every NAME on the PATH, in search order",
+        "no spaces around =": "**No spaces around `=`.**",
+        "leaving out :$PATH loses the old list": "**Leave out `:$PATH` and the old list is gone.**",
+        "single quotes write the line as typed": "goes into the file exactly as typed",
     },
     "reading-and-editing": {
         "man shows a command's page": "the full manual page",
