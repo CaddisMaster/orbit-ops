@@ -46,6 +46,13 @@ and why it matters, not what the diff says.
   you type, and says what Docker and a container are before quiz Q4 relies on them. Try it
   says where to run it, has you type `id root`, and gives `su` and `sudo visudo -c` a
   real-Linux-only block.
+- Unit 1.1 module 06, *Processes and signals*, audited the same way (#237). It says what a
+  process's name is and that `pgrep` and `pkill` match any part of it, so `pkill o2` aims at
+  more than the runaway. It also says you can signal only your own processes. It shows real
+  `ps aux` output and explains its columns, `aux` without a dash, `--sort=` and `head` with no
+  `-n`. Jobs (`sleep`, `&`, `jobs`, `fg`, `bg`, `kill %1`) are a table, not code comments, and
+  `;`, `&&` and `||` each get an example. The console task says when it's done, and to press
+  Reset after a KILL sent first. Try it adds Ctrl-C and `ps aux | grep` on a real machine.
 
 ## [0.10.0] — 2026-10-17
 

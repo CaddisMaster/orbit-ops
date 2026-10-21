@@ -101,7 +101,12 @@ NEEDS = {
         "pkill -9 sends KILL by name": "SIGKILL by name",
         "check whether TERM worked before KILL": "Check that it worked",
         "$? holds the last command's exit status": "The shell keeps the last command's exit status in a variable named `?`",
-        "kill prints nothing when it works": "A `kill` that delivers its signal says nothing at all",
+        "kill and pkill print nothing when they work": "**`kill` and `pkill` print nothing when they work.**",
+        "pgrep and pkill match part of the name": "match any part of the name",
+        "you can only signal your own processes": "**You can signal only your own processes.**",
+        "a process's name is its program's file name": "A process's **name** is its program's file name",
+        "pgrep prints nothing when nothing matches": "**`pgrep` prints nothing when\nno process matches**",
+        "an ignored signal doesn't end the process": "an ignored\nsignal does nothing, and the program carries on",
     },
     "pipes-and-redirection": {
         "ls takes several paths": "`ls` takes several paths",
