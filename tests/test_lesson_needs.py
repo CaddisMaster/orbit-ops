@@ -128,7 +128,12 @@ NEEDS = {
         "uniq -c counts adjacent duplicates": "collapses **adjacent** duplicate lines",
         "sort before uniq": "which is why it almost always comes after `sort`",
         "sort -rn ranks by count": "numbers, largest first",
-        "the whole top-N pipeline": "rank by count, keep the top ten",
+        "the whole top-N pipeline": "rank by count, keep the top five",
+        "uniq -c writes the count first": "`uniq -c` writes **the count first**",
+        "sort -n reads the number at the start of a line": "reading the number at the start of each line",
+        "a space delimiter is quoted": "the space has to be quoted, **`-d' '`**",
+        "awk's program goes in single quotes": "**The quotes stop the shell\ntreating `$1` as one of its own variables**",
+        "the address is field 1 of an access-log line": "the **client's address**",
     },
     "environment-and-path": {
         "the first match on PATH wins": "runs the first file with that name",

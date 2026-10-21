@@ -1035,6 +1035,96 @@ def test_module_07s_task_says_when_its_done():
     assert "The console checks after every command, so you're done the moment both files are right" in task
 
 
+# --- #241: module 08 reads for a beginner who has done 01 to 07 ---------------------------
+def _text_tools_plain():
+    module = load_catalog().modules["text-tools"]
+    lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
+
+    def plain(fragment):
+        return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+    return module, plain(re.sub(r"<pre.*?</pre>", " ", lesson, flags=re.S)), plain(lesson), plain(try_it)
+
+
+def _text_tools_section(prose, heading, next_heading):
+    return prose[prose.index(heading):prose.index(next_heading)]
+
+
+@pytest.mark.criterion(241, "grep's flags are taught in prose or a table")
+def test_module_08_teaches_greps_flags_in_a_table():
+    _, prose, lesson, _ = _text_tools_plain()
+    grep = _text_tools_section(prose, "grep TEXT FILE (module 05)", "What's in an access log")
+    for row in ("grep -i ROOT /etc/passwd matching lines, i gnoring case", "grep -v root /etc/passwd the lines that do not contain",
+                "grep -n bash /etc/passwd matching lines, each with its line n umber", "grep -c bash /etc/passwd how many lines match"):
+        assert row in grep, row
+    assert "app.log" not in lesson and "names.txt" not in lesson and "sizes.txt" not in lesson
+
+
+@pytest.mark.criterion(241, "The learner can see what an access-log line holds")
+def test_module_08_shows_an_access_log_line_field_by_field():
+    module, prose, lesson, _ = _text_tools_plain()
+    assert '10.4.0.5 - - [08/Oct/2026:06:00:31 +0000] "GET /reactor HTTP/1.1" 502 0' in lesson
+    for row in ("$1 10.4.0.5 the client's address", "$7 /reactor the path", "$9 502 the status code"):
+        assert row in prose, row
+    assert prose.index("$9 502 the status code") < prose.index("$9 >= 500")
+    assert "10.4.0.5" not in module.terminal.files[1].contents  # the task's log isn't the lesson's
+
+
+@pytest.mark.criterion(241, "uniq -c's output and the task's format are clear")
+def test_module_08_shows_uniq_c_output_and_the_task_says_count_first():
+    module, prose, lesson, _ = _text_tools_plain()
+    assert "7 200 2 404 2 502" in lesson
+    assert "reading the number at the start of each line" in prose and "uniq -c writes the count first" in prose
+    task = " ".join(module.terminal.task.split())
+    assert "with its request count **in front**, as `uniq -c` writes it" in task
+    assert "The console checks after every command" in task
+
+
+@pytest.mark.criterion(241, "Both routes the task offers are taught")
+def test_module_08_teaches_cut_on_a_space_and_awks_syntax():
+    _, prose, _, _ = _text_tools_plain()
+    assert "the space has to be quoted, -d' '" in prose
+    assert "The quotes stop the shell treating $1 as one of its own variables" in prose
+    assert "{print $1} runs on every line, and a condition in front of the braces" in prose
+
+
+@pytest.mark.criterion(241, "sed is explained and practised")
+def test_module_08_explains_and_practises_sed():
+    _, prose, _, try_it = _text_tools_plain()
+    sed = _text_tools_section(prose, "sed: edit a stream", "Putting it together")
+    assert "s/OLD/NEW/ s ubstitutes NEW for OLD" in sed and "Add g ( g lobal)" in sed
+    assert "-n prints nothing unless told, and 2,3p says p rint lines 2 to 3" in sed
+    assert "The .bak straight after it, with no space, is the suffix" in sed
+    assert "sed 's/bash/BASH/' /etc/passwd" in try_it
+
+
+@pytest.mark.criterion(241, "The worked pipeline is not the task's answer")
+def test_module_08s_worked_pipeline_ranks_paths():
+    module, _, lesson, _ = _text_tools_plain()
+    together = lesson[lesson.index("Putting it together"):lesson.index("Try it") if "Try it" in lesson else None]
+    assert "print $7" in together and "print $1" not in together
+    card = next(c for c in module.cards if c.id == "text-tools/top-n")
+    assert card.section_html == "Putting it together"
+
+
+@pytest.mark.criterion(241, "The challenge says what it assumes")
+def test_module_08s_challenge_says_what_it_assumes():
+    module, _, _, _ = _text_tools_plain()
+    task = " ".join(module.challenge.task.split())
+    assert "A bonus for anyone who already knows some Python, which *Python for operations* (Unit 2.1) teaches" in task
+    assert "A `POST /login` is a login attempt" in task and "the status `401` means the server refused it" in task
+
+
+@pytest.mark.criterion(241, "Smaller fixes")
+def test_module_08s_smaller_fixes():
+    module, prose, _, try_it = _text_tools_plain()
+    assert "comparing character by character, so 10 comes before 9" in prose
+    assert "and stdin, what a | hands them, if you don't" in prose and "spaces and tabs, however many in a row" in prose
+    assert "head -5" not in try_it and "field 5 is the size in bytes and field 9 the name" in try_it
+    assert try_it.startswith("Run these one at a time, on a Linux machine or in the station console")
+    assert "three noisiest" in module.story_html and "ten noisiest" not in module.story_html
+
+
 # --- #207: Okafor is he --------------------------------------------------------------
 SHE = re.compile(r"\b(she|her|hers|herself)\b", re.IGNORECASE)
 # The only women on the crew so far, and where they appear. Anywhere else, she/her is Okafor.

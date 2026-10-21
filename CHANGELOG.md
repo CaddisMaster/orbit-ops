@@ -62,6 +62,13 @@ and why it matters, not what the diff says.
   `auth.log` examples are replaced by ones the console can run. Try it says where to run it,
   and has you type `>>`, `/dev/null` and the wrong `2>&1` order, which the quiz asks about.
   The task says when it's done.
+- Unit 1.1 module 08, *Text tools*, audited the same way (#241). `grep`'s flags and `sed`'s
+  `s/OLD/NEW/`, `g`, `-n` and `-i.bak` are tables and prose, not code comments, on real files
+  like `/etc/passwd`. A new section reads an access-log line field by field. The lesson shows
+  what `uniq -c` prints (the count first), how to `cut` on a space, and what awk's quotes and
+  braces do. The console has a second log, the bridge's web server's, so the lesson's
+  examples run there without handing over the task's answer. The task says to put the count
+  first, and the Python challenge says it's a bonus for anyone who already knows some.
 
 ## [0.10.0] — 2026-10-17
 
