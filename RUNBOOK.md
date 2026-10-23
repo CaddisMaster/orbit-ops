@@ -129,23 +129,35 @@ and the public `/healthz` both report the new version.
 **not** touch the schema; that is safe only because migrations are expand-only (see
 `docs/gotchas.md`). To undo a schema change, restore the pre-deploy dump (§6).
 
-**Never** run a bare `docker compose pull` or `docker compose up -d` without `TAG` on the box
-mindlessly: a bare pull fetches a newer `postgres:16`, and the next `up -d` recreates the
-database container. `scripts/install_compose.sh` refuses a release whose compose file would
-recreate `db`. To change the `db` service deliberately:
+**Never** run a bare `docker compose up -d` on the box mindlessly: after any edit to the `db`
+service it recreates the database container. `postgres` is pinned by tag and digest (#266), so
+a pull no longer changes it behind your back, but the edit itself still does.
+`scripts/install_compose.sh` refuses a release whose compose file would recreate `db`, so a `db`
+change is applied by hand, **before** the release that carries it, at a quiet time. From a Mac
+terminal (the VM can't reach the droplet):
 
 ```bash
 cd /opt/orbit-ops && set -a && . ./.env && set +a
+# 1. What's running now. A change of MAJOR version (16 → 17) is not this procedure: it needs
+#    a dump and restore. A minor change (16.x → 16.y) is safe to restart into.
+docker compose exec -T db postgres --version
+# 2. A verified dump.
 ( set -o pipefail
   docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" | gzip > backups/pre-db-change.sql.gz ) \
   && gzip -dc backups/pre-db-change.sql.gz | tail -n 20 | grep 'dump complete'
 # Go on only if that printed "-- PostgreSQL database dump complete" (#116). A valid gzip
 # alone proves nothing: a failed pg_dump still leaves one. (20 lines: a `\unrestrict` line
 # follows the marker.)
-# copy the new docker-compose.yml up (scp), then:
-docker compose up -d db && docker compose ps
-curl -s http://127.0.0.1:5002/healthz
+# 3. From the Mac: scp main's docker-compose.yml to /opt/orbit-ops/docker-compose.yml. Then:
+docker compose pull db && docker compose up -d db && docker compose ps
+docker compose exec -T db postgres --version
+# 4. Both apps, since they share the droplet.
+curl -s http://127.0.0.1:5002/healthz; curl -s http://127.0.0.1:5001/healthz
 ```
+
+`up -d db` touches only `db`, but `web` loses its connections while Postgres restarts; a page
+load in that window gets the error page, and the next one works. The release that follows
+installs the same file, and its guard then sees no `db` change.
 
 ## 6. Backups and restore
 

@@ -21,6 +21,10 @@ and why it matters, not what the diff says.
   deploys. A critical one with a fix available stops the release. Release images now carry an
   SBOM (a list of everything installed in them) and build provenance (how and where they were
   built), attached in the registry.
+- The database image is pinned to Postgres 16.15 by digest (#266), so a pull can no longer
+  change the database under a running release, and it can't gain privileges through setuid
+  programs. CI and the release smoke test now test against that same Postgres. Applied to the
+  droplet by hand, before the next release (RUNBOOK §5).
 - Python 3.14.8 (#265), which fixes a critical CVE (CVE-2026-19445) the new scan found in
   3.14.7. The new base image also brings Debian's fixed OpenSSL.
 

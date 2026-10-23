@@ -5,7 +5,10 @@
 # 127.0.0.1 and host Nginx is the only public entry point.
 services:
   db:
-    image: postgres:16
+    # Pinned by patch tag and digest (#266): a bare `postgres:16` let any pull
+    # change the database under a running release. ci.yml's and release.yml's
+    # test databases use the same reference (tests/test_repo_hardening.py).
+    image: postgres:16.15@sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -20,6 +23,12 @@ services:
     # No `ports:` at all — nothing outside this compose network needs Postgres.
     # Migrations and backups go through `docker compose exec/run`.
     mem_limit: 256m
+    # no-new-privileges, but NOT cap_drop: [ALL] (#266). The entrypoint starts
+    # as root and needs CHOWN, SETUID, SETGID, FOWNER and DAC_OVERRIDE to fix
+    # the data directory's ownership and drop to the postgres user. It drops
+    # with gosu (a syscall), which no-new-privileges allows.
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -q -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
