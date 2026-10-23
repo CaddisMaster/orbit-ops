@@ -1,0 +1,9 @@
+# Vulnerabilities accepted after review (#265). The image scan in ci.yml and
+# release.yml fails on a CRITICAL with a fix available; add an entry here only
+# when that fix can't ship yet, with the reason and the date to look again.
+#
+#   - vulnerability: CVE-2026-00000
+#     package:
+#       name: openssl
+#     # Why: <reason>. Revisit: YYYY-MM-DD.
+ignore: []

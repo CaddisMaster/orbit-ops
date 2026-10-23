@@ -17,6 +17,12 @@ and why it matters, not what the diff says.
   smoke test runs the image the same way, so a release that needs to write to disk fails
   before deploy approval, not on the droplet. The database container is unchanged: editing
   it recreates the container, so its hardening is a scheduled operation (#266).
+- Every image is scanned for known vulnerabilities (#265), on each PR and before each release
+  deploys. A critical one with a fix available stops the release. Release images now carry an
+  SBOM (a list of everything installed in them) and build provenance (how and where they were
+  built), attached in the registry.
+- Python 3.14.8 (#265), which fixes a critical CVE (CVE-2026-19445) the new scan found in
+  3.14.7. The new base image also brings Debian's fixed OpenSSL.
 
 ### Changed
 - Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must

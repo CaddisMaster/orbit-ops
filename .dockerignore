@@ -48,3 +48,6 @@ docs/
 .claude/
 docker-compose*.yml
 test.sh
+
+# The image scan's ignore list (#265): CI reads it, the image doesn't need it.
+.grype.yaml
