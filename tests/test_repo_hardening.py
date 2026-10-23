@@ -94,3 +94,31 @@ def test_production_runs_no_reloader():
     assert "--reload" not in cmd
     assert not any(line.startswith("watchfiles==") for line in _requirement_lines("requirements.txt"))
 
+
+
+def _dockerfile_instructions():
+    """The Dockerfile without its comments, which name the things it no longer does."""
+    lines = (ROOT / "Dockerfile").read_text().splitlines()
+    return "\n".join(line for line in lines if not line.lstrip().startswith("#"))
+
+
+def _image_check_step():
+    steps = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())["jobs"]["docker-build"]["steps"]
+    return next(step["run"] for step in steps if step.get("name") == "Check the image's user and ownership")
+
+
+@pytest.mark.criterion(263, "The app user cannot write the app's code")
+def test_root_owns_the_code_and_ci_checks_the_built_image():
+    dockerfile = _dockerfile_instructions()
+    assert "--chown" not in dockerfile, "the app user must not own anything it runs"
+    assert re.search(r"^RUN useradd --no-create-home --shell /usr/sbin/nologin --uid 10001 appuser$", dockerfile, re.M)
+    # The Dockerfile can't show what the built image looks like; CI's image job does.
+    check = _image_check_step()
+    assert 'test "$(whoami)" = appuser' in check
+    assert "find /app /opt/pyodide -writable" in check
+
+
+@pytest.mark.criterion(263, "The runtime image has no psql")
+def test_the_image_installs_no_postgresql_client():
+    assert "postgresql-client" not in _dockerfile_instructions()
+    assert "command -v psql" in _image_check_step()

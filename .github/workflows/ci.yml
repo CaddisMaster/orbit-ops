@@ -94,5 +94,19 @@ jobs:
         with:
           context: .
           push: false
+          load: true
+          tags: orbit-ops:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # #263: the app user can't rewrite its own code, and the image has no psql.
+      - name: Check the image's user and ownership
+        run: |
+          docker run --rm --entrypoint sh orbit-ops:ci -c '
+            set -e
+            test "$(whoami)" = appuser || { echo "runs as $(whoami), not appuser"; exit 1; }
+            test "$(stat -c %U /app)" = root || { echo "/app is not owned by root"; exit 1; }
+            writable="$(find /app /opt/pyodide -writable -print -quit)"
+            test -z "$writable" || { echo "appuser can write $writable"; exit 1; }
+            if command -v psql; then echo "psql is in the image"; exit 1; fi
+            echo "appuser, root-owned /app, nothing writable, no psql"
+          '
