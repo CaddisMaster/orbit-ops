@@ -49,6 +49,7 @@ def test_every_service_caps_its_logs():
         assert service.get("logging", {}).get("options", {}).get("max-size"), f"{name} has unbounded logs"
 
 
+@pytest.mark.criterion(265, "Every new action is pinned by SHA")
 def test_actions_are_pinned_by_commit_sha():
     for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
         for uses in re.findall(r"uses:\s*(\S+)", workflow.read_text()):
@@ -191,3 +192,42 @@ def test_trusting_every_forwarding_address_is_explained():
     assert '"--forwarded-allow-ips", "*"' in dockerfile
     comments = " ".join(line for line in dockerfile.splitlines() if line.startswith("#"))
     assert "127.0.0.1" in comments and "Nginx" in comments
+
+
+def _workflow(name):
+    return yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text())
+
+
+def _scan_step(steps):
+    return next(step for step in steps if step.get("uses", "").startswith("anchore/scan-action@"))
+
+
+_GATE = {"only-fixed": True, "severity-cutoff": "critical", "fail-build": True}
+
+
+@pytest.mark.criterion(265, "A release image is scanned before it ships")
+def test_the_release_scans_the_pushed_digest_before_deploying():
+    jobs = _workflow("release.yml")["jobs"]
+    scan = jobs["scan"]
+    # The scanner never shares a job with the token that can push images.
+    assert scan["permissions"] == {"contents": "read", "packages": "read"}
+    step = _scan_step(scan["steps"])
+    assert {key: step["with"].get(key) for key in _GATE} == _GATE
+    assert step["with"]["image"] == "${{ env.IMAGE }}@${{ needs.build-push.outputs.digest }}"
+    assert jobs["build-push"]["outputs"]["digest"] == "${{ steps.push.outputs.digest }}"
+    assert "scan" in jobs["deploy"]["needs"]
+
+
+@pytest.mark.criterion(265, "CI scans the image on every PR")
+def test_ci_scans_the_built_image_the_same_way():
+    ci = _scan_step(_workflow("ci.yml")["jobs"]["docker-build"]["steps"])["with"]
+    release = _scan_step(_workflow("release.yml")["jobs"]["scan"]["steps"])["with"]
+    assert ci["image"] == "orbit-ops:ci"
+    assert {k: v for k, v in ci.items() if k != "image"} == {k: v for k, v in release.items() if k != "image"}
+
+
+@pytest.mark.criterion(265, "A release image carries an SBOM and provenance")
+def test_the_release_build_attaches_an_sbom_and_provenance():
+    push = next(s for s in _workflow("release.yml")["jobs"]["build-push"]["steps"] if s.get("id") == "push")
+    assert push["with"]["sbom"] is True
+    assert push["with"]["provenance"] == "mode=max"

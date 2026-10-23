@@ -75,6 +75,11 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   write at runtime writes to `/tmp` (a tmpfs, gone on restart) or gets a named volume. The dev
   override keeps the lockdown but makes `/tmp` executable (the backup-script tests run a stub
   `docker` from `tmp_path`) and raises `pids_limit` for pytest-xdist.
+- **The image scan can fail a PR that changed nothing in the image** (#265). Grype's database
+  updates daily, so a newly published CRITICAL with a fix fails every PR's "Image builds" until
+  the fix ships. Fix it in its own PR (usually a base-image bump: both `FROM` lines, new digest);
+  don't add a `.grype.yaml` ignore to get an unrelated PR through. The scanner runs only in
+  jobs without write permissions: Trivy's action was hijacked in March 2026 to steal CI tokens.
 
 - **Pyodide lives in `/opt/pyodide`, not `app/static/`** (#53). In development `.:/app` is
   bind-mounted over the image, so anything the Dockerfile puts under `/app` is hidden. A bare

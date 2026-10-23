@@ -34,6 +34,7 @@ jobs:
       packages: write
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      digest: ${{ steps.push.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Derive tags
@@ -58,11 +59,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push
+        id: push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: true
           platforms: linux/amd64
+          # #265: what's in the image (SBOM) and how it was built (provenance),
+          # attached to the pushed image as attestations.
+          sbom: true
+          provenance: mode=max
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
@@ -123,9 +129,33 @@ jobs:
         if: failure()
         run: docker logs smoke || true
 
+  # #265. A job of its own, after the push, so the scanner (third-party code
+  # that downloads more code) never runs beside the packages:write token. A
+  # failing scan stops the deploy, as a failing smoke test does; the pushed
+  # tag is never deployed. Same settings as ci.yml's scan, held equal by
+  # tests/test_repo_hardening.py.
+  scan:
+    name: Pushed image has no fixable critical vulnerability
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Scan the pushed image
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: ${{ env.IMAGE }}@${{ needs.build-push.outputs.digest }}
+          grype-version: v0.120.1
+          only-fixed: true
+          severity-cutoff: critical
+          fail-build: true
+          output-format: table
+
   deploy:
     name: Deploy to the droplet
-    needs: [build-push, smoke]
+    needs: [build-push, smoke, scan]
     runs-on: ubuntu-latest
     environment: production
     env:

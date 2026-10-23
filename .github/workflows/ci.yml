@@ -110,3 +110,15 @@ jobs:
             if command -v psql; then echo "psql is in the image"; exit 1; fi
             echo "appuser, root-owned /app, nothing writable, no psql"
           '
+      # #265: fails on a CRITICAL with a fix available; the table also lists
+      # fixable HIGH and below without failing. Accepted findings go in
+      # .grype.yaml, each with its reason. Same settings as release.yml's scan.
+      - name: Scan the image
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: orbit-ops:ci
+          grype-version: v0.120.1
+          only-fixed: true
+          severity-cutoff: critical
+          fail-build: true
+          output-format: table

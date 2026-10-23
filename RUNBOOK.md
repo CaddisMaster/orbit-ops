@@ -119,7 +119,8 @@ Until those two keys are set the app connects as the owner, which works but is n
 ## 5. Deploying, rolling back, and changing the `db` service
 
 **Deploy** = publish a GitHub Release `vX.Y.Z` (see `VERSIONING.md`). `release.yml` builds and
-pushes the image, boots it against a scratch Postgres (migrations + `/healthz`), waits for your
+pushes the image with an SBOM and provenance attached, boots it against a scratch Postgres
+(migrations + `/healthz`), scans it with Grype (a fixable CRITICAL fails the release), waits for your
 approval, then over SSH: pins `TAG` in `.env`, takes a verified `pg_dump` (`scripts/backup_db.sh`), pulls `web`, runs
 `alembic upgrade head` from the **new** image, `up -d`, and checks the running `APP_VERSION`
 and the public `/healthz` both report the new version.
