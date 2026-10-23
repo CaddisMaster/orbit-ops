@@ -83,6 +83,14 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   GitHub's permanent facts and published fingerprint, and the shape of anything that grows.
 - **The laptop screen's contents are drawn at 85%** (#188, Sean's pick from previews), with the
   lesson column widened by the same factor. `docs/gotchas.md` has the zoom's JS trap.
+- **The containers are locked down** (#263–#266). Root owns the image's code, and `web` runs
+  read-only with no capabilities. The deploy's migrations and the release smoke test run the
+  same way. `db` keeps its capabilities and gets `no-new-privileges`. Postgres is pinned by tag
+  and digest, and any `db` edit is a scheduled operation (RUNBOOK §5), never a release.
+- **Image scans run with no write token** (#265). Grype runs on every PR and on the pushed
+  digest before the deploy, in a read-only job, and fails on a fixable CRITICAL. It's Grype
+  rather than Trivy because Trivy's action, binary and images were hijacked in March 2026.
+  Release images carry an SBOM and provenance. Signing waits until the deploy can verify it.
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -104,6 +112,54 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-23: container hardening (#263–#266)
+
+- **The old architecture review file is gone.** All its findings were already filed as
+  #255–#260. Only "share tooling with Budget Buddy" has no issue of its own (#260 covers part).
+- **Filed from the container-hardening handoff** (checked against the code first) and merged
+  on Sean's word, one PR each:
+  - #267 (#263): root owns `/app`. The app user has no home or login shell, and `psql` is
+    gone. CI runs the built image and fails if `appuser` can write anything under `/app` or
+    `/opt/pyodide` (it fails `main`'s old image with `appuser can write /app/scripts`).
+  - #268 (#264): `web` is read-only with a tmpfs `/tmp`, `cap_drop: [ALL]`,
+    `no-new-privileges` and `pids_limit: 100`. The smoke run uses the same flags for both
+    migrations and the app. `--forwarded-allow-ips "*"` stays, with a comment saying why.
+    Checked on the production compose file locally: `docker inspect`, migrations through
+    `compose run web`, and module 08's Python challenge passing in Playwright.
+  - #269 (#265): Grype (`anchore/scan-action` v7.4.2, Grype v0.120.1) scans on every PR, and a
+    read-only `scan` job scans the pushed digest before the deploy. Release builds get
+    `sbom: true` and `provenance: mode=max`. **The gate's first catch:** CVE-2026-19445
+    (CRITICAL) in Python 3.14.7, so the base image moved to 3.14.8.
+  - #270 (part of #266): Postgres pinned as `16.15@sha256:9e2cf628…` in the compose file, CI
+    and the smoke run, held equal by a test, with `no-new-privileges` on `db`. RUNBOOK §5 is
+    rewritten as the procedure. It was rehearsed on a throwaway stack: the guard refused before,
+    the dump was verified, the data was intact, `web` was never restarted and `/healthz` stayed
+    200, and the guard passed after.
+- **Two specs were corrected on contact with the code.** #264's last scenario became a local
+  production-compose run (the droplet check is now "After the release"). #265 scans before
+  deploy rather than before push, to keep the scanner away from `packages: write`.
+- Gotchas:
+  - ⚠️ **Docker's `--tmpfs` is `noexec`.** The backup-script tests run a stub `docker` from
+    `tmp_path`, so the dev override needs `/tmp:exec`. Overriding a list takes compose's
+    `!override` tag, which `yaml.safe_load` can't read. The repo tests have a loader for it.
+  - ⚠️ **pytest-xdist outgrows `pids_limit: 100`** (threads count), so dev sets 1000.
+  - ⚠️ **A new CVE can fail a PR that didn't touch the image.** Fix it in its own PR, and don't
+    ignore it in `.grype.yaml` just to get a PR through.
+  - ⚠️ **Nothing proposes Postgres bumps.** `dependabot.yml` has no `docker-compose` entry.
+- **Not released.** v0.11.0 is still in production. The next release carries #263–#266 and is
+  the first run of the `scan` job, the SBOM/provenance step and the locked-down smoke test.
+- **Left for Sean, in this order:**
+  1. From the Mac at a quiet time: RUNBOOK §5, "changing the db service", with `main`'s
+     `docker-compose.yml`. Comment the two `postgres --version` lines and both `/healthz`
+     results on #266, then close it. **Until then the release guard refuses every release.**
+  2. Cut the release when he chooses. Afterwards: #264's "After the release" check
+     (`docker inspect orbit-ops-web-1`, a Python challenge on learn.seandesmet.com) and the
+     SBOM check in #269's body.
+  3. Delete the untracked `orbit-ops-container-hardening-handoff.md` once #266 is closed.
+     Budget Buddy has its own copy and hasn't started it. BB can copy these four PRs.
+- **Next:** #255 (split `shell.js`) before Unit 1.5, as planned. The quick ones still fit
+  anywhere: #256, #258, #248, plus #260's decision and Dependabot's #253.
 
 ### 2026-10-21: Unit 1.1 modules 06–10 audited, and v0.11.0 shipped
 
@@ -224,44 +280,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   2. Cut v0.11.0 when Sean says so. It's content plus the #229 console fix, so a MINOR by the
      milestone, with no migrations.
   3. Then Unit 1.5 (systemd).
-
-### 2026-10-17 (evening): v0.10.0 shipped, and a beginner audit planned
-
-- **Merged on Sean's word:**
-  - #211, Okafor is he.
-  - #213 (#208): the console's status line says `N of M done` for tasks with two or more checks,
-    once something has changed. It never says which check is left. The rule is a pure
-    `progressNote` in `shell.js`, so a Node test claims it.
-  - #215 (#210): module 05.
-    - Lesson: `/etc/passwd` field by field, the login shell, `nologin`, a user versus a
-      same-name group, why `groups` lags after `usermod`, a `su` paragraph, and what `grep` does.
-    - Task: two numbered parts.
-    - `su` is in `CONSOLE_LACKS`.
-  - #218 (#214): module 06 says what `$?` is, that its `$` is typed, and that silence means
-    success. Q3 was reworded in place.
-  - #219 (#216): module 07 rewritten for a beginner.
-    - The three streams in plain words, `>` is `1>`, and `2>&1` piece by piece.
-    - `/dev/null` and "only stdout goes through a pipe" each get a sentence.
-    - `tee` is practised in Try it.
-    - No `cmd` anywhere, and pipefail is left to *Robust scripts*.
-- **Shipped v0.10.0, not v0.9.1.** Release-prep pointed out that `stat -c` and the progress line
-  are features, and `VERSIONING.md` makes those a MINOR. Sean chose 0.10.0, so milestone v0.9.1
-  was renamed v0.10.0 (now closed) and the audit milestone became v0.11.0.
-  - CHANGELOG cut: #220.
-  - Run `39054223874`: backup ok, no migrations, `running version 0.10.0`, "Deployed and
-    healthy". The public `/healthz` reports `0.10.0` and Budget Buddy answers 200.
-  - ⚠️ `gh release create --target <short sha>` is refused ("not a valid tag"). Use `--target
-    main` or the full SHA.
-- **The finding behind it:** our checks test that a lesson is *right*, not that a beginner can
-  *find* the answer.
-  - `NEEDS` covers only the console task.
-  - The content-reviewer checks quiz answers for correctness.
-  - Sean couldn't find `$?`, `/dev/null` or what stdin is.
-  - The reviewer, told to read as a learner who had done only the earlier modules, caught module
-    07's `grep` example being the task's answer word for word.
-- **Next, milestone v0.11.0:**
-  1. **#217:** a `/beginner-audit` skill that reads one module end to end as a learner who has
-     done only the modules before it. It reports, and Claude files that module's issue.
-  2. **The audit:** Unit 1.1 from module 01, one module at a time, thoroughly. Each module gets
-     its own issue, filed with its findings, and its own PR.
-  3. Unit 1.5 (systemd) waits behind the audit.
