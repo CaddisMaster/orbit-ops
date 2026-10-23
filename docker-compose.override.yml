@@ -9,6 +9,13 @@ services:
     # The production 256m cap is sized for one uvicorn process; ./test.sh runs
     # pytest-xdist workers inside this same container.
     mem_limit: 2g
+    # Production's lockdown (#264) applies here too, so a change that writes to
+    # disk fails locally first. Two exceptions for the suite: pytest-xdist's
+    # workers and their threads outgrow 100 pids, and the backup-script tests
+    # run a stub `docker` from pytest's tmp_path, which a noexec /tmp refuses.
+    pids_limit: 1000
+    tmpfs: !override
+      - /tmp:exec
     volumes:
       - .:/app
       - /app/.venv

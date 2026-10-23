@@ -44,6 +44,10 @@ EXPOSE 8000
 # process. Plain uvicorn rather than gunicorn+UvicornWorker: compose's
 # `restart: always` already supervises the process, and uvicorn deprecated its
 # gunicorn worker class. --proxy-headers trusts host Nginx's X-Forwarded-*.
+# Trusting every forwarding address ("*") is safe here, and deliberate (#264):
+# compose publishes the port on 127.0.0.1 only, so host Nginx is the only client
+# that can reach uvicorn and set those headers. Pinning the Docker bridge
+# gateway's IP instead would break when the network is recreated on a new subnet.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
      "--proxy-headers", "--forwarded-allow-ips", "*", "--no-server-header"]
 

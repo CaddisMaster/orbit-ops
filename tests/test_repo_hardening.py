@@ -67,8 +67,27 @@ def test_env_example_lists_every_setting():
         assert re.search(rf"^{field.upper()}=", example, flags=re.MULTILINE), f".env.example is missing {field.upper()}"
 
 
+class _ComposeLoader(yaml.SafeLoader):
+    """safe_load plus compose's merge tags (`!override`, `!reset`), read as their plain value."""
+
+
+for _tag in ("!override", "!reset"):
+    _ComposeLoader.add_constructor(
+        _tag,
+        lambda loader, node: (
+            loader.construct_sequence(node) if isinstance(node, yaml.SequenceNode)
+            else loader.construct_mapping(node) if isinstance(node, yaml.MappingNode)
+            else loader.construct_scalar(node)
+        ),
+    )
+
+
+def _dev_web():
+    return yaml.load((ROOT / "docker-compose.override.yml").read_text(), Loader=_ComposeLoader)["services"]["web"]
+
+
 def _dev_command():
-    return yaml.safe_load((ROOT / "docker-compose.override.yml").read_text())["services"]["web"]["command"]
+    return _dev_web()["command"]
 
 
 @pytest.mark.criterion(247, "Editing a lesson reloads the dev app")
@@ -122,3 +141,53 @@ def test_root_owns_the_code_and_ci_checks_the_built_image():
 def test_the_image_installs_no_postgresql_client():
     assert "postgresql-client" not in _dockerfile_instructions()
     assert "command -v psql" in _image_check_step()
+
+
+_HARDENING = ("read_only", "tmpfs", "cap_drop", "security_opt", "pids_limit")
+
+
+def _services():
+    return yaml.safe_load((ROOT / "docker-compose.yml").read_text())["services"]
+
+
+@pytest.mark.criterion(264, "The web service is locked down")
+def test_the_web_service_is_locked_down():
+    web = _services()["web"]
+    assert web["read_only"] is True
+    assert web["tmpfs"] == ["/tmp"]
+    assert web["cap_drop"] == ["ALL"]
+    assert "no-new-privileges:true" in web["security_opt"]
+    assert web["pids_limit"] == 100
+    # Dev loosens only pids and /tmp's noexec; a disk write still fails locally first.
+    dev = _dev_web()
+    assert "read_only" not in dev and "cap_drop" not in dev and "security_opt" not in dev
+
+
+@pytest.mark.criterion(264, "The database service is untouched")
+def test_the_database_service_has_no_hardening_keys():
+    # Any edit to db recreates the database container; that's a scheduled operation (#266).
+    db = _services()["db"]
+    assert not [key for key in _HARDENING if key in db]
+
+
+@pytest.mark.criterion(264, "The release smoke test runs the image locked down")
+def test_the_release_smoke_test_runs_locked_down():
+    smoke = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml").read_text())["jobs"]["smoke"]["steps"]
+    runs = {step.get("name"): step.get("run", "") for step in smoke}
+    lockdown = re.search(r'LOCKDOWN=([^"]+)"', runs["Write the smoke env"]).group(1).split()
+    for flag in ("--read-only", "--cap-drop", "--security-opt", "--pids-limit", "--tmpfs"):
+        assert flag in lockdown
+    pairs = set(zip(lockdown, lockdown[1:], strict=False))
+    web = _services()["web"]
+    assert ("--pids-limit", str(web["pids_limit"])) in pairs
+    assert ("--security-opt", web["security_opt"][0]) in pairs
+    for name in ("Migrations apply from the pushed image", "Run the pushed image"):
+        assert "$LOCKDOWN" in runs[name], f"{name!r} runs the image without the lockdown"
+
+
+@pytest.mark.criterion(264, "The trust in forwarded headers is explained")
+def test_trusting_every_forwarding_address_is_explained():
+    dockerfile = (ROOT / "Dockerfile").read_text()
+    assert '"--forwarded-allow-ips", "*"' in dockerfile
+    comments = " ".join(line for line in dockerfile.splitlines() if line.startswith("#"))
+    assert "127.0.0.1" in comments and "Nginx" in comments
