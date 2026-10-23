@@ -45,6 +45,19 @@ services:
     ports:
       - "127.0.0.1:5002:8000"
     mem_limit: 256m
+    # Locked down (#264). Nothing writes to disk at runtime (the catalog renders
+    # into memory, logs go to stdout), so the root filesystem is read-only and
+    # /tmp is the only writable place. uvicorn binds 8000, so no capability is
+    # needed. pids counts threads: one process plus anyio's 40-thread pool.
+    # release.yml's smoke run uses the same flags, so a release that can't
+    # live with this fails before the production approval.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
     healthcheck:
       test: ["CMD", "python", "-c",
              "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).status == 200 else 1)"]

@@ -99,14 +99,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # LOCKDOWN mirrors web's hardening in docker-compose.yml (#264); the deploy
+      # runs migrations through that service, so both steps run locked down.
       - name: Write the smoke env
         run: |
           printf '%s\n' DB_HOST=localhost DB_PORT=5432 DB_NAME=orbit DB_USER=orbit DB_PASSWORD=orbit \
             SECRET_KEY=smoke-test-key-not-for-production > "$RUNNER_TEMP/smoke.env"
+          echo "LOCKDOWN=--read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 100" >> "$GITHUB_ENV"
       - name: Migrations apply from the pushed image
-        run: docker run --rm --network host --env-file "$RUNNER_TEMP/smoke.env" "${IMAGE}:${VERSION}" alembic upgrade head
+        run: docker run --rm $LOCKDOWN --network host --env-file "$RUNNER_TEMP/smoke.env" "${IMAGE}:${VERSION}" alembic upgrade head
       - name: Run the pushed image
-        run: docker run -d --name smoke --network host --env-file "$RUNNER_TEMP/smoke.env" "${IMAGE}:${VERSION}"
+        run: docker run -d --name smoke $LOCKDOWN --network host --env-file "$RUNNER_TEMP/smoke.env" "${IMAGE}:${VERSION}"
       - name: /healthz returns 200 and the release version
         run: |
           for i in $(seq 1 30); do

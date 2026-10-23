@@ -11,6 +11,12 @@ and why it matters, not what the diff says.
   root, and the app runs as a user with no home directory or login shell, so a compromised app
   can't plant changes that outlive it. CI now fails if that user can write anything under
   `/app`. The image no longer carries `psql`; use `docker compose exec db psql` instead.
+- The app's container is locked down (#264). Its filesystem is read-only apart from a
+  temporary `/tmp`, it has none of Docker's default capabilities, it can't gain privileges
+  through setuid programs, and it can run at most 100 processes and threads. The release's
+  smoke test runs the image the same way, so a release that needs to write to disk fails
+  before deploy approval, not on the droplet. The database container is unchanged: editing
+  it recreates the container, so its hardening is a scheduled operation (#266).
 
 ### Changed
 - Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must

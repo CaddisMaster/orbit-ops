@@ -70,6 +70,11 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   `-p no:cacheprovider` in `test.sh`.
 - **`.dockerignore` drops `**/*.md`** — except `content/**/*.md`, which the app needs. Keep the
   exception when touching that file.
+- **`web` runs read-only, with no capabilities** (#264), and so do the deploy's migrations
+  (`compose run web`) and the release smoke test. Root owns `/app` (#263). Anything that must
+  write at runtime writes to `/tmp` (a tmpfs, gone on restart) or gets a named volume. The dev
+  override keeps the lockdown but makes `/tmp` executable (the backup-script tests run a stub
+  `docker` from `tmp_path`) and raises `pids_limit` for pytest-xdist.
 
 - **Pyodide lives in `/opt/pyodide`, not `app/static/`** (#53). In development `.:/app` is
   bind-mounted over the image, so anything the Dockerfile puts under `/app` is hidden. A bare
