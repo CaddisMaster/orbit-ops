@@ -6,6 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Security
+- The app can no longer rewrite its own code (#263). The image's code and lessons are owned by
+  root, and the app runs as a user with no home directory or login shell, so a compromised app
+  can't plant changes that outlive it. CI now fails if that user can write anything under
+  `/app`. The image no longer carries `psql`; use `docker compose exec db psql` instead.
+
 ### Changed
 - Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must
   hold the ALERT lines **and nothing else**, so copying all of `core.log` into it no longer

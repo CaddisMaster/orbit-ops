@@ -18,11 +18,14 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-# pg_dump for the pre-deploy backup runs in the db container, but psql here is
-# handy for `docker compose exec web psql` debugging and costs ~10 MB.
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/*
-RUN useradd --create-home --uid 10001 appuser
-COPY --chown=appuser:appuser . .
+# No postgresql-client (#263): pg_dump and psql both run in the db container
+# (`docker compose exec db psql`), so the app image doesn't need them.
+# No home and no login shell: nothing reads $HOME.
+RUN useradd --no-create-home --shell /usr/sbin/nologin --uid 10001 appuser
+# ⚠️ Root owns the code (#263). With --chown the running app could rewrite its
+# own code and lessons; nothing under /app is written at runtime. CI's image
+# job fails if appuser can write anything under /app.
+COPY . .
 # Read-only to the app user: root owns it.
 COPY --from=pyodide /pyodide /opt/pyodide
 
