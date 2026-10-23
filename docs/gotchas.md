@@ -80,6 +80,12 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   the fix ships. Fix it in its own PR (usually a base-image bump: both `FROM` lines, new digest);
   don't add a `.grype.yaml` ignore to get an unrelated PR through. The scanner runs only in
   jobs without write permissions: Trivy's action was hijacked in March 2026 to steal CI tokens.
+- **Bumping Postgres is a scheduled operation, never a release** (#266). The `db` image is
+  pinned by patch tag and digest in three places held equal by a test: `docker-compose.yml`,
+  `ci.yml`'s and `release.yml`'s service containers. `dependabot.yml` has no `docker-compose`
+  entry, so nothing proposes a bump: watch for 16.x minor releases (roughly quarterly), bump all
+  three in one PR, then apply it by hand per RUNBOOK §5 **before** the next release, whose guard
+  refuses it otherwise.
 
 - **Pyodide lives in `/opt/pyodide`, not `app/static/`** (#53). In development `.:/app` is
   bind-mounted over the image, so anything the Dockerfile puts under `/app` is hidden. A bare

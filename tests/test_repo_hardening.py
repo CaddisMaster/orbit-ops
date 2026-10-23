@@ -144,9 +144,6 @@ def test_the_image_installs_no_postgresql_client():
     assert "command -v psql" in _image_check_step()
 
 
-_HARDENING = ("read_only", "tmpfs", "cap_drop", "security_opt", "pids_limit")
-
-
 def _services():
     return yaml.safe_load((ROOT / "docker-compose.yml").read_text())["services"]
 
@@ -164,11 +161,24 @@ def test_the_web_service_is_locked_down():
     assert "read_only" not in dev and "cap_drop" not in dev and "security_opt" not in dev
 
 
-@pytest.mark.criterion(264, "The database service is untouched")
-def test_the_database_service_has_no_hardening_keys():
-    # Any edit to db recreates the database container; that's a scheduled operation (#266).
+@pytest.mark.criterion(266, "Postgres is pinned by tag and digest")
+def test_postgres_is_pinned_and_ci_tests_against_the_same_one():
+    image = _services()["db"]["image"]
+    assert re.fullmatch(r"postgres:16\.\d+@sha256:[0-9a-f]{64}", image), f"db is not pinned: {image}"
+    workflows = ROOT / ".github" / "workflows"
+    ci = yaml.safe_load((workflows / "ci.yml").read_text())["jobs"]["test"]["services"]["db"]["image"]
+    smoke = yaml.safe_load((workflows / "release.yml").read_text())["jobs"]["smoke"]["services"]["db"]["image"]
+    assert ci == smoke == image, "CI and the release smoke test must test the Postgres production runs"
+
+
+@pytest.mark.criterion(266, "Postgres sets no-new-privileges and keeps its capabilities")
+def test_postgres_sets_no_new_privileges_and_keeps_its_capabilities():
+    # An edit here recreates the database container: a scheduled operation (RUNBOOK §5).
     db = _services()["db"]
-    assert not [key for key in _HARDENING if key in db]
+    assert db["security_opt"] == ["no-new-privileges:true"]
+    # The entrypoint needs CHOWN, SETUID, SETGID, FOWNER and DAC_OVERRIDE to drop to postgres;
+    # the rest of web's lockdown is untested against it and stays off.
+    assert not [key for key in ("cap_drop", "read_only", "tmpfs", "pids_limit") if key in db]
 
 
 @pytest.mark.criterion(264, "The release smoke test runs the image locked down")
