@@ -1,0 +1,169 @@
+"""The shape of curriculum files, as Pydantic models.
+
+These validate what an author writes. The loader (app/content/loader.py) turns
+validated files into the read-only Catalog the app serves from. Every model
+forbids unknown keys, so a typo'd field name is an error rather than a field
+that silently does nothing.
+
+It's a package by area (#257): base, questions, terminal/ (one file per spec
+family), challenge, lab, comms, module and syllabus. A file imports only from
+the files before it in that list. Every public name is re-exported here, so
+`from app.content.schema import ...` works everywhere, as it did when this was
+one file.
+"""
+
+from .base import Slug, Text
+from .challenge import Challenge, ChallengeCheck, PyName
+from .comms import Avatar, Beat, CastSpec, Comms, Drill, Message, WindowEvent
+from .lab import (
+    MAX_PASTE,
+    ContainsLabCheck,
+    Lab,
+    LabBox,
+    LabCheck,
+    LineCount,
+    LinesLabCheck,
+    NotContainsLabCheck,
+    RegexLabCheck,
+)
+from .module import ModuleFile
+from .questions import Card, ChoiceQuestion, FillQuestion, MultiQuestion, Question
+from .syllabus import (
+    BadgeRule,
+    BadgeSpec,
+    Emblem,
+    FirstPerfectQuizRule,
+    LabsCompletedRule,
+    RankSpec,
+    StreakRule,
+    Syllabus,
+    TrackSpec,
+    UnitCompleteRule,
+    UnitEmblem,
+    UnitSpec,
+)
+from .terminal.addresses import HOST_NAME, STATION_RANGES, HostName, Port, Proto, station_address
+from .terminal.checks import (
+    ContainsCheck,
+    CwdCheck,
+    ExecutableCheck,
+    ExistsCheck,
+    FilesUnderCheck,
+    LacksCheck,
+    MissingCheck,
+    ModeCheck,
+    OwnerCheck,
+    ProcName,
+    RunningCheck,
+    Signal,
+    SignalledCheck,
+    StoppedCheck,
+    SymlinkCheck,
+    TerminalCheck,
+    check_path,
+    describe,
+)
+from .terminal.dns import ETC_HOSTS, DnsRecord, DnsSpec
+from .terminal.exercise import KNOWN_GIDS, TerminalExercise
+from .terminal.files import STATION_NOW, AbsPath, Account, FsEntry, LinkTarget, Octal, Size, SizeText, Stamp, size_bytes
+from .terminal.firewall import UFW_INSTALLED, FirewallRule, FirewallSpec, ufw_conf, ufw_rules
+from .terminal.network import ConnectionSpec, HostSpec, InterfaceSpec, ListenSpec, NetworkSpec, RouteSpec, ServiceSpec
+from .terminal.system import AccountSpec, DiskSpec, MemorySpec, ProcessSpec, proc_name
+
+__all__ = [
+    "AbsPath",
+    "Account",
+    "AccountSpec",
+    "Avatar",
+    "BadgeRule",
+    "BadgeSpec",
+    "Beat",
+    "Card",
+    "CastSpec",
+    "Challenge",
+    "ChallengeCheck",
+    "check_path",
+    "ChoiceQuestion",
+    "Comms",
+    "ConnectionSpec",
+    "ContainsCheck",
+    "ContainsLabCheck",
+    "CwdCheck",
+    "describe",
+    "DiskSpec",
+    "DnsRecord",
+    "DnsSpec",
+    "Drill",
+    "Emblem",
+    "ETC_HOSTS",
+    "ExecutableCheck",
+    "ExistsCheck",
+    "FilesUnderCheck",
+    "FillQuestion",
+    "FirewallRule",
+    "FirewallSpec",
+    "FirstPerfectQuizRule",
+    "FsEntry",
+    "HOST_NAME",
+    "HostName",
+    "HostSpec",
+    "InterfaceSpec",
+    "KNOWN_GIDS",
+    "Lab",
+    "LabBox",
+    "LabCheck",
+    "LabsCompletedRule",
+    "LacksCheck",
+    "LineCount",
+    "LinesLabCheck",
+    "LinkTarget",
+    "ListenSpec",
+    "MAX_PASTE",
+    "MemorySpec",
+    "Message",
+    "MissingCheck",
+    "ModeCheck",
+    "ModuleFile",
+    "MultiQuestion",
+    "NetworkSpec",
+    "NotContainsLabCheck",
+    "Octal",
+    "OwnerCheck",
+    "Port",
+    "proc_name",
+    "ProcessSpec",
+    "ProcName",
+    "Proto",
+    "PyName",
+    "Question",
+    "RankSpec",
+    "RegexLabCheck",
+    "RouteSpec",
+    "RunningCheck",
+    "ServiceSpec",
+    "Signal",
+    "SignalledCheck",
+    "Size",
+    "size_bytes",
+    "SizeText",
+    "Slug",
+    "Stamp",
+    "station_address",
+    "STATION_NOW",
+    "STATION_RANGES",
+    "StoppedCheck",
+    "StreakRule",
+    "Syllabus",
+    "SymlinkCheck",
+    "TerminalCheck",
+    "TerminalExercise",
+    "Text",
+    "TrackSpec",
+    "ufw_conf",
+    "UFW_INSTALLED",
+    "ufw_rules",
+    "UnitCompleteRule",
+    "UnitEmblem",
+    "UnitSpec",
+    "WindowEvent",
+]

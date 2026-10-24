@@ -3,7 +3,7 @@
 A badge's definition (name, emblem, rule) lives in syllabus.yml. Its rule names
 one of the evaluators below, so content chooses the rule and its argument but
 can't run code. A new kind of badge (like #121's labs_completed) is a new rule
-model in app/content/schema.py plus a case in qualifies().
+model in app/content/schema/syllabus.py plus a case in qualifies().
 
 Earning is idempotent: (user_id, badge_slug) is unique in badges_earned and
 award() inserts with ON CONFLICT DO NOTHING, so a rule satisfied again, or a

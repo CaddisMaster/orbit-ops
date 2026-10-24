@@ -15,7 +15,7 @@
   // first, then the resolver /etc/resolv.conf names. getent, ping and nc go
   // that way; dig and host skip the file and ask the resolver. Both files are
   // read live, so editing them changes the answers. The resolver answers from
-  // the exercise's `network.dns` (schema.py DnsSpec). dig and host print what
+  // the exercise's `network.dns` (schema/terminal/dns.py DnsSpec). dig and host print what
   // BIND 9.18's do, checked against a bind9 resolver in ubuntu:24.04 containers.
   var ETC_HOSTS = "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n";
   var DIG_BANNER = "; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> ";

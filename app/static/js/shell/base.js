@@ -176,7 +176,7 @@
 
   // --- the station network (#164) -------------------------------------------------------
   // The console's interfaces, its own sockets and the other hosts come from the
-  // exercise's `network:` (app/content/schema.py NetworkSpec). Nothing real is
+  // exercise's `network:` (app/content/schema/terminal/network.py NetworkSpec). Nothing real is
   // touched: ip, ss, ping and nc read this, and print what Ubuntu 24.04's do
   // (iproute2 6.1, iputils 20240117, OpenBSD netcat 1.226), checked against
   // the real ones. DEFAULT_NETWORK is NetworkSpec's defaults; a test keeps

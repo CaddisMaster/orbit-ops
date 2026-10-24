@@ -34,6 +34,11 @@ and why it matters, not what the diff says.
   processes, network, names) each have their own. Nothing changes for the learner. Every
   console test, every task's reference solution and the shared grading cases pass unchanged.
   This is groundwork for Unit 1.5, which adds `systemctl` and services to the console.
+- The content schema is now a package of small files by area instead of one of 1,136 lines
+  (#257). Quiz questions, labs, challenges, the comms log and the syllabus each have a file,
+  and the console's specs (files, checks, accounts and processes, network, DNS, firewall)
+  have one per family. Authors and learners see no change: content validates exactly as
+  before, with the same error messages. This is groundwork for Unit 1.5's systemd specs.
 - Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must
   hold the ALERT lines **and nothing else**, so copying all of `core.log` into it no longer
   passes. Module 08's `noisy.txt` must hold the **three** busiest addresses, not every address

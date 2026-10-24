@@ -1,6 +1,6 @@
 # Content authoring
 
-How to write curriculum for Orbit Ops. The schema is enforced by `app/content/schema.py`, both
+How to write curriculum for Orbit Ops. The schema is enforced by `app/content/schema/`, both
 when the app starts and in CI (`tests/test_content.py`), so a broken lesson fails a PR and never
 reaches production. Error messages name the file and the field, for example
 `core/linux-shell/03-permissions.md: quiz.2.choice.answer: Value error, answer 4 is not an index into the 4 options`.
@@ -49,7 +49,7 @@ fill that section's compartments in syllabus order. Each section has five. A six
 track fails `tests/test_station_map.py` until the art gains a compartment for it.
 
 `emblem` is a line-art illustration drawn in the deck's colour on the syllabus and on the unit's
-module pages. The set is fixed (`UnitEmblem` in `app/content/schema.py`, drawn in
+module pages. The set is fixed (`UnitEmblem` in `app/content/schema/syllabus.py`, drawn in
 `app/templates/partials/_unit_emblem.html`); a new one is an SVG added to both. Each track's
 colour is in `app/static/css/style.css` under "Decks", keyed by the track slug, so a new track
 needs a `.deck--<slug>` line there too.
@@ -65,7 +65,7 @@ A badge's `rule` is one of a fixed set, so content picks the rule but cannot run
 Rules are checked after every module completion against everything the learner has done, so a
 badge added later is earned at the learner's next completion. Emblems are inline SVGs in
 `app/templates/partials/_emblem.html`; adding one means adding it there and to `Emblem` in
-`app/content/schema.py`. A new *kind* of rule is code: a model in the schema and a case in
+`app/content/schema/syllabus.py`. A new *kind* of rule is code: a model in the schema and a case in
 `app/game/badges.py`.
 
 ## A module
@@ -288,14 +288,14 @@ Sizes, dates, links, the disk and memory (#67):
   `contents` is a sample for `cat`, and `ls`, `du`, `df`, `find -size` and `tar` see the size.
   Writing over the file replaces it (so `> big.log` frees the space), and appending adds to it.
 - **`mtime`** dates a file on the **station's clock**, which starts at 2026-10-08 09:00
-  (`STATION_NOW` in `app/content/schema.py`, `START_TIME` in `shell/base.js`; a test holds them
+  (`STATION_NOW` in `app/content/schema/terminal/files.py`, `START_TIME` in `shell/base.js`; a test holds them
   equal). It can't be later. Ages for `find -mtime` and `max_age` count back from it, so a file
   dated 2026-09-20 is 18 days old for every learner, whatever today's date.
 - **`type: link`** with a `target` (stored as written, so a relative target is relative to the
   link's directory). Dangling targets are allowed.
 
 The station network (#164). Every console has one; without `network:` it is the default below
-(`NetworkSpec` in `app/content/schema.py`, `DEFAULT_NETWORK` in `shell/base.js`, a test holds them equal):
+(`NetworkSpec` in `app/content/schema/terminal/network.py`, `DEFAULT_NETWORK` in `shell/base.js`, a test holds them equal):
 
 ```yaml
   network:
@@ -598,7 +598,7 @@ moment is when the XP ledger first reached it, and a badge's is when it was earn
 a line changes everyone's history.
 
 A new character needs an avatar sprite in `art/sprites.py` (and its name in `Avatar` in
-`app/content/schema.py`); a new window event needs a sprite in `art/sprites.py`, its entry in
+`app/content/schema/comms.py`); a new window event needs a sprite in `art/sprites.py`, its entry in
 `WINDOW_SPRITES` (`app/comms.py`), its name in `WindowEvent`, and a rule plus keyframes in
 `style.css` whose `left`/`top` also make a sensible still for reduced motion. The art is code: change it in `art/`, run
 `docker compose exec -u "$(id -u):$(id -g)" web python -m art.build`, and commit both
