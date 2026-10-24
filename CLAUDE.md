@@ -91,10 +91,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.11.0** is in production (2026-10-21). Merged since, unreleased: the
-container hardening (#263–#265, and #266's compose change). ⚠️ Before the next release, #266's
-`db` change must be applied by hand on the droplet (RUNBOOK §5), or the release guard refuses
-the release. Next is #255 (split `shell.js`), then Unit 1.5, systemd & services. Open small
-follow-ups: #248, #256–#258, #260.
+container hardening (#263–#266; #266's `db` change was applied on the droplet by hand on
+2026-10-24, so the release guard passes), the `shell.js` split (#255) and the schema package
+(#257). Next: release those, then Unit 1.5, systemd & services. Open small follow-ups: #248,
+#256, #258, #260.
 
 ## Maintainer notes (local only)
 
