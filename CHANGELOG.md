@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.11.1] — 2026-10-24
+
+Hardening, with nothing new for the learner. The app's container is locked down and can't
+rewrite its own code, every image is scanned before it deploys and carries a list of what's in
+it, and the database is pinned to an exact Postgres image. The station console's shell and the
+content schema are split into small files by area, ready for Unit 1.5. Two Unit 1.1 console
+tasks now check exactly what they ask for.
+
 ### Security
 - The app can no longer rewrite its own code (#263). The image's code and lessons are owned by
   root, and the app runs as a user with no home directory or login shell, so a compromised app
@@ -24,7 +32,7 @@ and why it matters, not what the diff says.
 - The database image is pinned to Postgres 16.15 by digest (#266), so a pull can no longer
   change the database under a running release, and it can't gain privileges through setuid
   programs. CI and the release smoke test now test against that same Postgres. Applied to the
-  droplet by hand, before the next release (RUNBOOK §5).
+  droplet by hand on 2026-10-24, before this release (RUNBOOK §5).
 - Python 3.14.8 (#265), which fixes a critical CVE (CVE-2026-19445) the new scan found in
   3.14.7. The new base image also brings Debian's fixed OpenSSL.
 
@@ -39,6 +47,8 @@ and why it matters, not what the diff says.
   and the console's specs (files, checks, accounts and processes, network, DNS, firewall)
   have one per family. Authors and learners see no change: content validates exactly as
   before, with the same error messages. This is groundwork for Unit 1.5's systemd specs.
+
+### Fixed
 - Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must
   hold the ALERT lines **and nothing else**, so copying all of `core.log` into it no longer
   passes. Module 08's `noisy.txt` must hold the **three** busiest addresses, not every address
