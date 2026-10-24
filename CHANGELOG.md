@@ -29,6 +29,11 @@ and why it matters, not what the diff says.
   3.14.7. The new base image also brings Debian's fixed OpenSSL.
 
 ### Changed
+- The station console's shell is now twelve files by area instead of one of 6,275 lines (#255):
+  the parser, word expansion, running commands, and the command families (files, text,
+  processes, network, names) each have their own. Nothing changes for the learner. Every
+  console test, every task's reference solution and the shared grading cases pass unchanged.
+  This is groundwork for Unit 1.5, which adds `systemctl` and services to the console.
 - Two Unit 1.1 console tasks now check what they ask for (#249). Module 07's `alerts.txt` must
   hold the ALERT lines **and nothing else**, so copying all of `core.log` into it no longer
   passes. Module 08's `noisy.txt` must hold the **three** busiest addresses, not every address

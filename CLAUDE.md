@@ -48,7 +48,7 @@ app/ai.py            models, prices and cost per call (pure); app/spend.py: the 
 app/hints.py         hints: the prompt without the answer key, and the leak guard on the reply
 app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their ledgers)
 app/station_map.py   the /map layout (pure); app/console.py: header readout + comms log (app/comms.py)
-app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js is the simulated shell
+app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js + shell/ is the simulated shell
 app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
 app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review)

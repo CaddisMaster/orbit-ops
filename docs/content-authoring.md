@@ -288,14 +288,14 @@ Sizes, dates, links, the disk and memory (#67):
   `contents` is a sample for `cat`, and `ls`, `du`, `df`, `find -size` and `tar` see the size.
   Writing over the file replaces it (so `> big.log` frees the space), and appending adds to it.
 - **`mtime`** dates a file on the **station's clock**, which starts at 2026-10-08 09:00
-  (`STATION_NOW` in `app/content/schema.py`, `START_TIME` in `shell.js`; a test holds them
+  (`STATION_NOW` in `app/content/schema.py`, `START_TIME` in `shell/base.js`; a test holds them
   equal). It can't be later. Ages for `find -mtime` and `max_age` count back from it, so a file
   dated 2026-09-20 is 18 days old for every learner, whatever today's date.
 - **`type: link`** with a `target` (stored as written, so a relative target is relative to the
   link's directory). Dangling targets are allowed.
 
 The station network (#164). Every console has one; without `network:` it is the default below
-(`NetworkSpec` in `app/content/schema.py`, `DEFAULT_NETWORK` in `shell.js`, a test holds them equal):
+(`NetworkSpec` in `app/content/schema.py`, `DEFAULT_NETWORK` in `shell/base.js`, a test holds them equal):
 
 ```yaml
   network:
@@ -508,7 +508,8 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     prompt a `set -e` failure prints `logout` and a note, since the console can't close.
 
   Anything else prints "command not found". Not yet: `set`, `printf`, `top`. Don't set a task that needs more: add the
-  command to `app/static/js/shell.js` first, with a test in `tests/js/`.
+  command to the console's shell first (`app/static/js/shell/`, the part for its family), with a
+  test in `tests/js/`.
 - **`~` in the prompt** appears only when `cwd` is `/home/<user>`; otherwise the prompt shows
   the path. Starting in `/home/cadet` (listed as a directory) makes the console feel like a
   real login.
