@@ -25,6 +25,13 @@ from tests.conftest import csrf
 from tests.test_progress import complete
 from tests.test_xp import MODULE, SYLLABUS
 
+JS = Path(__file__).resolve().parents[1] / "app/static/js"
+
+
+def shell_source():
+    """The console's shell, every part of it (#255): shell.js and shell/*.js."""
+    return "".join(p.read_text() for p in [JS / "shell.js", *sorted((JS / "shell").glob("*.js"))])
+
 TERMINAL = """terminal:
   task: Make `scrubber.conf` readable by its owner only.
   cwd: /station
@@ -143,6 +150,34 @@ def test_the_real_exercises_load_and_start_unsolved():
 
 
 # --- the page ----------------------------------------------------------------------------
+def shell_parts():
+    """shell.js's PARTS: the order the parts load in."""
+    return json.loads(re.search(r"var PARTS = (\[[^\]]*\]);", (JS / "shell.js").read_text()).group(1))
+
+
+@pytest.mark.criterion(255, "The shell is split by area")
+def test_the_shell_is_split_by_area():
+    parts = {name: (JS / "shell" / f"{name}.js").read_text() for name in shell_parts()}
+    assert sorted(parts) == sorted(p.stem for p in (JS / "shell").glob("*.js"))  # every part is listed
+    files = {**parts, "shell.js": (JS / "shell.js").read_text()}
+    assert len(files) > 1
+    for name, text in files.items():
+        assert text.count("\n") <= 2000, f"{name} has {text.count(chr(10))} lines"
+        assert not ("function Parser(" in text and "Object.assign(COMMANDS" in text), f"{name} has the parser and commands"
+
+
+@pytest.mark.criterion(255, "The page still loads it under the CSP")
+def test_the_page_loads_every_shell_part_in_order(logged_in, terminal_curriculum):
+    complete(logged_in, "one")
+    page = logged_in.get("/modules/two").text
+    scripts = re.findall(r'<script src="[^"]*/static/js/([^"?]+)\?v=[^"]+"[^>]* defer></script>', page)
+    shell = [f"shell/{p}.js" for p in shell_parts()]
+    start = scripts.index("manual.js")
+    assert scripts[start : start + len(shell) + 3] == ["manual.js", *shell, "shell.js", "console.js"]  # each part before the next
+    for path in shell:
+        assert logged_in.get(f"/static/js/{path}").status_code == 200
+
+
 @pytest.mark.criterion(17, "The console starts in the module's filesystem")
 def test_the_module_page_carries_the_console_and_its_starting_filesystem(logged_in, terminal_curriculum):
     complete(logged_in, "one")
@@ -495,7 +530,7 @@ def test_symlink_and_size_checks_are_graded_on_the_server(logged_in, tmp_path, u
 def test_the_station_clock_matches_the_console():
     from app.content.schema import STATION_NOW
 
-    shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
+    shell = shell_source()
     assert f"var START_TIME = new Date({STATION_NOW.year}, {STATION_NOW.month - 1}, {STATION_NOW.day}, {STATION_NOW.hour}, {STATION_NOW.minute});" in shell
 
 
@@ -581,9 +616,9 @@ def test_the_network_reaches_the_console_only_when_the_exercise_has_one(tmp_path
 def test_the_default_network_matches_the_console():
     from app.content.schema import NetworkSpec
 
-    shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
+    shell = shell_source()
     found = re.search(r"^  var DEFAULT_NETWORK = (\{.*\});$", shell, re.M)
-    assert found, "shell.js has no one-line DEFAULT_NETWORK"
+    assert found, "the shell has no one-line DEFAULT_NETWORK"
     assert json.loads(found.group(1)) == NetworkSpec().model_dump()
 
 
@@ -652,9 +687,9 @@ def test_an_exercise_can_bring_its_own_etc_hosts(tmp_path):
 def test_the_station_hosts_file_matches_the_console():
     from app.content.schema import ETC_HOSTS
 
-    shell = (Path(__file__).resolve().parents[1] / "app/static/js/shell.js").read_text()
+    shell = shell_source()
     found = re.search(r'^  var ETC_HOSTS = (".*");$', shell, re.M)
-    assert found, "shell.js has no one-line ETC_HOSTS"
+    assert found, "the shell has no one-line ETC_HOSTS"
     assert json.loads(found.group(1)) == ETC_HOSTS
 
 

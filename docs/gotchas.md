@@ -62,6 +62,14 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   `STATION_NOW` is the same moment, and `test_the_station_clock_matches_the_console` keeps them
   together.
 
+- **The console's shell is in parts that share one namespace, `S`** (#255). Each part copies
+  what it uses from `S` when it loads and adds what others need at its end
+  (`Object.assign(S, {…})`), so **a part may use only the parts before it** in `shell.js`'s
+  `PARTS`. A name used from a later part, or missing from its part's export, is `undefined`, and
+  that shows only when a command reaches it, so give any new command a `tests/js/` test. A new
+  part goes in `PARTS` and in `module.html`'s loop, and a test holds the two equal. A command
+  joins its family with `Object.assign(COMMANDS, {…})` or `COMMANDS.name = …`.
+
 ## Containers
 
 - **The host `.env` is mode 600 and the container user is uid 10001.** The app does not read
