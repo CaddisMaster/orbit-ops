@@ -141,19 +141,38 @@ cd /opt/orbit-ops && set -a && . ./.env && set +a
 # 1. What's running now. A change of MAJOR version (16 → 17) is not this procedure: it needs
 #    a dump and restore. A minor change (16.x → 16.y) is safe to restart into.
 docker compose exec -T db postgres --version
-# 2. A verified dump.
-( set -o pipefail
+#    And the learner's rows, to compare at the end.
+COUNTS="select (select count(*) from module_progress), (select count(*) from xp_events), (select count(*) from card_state)"
+docker compose exec -T db psql -U "$DB_USER" "$DB_NAME" -tAc "$COUNTS"
+# 2. A verified dump, private (root's umask would leave it world-readable) and owned by
+#    deploy like the release backups.
+( umask 077; set -o pipefail
   docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" | gzip > backups/pre-db-change.sql.gz ) \
-  && gzip -dc backups/pre-db-change.sql.gz | tail -n 20 | grep 'dump complete'
+  && gzip -dc backups/pre-db-change.sql.gz | tail -n 20 | grep 'dump complete' \
+  && chown deploy:deploy backups/pre-db-change.sql.gz && ls -l backups/pre-db-change.sql.gz
 # Go on only if that printed "-- PostgreSQL database dump complete" (#116). A valid gzip
 # alone proves nothing: a failed pg_dump still leaves one. (20 lines: a `\unrestrict` line
 # follows the marker.)
-# 3. From the Mac: scp main's docker-compose.yml to /opt/orbit-ops/docker-compose.yml. Then:
-docker compose pull db && docker compose up -d db && docker compose ps
+# 3. main's docker-compose.yml, fetched at a commit and checked. The repo is public and the
+#    Mac has no clone. SHA and SUM are main's commit and `sha256sum docker-compose.yml` there.
+curl -fsSL "https://raw.githubusercontent.com/CaddisMaster/orbit-ops/$SHA/docker-compose.yml" -o docker-compose.yml.new
+echo "$SUM  docker-compose.yml.new" | sha256sum -c
+cp -p docker-compose.yml docker-compose.yml.prev
+chown deploy:deploy docker-compose.yml.new && chmod 644 docker-compose.yml.new && mv docker-compose.yml.new docker-compose.yml
+docker compose config --quiet && echo config ok
+# 4. Only db. Never name another service here, and never a bare `up -d`.
+docker compose pull db && docker compose up -d db && sleep 15 && docker compose ps
 docker compose exec -T db postgres --version
-# 4. Both apps, since they share the droplet.
-curl -s http://127.0.0.1:5002/healthz; curl -s http://127.0.0.1:5001/healthz
+docker inspect -f '{{.HostConfig.SecurityOpt}}' $(docker compose ps -q db)
+# 5. Both apps, since they share the droplet, and the same rows as in step 1.
+curl -s http://127.0.0.1:5002/healthz; echo; curl -s http://127.0.0.1:5001/healthz; echo
+docker compose exec -T db psql -U "$DB_USER" "$DB_NAME" -tAc "$COUNTS"
 ```
+
+If `db` won't come up in step 4: `mv docker-compose.yml.prev docker-compose.yml && docker
+compose up -d db` brings back the old definition and its still-cached image. The data volume
+is never touched, and the step 2 dump is there if it's needed (§6). First run: #266,
+2026-10-24 (16.14 → 16.15, rows unchanged).
 
 `up -d db` touches only `db`, but `web` loses its connections while Postgres restarts; a page
 load in that window gets the error page, and the next one works. The release that follows
