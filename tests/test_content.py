@@ -5,6 +5,7 @@ broken lesson fail CI rather than production), and the validator is exercised
 against small throwaway trees built in tmp_path.
 """
 
+import ast
 import html
 import re
 import textwrap
@@ -1277,3 +1278,31 @@ def test_okafor_is_he():
             continue
         for sentence in re.split(r"(?<=[.!?\"])\s+", text):  # the auditor's or Nakamura's, never Okafor's
             assert not ("Okafor" in sentence and SHE.search(sentence)), f"{slug}: {sentence}"
+
+
+# --- #257: the schema is a package ----------------------------------------------------------
+SCHEMA = Path(__file__).resolve().parents[1] / "app/content/schema"
+
+
+@pytest.mark.criterion(257, "The schema is a package")
+def test_the_schema_is_a_package_of_small_files():
+    files = sorted(SCHEMA.rglob("*.py"))
+    assert (SCHEMA / "__init__.py") in files and len(files) > 2
+    assert not (SCHEMA.parent / "schema.py").exists()
+    for f in files:
+        assert f.read_text().count("\n") <= 600, f"{f.relative_to(SCHEMA)} is over 600 lines"
+
+
+@pytest.mark.criterion(257, "Nothing that imports it changes")
+def test_every_import_of_the_schema_resolves():
+    import app.content.schema as schema
+
+    root = SCHEMA.parents[2]
+    imported = set()
+    for f in [*root.glob("app/**/*.py"), *root.glob("scripts/*.py"), *root.glob("tests/*.py")]:
+        for node in ast.walk(ast.parse(f.read_text())):
+            if isinstance(node, ast.ImportFrom) and node.module == "app.content.schema":
+                imported |= {a.name for a in node.names}
+    assert imported  # the scan found the imports
+    assert sorted(n for n in imported if not hasattr(schema, n)) == []
+    assert sorted(n for n in schema.__all__ if not hasattr(schema, n)) == []

@@ -1,6 +1,6 @@
 {# Unit illustrations: inline line art in the deck's colour (currentColor), so
    no image requests and no CSP change. The names are the schema's
-   `UnitEmblem` literal (app/content/schema.py); keep the two in step. #}
+   `UnitEmblem` literal (app/content/schema/syllabus.py); keep the two in step. #}
 {% macro unit_emblem(name, size=56) -%}
 {% if name %}
 <svg class="unit-emblem" data-emblem="{{ name }}" viewBox="0 0 64 64" width="{{ size }}" height="{{ size }}"

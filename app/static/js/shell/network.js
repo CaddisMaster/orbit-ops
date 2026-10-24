@@ -419,7 +419,7 @@
   // --- the console's firewall: ufw (#166) ---------------------------------------------
   // ufw keeps its state in its own files, and so does the console: ENABLED in
   // /etc/ufw/ufw.conf, and the rules as `### tuple ###` lines in user.rules
-  // (schema.py writes them for the starting filesystem, byte for byte as ufw
+  // (schema/terminal/firewall.py writes them for the starting filesystem, byte for byte as ufw
   // 0.36.2 does, and a test holds this renderer to the same bytes). Rules only
   // touch connections *into* the console from other hosts: the first rule that
   // matches decides, and with none, incoming is denied, which drops the packet,

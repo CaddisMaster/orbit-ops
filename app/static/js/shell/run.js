@@ -402,7 +402,7 @@
 
   // --- processes and jobs ---------------------------------------------------------------
   function procName(command) {
-    var first = command.replace(/^-+/, "").split(" ")[0]; // the same rule as app/content/schema.py proc_name()
+    var first = command.replace(/^-+/, "").split(" ")[0]; // the same rule as app/content/schema/terminal/system.py proc_name()
     return first.slice(first.lastIndexOf("/") + 1).replace(/:$/, "");
   }
 

@@ -86,7 +86,7 @@ Each module's front matter holds `slug`, `title`, `minutes`, `xp`, `story` (a mi
 - `lab`: steps, `verify` (exact / regex / sha256 of the expected output) and `ai_review: true|false`.
 - `cards[]`: front and back for flashcards.
 
-`app/content/schemas.py` validates all of this with Pydantic at startup and in CI (`tests/test_content.py`). It checks that slugs are unique, prerequisites exist, the DAG has no cycles, and every quiz has an answer.
+`app/content/schema/` validates all of this with Pydantic at startup and in CI (`tests/test_content.py`). It checks that slugs are unique, prerequisites exist, the DAG has no cycles, and every quiz has an answer.
 
 **The space-station story.** Sean is a new cadet on the orbital station *Meridian*. Each track is a station deck that he brings back online:
 | Track | Station deck | Units (approx. modules) |
