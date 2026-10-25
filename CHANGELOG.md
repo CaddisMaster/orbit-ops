@@ -21,6 +21,9 @@ and why it matters, not what the diff says.
 - Two read-only admin pages (#285). AI spend shows the month's total against the budget and
   every call behind it. System shows the app and Pyodide versions, the migrations, the catalog's
   size and how many learner rows there are. Neither shows anything from the server's secrets.
+- The admin panel can reset one module or one unit (#284), so a module changed after a
+  beginner audit can be played again without replaying everything. Badges and streak days
+  stay. It can also preview any module, locked or not, without recording anything.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the

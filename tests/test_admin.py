@@ -494,3 +494,134 @@ def test_no_secrets_on_the_admin_pages(as_admin, monkeypatch):
 @pytest.mark.parametrize("path", ["/admin/ai", "/admin/system"])
 def test_the_read_only_pages_are_admin_only(logged_in, path):
     assert logged_in.get(path).status_code == 404
+
+
+# --- #284: one module or unit, and the preview ------------------------------
+
+def _seed_module(user_id: int, slug: str) -> None:
+    """A completed module with every kind of row a module owns: each XP ref
+    shape (the slug, a hint's "<slug>/<item>", a card review's
+    "<day>/<slug>/<card>"), an attempt and a review card."""
+    with SessionLocal() as db:
+        db.add_all([
+            ModuleProgress(user_id=user_id, module_slug=slug, status="complete"),
+            ExerciseAttempt(user_id=user_id, module_slug=slug, kind="quiz", item=0, submitted=["1"], correct=True),
+            XpEvent(user_id=user_id, amount=50, reason="module_complete", ref=slug),
+            XpEvent(user_id=user_id, amount=-5, reason="hint", ref=f"{slug}/quiz-0"),
+            XpEvent(user_id=user_id, amount=2, reason="card_review", ref=f"2026-10-20/{slug}/card"),
+            CardState(user_id=user_id, card_id=f"{slug}/card", ease=2.5, interval_days=1,
+                      due_on=date(2026, 10, 21), last_reviewed_on=date(2026, 10, 20)),
+        ])
+        db.commit()
+
+
+def _module_rows(user_id: int, slug: str) -> int:
+    with SessionLocal() as db:
+        return sum(
+            db.scalar(select(func.count()).select_from(m).where(m.user_id == user_id, cond))
+            for m, cond in (
+                (ModuleProgress, ModuleProgress.module_slug == slug),
+                (ExerciseAttempt, ExerciseAttempt.module_slug == slug),
+                (CardState, CardState.card_id.startswith(f"{slug}/")),
+                (XpEvent, (XpEvent.ref == slug) | XpEvent.ref.startswith(f"{slug}/") | XpEvent.ref.contains(f"/{slug}/")),
+            )
+        )
+
+
+def _history(user_id: int) -> tuple[int, int]:
+    with SessionLocal() as db:
+        return (
+            db.scalar(select(func.count()).select_from(BadgeEarned).where(BadgeEarned.user_id == user_id)),
+            db.scalar(select(func.count()).select_from(ActivityDay).where(ActivityDay.user_id == user_id)),
+        )
+
+
+def _reset_part(client, user_id, part, password=PASSWORD):
+    return client.post("/admin/reset-part", data={"user_id": user_id, "part": part, "password": password, "csrf_token": csrf(client)})
+
+
+@pytest.fixture
+def catalog(client):
+    with client:  # the lifespan loads it
+        return app.state.catalog
+
+
+@pytest.mark.criterion(284, "Resetting one module replays only that module")
+def test_resetting_one_module_replays_only_that_module(as_admin, make_user, catalog):
+    from app import progress
+
+    first, second = catalog.units[catalog.tracks[0].units[0]].modules[:2]
+    target = make_user()
+    _seed_module(target.id, first)
+    _seed_module(target.id, second)
+    with SessionLocal() as db:
+        db.add_all([BadgeEarned(user_id=target.id, badge_slug="first-steps"), ActivityDay(user_id=target.id, day=date(2026, 10, 20))])
+        db.commit()
+    response = _reset_part(as_admin, target.id, f"module:{second}")
+    assert response.status_code == 200
+    assert f"Reset “{catalog.modules[second].title}” for {target.username}." in response.text
+    assert _module_rows(target.id, second) == 0
+    assert _module_rows(target.id, first) == 6
+    assert _history(target.id) == (1, 1)
+    with SessionLocal() as db:
+        completed = progress.completed_slugs(db, target.id)
+    assert first in completed and second not in completed
+    assert progress.module_available(catalog, second, completed)
+
+
+@pytest.mark.criterion(284, "Resetting a unit")
+def test_resetting_a_unit_leaves_other_units_alone(as_admin, make_user, catalog):
+    unit_slug = catalog.tracks[0].units[0]
+    elsewhere = catalog.units[catalog.tracks[0].units[1]].modules[0]
+    target = make_user()
+    for slug in (*catalog.units[unit_slug].modules, elsewhere):
+        _seed_module(target.id, slug)
+    assert _reset_part(as_admin, target.id, f"unit:{unit_slug}").status_code == 200
+    assert all(_module_rows(target.id, slug) == 0 for slug in catalog.units[unit_slug].modules)
+    assert _module_rows(target.id, elsewhere) == 6
+
+
+def test_a_module_reset_needs_the_password_and_a_real_part(as_admin, make_user, catalog):
+    slug = catalog.units[catalog.tracks[0].units[0]].modules[0]
+    target = make_user()
+    _seed_module(target.id, slug)
+    assert _reset_part(as_admin, target.id, f"module:{slug}", password="not the password").status_code == 400
+    assert _reset_part(as_admin, target.id, "module:no-such-module").status_code == 400
+    assert _module_rows(target.id, slug) == 6
+
+
+def test_a_non_admin_cannot_reset_a_module(logged_in, make_user, catalog):
+    slug = catalog.units[catalog.tracks[0].units[0]].modules[0]
+    target = make_user()
+    _seed_module(target.id, slug)
+    assert _reset_part(logged_in, target.id, f"module:{slug}").status_code == 404
+    assert _module_rows(target.id, slug) == 6
+
+
+@pytest.mark.criterion(284, "Previewing a locked module changes nothing")
+def test_previewing_a_locked_module_changes_nothing(as_admin, admin, catalog):
+    from app import progress
+
+    locked = list(catalog.modules)[-1]
+    assert not progress.module_available(catalog, locked, set())
+    page = as_admin.get(f"/admin/preview/{locked}")
+    assert page.status_code == 200
+    assert "Admin preview of" in page.text
+    assert catalog.modules[locked].title in page.text
+    assert "<form" not in page.text.split("<main", 1)[1]  # nothing to answer
+    assert not any(_counts(admin.id).values())
+
+
+@pytest.mark.criterion(284, "Preview is admin-only")
+def test_preview_is_admin_only(logged_in, catalog):
+    assert logged_in.get(f"/admin/preview/{next(iter(catalog.modules))}").status_code == 404
+
+
+def test_previewing_an_unknown_module_is_a_404(as_admin):
+    assert as_admin.get("/admin/preview/no-such-module").status_code == 404
+
+
+def test_every_module_previews(as_admin, catalog):
+    """Each kind of content (quiz types, console task, challenge, lab, cards) renders."""
+    failures = [slug for slug in catalog.modules if as_admin.get(f"/admin/preview/{slug}").status_code != 200]
+    assert not failures

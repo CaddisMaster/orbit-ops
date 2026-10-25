@@ -34,6 +34,42 @@
 </section>
 
 <section class="card">
+  <h2>Reset one module or unit</h2>
+  <p class="muted">Clears that part's progress, answers, XP and review cards, so it plays again from the start. Badges and streak days stay.</p>
+  <form method="post" action="/admin/reset-part" class="stack admin-create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Account
+      <select name="user_id" required>
+        {% for row in learners %}<option value="{{ row.user.id }}">{{ row.user.username }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>What to reset
+      <select name="part" required>
+        {% for track in catalog.tracks %}{% for unit_slug in track.units %}{% set unit = catalog.units[unit_slug] %}
+        <optgroup label="{{ catalog.unit_code(unit_slug) }} {{ unit.title }}">
+          <option value="unit:{{ unit_slug }}">The whole unit</option>
+          {% for slug in unit.modules %}<option value="module:{{ slug }}">{{ catalog.unit_code(unit_slug) }}.{{ loop.index }} {{ catalog.modules[slug].title }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}{% endfor %}
+      </select>
+    </label>
+    <label>Your password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="secondary">Reset</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Preview a module</h2>
+  <p class="muted">Read any module, locked or not. Previewing records nothing.</p>
+  {% for track in catalog.tracks %}{% for unit_slug in track.units %}{% set unit = catalog.units[unit_slug] %}
+  <details class="admin-units">
+    <summary>{{ catalog.unit_code(unit_slug) }} {{ unit.title }}</summary>
+    <ol>{% for slug in unit.modules %}<li><a href="/admin/preview/{{ slug }}">{{ catalog.modules[slug].title }}</a></li>{% endfor %}</ol>
+  </details>
+  {% endfor %}{% endfor %}
+</section>
+
+<section class="card">
   <h2>Create an account</h2>
   <p class="muted">Fine for a friend's account. A second learner shares the single-user limits: the rate limits reset when the app restarts, and Python challenge results are trusted from the browser (#258).</p>
   <form method="post" action="/admin/users" class="stack admin-create">
