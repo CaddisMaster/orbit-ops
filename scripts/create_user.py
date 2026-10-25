@@ -1,9 +1,10 @@
 """Create (or reset the password of) the learner account.
 
-    docker compose exec web python -m scripts.create_user <username>
+    docker compose exec web python -m scripts.create_user <username> [--admin]
 
 Prompts for the password so it never lands in shell history. Resetting rotates
-the session token, which logs out every existing session.
+the session token, which logs out every existing session. --admin makes the
+account an admin (#281); without it, an existing account keeps its setting.
 """
 
 import argparse
@@ -22,6 +23,7 @@ MIN_LENGTH = 12
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("username")
+    parser.add_argument("--admin", action="store_true", help="make the account an admin")
     args = parser.parse_args()
 
     password = getpass.getpass("Password: ")
@@ -35,14 +37,16 @@ def main() -> int:
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.username == args.username))
         if user is None:
-            db.add(User(username=args.username, password_hash=hash_password(password)))
+            db.add(User(username=args.username, password_hash=hash_password(password), is_admin=args.admin))
             action = "Created"
         else:
             user.password_hash = hash_password(password)
             user.session_token = new_session_token()
             action = "Reset password for"
+            if args.admin:
+                user.is_admin = True
         db.commit()
-    print(f"{action} {args.username}.")
+    print(f"{action} {args.username}{' (admin)' if args.admin else ''}.")
     return 0
 
 

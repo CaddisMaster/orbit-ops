@@ -12,7 +12,7 @@ from collections import defaultdict, deque
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -71,6 +71,15 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User | None
 def require_user(user: User | None = Depends(current_user)) -> User:
     if user is None:
         raise LoginRequired
+    return user
+
+
+def require_admin(user: User = Depends(require_user)) -> User:
+    """The admin panel's guard (#281). A logged-in non-admin gets the same 404
+    as a page that doesn't exist, so the panel isn't advertised; a logged-out
+    visitor goes to login like anywhere else."""
+    if not user.is_admin:
+        raise HTTPException(status_code=404)
     return user
 
 
@@ -142,6 +151,18 @@ def client_ip(request: Request) -> str:
     # X-Forwarded-For, and the port is bound to 127.0.0.1 so only Nginx can
     # reach it to set that header.
     return request.client.host if request.client else "unknown"
+
+
+def confirm_password(request: Request, user: User, password: str) -> str | None:
+    """Check the user's own password, re-entered before a destructive admin
+    action (#281), so a stolen session or a stray click can't wipe anything.
+    Counted by the login limiter, so the form is no way around it. Returns
+    what's wrong, or None when it's right."""
+    if not login_limiter.hit(client_ip(request)):
+        return "Too many attempts. Wait a minute and try again."
+    if not verify_password(user.password_hash, password):
+        return "That password is wrong. Nothing was changed."
+    return None
 
 
 # ---------------------------------------------------------------------------

@@ -9,6 +9,10 @@ and why it matters, not what the diff says.
 ### Added
 - Accounts can be marked as admins, ready for the admin panel that resets progress and
   creates users from inside the app (#280). Every existing account starts as a non-admin.
+- An admin panel at `/admin` (#281). It lists every account with its completed modules and XP,
+  and can wipe one account's progress so its modules can be played again from the start. The
+  login and the AI spend record stay. The reset asks for the admin's password again, and anyone
+  who isn't an admin sees a page that doesn't exist. `create_user.py --admin` makes an admin.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the

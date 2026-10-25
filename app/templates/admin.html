@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Admin · Orbit Ops{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow">Station command</p>
+  <h1>Admin</h1>
+  {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <table class="admin-table">
+    <thead>
+      <tr><th scope="col">Account</th><th scope="col" class="num">Modules done</th><th scope="col" class="num">XP</th><th scope="col">Joined</th><th scope="col">Reset progress</th></tr>
+    </thead>
+    <tbody>
+      {% for row in learners %}
+      <tr>
+        <td>{{ row.user.username }}{% if row.user.is_admin %} <span class="tag">admin</span>{% endif %}</td>
+        <td class="num">{{ row.completed }}</td>
+        <td class="num">{{ row.xp }}</td>
+        <td><time datetime="{{ row.user.created_at.isoformat() }}">{{ row.user.created_at.strftime("%-d %b %Y") }}</time></td>
+        <td>
+          <form method="post" action="/admin/users/{{ row.user.id }}/reset" class="admin-action">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <label class="visually-hidden" for="reset-pw-{{ row.user.id }}">Your password, to reset {{ row.user.username }}</label>
+            <input id="reset-pw-{{ row.user.id }}" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+            <button type="submit" class="secondary">Reset</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">A reset clears the account's modules, answers, XP, streak days, badges and review cards. The login and the AI spend record stay.</p>
+</section>
+{% endblock %}
