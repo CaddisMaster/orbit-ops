@@ -15,9 +15,7 @@ from sqlalchemy import select
 
 from app.db import SessionLocal
 from app.models import User, new_session_token
-from app.security import hash_password
-
-MIN_LENGTH = 12
+from app.security import PASSWORD_MIN_LENGTH, hash_password
 
 
 def main() -> int:
@@ -27,8 +25,8 @@ def main() -> int:
     args = parser.parse_args()
 
     password = getpass.getpass("Password: ")
-    if len(password) < MIN_LENGTH:
-        print(f"Password must be at least {MIN_LENGTH} characters.", file=sys.stderr)
+    if len(password) < PASSWORD_MIN_LENGTH:
+        print(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.", file=sys.stderr)
         return 1
     if getpass.getpass("Repeat: ") != password:
         print("Passwords do not match.", file=sys.stderr)

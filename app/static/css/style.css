@@ -848,3 +848,5 @@ body::before {
 .admin-action input { padding: 0.4rem 0.6rem; width: 10rem; }
 .notice { border: 1px solid var(--ok); color: var(--ok); border-radius: 6px; padding: 0.6rem 0.75rem; }
 .tag { border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0 0.5rem; font-size: 0.75rem; }
+.admin-create { max-width: 26rem; }
+.admin-create label.check { flex-direction: row; align-items: center; gap: 0.5rem; }

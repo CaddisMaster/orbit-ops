@@ -31,4 +31,18 @@
   </table>
   <p class="muted">A reset clears the account's modules, answers, XP, streak days, badges and review cards. The login and the AI spend record stay.</p>
 </section>
+
+<section class="card">
+  <h2>Create an account</h2>
+  <p class="muted">Fine for a friend's account. A second learner shares the single-user limits: the rate limits reset when the app restarts, and Python challenge results are trusted from the browser (#258).</p>
+  <form method="post" action="/admin/users" class="stack admin-create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Username <input name="username" autocomplete="off" required maxlength="64"></label>
+    <label>Their password <input name="new_password" type="password" autocomplete="new-password" required minlength="{{ password_min_length }}"></label>
+    <label>Their password again <input name="new_password_repeat" type="password" autocomplete="new-password" required minlength="{{ password_min_length }}"></label>
+    <label class="check"><input type="checkbox" name="make_admin" value="true"> Make this account an admin</label>
+    <label>Your password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="primary">Create account</button>
+  </form>
+</section>
 {% endblock %}
