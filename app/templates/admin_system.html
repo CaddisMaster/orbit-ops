@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}System · Orbit Ops{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="/admin">Admin</a></p>
+  <h1>System</h1>
+  <table class="admin-table">
+    <tbody>
+      <tr><th scope="row">App version</th><td>{{ app_version }} <span class="muted">({{ app_commit }})</span></td></tr>
+      <tr><th scope="row">Pyodide</th><td>{{ pyodide_version }}</td></tr>
+      <tr><th scope="row">Migrations in this image</th><td>head {{ code_head }}</td></tr>
+      <tr><th scope="row">Database revision</th><td>
+        {% if db_revision is none %}<span class="muted">not readable by the app's database role (kept from it on purpose)</span>
+        {% elif db_revision == code_head %}{{ db_revision }}: at head
+        {% else %}{{ db_revision }}: <strong>not at head</strong>{% endif %}
+      </td></tr>
+      <tr><th scope="row">Catalog</th><td>{{ catalog.tracks }} tracks, {{ catalog.units }} units, {{ catalog.modules }} modules</td></tr>
+    </tbody>
+  </table>
+  <h2>Learner state</h2>
+  <table class="admin-table">
+    <thead><tr><th scope="col">Table</th><th scope="col" class="num">Rows</th></tr></thead>
+    <tbody>
+      {% for table, count in counts.items() %}<tr><td><code>{{ table }}</code></td><td class="num">{{ count }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

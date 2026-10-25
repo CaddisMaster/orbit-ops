@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}AI spend · Orbit Ops{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="/admin">Admin</a></p>
+  <h1>AI spend</h1>
+  <p class="spend-total">${{ "%.2f" | format(spent / 100_000_000) }} of ${{ "%.2f" | format(budget / 100_000_000) }} spent in {{ month.strftime("%B %Y") }}</p>
+  <p class="muted">Uplink {{ "online" if online else "offline" }}: {{ "AI features can call." if online else "no key, or the month's budget is spent." }} The budget is set in the server's environment, not here.</p>
+  {% if requests %}
+  <table class="admin-table">
+    <thead>
+      <tr><th scope="col">When</th><th scope="col">Purpose</th><th scope="col">Model</th><th scope="col" class="num">Tokens in / out</th><th scope="col" class="num">Cost</th><th scope="col">Account</th></tr>
+    </thead>
+    <tbody>
+      {% for row, username in requests %}
+      <tr>
+        <td><time datetime="{{ row.created_at.isoformat() }}">{{ row.created_at.astimezone(tz).strftime("%-d %b %H:%M") }}</time></td>
+        <td>{{ row.purpose }}</td>
+        <td>{{ row.model }}</td>
+        <td class="num">{{ row.input_tokens + row.cache_read_tokens + row.cache_write_tokens }} / {{ row.output_tokens }}</td>
+        <td class="num">{{ "%.3f" | format(row.cost_microcents / 1_000_000) }}¢</td>
+        <td>{{ username or "deleted" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No AI calls this month.</p>
+  {% endif %}
+</section>
+{% endblock %}

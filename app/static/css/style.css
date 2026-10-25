@@ -851,3 +851,4 @@ body::before {
 .admin-create { max-width: 26rem; }
 .admin-create label.check { flex-direction: row; align-items: center; gap: 0.5rem; }
 button.secondary.danger { color: var(--danger); border-color: var(--danger); }
+.spend-total { font-size: 1.25rem; font-weight: 700; margin: 0.5rem 0; }

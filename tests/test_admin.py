@@ -1,11 +1,11 @@
 """The admin panel (#281): who may see it, and the progress reset."""
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, text, update
 
 from app.admin import LEARNER_STATE
 from app.db import SessionLocal
@@ -409,3 +409,88 @@ def test_an_awkward_username_still_downloads(as_admin):
         with SessionLocal() as db:
             db.execute(delete(User).where(User.id == odd_id))
             db.commit()
+# --- #285: the AI spend and system pages -----------------------------------
+
+PINNED = datetime(2031, 3, 15, 12, 0, tzinfo=UTC)  # a month no other test writes to
+
+
+@pytest.fixture
+def march_requests(make_user, monkeypatch):
+    """Two AI calls in the pinned month and one the month before."""
+    from app import spend
+
+    monkeypatch.setattr(spend, "_now", lambda: PINNED)
+    learner = make_user()
+    rows = [
+        AiRequest(user_id=learner.id, purpose="hint", model="claude-haiku-5-5", input_tokens=900, output_tokens=120, cost_microcents=51_000, created_at=PINNED - timedelta(days=2)),
+        AiRequest(user_id=learner.id, purpose="lab_review", model="claude-sonnet-5-5", input_tokens=3000, output_tokens=600, cost_microcents=1_830_000, created_at=PINNED - timedelta(days=1)),
+        AiRequest(user_id=learner.id, purpose="hint", model="claude-haiku-5-5", input_tokens=900, output_tokens=120, cost_microcents=777_000, created_at=PINNED - timedelta(days=30)),
+    ]
+    with SessionLocal() as db:
+        db.add_all(rows)
+        db.commit()
+        ids = [r.id for r in rows]
+    yield learner
+    with SessionLocal() as db:
+        db.execute(delete(AiRequest).where(AiRequest.id.in_(ids)))
+        db.commit()
+
+
+@pytest.mark.criterion(285, "The spend page agrees with the budget gate")
+def test_the_spend_page_agrees_with_the_budget_gate(as_admin, march_requests):
+    from app import spend
+
+    page = as_admin.get("/admin/ai")
+    assert page.status_code == 200
+    with SessionLocal() as db:
+        total = spend.spent_this_month(db, PINNED)
+    assert total == 1_881_000  # the two March calls, not February's
+    assert f"${total / 100_000_000:.2f} of $5.00 spent in March 2031" in page.text
+    assert "0.051¢" in page.text and "1.830¢" in page.text
+    assert "0.777¢" not in page.text  # last month's call isn't listed
+    assert page.text.count(march_requests.username) == 2
+
+
+@pytest.mark.criterion(285, "The system page shows the running versions")
+def test_the_system_page_shows_the_running_versions(as_admin):
+    from app.admin import code_head
+    from app.static_files import PYODIDE_VERSION
+
+    page = as_admin.get("/admin/system")
+    assert page.status_code == 200
+    assert PYODIDE_VERSION in page.text
+    assert f"head {code_head()}" in page.text
+    # The test database is reached as its owner, which may read alembic_version.
+    assert f"{code_head()}: at head" in page.text
+
+
+def test_the_system_page_says_when_the_revision_is_unreadable(as_admin, monkeypatch):
+    from app import admin as panel
+
+    monkeypatch.setattr(panel, "database_revision", lambda db: None)  # production's orbit_app
+    assert "not readable by the app's database role" in as_admin.get("/admin/system").text
+
+
+def test_the_app_role_really_cannot_read_the_revision():
+    """Why the page can't always show it: 0002's grants, which this PR leaves alone."""
+    with SessionLocal() as db:
+        assert not db.scalar(text("SELECT has_table_privilege('orbit_app', 'alembic_version', 'SELECT')"))
+
+
+@pytest.mark.criterion(285, "No secrets on the admin pages")
+def test_no_secrets_on_the_admin_pages(as_admin, monkeypatch):
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "anthropic_api_key", "sk-ant-test-SECRET-key-285")
+    monkeypatch.setattr(settings, "db_password", "db-SECRET-password-285")
+    monkeypatch.setattr(settings, "db_app_password", "app-SECRET-password-285")
+    for path in ("/admin/ai", "/admin/system"):
+        body = as_admin.get(path).text
+        assert "SECRET" not in body, path
+
+
+@pytest.mark.criterion(285, "Admin only")
+@pytest.mark.parametrize("path", ["/admin/ai", "/admin/system"])
+def test_the_read_only_pages_are_admin_only(logged_in, path):
+    assert logged_in.get(path).status_code == 404

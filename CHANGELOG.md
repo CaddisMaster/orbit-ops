@@ -18,6 +18,9 @@ and why it matters, not what the diff says.
 - Each account has its own admin page (#283): set a new password, log it out everywhere, delete
   it (never your own), or download its progress as JSON to keep before a reset. A deleted
   account's AI spend stays in the month's total.
+- Two read-only admin pages (#285). AI spend shows the month's total against the budget and
+  every call behind it. System shows the app and Pyodide versions, the migrations, the catalog's
+  size and how many learner rows there are. Neither shows anything from the server's secrets.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the

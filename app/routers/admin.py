@@ -1,4 +1,4 @@
-"""The admin panel (#281, #282, #283). Admins only: everyone else gets a 404.
+"""The admin panel (#281, #282, #283, #285). Admins only: everyone else gets a 404.
 Each destructive action asks for the admin's password again."""
 
 import logging
@@ -12,10 +12,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import admin as panel
+from app import spend
 from app.config import get_settings
+from app.content import Catalog, get_catalog
 from app.db import get_db
 from app.models import User
 from app.security import PASSWORD_MIN_LENGTH, confirm_password, login_session, require_admin
+from app.static_files import PYODIDE_VERSION
 from app.templating import templates
 
 router = APIRouter(prefix="/admin")
@@ -178,4 +181,42 @@ def progress_json(user_id: int, admin: User = Depends(require_admin), db: Sessio
     return JSONResponse(
         panel.progress_export(db, target),
         headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
+    )
+
+
+@router.get("/ai", response_class=HTMLResponse)
+def ai_spend(request: Request, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    now = spend.now()
+    return templates.TemplateResponse(
+        request,
+        "admin_ai.html",
+        {
+            "user": admin,
+            "spent": spend.spent_this_month(db, now),
+            "budget": spend.budget_microcents(),
+            "online": spend.uplink_online(db, now),
+            "month": spend.month_bounds(now)[0],
+            "requests": panel.month_requests(db, now),
+            "tz": get_settings().tz,
+        },
+    )
+
+
+@router.get("/system", response_class=HTMLResponse)
+def system(request: Request, admin: User = Depends(require_admin), db: Session = Depends(get_db), catalog: Catalog = Depends(get_catalog)):
+    settings = get_settings()
+    head = panel.code_head()
+    return templates.TemplateResponse(
+        request,
+        "admin_system.html",
+        {
+            "user": admin,
+            "app_version": settings.app_version,
+            "app_commit": settings.app_commit,
+            "pyodide_version": PYODIDE_VERSION,
+            "code_head": head,
+            "db_revision": panel.database_revision(db),
+            "catalog": {"tracks": len(catalog.tracks), "units": len(catalog.units), "modules": len(catalog.modules)},
+            "counts": panel.table_counts(db),
+        },
     )

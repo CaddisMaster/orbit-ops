@@ -1,6 +1,7 @@
 """The admin panel's queries (#281): every learner with their progress,
-wiping one learner's progress, creating an account (#282), and managing one:
-a new password, logging it out everywhere, deleting it, its progress as JSON (#283).
+wiping one learner's progress, creating an account (#282), managing one: a
+new password, logging it out everywhere, deleting it, its progress as JSON
+(#283), and the read-only AI spend and system pages (#285).
 
 The one place that reads another user's learner state. Each function names its
 target user explicitly, and only routes behind require_admin call them, so
@@ -9,12 +10,17 @@ non-negotiable #1 still holds: a learner's own pages never see anyone else.
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from pathlib import Path
 
-from sqlalchemy import delete, func, select
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
+from app import spend
 from app.models import (
     ActivityDay,
+    AiRequest,
     BadgeEarned,
     CardState,
     ExerciseAttempt,
@@ -109,3 +115,36 @@ def progress_export(db: Session, user: User) -> dict:
         rows = db.scalars(select(model).where(model.user_id == user.id).order_by(model.id))
         tables[model.__tablename__] = [{c: _jsonable(getattr(row, c)) for c in columns} for row in rows]
     return {"username": user.username, "exported_at": datetime.now(UTC).isoformat(), "tables": tables}
+def month_requests(db: Session, now: datetime) -> list[tuple[AiRequest, str | None]]:
+    """This month's AI calls, newest first, each with its user's name (None once
+    the user is deleted: the row stays, #120). The month is spend's month."""
+    start, end = spend.month_bounds(now)
+    rows = db.execute(
+        select(AiRequest, User.username)
+        .outerjoin(User, User.id == AiRequest.user_id)
+        .where(AiRequest.created_at >= start, AiRequest.created_at < end)
+        .order_by(AiRequest.created_at.desc(), AiRequest.id.desc())
+    )
+    return [(row, name) for row, name in rows]
+
+
+_ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
+
+
+def code_head() -> str:
+    """The newest revision this image's migrations define."""
+    return ScriptDirectory.from_config(Config(str(_ALEMBIC_INI))).get_current_head()
+
+
+def database_revision(db: Session) -> str | None:
+    """The revision the database is at, or None when this connection may not
+    read it. In production the app connects as orbit_app, which 0002 keeps away
+    from alembic_version on purpose."""
+    if not db.scalar(text("SELECT has_table_privilege(current_user, 'alembic_version', 'SELECT')")):
+        return None
+    return db.scalar(text("SELECT version_num FROM alembic_version"))
+
+
+def table_counts(db: Session) -> dict[str, int]:
+    """Rows in each learner-state table, over every learner."""
+    return {m.__tablename__: db.scalar(select(func.count()).select_from(m)) for m in LEARNER_STATE}
