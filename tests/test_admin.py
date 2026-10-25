@@ -265,6 +265,150 @@ def test_a_name_taken_after_the_check_is_refused_not_a_500(as_admin, make_user, 
     assert f"There is already an account called {taken.username}." in response.text
 
 
+# --- #283: managing one account ---------------------------------------------
+
+@pytest.fixture
+def other_client():
+    """A second browser, for the account being managed."""
+    with TestClient(app, base_url="http://testserver") as c:
+        yield c
+
+
+def _post(client, user_id, action, **data):
+    return client.post(f"/admin/users/{user_id}/{action}", data={"password": PASSWORD, "csrf_token": csrf(client)} | data)
+
+
+def _sent_to_login(client) -> bool:
+    response = client.get("/", follow_redirects=False)
+    return response.status_code == 303 and response.headers["location"] == "/login"
+
+
+def test_an_account_page_lists_the_actions(as_admin, make_user):
+    target = make_user()
+    page = as_admin.get(f"/admin/users/{target.id}")
+    assert page.status_code == 200
+    for action in ("password", "logout", "delete", "progress.json"):
+        assert f"/admin/users/{target.id}/{action}" in page.text
+    assert f'href="/admin/users/{target.id}"' in as_admin.get("/admin").text
+
+
+@pytest.mark.criterion(283, "Resetting a password ends their sessions")
+def test_a_new_password_ends_their_sessions(as_admin, make_user, other_client):
+    target = make_user()
+    assert login(other_client, target.username).status_code == 303
+    response = _post(as_admin, target.id, "password", new_password=NEW_PASSWORD, new_password_repeat=NEW_PASSWORD)
+    assert response.status_code == 200
+    assert "has a new password" in response.text
+    assert _sent_to_login(other_client)
+    assert login(other_client, target.username, NEW_PASSWORD).status_code == 303
+    assert login(other_client, target.username, PASSWORD).status_code == 401
+
+
+def test_a_bad_new_password_changes_nothing(as_admin, make_user, other_client):
+    target = make_user()
+    assert login(other_client, target.username).status_code == 303
+    response = _post(as_admin, target.id, "password", new_password="short", new_password_repeat="short")
+    assert response.status_code == 400
+    assert not _sent_to_login(other_client)
+
+
+@pytest.mark.criterion(283, "Log out everywhere")
+def test_log_out_everywhere_keeps_the_password(as_admin, make_user, other_client):
+    target = make_user()
+    assert login(other_client, target.username).status_code == 303
+    assert "has ended" in _post(as_admin, target.id, "logout").text
+    assert _sent_to_login(other_client)
+    assert login(other_client, target.username).status_code == 303
+
+
+def test_logging_yourself_out_everywhere_keeps_this_session(as_admin, admin, other_client):
+    assert login(other_client, admin.username).status_code == 303
+    assert _post(as_admin, admin.id, "logout").status_code == 200
+    assert _sent_to_login(other_client)
+    assert as_admin.get("/admin").status_code == 200
+
+
+@pytest.mark.criterion(283, "Deleting a user")
+def test_deleting_a_user_keeps_their_ai_spend(as_admin, make_user):
+    target = make_user()
+    _seed(target.id)
+    with SessionLocal() as db:
+        spend = AiRequest(user_id=target.id, purpose="hint", model="claude-haiku-5-5", input_tokens=1, output_tokens=1, cost_microcents=1)
+        db.add(spend)
+        db.commit()
+        spend_id = spend.id
+    try:
+        response = _post(as_admin, target.id, "delete")
+        assert response.status_code == 200
+        assert f"Deleted {target.username}." in response.text
+        with SessionLocal() as db:
+            assert db.get(User, target.id) is None
+            assert db.get(AiRequest, spend_id).user_id is None
+        assert not any(_counts(target.id).values())
+    finally:
+        with SessionLocal() as db:
+            db.execute(delete(AiRequest).where(AiRequest.id == spend_id))
+            db.commit()
+
+
+def test_deleting_needs_the_admins_password(as_admin, make_user):
+    target = make_user()
+    assert _post(as_admin, target.id, "delete", password="not the password").status_code == 400
+    assert _account(target.username) is not None
+
+
+@pytest.mark.criterion(283, "An admin can't delete themselves")
+def test_an_admin_cannot_delete_themselves(as_admin, admin):
+    response = _post(as_admin, admin.id, "delete")
+    assert response.status_code == 400
+    assert "You can&#39;t delete your own account." in response.text
+    assert _account(admin.username) is not None
+    assert f"/admin/users/{admin.id}/delete" not in as_admin.get(f"/admin/users/{admin.id}").text
+
+
+@pytest.mark.criterion(283, "The progress export holds progress and no secrets")
+def test_the_progress_export_holds_progress_and_no_secrets(as_admin, make_user, other_client):
+    target = make_user()
+    _seed(target.id)
+    response = as_admin.get(f"/admin/users/{target.id}/progress.json")
+    assert response.status_code == 200
+    assert f'filename="orbit-progress-{target.username}-' in response.headers["content-disposition"]
+    data = response.json()
+    assert data["username"] == target.username
+    assert {table: len(rows) for table, rows in data["tables"].items()} == {m.__tablename__: 1 for m in LEARNER_STATE}
+    assert data["tables"]["module_progress"][0]["module_slug"] == "the-filesystem"
+    with SessionLocal() as db:
+        secrets = db.execute(select(User.password_hash, User.session_token).where(User.id == target.id)).one()
+    assert not any(secret in response.text for secret in secrets)
+    assert "password" not in response.text and "session_token" not in response.text
+    assert login(other_client, target.username).status_code == 303  # a non-admin
+    assert other_client.get(f"/admin/users/{target.id}/progress.json").status_code == 404
+
+
+@pytest.mark.parametrize("action", ["password", "logout", "delete"])
+def test_a_non_admin_cannot_manage_an_account(logged_in, make_user, action):
+    target = make_user()
+    assert _post(logged_in, target.id, action, new_password=NEW_PASSWORD, new_password_repeat=NEW_PASSWORD).status_code == 404
+    assert _account(target.username) is not None
+
+
+def test_an_awkward_username_still_downloads(as_admin):
+    name = 'Zoë "the" admin\r\n'
+    with SessionLocal() as db:
+        odd = User(username=name, password_hash="x")
+        db.add(odd)
+        db.commit()
+        odd_id = odd.id
+    try:
+        response = as_admin.get(f"/admin/users/{odd_id}/progress.json")
+        assert response.status_code == 200
+        assert 'filename="orbit-progress-Zo___the__admin__-' in response.headers["content-disposition"]
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json()["username"] == name
+    finally:
+        with SessionLocal() as db:
+            db.execute(delete(User).where(User.id == odd_id))
+            db.commit()
 # --- #285: the AI spend and system pages -----------------------------------
 
 PINNED = datetime(2031, 3, 15, 12, 0, tzinfo=UTC)  # a month no other test writes to
