@@ -156,6 +156,7 @@ N. **Smaller:** <minor findings, one line each.>
 ## Acceptance criteria
 ```gherkin
 Scenario: <one per finding or group of findings, each something a reader can check on the page>
+  # covers 1, 3
   Given module NN of Unit X.Y
   Then …
 ```
@@ -167,6 +168,12 @@ Scenario: <one per finding or group of findings, each something a reader can che
 Order the findings most serious first: a quiz answer or task need you can't find, then terms
 used before they're explained, then the rest. Number them, because the issue's sections refer
 back to them.
+
+**Scenario titles are plain sentences, with no finding numbers** (#248). Write `Scenario: The
+quiz's answer is in the lesson's prose`, never `… (1)` or `… (2, 3)`. Tests claim a scenario by
+its exact title (`scripts/check_criteria.py`), so a number in it fails the PR's criteria check
+or has to be copied into every claim. To say which findings a scenario covers, put a
+`# covers 1, 3` comment line under it, as in the template.
 
 If the module is clean, say so in one line and list what you checked. Never invent findings to
 fill the issue. A module with two real findings is a good result.
