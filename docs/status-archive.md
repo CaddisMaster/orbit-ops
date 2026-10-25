@@ -4,6 +4,62 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-19: `/beginner-audit`, and Unit 1.1 modules 01–05 audited
+
+- **Merged on Sean's word**, one issue and one PR each, all in milestone v0.11.0:
+  - #223 (#217): the `/beginner-audit` skill, run as `/beginner-audit <slug> [git-ref]`.
+    - It runs in a forked context, is read-only, and returns an issue body with a practice
+      table.
+    - It's step 3 of "Before Sean plays it".
+    - It took three runs on old module 07 to catch all four of Sean's gaps. The `tee` gap was
+      found only once the practice table was part of the output: a check the skill keeps "for
+      itself" gets skipped.
+  - #225 (#224), module 01. The task answered itself: its only check is `cwd`, so the success
+    text and comms gave the 02:40 time on the `cd`, before the `cat`. The time is now the log's.
+  - #227 (#226), module 02. It now teaches how to work out a relative path, not just finished
+    ones. `cd -` prints its path, the one exception to module 01's "cd is silent".
+  - #231 (#228), module 03. Its examples were the task's answer (`crash-2026-10-*`, `archive`).
+  - #230 (#229), a console bug found playing module 03's Try it. `mv f nope/` renamed the file
+    to `nope`, and now it refuses as GNU does. A directory can still be renamed with a slash.
+  - #233 (#232), module 04. It defines owner, group and mode. `chown` stays here, with one
+    `sudo` sentence: moving it to module 05 would change its card's id and lose its review
+    history (Sean deferred to that).
+  - #235 (#234), module 05: `cut -d: -fN` in prose, main and extra groups, and Docker before
+    Q4.
+- **The audit rhythm that held for every module:**
+  1. Audit, verify its claims against the module, file the issue.
+  2. Fix, then run the content-reviewer and a **second** `/beginner-audit` on the rewrite.
+     The second pass found real gaps every time, 4 to 8 per module.
+  3. Run Try it in `ubuntu:24.04` and in the station console. That found something every time:
+     `less` missing from the bare image, `cd -` printing, the `mv` bug.
+  4. Play the task as `verify-bot` with Playwright.
+  5. Add `criterion` tests that fail against `main`'s module.
+- Gotchas:
+  - ⚠️ `docs/content-authoring.md` caps a quiz at **5 questions** (`test_real_modules_follow_the_authoring_guidelines`).
+    A sixth question for module 01's time was refused.
+  - ⚠️ There is no console check type that sees a command being *run*. Only state is checked.
+  - ⚠️ `#210`'s test keeps the word `airlock` out of module 05's lesson, so `sudo -u` examples
+    use `www-data`, which is real-Linux-only. The console has only `root`, the task's accounts
+    and you.
+  - ⚠️ After switching branches mid-session, `/beginner-audit` may come up "Unknown skill"
+    until the skill list refreshes. A general-purpose agent told to follow `SKILL.md` is the
+    same thing.
+  - ⚠️ The Playwright helper split its command list on `|` and broke a pipe. A different
+    separator fixed it.
+- **Left for Sean:**
+  - Module 05's part 2 answer, `/usr/sbin/nologin`, is guessable from the lesson's "usually
+    `nologin`". Fixing it needs a new `shell:` and check.
+  - `id deploy` on the droplet would say whether Q4's removed `deploy`-in-`docker` claim can
+    come back.
+  - Sean confirmed nginx logs to `/var/log/nginx/` on the droplet, so module 01's claim stands.
+  - Dependabot's #222 (8 bumps, ruff 0.17) is still open.
+- **Next:**
+  1. Continue the audit with module 06, *Processes and signals*, then 07–10, one issue and PR
+     each.
+  2. Cut v0.11.0 when Sean says so. It's content plus the #229 console fix, so a MINOR by the
+     milestone, with no migrations.
+  3. Then Unit 1.5 (systemd).
+
 ### 2026-10-17 (evening): v0.10.0 shipped, and a beginner audit planned
 
 - **Merged on Sean's word:**
