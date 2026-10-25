@@ -4,6 +4,7 @@
 <section class="card">
   <p class="eyebrow">Station command</p>
   <h1>Admin</h1>
+  <p><a href="/admin/ai">AI spend</a> · <a href="/admin/system">System</a></p>
   {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
   {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
   <table class="admin-table">
@@ -13,7 +14,7 @@
     <tbody>
       {% for row in learners %}
       <tr>
-        <td>{{ row.user.username }}{% if row.user.is_admin %} <span class="tag">admin</span>{% endif %}</td>
+        <td><a href="/admin/users/{{ row.user.id }}">{{ row.user.username }}</a>{% if row.user.is_admin %} <span class="tag">admin</span>{% endif %}</td>
         <td class="num">{{ row.completed }}</td>
         <td class="num">{{ row.xp }}</td>
         <td><time datetime="{{ row.user.created_at.isoformat() }}">{{ row.user.created_at.strftime("%-d %b %Y") }}</time></td>
@@ -29,7 +30,7 @@
       {% endfor %}
     </tbody>
   </table>
-  <p class="muted">A reset clears the account's modules, answers, XP, streak days, badges and review cards. The login and the AI spend record stay.</p>
+  <p class="muted">A reset clears the account's modules, answers, XP, streak days, badges and review cards. The login and the AI spend record stay. To keep a copy first, open the account and download its progress.</p>
 </section>
 
 <section class="card">

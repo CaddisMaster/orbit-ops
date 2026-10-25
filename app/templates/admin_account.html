@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ target.username }} · Admin · Orbit Ops{% endblock %}
+{% macro confirm(id) -%}
+<label class="visually-hidden" for="{{ id }}">Your password</label>
+<input id="{{ id }}" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+{%- endmacro %}
+{% block content %}
+<section class="card">
+  <p class="eyebrow"><a href="/admin">Admin</a></p>
+  <h1>{{ target.username }}{% if target.is_admin %} <span class="tag">admin</span>{% endif %}</h1>
+  {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+
+  <h2>Progress</h2>
+  <p><a href="/admin/users/{{ target.id }}/progress.json" download>Download progress (JSON)</a> <span class="muted">· every module, answer, XP award, streak day, badge and review card, without the password. Keep it before a reset.</span></p>
+
+  <h2>New password</h2>
+  <form method="post" action="/admin/users/{{ target.id }}/password" class="stack admin-create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>New password <input name="new_password" type="password" autocomplete="new-password" required minlength="{{ password_min_length }}"></label>
+    <label>New password again <input name="new_password_repeat" type="password" autocomplete="new-password" required minlength="{{ password_min_length }}"></label>
+    <label>Your password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="secondary">Set the password</button>
+  </form>
+  <p class="muted">Every session of theirs ends{% if target.id == user.id %}, except this one{% endif %}.</p>
+
+  <h2>Log out everywhere</h2>
+  <form method="post" action="/admin/users/{{ target.id }}/logout" class="admin-action">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {{ confirm("logout-pw") }}
+    <button type="submit" class="secondary">Log out everywhere</button>
+  </form>
+  <p class="muted">Ends every session{% if target.id == user.id %} except this one{% endif %}. The password doesn't change.</p>
+
+  {% if target.id != user.id %}
+  <h2>Delete the account</h2>
+  <form method="post" action="/admin/users/{{ target.id }}/delete" class="admin-action">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {{ confirm("delete-pw") }}
+    <button type="submit" class="secondary danger">Delete {{ target.username }}</button>
+  </form>
+  <p class="muted">Removes the login and all of its progress for good. Its AI spend stays in the month's total.</p>
+  {% endif %}
+</section>
+{% endblock %}

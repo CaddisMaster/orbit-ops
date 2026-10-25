@@ -15,6 +15,12 @@ and why it matters, not what the diff says.
   who isn't an admin sees a page that doesn't exist. `create_user.py --admin` makes an admin.
 - The admin panel creates accounts too (#282), with the same rules as `create_user.py`: a
   password of at least 12 characters, typed twice, and the admin's own password to confirm.
+- Each account has its own admin page (#283): set a new password, log it out everywhere, delete
+  it (never your own), or download its progress as JSON to keep before a reset. A deleted
+  account's AI spend stays in the month's total.
+- Two read-only admin pages (#285). AI spend shows the month's total against the budget and
+  every call behind it. System shows the app and Pyodide versions, the migrations, the catalog's
+  size and how many learner rows there are. Neither shows anything from the server's secrets.
 - The admin panel can reset one module or one unit (#284), so a module changed after a
   beginner audit can be played again without replaying everything. Badges and streak days
   stay. It can also preview any module, locked or not, without recording anything.

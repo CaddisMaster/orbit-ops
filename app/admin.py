@@ -1,6 +1,8 @@
 """The admin panel's queries (#281): every learner with their progress,
-wiping one learner's progress (all of it, or one module or unit: #284), and
-creating an account (#282).
+wiping one learner's progress (all of it, or one module or unit: #284),
+creating an account (#282), managing one: a
+new password, logging it out everywhere, deleting it, its progress as JSON
+(#283), and the read-only AI spend and system pages (#285).
 
 The one place that reads another user's learner state. Each function names its
 target user explicitly, and only routes behind require_admin call them, so
@@ -9,11 +11,26 @@ non-negotiable #1 still holds: a learner's own pages never see anyone else.
 
 from collections.abc import Collection
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
+from pathlib import Path
 
-from sqlalchemy import and_, delete, func, or_, select
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.orm import Session
 
-from app.models import ActivityDay, BadgeEarned, CardState, ExerciseAttempt, ModuleProgress, User, XpEvent
+from app import spend
+from app.models import (
+    ActivityDay,
+    AiRequest,
+    BadgeEarned,
+    CardState,
+    ExerciseAttempt,
+    ModuleProgress,
+    User,
+    XpEvent,
+    new_session_token,
+)
 from app.security import PASSWORD_MIN_LENGTH, hash_password
 
 # Everything a reset clears. Not users (the login stays) and not ai_requests:
@@ -68,15 +85,22 @@ def reset_modules(db: Session, user_id: int, slugs: Collection[str]) -> None:
     )
 
 
-def new_account_problem(db: Session, username: str, password: str, repeat: str) -> str | None:
-    """What stops this account being created, or None. The same rules as
+def password_problem(password: str, repeat: str) -> str | None:
+    """What's wrong with a new password, or None. The same rule as
     scripts/create_user.py."""
-    if not username:
-        return "Give the account a username."
     if len(password) < PASSWORD_MIN_LENGTH:
         return f"The password must be at least {PASSWORD_MIN_LENGTH} characters."
     if password != repeat:
         return "The two passwords don't match."
+    return None
+
+
+def new_account_problem(db: Session, username: str, password: str, repeat: str) -> str | None:
+    """What stops this account being created, or None."""
+    if not username:
+        return "Give the account a username."
+    if problem := password_problem(password, repeat):
+        return problem
     if db.scalar(select(User.id).where(User.username == username)) is not None:
         return f"There is already an account called {username}."
     return None
@@ -88,3 +112,63 @@ def create_account(db: Session, username: str, password: str, *, is_admin: bool)
     db.add(user)
     db.flush()
     return user
+
+
+def set_password(user: User, password: str) -> None:
+    """A new password, and a new session token, so every existing session of
+    theirs ends: what create_user.py's reset does. The caller commits."""
+    user.password_hash = hash_password(password)
+    user.session_token = new_session_token()
+
+
+def log_out_everywhere(user: User) -> None:
+    """End every session of theirs; the password is unchanged. The caller commits."""
+    user.session_token = new_session_token()
+
+
+def _jsonable(value):
+    return value.isoformat() if isinstance(value, (date, datetime)) else value
+
+
+def progress_export(db: Session, user: User) -> dict:
+    """Their rows from every learner-state table, for keeping before a reset.
+    Never the users row: no password hash, no session token."""
+    tables = {}
+    for model in LEARNER_STATE:
+        columns = [c.name for c in model.__table__.columns if c.name not in ("id", "user_id")]
+        rows = db.scalars(select(model).where(model.user_id == user.id).order_by(model.id))
+        tables[model.__tablename__] = [{c: _jsonable(getattr(row, c)) for c in columns} for row in rows]
+    return {"username": user.username, "exported_at": datetime.now(UTC).isoformat(), "tables": tables}
+def month_requests(db: Session, now: datetime) -> list[tuple[AiRequest, str | None]]:
+    """This month's AI calls, newest first, each with its user's name (None once
+    the user is deleted: the row stays, #120). The month is spend's month."""
+    start, end = spend.month_bounds(now)
+    rows = db.execute(
+        select(AiRequest, User.username)
+        .outerjoin(User, User.id == AiRequest.user_id)
+        .where(AiRequest.created_at >= start, AiRequest.created_at < end)
+        .order_by(AiRequest.created_at.desc(), AiRequest.id.desc())
+    )
+    return [(row, name) for row, name in rows]
+
+
+_ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
+
+
+def code_head() -> str:
+    """The newest revision this image's migrations define."""
+    return ScriptDirectory.from_config(Config(str(_ALEMBIC_INI))).get_current_head()
+
+
+def database_revision(db: Session) -> str | None:
+    """The revision the database is at, or None when this connection may not
+    read it. In production the app connects as orbit_app, which 0002 keeps away
+    from alembic_version on purpose."""
+    if not db.scalar(text("SELECT has_table_privilege(current_user, 'alembic_version', 'SELECT')")):
+        return None
+    return db.scalar(text("SELECT version_num FROM alembic_version"))
+
+
+def table_counts(db: Session) -> dict[str, int]:
+    """Rows in each learner-state table, over every learner."""
+    return {m.__tablename__: db.scalar(select(func.count()).select_from(m)) for m in LEARNER_STATE}
