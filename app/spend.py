@@ -35,6 +35,11 @@ def _now() -> datetime:
     return datetime.now(UTC)  # a seam: tests pin the clock here
 
 
+def now() -> datetime:
+    """The ledger's clock, for callers outside this module (the admin page, #285)."""
+    return _now()
+
+
 def month_bounds(now: datetime) -> tuple[datetime, datetime]:
     """The calendar month containing `now`, in APP_TIMEZONE, as [start, end)."""
     local = now.astimezone(get_settings().tz)

@@ -15,6 +15,9 @@ and why it matters, not what the diff says.
   who isn't an admin sees a page that doesn't exist. `create_user.py --admin` makes an admin.
 - The admin panel creates accounts too (#282), with the same rules as `create_user.py`: a
   password of at least 12 characters, typed twice, and the admin's own password to confirm.
+- Two read-only admin pages (#285). AI spend shows the month's total against the budget and
+  every call behind it. System shows the app and Pyodide versions, the migrations, the catalog's
+  size and how many learner rows there are. Neither shows anything from the server's secrets.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the
