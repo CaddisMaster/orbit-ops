@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
-from app.models import ActivityDay, AiRequest, BadgeEarned, CardState, ExerciseAttempt, XpEvent
+from app.models import ActivityDay, AiRequest, BadgeEarned, CardState, ExerciseAttempt, User, XpEvent
 
 ROLE = "orbit_app"
 
@@ -173,3 +173,29 @@ def test_an_attempt_has_no_review_until_one_is_written(make_user):
         db.commit()
         assert db.scalar(text("SELECT review IS NULL FROM exercise_attempts WHERE id = :i"), {"i": plain.id})
         assert db.scalar(text("SELECT review->>'score' FROM exercise_attempts WHERE id = :i"), {"i": reviewed.id}) == "80"
+
+
+def _users_column(name: str):
+    with SessionLocal() as db:
+        return db.execute(
+            text("SELECT is_nullable, column_default FROM information_schema.columns WHERE table_name = 'users' AND column_name = :c"),
+            {"c": name},
+        ).one_or_none()
+
+
+@pytest.mark.criterion(280, "Users carry an admin flag")
+def test_users_carry_an_admin_flag_that_defaults_to_false(make_user):
+    """0010: who may use the admin panel. Not null, and false unless set."""
+    assert _users_column("is_admin") == ("NO", "false")
+    user = make_user()
+    with SessionLocal() as db:
+        # Raw SQL, so it is the column's server default that fills is_admin.
+        made = db.scalar(
+            text("INSERT INTO users (username, password_hash, session_token) VALUES (:n, 'x', 't') RETURNING id"),
+            {"n": f"{user.username}-raw"},
+        )
+        db.commit()
+        assert db.scalar(text("SELECT is_admin FROM users WHERE id = :i"), {"i": made}) is False
+        assert db.get(User, user.id).is_admin is False
+        db.execute(text("DELETE FROM users WHERE id = :i"), {"i": made})
+        db.commit()

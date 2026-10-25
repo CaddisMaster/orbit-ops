@@ -37,6 +37,8 @@ class User(Base):
     # Rotating it (password change, "log out everywhere") invalidates every
     # existing session at once — the same idea as Budget Buddy's sql/37.
     session_token: Mapped[str] = mapped_column(String(64), default=new_session_token)
+    # Who may use the admin panel (#280). Nothing reads or sets it until #281.
+    is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

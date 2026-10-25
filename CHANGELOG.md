@@ -6,6 +6,10 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- Accounts can be marked as admins, ready for the admin panel that resets progress and
+  creates users from inside the app (#280). Every existing account starts as a non-admin.
+
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the
   image, and the app reads it from there, so an upgrade can't change one copy and miss the

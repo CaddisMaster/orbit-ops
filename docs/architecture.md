@@ -80,7 +80,7 @@ database never stores content, only learner state keyed by module slug.
 
 | Table | Columns | Notes |
 |---|---|---|
-| `users` | id, username (unique), password_hash, session_token, created_at | rotating `session_token` revokes every session |
+| `users` | id, username (unique), password_hash, session_token, is_admin (default false, #280), created_at | rotating `session_token` revokes every session |
 | `module_progress` | user_id, module_slug (unique together), status (`in_progress`/`complete`), score 0–100, started_at, completed_at | locked/available is derived, never stored |
 | `exercise_attempts` | user_id, module_slug, kind (`quiz`, `terminal`, `challenge`, `lab`), item (question index), submitted (JSONB), correct, review (JSONB, nullable: Claude's review of a passed lab, #122), created_at | full history; the first attempt per item counts |
 | `activity_days` | user_id, day (in `APP_TIMEZONE`; unique with user_id), freeze_used, created_at | a day that counted: active, or a missed day a freeze bridged; the streak is derived |
