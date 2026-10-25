@@ -1,12 +1,15 @@
 """The admin panel (#281): who may see it, and the progress reset."""
 
+import uuid
 from datetime import date
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import delete, func, select, update
 
 from app.admin import LEARNER_STATE
 from app.db import SessionLocal
+from app.main import app
 from app.models import ActivityDay, AiRequest, BadgeEarned, CardState, ExerciseAttempt, ModuleProgress, User, XpEvent
 from scripts import create_user
 from tests.conftest import PASSWORD, csrf, login
@@ -157,3 +160,106 @@ def test_create_user_admin_flag(monkeypatch):
         with SessionLocal() as db:
             db.execute(delete(User).where(User.username == name))
             db.commit()
+
+
+NEW_PASSWORD = "a brand new password"
+
+
+@pytest.fixture
+def new_name():
+    """A unique username for an account a test creates, deleted afterwards."""
+    name = f"made-{uuid.uuid4().hex[:12]}"
+    yield name
+    with SessionLocal() as db:
+        db.execute(delete(User).where(User.username == name))
+        db.commit()
+
+
+def _create(client, username, *, new=NEW_PASSWORD, repeat=NEW_PASSWORD, password=PASSWORD, make_admin=False):
+    data = {"username": username, "new_password": new, "new_password_repeat": repeat, "password": password, "csrf_token": csrf(client)}
+    if make_admin:
+        data["make_admin"] = "true"
+    return client.post("/admin/users", data=data)
+
+
+def _account(username):
+    with SessionLocal() as db:
+        return db.scalar(select(User).where(User.username == username))
+
+
+@pytest.mark.criterion(282, "An admin creates a user")
+def test_an_admin_creates_a_user_who_can_log_in(as_admin, new_name):
+    response = _create(as_admin, f"  {new_name} ")
+    assert response.status_code == 200
+    assert f"Created {new_name}." in response.text
+    made = _account(new_name)
+    assert made is not None and made.is_admin is False
+    assert not any(_counts(made.id).values())
+    with TestClient(app, base_url="http://testserver") as fresh:
+        assert login(fresh, new_name, NEW_PASSWORD).status_code == 303
+
+
+@pytest.mark.criterion(282, "An admin creates another admin")
+def test_an_admin_creates_another_admin(as_admin, new_name):
+    assert "as an admin" in _create(as_admin, new_name, make_admin=True).text
+    assert _account(new_name).is_admin is True
+
+
+@pytest.mark.criterion(282, "Bad input creates nothing")
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"new": "too short 1", "repeat": "too short 1"}, "at least 12 characters"),
+        ({"repeat": "a different password"}, "don&#39;t match"),
+    ],
+)
+def test_bad_input_creates_nothing(as_admin, new_name, kwargs, message):
+    response = _create(as_admin, new_name, **kwargs)
+    assert response.status_code == 400
+    assert message in response.text
+    assert _account(new_name) is None
+
+
+@pytest.mark.criterion(282, "Bad input creates nothing")
+def test_a_taken_username_is_refused(as_admin, make_user):
+    taken = make_user()
+    response = _create(as_admin, taken.username)
+    assert response.status_code == 400
+    assert f"There is already an account called {taken.username}." in response.text
+    with SessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(User).where(User.username == taken.username)) == 1
+
+
+@pytest.mark.criterion(282, "The admin's password is required")
+def test_creating_needs_the_admins_password(as_admin, new_name):
+    response = _create(as_admin, new_name, password="not the password")
+    assert response.status_code == 400
+    assert "That password is wrong. Nothing was changed." in response.text
+    assert _account(new_name) is None
+
+
+def test_a_non_admin_cannot_create_an_account(logged_in, new_name):
+    assert _create(logged_in, new_name).status_code == 404
+    assert _account(new_name) is None
+
+
+def test_the_script_and_the_panel_share_one_length_rule():
+    from app.security import PASSWORD_MIN_LENGTH
+
+    assert create_user.PASSWORD_MIN_LENGTH is PASSWORD_MIN_LENGTH == 12
+
+
+def test_creating_needs_the_csrf_token(as_admin, new_name):
+    data = {"username": new_name, "new_password": NEW_PASSWORD, "new_password_repeat": NEW_PASSWORD, "password": PASSWORD}
+    assert as_admin.post("/admin/users", data=data).status_code == 403
+    assert _account(new_name) is None
+
+
+def test_a_name_taken_after_the_check_is_refused_not_a_500(as_admin, make_user, monkeypatch):
+    from app import admin as panel
+
+    taken = make_user()
+    monkeypatch.setattr(panel, "new_account_problem", lambda *args: None)  # the race: the check saw it free
+    response = _create(as_admin, taken.username)
+    assert response.status_code == 400
+    assert f"There is already an account called {taken.username}." in response.text

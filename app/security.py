@@ -31,6 +31,11 @@ _hasher = PasswordHasher()
 _DUMMY_HASH = _hasher.hash(secrets.token_urlsafe(16))
 
 
+# The shortest password an account may have, set by create_user.py or the
+# admin panel (#282).
+PASSWORD_MIN_LENGTH = 12
+
+
 def hash_password(password: str) -> str:
     return _hasher.hash(password)
 

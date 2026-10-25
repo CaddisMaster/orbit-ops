@@ -40,7 +40,7 @@ Browser ─HTTPS─▶ host Nginx (TLS, learn.seandesmet.com)
 | `app/spend.py` | the AI ledger and the monthly budget |
 | `app/flash.py` | one-shot messages across a redirect |
 | `app/routers/` | auth, main (dashboard, badges, healthz), learn, review, admin |
-| `app/admin.py` | the admin panel's queries: every learner with their progress, and the progress reset (#281) |
+| `app/admin.py` | the admin panel's queries: every learner with their progress, the progress reset (#281), and creating an account (#282) |
 
 ## Module notes
 
@@ -68,7 +68,7 @@ The detail behind each row of the table above.
 - **`app/ai.py`:** every model call's pure half (#120): `MODELS` (Haiku 5.5 hints, Sonnet 5.5 lab review; lessons are written in Claude Code sessions, never through the app's key), `PRICES` and `cost_microcents()`, `client()`, `AIUnavailable`. Never touches the database. Each AI feature adds its `_call_*_model(client, model)` seam here
 - **`app/spend.py`:** the AI ledger and the monthly budget (non-negotiable #7): `run(user_id, purpose, seam)` refuses with no key or no budget left this month (in `APP_TIMEZONE`), calls the seam, and commits the cost in its own session. `uplink_online()` drives the readout's **Uplink**
 - **`app/flash.py`:** one-shot messages across a redirect, in the session
-- **`app/routers/`:** `auth` (login/logout), `main` (dashboard, `/badges`, `/healthz`), `learn` (`/syllabus`, `/map`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment, `POST /modules/{slug}/terminal` → JSON verdict, `POST /modules/{slug}/challenge` → `{correct, xp_gained}`, `POST /modules/{slug}/lab` → the lab section as an htmx fragment, plus the `lab_done` comms out of band on a first pass, `POST /modules/{slug}/lab/review` → Claude's review of a passed lab, once (#122), `POST /modules/{slug}/hint` → a hint for one item, `quiz-<n>`/`console`/`challenge`/`lab`, as an htmx fragment (#123)), `review` (`/review`, `/review/answer?card=` and `POST /review` → the next card as an htmx fragment, or a 303 back to `/review` for a plain form), `admin` (`/admin`: every account with its progress, and `POST /admin/users/{id}/reset`, behind `require_admin` (a 404 for non-admins) and the admin's password re-entered via `confirm_password`, #281)
+- **`app/routers/`:** `auth` (login/logout), `main` (dashboard, `/badges`, `/healthz`), `learn` (`/syllabus`, `/map`, `/modules/{slug}`, `POST /modules/{slug}/quiz/{index}` → htmx fragment, `POST /modules/{slug}/terminal` → JSON verdict, `POST /modules/{slug}/challenge` → `{correct, xp_gained}`, `POST /modules/{slug}/lab` → the lab section as an htmx fragment, plus the `lab_done` comms out of band on a first pass, `POST /modules/{slug}/lab/review` → Claude's review of a passed lab, once (#122), `POST /modules/{slug}/hint` → a hint for one item, `quiz-<n>`/`console`/`challenge`/`lab`, as an htmx fragment (#123)), `review` (`/review`, `/review/answer?card=` and `POST /review` → the next card as an htmx fragment, or a 303 back to `/review` for a plain form), `admin` (`/admin`: every account with its progress, `POST /admin/users` to create an account (#282) and `POST /admin/users/{id}/reset`, behind `require_admin` (a 404 for non-admins) and the admin's password re-entered via `confirm_password`, #281)
 
 ## Content
 

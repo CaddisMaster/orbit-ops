@@ -13,6 +13,8 @@ and why it matters, not what the diff says.
   and can wipe one account's progress so its modules can be played again from the start. The
   login and the AI spend record stay. The reset asks for the admin's password again, and anyone
   who isn't an admin sees a page that doesn't exist. `create_user.py --admin` makes an admin.
+- The admin panel creates accounts too (#282), with the same rules as `create_user.py`: a
+  password of at least 12 characters, typed twice, and the admin's own password to confirm.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the
