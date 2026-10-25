@@ -41,8 +41,8 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
 - **Link static files with `static_url('css/x.css')`, never `url_for('static', …)` or a bare
   `/static/…`** (#92). An unversioned URL is served `no-cache` and won't change when a release
   does. `tests/test_static.py` checks the main pages. CSS `url(...)` stays relative and
-  revalidates on its own. A new Pyodide version means changing `PYODIDE_VERSION` in
-  `app/static_files.py` along with `scripts/fetch_pyodide.py` (a test holds them equal).
+  revalidates on its own. A new Pyodide version means changing `VERSION` (and the hashes) in
+  `scripts/fetch_pyodide.py` only. `app/static_files.py` imports it (#256).
 
 - **Size the app in `rem`, not `px`** (#105). The root font size is an 80th of the desk's
   width, so anything in rem grows with the art and anything in px stays put on a big screen.

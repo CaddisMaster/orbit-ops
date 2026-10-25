@@ -110,6 +110,17 @@ jobs:
             if command -v psql; then echo "psql is in the image"; exit 1; fi
             echo "appuser, root-owned /app, nothing writable, no psql"
           '
+      # #256: the Pyodide the image fetched is the version the app serves at
+      # /pyodide/<version>/. The loader carries its own version string, and
+      # Pyodide refuses to start if its files don't match it.
+      - name: Check the image serves the Pyodide it fetched
+        run: |
+          docker run --rm --entrypoint sh orbit-ops:ci -c '
+            set -e
+            v="$(python -c "from app.static_files import PYODIDE_URL, PYODIDE_VERSION; assert PYODIDE_URL == f\"/pyodide/{PYODIDE_VERSION}/\"; print(PYODIDE_VERSION)")"
+            grep -q "\"$v\"" /opt/pyodide/pyodide.mjs || { echo "/opt/pyodide is not Pyodide $v"; exit 1; }
+            echo "serves /pyodide/$v/, and /opt/pyodide is Pyodide $v"
+          '
       # #265: fails on a CRITICAL with a fix available; the table also lists
       # fixable HIGH and below without failing. Accepted findings go in
       # .grype.yaml, each with its reason. Same settings as release.yml's scan.
