@@ -15,6 +15,9 @@ and why it matters, not what the diff says.
   who isn't an admin sees a page that doesn't exist. `create_user.py --admin` makes an admin.
 - The admin panel creates accounts too (#282), with the same rules as `create_user.py`: a
   password of at least 12 characters, typed twice, and the admin's own password to confirm.
+- Each account has its own admin page (#283): set a new password, log it out everywhere, delete
+  it (never your own), or download its progress as JSON to keep before a reset. A deleted
+  account's AI spend stays in the month's total.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the

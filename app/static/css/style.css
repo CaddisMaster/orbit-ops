@@ -850,3 +850,4 @@ body::before {
 .tag { border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0 0.5rem; font-size: 0.75rem; }
 .admin-create { max-width: 26rem; }
 .admin-create label.check { flex-direction: row; align-items: center; gap: 0.5rem; }
+button.secondary.danger { color: var(--danger); border-color: var(--danger); }
