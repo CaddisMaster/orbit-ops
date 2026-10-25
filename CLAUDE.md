@@ -92,11 +92,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.11.1** is in production (2026-10-24): the container hardening
-(#263–#266), the `shell.js` split (#255) and the schema package (#257). Merged since, unreleased:
-the Pyodide version written once (#256) and `/beginner-audit`'s plain scenario titles (#248).
-Next: #258, Dependabot's #253, then Unit 1.5, systemd & services (a v0.12.0 milestone first).
-#260 waits on Sean's decision.
+See `docs/status.md`. **v0.12.1** is in production (2026-10-25): the admin panel (v0.12.0,
+#280–#285: progress resets, module preview, accounts, AI spend and System pages) and screen text
+that stays 13.5–15.5px at any window size (#293). Next: #258, Dependabot's #253, then Unit 1.5,
+systemd & services (a v0.13.0 milestone first). #260 waits on Sean's decision.
 
 ## Maintainer notes (local only)
 
