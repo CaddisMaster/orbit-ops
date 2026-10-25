@@ -6,6 +6,19 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-10-25
+
+An admin panel, so the jobs that needed SQL or a script on the droplet happen in the app. An
+admin can reset a learner's progress (all of it, or one module or unit, to replay a module
+after a beginner audit), preview any module, create accounts and manage them, and see the
+month's AI spend and what's running. Every destructive action asks for the admin's password
+again, and anyone else sees a page that doesn't exist.
+
+**Server:** one migration, `0010`, runs before the new image serves. Every account starts as a
+non-admin, so after the deploy, promote yours once from the droplet:
+`docker compose exec web python -m scripts.create_user <username> --admin`. It asks for a
+password and sets it: re-enter the current one to keep it. Your sessions end, so log in again.
+
 ### Added
 - Accounts can be marked as admins, ready for the admin panel that resets progress and
   creates users from inside the app (#280). Every existing account starts as a non-admin.
