@@ -50,11 +50,15 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   attributes needs a CSS size in rem as well (`.avatar`, `.emblem`, `.unit-emblem`).
 
 - **The screen's contents are zoomed** (#188): `.screen-main` and `.comms` have `zoom:
-  var(--screen-scale)` (0.85), so on the laptop 1rem draws as 0.85 of the room's rem. Size
-  things inside the screen in rem as usual and they follow. `getBoundingClientRect()` inside
-  it returns drawn (zoomed) pixels while `offsetHeight` and CSS lengths don't, so don't mix
-  the two in JS. A max-width meant to match the glass divides by `--screen-scale`, as
-  `.screen-main .container` does.
+  var(--screen-scale)`, so on the laptop 1rem draws as that fraction of the room's rem. The
+  scale **steps down as the window grows** (#293: 0.85 at 1280x720, 0.68 at 1864x984, 0.47 at
+  the cap), so lesson text stays at 13.5-15.5px while the art grows. Size things inside the
+  screen in rem as usual and they follow. `getBoundingClientRect()` inside it returns drawn
+  (zoomed) pixels while `offsetHeight` and CSS lengths don't, so don't mix the two in JS. A
+  new step is a scene width W: `min-width: W` **and** `min-height: W * 9/16`, and
+  `test_lesson_text_stays_near_one_size` checks every width. `.screen-main .container` is the one
+  width that doesn't divide by the scale: it's fixed at `47.5rem / 0.85` so lines keep their
+  length in characters, and the column narrows on the glass as the scale falls.
 
 - **The console's clock is the station's, not the browser's** (#67). Files are dated on a fixed
   clock that starts at 2026-10-08 09:00 and moves a second per command (`sh.now()`), so use it,
