@@ -90,11 +90,11 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.11.0** is in production (2026-10-21). Merged since, unreleased: the
-container hardening (#263–#266; #266's `db` change was applied on the droplet by hand on
-2026-10-24, so the release guard passes), the `shell.js` split (#255) and the schema package
-(#257). Next: release those, then Unit 1.5, systemd & services. Open small follow-ups: #248,
-#256, #258, #260.
+See `docs/status.md`. **v0.11.1** is in production (2026-10-24): the container hardening
+(#263–#266), the `shell.js` split (#255) and the schema package (#257). Merged since, unreleased:
+the Pyodide version written once (#256) and `/beginner-audit`'s plain scenario titles (#248).
+Next: #258, Dependabot's #253, then Unit 1.5, systemd & services (a v0.12.0 milestone first).
+#260 waits on Sean's decision.
 
 ## Maintainer notes (local only)
 

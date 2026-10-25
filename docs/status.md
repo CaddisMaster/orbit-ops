@@ -91,6 +91,10 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   digest before the deploy, in a read-only job, and fails on a fixable CRITICAL. It's Grype
   rather than Trivy because Trivy's action, binary and images were hijacked in March 2026.
   Release images carry an SBOM and provenance. Signing waits until the deploy can verify it.
+- **A file that a unit is about to grow is split by area first, as a generated pure move** (#255,
+  #257). A script parses the old file, moves each block's text unchanged, and computes the imports
+  (`S.name` aliases in the shell's parts, Python imports in the schema package). A part may use
+  only the parts before it. A line-by-line comparison proves nothing else changed.
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
 
@@ -98,6 +102,7 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.11.1 | 2026-10-24 | Hardening, nothing new for the learner: root-owned image code, `web` read-only with no capabilities (#263, #264), Grype scans and an SBOM/provenance on every release (#265), Postgres pinned by digest, applied by hand first (#266); `shell.js` split into 12 parts (#255), the schema a package (#257); two Unit 1.1 tasks check what they ask (#249). A PATCH. No migrations |
 | 0.11.0 | 2026-10-21 | The Unit 1.1 beginner audit: `/beginner-audit` (#217) and modules 01–10 rewritten so everything a task, quiz or card needs is in prose or a table (#224–#245); the console refuses `mv f nope/` (#229). A MINOR by the milestone. No migrations |
 | 0.10.0 | 2026-10-17 | Fixes from playing Unit 1.1: modules 04–07 say plainly what tasks and quizzes need (#206, #210, #214, #216); the console's `N of M done` line (#208) and `stat -c` (#206); Okafor is he (#207). Planned as 0.9.1, a MINOR because it carries features. No migrations |
 | 0.9.0 | 2026-10-17 | Unit 1.4 Networking complete (10 modules, *Relays Restored*): the console's network, DNS, curl, ufw and `ssh HOST 'CMD'` (#164–#166); the mystery's 1.4 clue (#176); Unit 1.1 says what the shell is (#196); the `lacks` check (#200); the screen at 85% (#188). No migrations |
@@ -112,6 +117,63 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-24: two splits, #266 on the droplet, and v0.11.1 shipped
+
+- **Merged on Sean's word**, one issue and one PR each:
+  - #272 (#255): `shell.js` (6,275 lines) is 12 classic scripts under `app/static/js/shell/`
+    sharing a namespace `S`, plus `shell.js` as the public face, loaded last. ES modules were
+    ruled out because CI's Node might not `require()` them. A generator (acorn, in the
+    scratchpad) moved every chunk unchanged and computed the imports, and a line diff showed
+    only the old `COMMANDS` literal's 3 framing lines gone. `module.html` loops over the parts,
+    and a test holds the loop's order equal to `PARTS`. Checked in Playwright with no CSP errors.
+  - #273 (#257): `schema.py` (1,136 lines) is `app/content/schema/`, with `terminal/` holding
+    one file per spec family. Generated the same way. `addresses.py` and `Message` in `comms.py`
+    exist to keep the imports one-way. `__init__` re-exports all 95 public names.
+  - #276 (#256): the Pyodide version lives only in `scripts/fetch_pyodide.py`, and the app
+    imports it. CI's image job checks that `/opt/pyodide/pyodide.mjs` carries the served version.
+  - #277 (#248): `/beginner-audit` titles scenarios as plain sentences, with `# covers N`
+    comments. A fresh audit of Unit 1.2 module 01 passed `check_criteria` as filed.
+  - #274: RUNBOOK §5 now matches the real run (row counts, a private dump, the compose file
+    fetched at a commit and its checksum checked).
+- **#266 was applied on the droplet by Sean from the Mac** (RUNBOOK §5): Postgres 16.14 →
+  16.15 with `no-new-privileges`, and both apps stayed healthy. The rows `8|19|7` were the same
+  before and after, which also confirms migration `0007` on production. Closed with the results
+  in a comment.
+- **Shipped v0.11.1** on Sean's go:
+  - the CHANGELOG cut was #275, with #249 moved under Fixed to match a PATCH;
+  - release run `40144135611`, the first real run of SBOM/provenance, the locked-down smoke
+    test and the `scan` job, all green;
+  - the database guard accepted the compose file, `backup ok (8096 bytes)`, `running version
+    0.11.1`;
+  - all 12 `shell/*.js` files are served on production, and Budget Buddy is 200.
+- Gotchas:
+  - ⚠️ **Write overwrites an existing file without warning.** #277 created
+    `tests/test_beginner_audit.py`, which already held #217's four tests, and dropped them.
+    #278 restored them. Its first body said "a PR that closes #217", which linked #217, so the
+    criteria check failed until the wording changed. That's the gotcha in `docs/gotchas.md`,
+    still live.
+  - ⚠️ The dev `web` container can't write to the bind mount, so `ruff --fix` in it fails. Run
+    the pinned ruff from a scratch venv on the host.
+  - ⚠️ Pasting a block that ends with a heading line runs the heading as a command on the
+    droplet. Harmless here (`Then: command not found`), but keep paste blocks pure commands.
+- **Left for Sean:**
+  - Open module 08 on learn.seandesmet.com: run a console command (the split shell's first
+    production load) and the bonus Python challenge (#264's check after the release).
+  - From the Mac: `docker inspect orbit-ops-web-1` (read-only, `[ALL]`, no-new-privileges),
+    then delete `docker-compose.yml.v0.11.0` and `backups/pre-db-change.sql.gz` from
+    `/opt/orbit-ops`.
+  - Decide #260 (Claude's view: delete `sweeper` and `test-first`; keep `gotcha-auditor` only
+    as a required pre-PR step).
+  - Unit 1.2 module 01's audit (8 findings, the worst being nano's exit question, recognising
+    vim, `NAME(N)` → `man N NAME`, and Git assumed in Q3/Q4) is in this session's transcript,
+    not filed. Decide whether Unit 1.2 gets the Unit 1.1 audit treatment before Unit 1.5.
+- **Next:**
+  1. #258 (a short docs note), then Dependabot's #253 in its own release.
+  2. Unit 1.5, *systemd & services*: a v0.12.0 milestone, a console issue (`systemctl`,
+     unit files, `journalctl -u/--since/--until` in a new `shell/systemd.js` and
+     `schema/terminal/services.py`), then ~6 module issues, with the mystery's reveal last
+     (`docs/story.md`).
 
 ### 2026-10-23: container hardening (#263–#266)
 
@@ -224,59 +286,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   2. Then Unit 1.5, *systemd & services*: a milestone and its issues.
   3. Quick ones that fit anywhere: #256 (Pyodide version once), #258 (non-negotiable #1's single-user note), #248 (audit scenario titles).
   4. #260 waits on Sean's keep-or-drop decision for the unused agents. #222 (Dependabot) needs its own look.
-
-### 2026-10-19: `/beginner-audit`, and Unit 1.1 modules 01–05 audited
-
-- **Merged on Sean's word**, one issue and one PR each, all in milestone v0.11.0:
-  - #223 (#217): the `/beginner-audit` skill, run as `/beginner-audit <slug> [git-ref]`.
-    - It runs in a forked context, is read-only, and returns an issue body with a practice
-      table.
-    - It's step 3 of "Before Sean plays it".
-    - It took three runs on old module 07 to catch all four of Sean's gaps. The `tee` gap was
-      found only once the practice table was part of the output: a check the skill keeps "for
-      itself" gets skipped.
-  - #225 (#224), module 01. The task answered itself: its only check is `cwd`, so the success
-    text and comms gave the 02:40 time on the `cd`, before the `cat`. The time is now the log's.
-  - #227 (#226), module 02. It now teaches how to work out a relative path, not just finished
-    ones. `cd -` prints its path, the one exception to module 01's "cd is silent".
-  - #231 (#228), module 03. Its examples were the task's answer (`crash-2026-10-*`, `archive`).
-  - #230 (#229), a console bug found playing module 03's Try it. `mv f nope/` renamed the file
-    to `nope`, and now it refuses as GNU does. A directory can still be renamed with a slash.
-  - #233 (#232), module 04. It defines owner, group and mode. `chown` stays here, with one
-    `sudo` sentence: moving it to module 05 would change its card's id and lose its review
-    history (Sean deferred to that).
-  - #235 (#234), module 05: `cut -d: -fN` in prose, main and extra groups, and Docker before
-    Q4.
-- **The audit rhythm that held for every module:**
-  1. Audit, verify its claims against the module, file the issue.
-  2. Fix, then run the content-reviewer and a **second** `/beginner-audit` on the rewrite.
-     The second pass found real gaps every time, 4 to 8 per module.
-  3. Run Try it in `ubuntu:24.04` and in the station console. That found something every time:
-     `less` missing from the bare image, `cd -` printing, the `mv` bug.
-  4. Play the task as `verify-bot` with Playwright.
-  5. Add `criterion` tests that fail against `main`'s module.
-- Gotchas:
-  - ⚠️ `docs/content-authoring.md` caps a quiz at **5 questions** (`test_real_modules_follow_the_authoring_guidelines`).
-    A sixth question for module 01's time was refused.
-  - ⚠️ There is no console check type that sees a command being *run*. Only state is checked.
-  - ⚠️ `#210`'s test keeps the word `airlock` out of module 05's lesson, so `sudo -u` examples
-    use `www-data`, which is real-Linux-only. The console has only `root`, the task's accounts
-    and you.
-  - ⚠️ After switching branches mid-session, `/beginner-audit` may come up "Unknown skill"
-    until the skill list refreshes. A general-purpose agent told to follow `SKILL.md` is the
-    same thing.
-  - ⚠️ The Playwright helper split its command list on `|` and broke a pipe. A different
-    separator fixed it.
-- **Left for Sean:**
-  - Module 05's part 2 answer, `/usr/sbin/nologin`, is guessable from the lesson's "usually
-    `nologin`". Fixing it needs a new `shell:` and check.
-  - `id deploy` on the droplet would say whether Q4's removed `deploy`-in-`docker` claim can
-    come back.
-  - Sean confirmed nginx logs to `/var/log/nginx/` on the droplet, so module 01's claim stands.
-  - Dependabot's #222 (8 bumps, ruff 0.17) is still open.
-- **Next:**
-  1. Continue the audit with module 06, *Processes and signals*, then 07–10, one issue and PR
-     each.
-  2. Cut v0.11.0 when Sean says so. It's content plus the #229 console fix, so a MINOR by the
-     milestone, with no migrations.
-  3. Then Unit 1.5 (systemd).
