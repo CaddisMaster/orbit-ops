@@ -15,6 +15,9 @@ and why it matters, not what the diff says.
   who isn't an admin sees a page that doesn't exist. `create_user.py --admin` makes an admin.
 - The admin panel creates accounts too (#282), with the same rules as `create_user.py`: a
   password of at least 12 characters, typed twice, and the admin's own password to confirm.
+- The admin panel can reset one module or one unit (#284), so a module changed after a
+  beginner audit can be played again without replaying everything. Badges and streak days
+  stay. It can also preview any module, locked or not, without recording anything.
 
 ### Changed
 - The Pyodide version is written in one place (#256), the script that fetches it for the

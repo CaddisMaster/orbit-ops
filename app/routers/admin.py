@@ -1,4 +1,4 @@
-"""The admin panel (#281, #282). Admins only: everyone else gets a 404.
+"""The admin panel (#281, #282, #284). Admins only: everyone else gets a 404.
 Each destructive action asks for the admin's password again."""
 
 import logging
@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import admin as panel
+from app.content import Catalog, get_catalog
 from app.db import get_db
 from app.models import User
 from app.security import PASSWORD_MIN_LENGTH, confirm_password, require_admin
@@ -23,7 +24,10 @@ def _page(request: Request, admin: User, db: Session, *, notice: str | None = No
     return templates.TemplateResponse(
         request,
         "admin.html",
-        {"user": admin, "learners": panel.learners(db), "notice": notice, "error": error, "password_min_length": PASSWORD_MIN_LENGTH},
+        {
+            "user": admin, "learners": panel.learners(db), "notice": notice, "error": error,
+            "password_min_length": PASSWORD_MIN_LENGTH, "catalog": get_catalog(request),
+        },
         status_code=status_code,
     )
 
@@ -78,3 +82,47 @@ def create_account(
         return _page(request, admin, db, error=f"There is already an account called {username}.", status_code=400)
     log.info("admin %s created user %s%s", admin.id, user.id, " (admin)" if make_admin else "")
     return _page(request, admin, db, notice=f"Created {username}{' as an admin' if make_admin else ''}.")
+
+
+@router.post("/reset-part", response_class=HTMLResponse)
+def reset_part(
+    request: Request,
+    user_id: Annotated[int, Form()],
+    part: Annotated[str, Form(max_length=80)],
+    password: Annotated[str, Form(max_length=1024)],
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    catalog: Catalog = Depends(get_catalog),
+):
+    """Reset one module ("module:<slug>") or every module of one unit ("unit:<slug>")."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=404)
+    kind, _, slug = part.partition(":")
+    if kind == "module" and slug in catalog.modules:
+        slugs, name = [slug], f"“{catalog.modules[slug].title}”"
+    elif kind == "unit" and slug in catalog.units:
+        slugs, name = list(catalog.units[slug].modules), f"unit {catalog.unit_code(slug)}, {catalog.units[slug].title}"
+    else:
+        return _page(request, admin, db, error="Choose a module or a unit to reset.", status_code=400)
+    if error := confirm_password(request, admin, password):
+        log.warning("admin %s failed the password check to reset %s for user %s", admin.id, part, target.id)
+        return _page(request, admin, db, error=error, status_code=400)
+    panel.reset_modules(db, target.id, slugs)
+    db.commit()
+    log.info("admin %s reset %s for user %s", admin.id, part, target.id)
+    return _page(request, admin, db, notice=f"Reset {name} for {target.username}.")
+
+
+@router.get("/preview/{slug}", response_class=HTMLResponse)
+def preview(request: Request, slug: str, admin: User = Depends(require_admin), catalog: Catalog = Depends(get_catalog)):
+    """A module's lesson, quiz and tasks, read-only, locked or not. Nothing here
+    writes: no progress row, no XP, and nothing on the page can be answered."""
+    module = catalog.modules.get(slug)
+    if module is None:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "admin_preview.html",
+        {"user": admin, "module": module, "unit": catalog.units[module.unit], "unit_code": catalog.unit_code(module.unit)},
+    )

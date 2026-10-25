@@ -850,3 +850,6 @@ body::before {
 .tag { border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0 0.5rem; font-size: 0.75rem; }
 .admin-create { max-width: 26rem; }
 .admin-create label.check { flex-direction: row; align-items: center; gap: 0.5rem; }
+.admin-units summary { cursor: pointer; padding: 0.25rem 0; }
+.admin-preview-list > li { margin-bottom: 0.75rem; }
+select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.6rem; }

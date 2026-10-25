@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Preview: {{ module.title }} · Orbit Ops{% endblock %}
+{% block content %}
+<p class="notice" role="status">Admin preview of {{ unit_code }}.{{ module.position }}. Nothing here is recorded, and the quiz and tasks can't be answered. <a href="/admin">Back to admin</a></p>
+<article class="card module">
+  <p class="eyebrow">{{ unit_code }} {{ unit.title }} · module {{ module.position }}</p>
+  <h1>{{ module.title }}</h1>
+  <p class="muted">{{ module.minutes }} minutes · {{ module.xp }} XP</p>
+  {% if module.story_html %}<div class="story prose">{{ module.story_html | safe }}</div>{% endif %}
+  {# body_html is rendered from repo Markdown with raw HTML disabled (app/content/render.py). #}
+  <section class="lesson prose">{{ module.body_html | safe }}</section>
+
+  <h2>Quiz</h2>
+  <ol class="admin-preview-list">
+    {% for question in module.quiz %}
+    <li>
+      {{ question.q | md }}
+      {% if question.code %}<div class="prose question-code">{{ question.code | codeblock(question.lang) }}</div>{% endif %}
+      {% if question.type == "fill" %}<p class="muted">Fill in the blank.</p>
+      {% else %}{% if question.type == "multi" %}<p class="muted">Select all that apply.</p>{% endif %}<ul>{% for option in question.options %}<li>{{ option | md }}</li>{% endfor %}</ul>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  {% if module.terminal %}<h2>Console task</h2><div class="prose">{{ module.terminal_task_html | safe }}</div>{% endif %}
+  {% if module.challenge %}<h2>Python challenge</h2><div class="prose">{{ module.challenge_task_html | safe }}</div>{% endif %}
+  {% if module.lab %}
+  <h2>Lab</h2>
+  <div class="prose">{{ module.lab_task_html | safe }}</div>
+  <ol class="admin-preview-list">{% for prompt in module.lab_prompts_html %}<li>{{ prompt | safe }}</li>{% endfor %}</ol>
+  {% endif %}
+  {% if module.cards %}
+  <h2>Review cards</h2>
+  <ul class="admin-preview-list">{% for card in module.cards %}<li>{{ card.front_html | safe }}</li>{% endfor %}</ul>
+  {% endif %}
+</article>
+{% endblock %}

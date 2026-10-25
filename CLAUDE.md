@@ -52,7 +52,7 @@ app/terminal.py      terminal exercises: grade the posted filesystem; static/js/
 app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
 app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review), admin.py (/admin)
-app/admin.py         the admin panel's queries: every learner, wiping one's progress (#281), creating an account (#282)
+app/admin.py         the admin panel's queries: every learner, wiping one's progress (#281), creating an account (#282), per-module reset (#284)
 alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0010 users.is_admin)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
