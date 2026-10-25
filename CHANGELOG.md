@@ -6,7 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
-### Changed
+## [0.12.1] — 2026-10-25
+
+One fix, with nothing to do on the server: the laptop screen's text stays a normal reading
+size on big windows instead of growing with the desk.
+
+### Fixed
 - The text on the laptop screen no longer grows with the window (#293). The room and its art
   still scale with the desk, but lessons, the console and comms stay at about 14-15px. At
   1864x984 lesson text drops from 18.6px to 14.9px, and 1280x720 is unchanged. Lines keep
