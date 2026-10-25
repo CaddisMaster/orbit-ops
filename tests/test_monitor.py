@@ -122,13 +122,31 @@ def test_the_shuttle_docks_at_the_drawn_port():
     assert _percent(shuttle, "left") == pytest.approx(100 * (px + 1) / room.W, abs=0.1)
 
 
-# --- #188: the screen's contents are drawn smaller than the room ------------------------------
-SCREEN_SCALE = 0.85  # Sean's pick from screenshots at 100, 90 and 85% (2026-10-16)
+# --- #188, #293: the screen's contents are drawn smaller than the room -------------------------
+SCREEN_SCALE = 0.85  # #188: Sean's pick from screenshots at 100, 90 and 85% (2026-10-16)
+SEANS_SCALE = 0.68  # #293: his pick at 1864x984 from 0.85, 0.75 and 0.68 (2026-10-25)
+_STEP = re.compile(
+    r"@media \(min-width: ([\d.]+)px\) and \(min-height: ([\d.]+)px\) \{ \.screen \{ --screen-scale: ([\d.]+); \} \}"
+)
+
+
+def _screen_scale(vw: float, vh: float) -> float:
+    """The --screen-scale a vw x vh window gets: the base rule, then the last step that matches."""
+    scale = float(re.search(r"^\.screen \{ --screen-scale: ([\d.]+); \}", CSS, re.M).group(1))
+    for min_w, min_h, step in _STEP.findall(CSS):
+        if vw >= float(min_w) and vh >= float(min_h):
+            scale = float(step)
+    return scale
+
+
+def _root_px(vw: float, vh: float) -> float:
+    """html's font-size: the 1/80 rule."""
+    return min(max(16, min(vw, vh * 16 / 9) / 80), 32)
 
 
 @pytest.mark.criterion(188, "More of a lesson fits on the laptop screen")
+@pytest.mark.criterion(293, "The room is untouched")
 def test_the_screen_contents_are_scaled_and_the_room_is_not():
-    assert f".screen {{ --screen-scale: {SCREEN_SCALE}; }}" in CSS
     # Both panes are scaled, and nothing outside the screen is.
     assert ".screen > .screen-main, .screen > .comms { zoom: var(--screen-scale); }" in CSS
     assert CSS.count("zoom:") == 1
@@ -136,12 +154,37 @@ def test_the_screen_contents_are_scaled_and_the_room_is_not():
     assert "font-size: clamp(16px, calc(min(100vw, 100vh * 16 / 9) / 80), 32px);" in CSS
 
 
-def test_the_lesson_column_keeps_its_width_on_the_glass():
+def test_each_step_is_a_scene_width():
+    """A step at scene width W needs min-height W * 9/16, the 1/80 rule's own width."""
+    steps = _STEP.findall(CSS)
+    assert len(steps) >= 3
+    for min_w, min_h, _ in steps:
+        assert float(min_h) == pytest.approx(float(min_w) * 9 / 16)
+
+
+@pytest.mark.criterion(293, "Lines don't get longer as the text gets smaller")
+def test_the_lesson_column_keeps_its_line_length():
     base = float(re.search(r"^\.container \{[^}]*max-width: ([\d.]+)rem;", CSS, re.M).group(1))
-    assert f".screen-main .container {{ flex: 1; max-width: calc({base}rem / var(--screen-scale)); }}" in CSS
+    assert f".screen-main .container {{ flex: 1; max-width: calc({base:g}rem / {SCREEN_SCALE}); }}" in CSS
 
 
 @pytest.mark.criterion(188, "The text stays readable")
+@pytest.mark.criterion(293, "Small windows are unchanged")
 def test_lesson_text_is_readable_at_the_smallest_desk():
     # 1rem is 16px at 1280x720, and a lesson's paragraphs are 1rem.
+    assert _screen_scale(1280, 720) == SCREEN_SCALE
     assert 16 * SCREEN_SCALE >= 13.5
+
+
+@pytest.mark.criterion(293, "Sean's window gets the size he picked")
+def test_seans_window_gets_his_pick():
+    assert _screen_scale(1864, 984) == SEANS_SCALE
+
+
+@pytest.mark.criterion(293, "Lesson text stays near one size on bigger windows")
+@pytest.mark.parametrize("aspect", [16 / 9, 16 / 10, 21 / 9, 4 / 3])
+def test_lesson_text_stays_near_one_size(aspect):
+    for width in range(1280, 3841, 10):
+        vw, vh = width, width / aspect
+        drawn = _root_px(vw, vh) * _screen_scale(vw, vh)
+        assert 13.5 <= drawn <= 15.5, f"{vw}x{vh:.0f}: lesson text at {drawn:.1f}px"

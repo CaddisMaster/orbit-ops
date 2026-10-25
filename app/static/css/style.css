@@ -713,12 +713,23 @@ body::before {
 /* The screen's contents are drawn smaller than the room around them (#188), so
    more of a lesson fits on the glass. zoom scales the panes' insides and not
    the cells they fill, so the glass, the bezel and the 1/80 rule above are
-   untouched. The column is widened by the same factor, to keep today's width
-   on the glass and fit more words on a line, not only more lines. */
+   untouched.
+   The art grows with the window but reading text shouldn't (#293), so the scale
+   steps down as the scene widens and lesson text stays at 13.5-15.5px: 0.85
+   (13.6px) at 1280x720, 0.68 (14.9px) at Sean's 1864x984, 0.47 at the 32px cap.
+   Each step is a scene width W, the 1/80 rule's min(100vw, 100vh * 16 / 9), so
+   it needs both min-width W and min-height W * 9 / 16.
+   The column keeps #188's line length in characters at every scale, so smaller
+   text means a narrower column on the glass, not longer lines. */
 .screen { --screen-scale: 0.85; }
+@media (min-width: 1440px) and (min-height: 810px) { .screen { --screen-scale: 0.76; } }
+@media (min-width: 1620px) and (min-height: 911.25px) { .screen { --screen-scale: 0.68; } }
+@media (min-width: 1820px) and (min-height: 1023.75px) { .screen { --screen-scale: 0.6; } }
+@media (min-width: 2060px) and (min-height: 1158.75px) { .screen { --screen-scale: 0.53; } }
+@media (min-width: 2330px) and (min-height: 1310.625px) { .screen { --screen-scale: 0.47; } }
 .screen > .screen-main, .screen > .comms { zoom: var(--screen-scale); }
 .screen-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.screen-main .container { flex: 1; max-width: calc(47.5rem / var(--screen-scale)); }
+.screen-main .container { flex: 1; max-width: calc(47.5rem / 0.85); }
 
 /* The comms log: one conversation, oldest at the top. */
 .comms {

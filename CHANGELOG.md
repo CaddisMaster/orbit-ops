@@ -6,6 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- The text on the laptop screen no longer grows with the window (#293). The room and its art
+  still scale with the desk, but lessons, the console and comms stay at about 14-15px. At
+  1864x984 lesson text drops from 18.6px to 14.9px, and 1280x720 is unchanged. Lines keep
+  their length, so the lesson column is narrower on the glass on bigger windows.
+
 ## [0.12.0] — 2026-10-25
 
 An admin panel, so the jobs that needed SQL or a script on the droplet happen in the app. An
