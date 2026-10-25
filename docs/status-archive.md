@@ -4,6 +4,70 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-21: Unit 1.1 modules 06–10 audited, and v0.11.0 shipped
+
+- **Merged on Sean's word**, one issue and one PR each, all in milestone v0.11.0:
+  - #238 (#237), module 06:
+    - `pgrep`/`pkill` match part of a name, so `pkill o2` also aims at the root-owned daemon;
+    - you can signal only your own processes;
+    - jobs (`sleep`, `&`, `%1`) are a table;
+    - `pgrep`'s silence means the process is gone.
+  - #240 (#239), module 07:
+    - `>` creates or empties a file;
+    - the `DIR:` heading the task's file shows;
+    - `2>&1` goes before `|`, and its `&` isn't module 06's;
+    - `ls` writes one name per line into a file.
+  - #242 (#241), module 08:
+    - grep and sed are tables on `/etc/passwd`;
+    - an access-log line field by field, and `uniq -c`'s count first;
+    - `cut -d' '`, and what awk's quotes keep from the shell;
+    - a second log in the console (`/var/log/nginx/access.log`), so examples never touch the task's file.
+  - #244 (#243), module 09:
+    - the environment and child processes;
+    - no spaces around `=`, the quote rules, and why `bash -c` takes single quotes;
+    - the prepend line in pieces, with the `:$PATH` trap and the way back;
+    - the false `test.sh` claim is gone.
+  - #246 (#245), module 10:
+    - every quiz answer and card was in a comment;
+    - which commands need `sudo`, and the Dockerfile terms behind Q3;
+    - Try it on `tree`, with somewhere to run it without Ubuntu.
+- **Shipped v0.11.0** the same day, on Sean's go:
+  - the CHANGELOG cut was #250;
+  - release run `39612989269`: `backup ok (7099 bytes)`, no migrations, `running version 0.11.0`, then "Deployed and healthy";
+  - `learn.seandesmet.com/healthz` reports `0.11.0`/`268916d`, and Budget Buddy's `/healthz` is 200.
+- **The rhythm held for all five**: the audit, a second audit, the reviewer, Try it in `ubuntu:24.04`, playing as `verify-bot`, and `criterion` tests that fail on `main`.
+  - Each second audit found 4 to 7 real gaps.
+  - Try it on Ubuntu caught two wrong claims in module 10. `apt install` only asks `[Y/n]` when it adds other packages, and `apt update` doesn't end on `Reading package lists... Done`.
+- Gotchas:
+  - ⚠️ **The dev app doesn't reload on content edits** (#247). `--reload-dir content` has no `--reload-include`, so only `*.py` triggers it. `docker compose restart web` before any Playwright check, or it plays the old module (it did, once).
+  - ⚠️ **CI didn't start for the last three pushes to `main`** (`815bb5d`, `8cfa0ef`, `268916d`): no runs at all. PR runs and the release workflow fired normally. v0.11.0 was published after checking that `main`'s tree equalled the CHANGELOG PR's tested head (`d7108c9`). Not investigated yet.
+  - ⚠️ `/beginner-audit` often titles scenarios "… (1)", which `check_criteria.py` won't match (#248). Strip the numbers before filing.
+  - ⚠️ A `lacks` check can't name a learner-created file, though both graders already handle one (#249). That's why modules 07 ("nothing else") and 08 ("three") are unenforced.
+  - ⚠️ The audit's suggested examples weren't always true of the module's console: `grep nologin` has no `nologin` lines there, and on 24.04 `/usr/sbin/nginx` is `nginx`'s, not `nginx-core`'s. Run each suggestion before taking it.
+  - ⚠️ Pygments splits `2>&1` into `2 > & 1` in rendered code, so `criterion` tests on Try it text must avoid the whole token.
+  - ⚠️ `test_lessons_say_when_the_console_lacks_something` fires on a mere mention (`htop`, "a friendlier `top`").
+- **Left for Sean:**
+  - Unit 1.1's only Python challenge (module 08) assumes Unit 2.1's Python. It's now labelled a bonus, but it could move.
+  - Module 10's Dockerfile section could move to *Python & Containers* once that's written.
+  - Module 09's `.bashrc` check passes on a comment that mentions `/opt/nav/bin`.
+  - Dependabot's #222 is still open.
+  - Milestone v0.11.0 is closed, and no v0.12.0 milestone exists yet.
+- **Next:**
+  1. Unit 1.5, *systemd & services*, needs a milestone and its issues. See `docs/roadmap.md`.
+  2. The three follow-ups: #247 (one line), #249 (schema plus two task checks), #248 (skill wording).
+  3. Find out why push-to-`main` CI stopped firing.
+- **Later the same day, on Sean's word:**
+  - #252 (#247): the dev app reloads on content edits. `--reload-include` alone did nothing, because uvicorn 0.54 ignores it without `watchfiles`, so `watchfiles==1.3.0` is now a dev dependency.
+  - #254 (#249): a `lacks` check may name a file the learner creates. Modules 07 and 08 now enforce "nothing else" and "three".
+  - The `main` push CI fired normally for both, so the earlier gap looks like a one-off.
+  - An outside architecture review produced #255–#260. The `shell.js` split (#255) goes before Unit 1.5.
+  - #261 (#259): this file keeps three sessions, and the rest are in `status-archive.md`. The wrap now says to keep it that way. `architecture.md`'s module table is one line a row.
+- **Next (supersedes the list above):**
+  1. #255, split `shell.js` by area, **before** any Unit 1.5 work. #257 (schema package) follows just before Unit 1.5's spec classes.
+  2. Then Unit 1.5, *systemd & services*: a milestone and its issues.
+  3. Quick ones that fit anywhere: #256 (Pyodide version once), #258 (non-negotiable #1's single-user note), #248 (audit scenario titles).
+  4. #260 waits on Sean's keep-or-drop decision for the unused agents. #222 (Dependabot) needs its own look.
+
 ### 2026-10-19: `/beginner-audit`, and Unit 1.1 modules 01–05 audited
 
 - **Merged on Sean's word**, one issue and one PR each, all in milestone v0.11.0:

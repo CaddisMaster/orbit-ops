@@ -97,11 +97,24 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   only the parts before it. A line-by-line comparison proves nothing else changed.
 - **Releases:** Sean decides when. On his go, Claude cuts the CHANGELOG, merges it and publishes
   the Release, and Sean approves `production`.
+- **The admin panel is the one cross-user reader** (#281, 2026-10-25). `app/admin.py` names its
+  target user explicitly and only `require_admin` routes call it (non-negotiable #1 says so).
+  Non-admins get a 404; every destructive action re-asks the admin's password, counted by the
+  login limiter. The first admin is made with `create_user.py --admin` on the droplet.
+- **Production's System page can't read the database's revision** (#285): `orbit_app` stays
+  locked out of `alembic_version` (0002). Sean kept that over a read grant, since every deploy
+  migrates before the new image serves.
+- **The screen's text stays 13.5–15.5px at any window size** (#293, 2026-10-25). The art grows
+  with the desk; `--screen-scale` steps down with the scene's width so reading text doesn't.
+  Sean picked 0.68 at his 1864×984 from screenshots at 0.85, 0.75 and 0.68, small windows
+  unchanged. The lesson column keeps its line length in characters.
 
 ## Release ledger
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.12.1 | 2026-10-25 | The laptop screen's text stops growing with the window: 13.5–15.5px at every size, 14.9px at 1864×984 (#293). A PATCH. No migrations |
+| 0.12.0 | 2026-10-25 | The admin panel (#280–#285): reset a learner's progress (all, or one module or unit), preview any module, create and manage accounts (password, log out everywhere, delete, JSON export), AI spend and System pages; destructive actions re-ask the password. Migration `0010` (`users.is_admin`) |
 | 0.11.1 | 2026-10-24 | Hardening, nothing new for the learner: root-owned image code, `web` read-only with no capabilities (#263, #264), Grype scans and an SBOM/provenance on every release (#265), Postgres pinned by digest, applied by hand first (#266); `shell.js` split into 12 parts (#255), the schema a package (#257); two Unit 1.1 tasks check what they ask (#249). A PATCH. No migrations |
 | 0.11.0 | 2026-10-21 | The Unit 1.1 beginner audit: `/beginner-audit` (#217) and modules 01–10 rewritten so everything a task, quiz or card needs is in prose or a table (#224–#245); the console refuses `mv f nope/` (#229). A MINOR by the milestone. No migrations |
 | 0.10.0 | 2026-10-17 | Fixes from playing Unit 1.1: modules 04–07 say plainly what tasks and quizzes need (#206, #210, #214, #216); the console's `N of M done` line (#208) and `stat -c` (#206); Okafor is he (#207). Planned as 0.9.1, a MINOR because it carries features. No migrations |
@@ -117,6 +130,52 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-25: `/cycle`, the admin panel, and v0.12.0 and v0.12.1 shipped
+
+- **`/cycle`** (a user-level skill in `personal-vault`, shared with Budget Buddy): Sean approves
+  a queue of issues once, Claude merges the auto-tagged ones on green and leaves stop-tagged
+  ones (auth, migrations, visual, AI spend, content) as open PRs. Two rounds ran this session.
+  Voice dictation was looked at first and dropped: Claude Code's `/voice` needs a local mic,
+  and the VM has none.
+- **v0.12.0, the admin panel** (milestone filed this session, #280–#285, PRs #286–#291):
+  - #286 (#280): migration `0010`, `users.is_admin`. Verified by hand on a scratch database
+    (a user made at 0009 upgrades to false; downgrade drops only the column).
+  - #287 (#281): `/admin`, `require_admin` (404), `confirm_password`, the full progress reset
+    (six tables; `users` and `ai_requests` stay), `create_user.py --admin`.
+  - #288 (#282): create accounts, `PASSWORD_MIN_LENGTH` shared with the script.
+  - #289 (#285): `/admin/ai` (from `app.spend`, so it can't disagree with the gate) and
+    `/admin/system`. `path_separator = os` in `alembic.ini` silences Alembic's warning.
+  - #290 (#283): a page per account (new password, log out everywhere, delete, progress JSON);
+    acting on yourself keeps the current session.
+  - #291 (#284): reset one module or unit (XP refs matched with `split_part`, card reviews on
+    part 2), and `/admin/preview/<slug>`, read-only, no answers. All 38 modules preview.
+  - Shipped as v0.12.0 (#292, run `40223396007`): `backup ok (8629 bytes)`, `running version
+    0.12.0`. Sean promoted his account from the Mac and confirmed `/admin` works.
+- **v0.12.1** (#293, #294, #295): the screen's text no longer grows with the window. Sean
+  picked from screenshots; checked at three sizes in Playwright, the console answering `pwd`.
+  Release run `40226594551`: `backup ok (5291 bytes)`, `running version 0.12.1`. The dump was
+  smaller than v0.12.0's 8629 bytes, which fits Sean having reset his progress from `/admin`.
+- Gotchas:
+  - ⚠️ **`ci.yml` runs only on PRs into `main`.** A PR stacked on another branch shows no
+    checks at all. Build each issue off `main` instead, and merge `main` in after its
+    neighbour lands.
+  - ⚠️ **The permission classifier refused a force-push plus a remote branch delete**, and
+    then `gh release create` ("Create Public Surface") until Sean said "publish" in so many
+    words. Merging `main` into the branch (a normal push) worked in place of the force-push.
+  - ⚠️ **"Keep both sides" on add/add conflicts can drop a shared line**: a function lost its
+    closing `)`. Where a branch's change sits inside code `main` reworked, take `main`'s file
+    and re-apply the branch's additions instead.
+  - ⚠️ A literal apostrophe in a Jinja template isn't escaped (only variables are), so a test
+    looks for `'`, not `&#39;`.
+- **Left for Sean:**
+  - Confirm the reset of his production progress took (the smaller dump suggests it did), and replay.
+  - From the Mac: `rm docker-compose.yml.v0.11.0 backups/pre-db-change.sql.gz` in
+    `/opt/orbit-ops`, and delete the leftover `281-admin-panel` branch on GitHub.
+  - #260 still waits on his decision.
+- **Next:** #258 (a docs note), Dependabot's #253 in its own release, then Unit 1.5,
+  *systemd & services*, as a **v0.13.0** milestone (a console issue for `systemctl`, unit files
+  and `journalctl`, then ~6 modules, the mystery's reveal last).
 
 ### 2026-10-24: two splits, #266 on the droplet, and v0.11.1 shipped
 
@@ -222,67 +281,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
      Budget Buddy has its own copy and hasn't started it. BB can copy these four PRs.
 - **Next:** #255 (split `shell.js`) before Unit 1.5, as planned. The quick ones still fit
   anywhere: #256, #258, #248, plus #260's decision and Dependabot's #253.
-
-### 2026-10-21: Unit 1.1 modules 06–10 audited, and v0.11.0 shipped
-
-- **Merged on Sean's word**, one issue and one PR each, all in milestone v0.11.0:
-  - #238 (#237), module 06:
-    - `pgrep`/`pkill` match part of a name, so `pkill o2` also aims at the root-owned daemon;
-    - you can signal only your own processes;
-    - jobs (`sleep`, `&`, `%1`) are a table;
-    - `pgrep`'s silence means the process is gone.
-  - #240 (#239), module 07:
-    - `>` creates or empties a file;
-    - the `DIR:` heading the task's file shows;
-    - `2>&1` goes before `|`, and its `&` isn't module 06's;
-    - `ls` writes one name per line into a file.
-  - #242 (#241), module 08:
-    - grep and sed are tables on `/etc/passwd`;
-    - an access-log line field by field, and `uniq -c`'s count first;
-    - `cut -d' '`, and what awk's quotes keep from the shell;
-    - a second log in the console (`/var/log/nginx/access.log`), so examples never touch the task's file.
-  - #244 (#243), module 09:
-    - the environment and child processes;
-    - no spaces around `=`, the quote rules, and why `bash -c` takes single quotes;
-    - the prepend line in pieces, with the `:$PATH` trap and the way back;
-    - the false `test.sh` claim is gone.
-  - #246 (#245), module 10:
-    - every quiz answer and card was in a comment;
-    - which commands need `sudo`, and the Dockerfile terms behind Q3;
-    - Try it on `tree`, with somewhere to run it without Ubuntu.
-- **Shipped v0.11.0** the same day, on Sean's go:
-  - the CHANGELOG cut was #250;
-  - release run `39612989269`: `backup ok (7099 bytes)`, no migrations, `running version 0.11.0`, then "Deployed and healthy";
-  - `learn.seandesmet.com/healthz` reports `0.11.0`/`268916d`, and Budget Buddy's `/healthz` is 200.
-- **The rhythm held for all five**: the audit, a second audit, the reviewer, Try it in `ubuntu:24.04`, playing as `verify-bot`, and `criterion` tests that fail on `main`.
-  - Each second audit found 4 to 7 real gaps.
-  - Try it on Ubuntu caught two wrong claims in module 10. `apt install` only asks `[Y/n]` when it adds other packages, and `apt update` doesn't end on `Reading package lists... Done`.
-- Gotchas:
-  - ⚠️ **The dev app doesn't reload on content edits** (#247). `--reload-dir content` has no `--reload-include`, so only `*.py` triggers it. `docker compose restart web` before any Playwright check, or it plays the old module (it did, once).
-  - ⚠️ **CI didn't start for the last three pushes to `main`** (`815bb5d`, `8cfa0ef`, `268916d`): no runs at all. PR runs and the release workflow fired normally. v0.11.0 was published after checking that `main`'s tree equalled the CHANGELOG PR's tested head (`d7108c9`). Not investigated yet.
-  - ⚠️ `/beginner-audit` often titles scenarios "… (1)", which `check_criteria.py` won't match (#248). Strip the numbers before filing.
-  - ⚠️ A `lacks` check can't name a learner-created file, though both graders already handle one (#249). That's why modules 07 ("nothing else") and 08 ("three") are unenforced.
-  - ⚠️ The audit's suggested examples weren't always true of the module's console: `grep nologin` has no `nologin` lines there, and on 24.04 `/usr/sbin/nginx` is `nginx`'s, not `nginx-core`'s. Run each suggestion before taking it.
-  - ⚠️ Pygments splits `2>&1` into `2 > & 1` in rendered code, so `criterion` tests on Try it text must avoid the whole token.
-  - ⚠️ `test_lessons_say_when_the_console_lacks_something` fires on a mere mention (`htop`, "a friendlier `top`").
-- **Left for Sean:**
-  - Unit 1.1's only Python challenge (module 08) assumes Unit 2.1's Python. It's now labelled a bonus, but it could move.
-  - Module 10's Dockerfile section could move to *Python & Containers* once that's written.
-  - Module 09's `.bashrc` check passes on a comment that mentions `/opt/nav/bin`.
-  - Dependabot's #222 is still open.
-  - Milestone v0.11.0 is closed, and no v0.12.0 milestone exists yet.
-- **Next:**
-  1. Unit 1.5, *systemd & services*, needs a milestone and its issues. See `docs/roadmap.md`.
-  2. The three follow-ups: #247 (one line), #249 (schema plus two task checks), #248 (skill wording).
-  3. Find out why push-to-`main` CI stopped firing.
-- **Later the same day, on Sean's word:**
-  - #252 (#247): the dev app reloads on content edits. `--reload-include` alone did nothing, because uvicorn 0.54 ignores it without `watchfiles`, so `watchfiles==1.3.0` is now a dev dependency.
-  - #254 (#249): a `lacks` check may name a file the learner creates. Modules 07 and 08 now enforce "nothing else" and "three".
-  - The `main` push CI fired normally for both, so the earlier gap looks like a one-off.
-  - An outside architecture review produced #255–#260. The `shell.js` split (#255) goes before Unit 1.5.
-  - #261 (#259): this file keeps three sessions, and the rest are in `status-archive.md`. The wrap now says to keep it that way. `architecture.md`'s module table is one line a row.
-- **Next (supersedes the list above):**
-  1. #255, split `shell.js` by area, **before** any Unit 1.5 work. #257 (schema package) follows just before Unit 1.5's spec classes.
-  2. Then Unit 1.5, *systemd & services*: a milestone and its issues.
-  3. Quick ones that fit anywhere: #256 (Pyodide version once), #258 (non-negotiable #1's single-user note), #248 (audit scenario titles).
-  4. #260 waits on Sean's keep-or-drop decision for the unused agents. #222 (Dependabot) needs its own look.
