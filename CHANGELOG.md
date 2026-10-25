@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- The Pyodide version is written in one place (#256), the script that fetches it for the
+  image, and the app reads it from there, so an upgrade can't change one copy and miss the
+  other. CI now checks that each built image holds the Pyodide version the app serves.
+
 ## [0.11.1] — 2026-10-24
 
 Hardening, with nothing new for the learner. The app's container is locked down and can't

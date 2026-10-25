@@ -15,10 +15,10 @@ from starlette.responses import Response
 from starlette.types import Scope
 
 from app.config import get_settings
+from scripts.fetch_pyodide import VERSION as PYODIDE_VERSION  # written once, where it's fetched (#256)
 
 STATIC_DIR = Path(__file__).parent / "static"
 PYODIDE_DIR = Path("/opt/pyodide")  # the Dockerfile's `pyodide` stage (#53)
-PYODIDE_VERSION = "314.0.7"  # scripts/fetch_pyodide.py's VERSION; tests/test_pyodide.py holds them equal
 PYODIDE_URL = f"/pyodide/{PYODIDE_VERSION}/"
 
 IMMUTABLE = "public, max-age=31536000, immutable"

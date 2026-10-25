@@ -13,7 +13,8 @@ shows it: `gh api repos/pyodide/pyodide/releases/tags/<VERSION>`), and
 LICENSE_SHA256 if the licence changed.
 
 Standard library only: it runs in a bare python image before anything is
-installed.
+installed. That's also why the app imports VERSION from here (#256), never the
+other way round: app/static_files.py serves Pyodide at /pyodide/<VERSION>/.
 """
 
 import hashlib

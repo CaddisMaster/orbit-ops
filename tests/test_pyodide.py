@@ -48,7 +48,20 @@ def test_pyodide_is_pinned_by_hash():
     assert re.search(r"^FROM python:[\d.]+-slim@sha256:[0-9a-f]{64} AS pyodide$", dockerfile, re.M)
     assert "RUN python /tmp/fetch_pyodide.py /pyodide\n" in dockerfile
     assert "COPY --from=pyodide /pyodide /opt/pyodide\n" in dockerfile and main.PYODIDE_DIR == Path("/opt/pyodide")
-    assert static_files.PYODIDE_VERSION == fetch_pyodide.VERSION  # the URL names what the image holds (#92)
+    assert static_files.PYODIDE_URL == f"/pyodide/{fetch_pyodide.VERSION}/"  # the URL names what the image holds (#92)
+
+
+@pytest.mark.criterion(256, "The Pyodide version is written once")
+def test_the_pyodide_version_is_written_once():
+    assert static_files.PYODIDE_VERSION is fetch_pyodide.VERSION
+    skip = {"__pycache__", "node_modules"}
+    files = [
+        f for f in ROOT.rglob("*")
+        if f.is_file() and f.stat().st_size < 1_000_000
+        and not any(part in skip or (part.startswith(".") and part != ".github") for part in f.relative_to(ROOT).parts)
+    ]
+    holders = [str(f.relative_to(ROOT)) for f in files if fetch_pyodide.VERSION in f.read_text(errors="ignore")]
+    assert [h for h in holders if h != "CHANGELOG.md"] == ["scripts/fetch_pyodide.py"]  # the CHANGELOG is history
 
 
 def test_a_download_that_doesnt_match_its_hash_is_refused():
