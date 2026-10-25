@@ -51,7 +51,8 @@ app/station_map.py   the /map layout (pure); app/console.py: header readout + co
 app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js + shell/ is the simulated shell
 app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
 app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
-app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review)
+app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review), admin.py (/admin)
+app/admin.py         the admin panel's queries: every learner, and wiping one's progress (#281)
 alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress … 0010 users.is_admin)
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
@@ -61,7 +62,8 @@ scripts/             create_user.py, install_compose.sh + backup_db.sh (deploy),
 ## Non-negotiables
 
 1. **Every query that reads learner state is scoped to the current user**, even though there is
-   one user today. It costs nothing and keeps a second account from ever being a rewrite.
+   one user today. It costs nothing and keeps a second account from ever being a rewrite. The one
+   exception is `app/admin.py`: it names its target user explicitly and only `require_admin` routes call it.
 2. **Never show an exception to the user.** The catch-all handler logs and renders `error.html`.
 3. **Inline `<script>` needs `nonce="{{ request.state.csp_nonce }}"`**; never add
    `'unsafe-inline'` or `'unsafe-eval'` to the CSP. Pyodide (v0.5.0) gets `'wasm-unsafe-eval'`

@@ -838,3 +838,13 @@ body::before {
   .window-event.aurora img { animation: none; }  /* at full brightness */
   .comms-line.is-new.shown { animation: none; }
 }
+
+/* The admin panel (#281) */
+.admin-table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+.admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; text-align: left; vertical-align: middle; }
+.admin-table th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+.admin-table .num { text-align: right; }
+.admin-action { display: flex; gap: 0.5rem; align-items: center; }
+.admin-action input { padding: 0.4rem 0.6rem; width: 10rem; }
+.notice { border: 1px solid var(--ok); color: var(--ok); border-radius: 6px; padding: 0.6rem 0.75rem; }
+.tag { border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 0 0.5rem; font-size: 0.75rem; }
