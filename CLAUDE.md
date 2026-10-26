@@ -64,6 +64,10 @@ scripts/             create_user.py, install_compose.sh + backup_db.sh (deploy),
 1. **Every query that reads learner state is scoped to the current user**, even though there is
    one user today. It costs nothing and keeps a second account from ever being a rewrite. The one
    exception is `app/admin.py`: it names its target user explicitly and only `require_admin` routes call it.
+   Two things still hold only for one user: the login and hint rate limiters are in-process memory
+   (reset on restart, not shared across workers), and a challenge's verdict comes from the browser
+   (#54). A second account needs database-backed limiters, and a challenge verdict the server
+   can check instead of paying out what the browser reports.
 2. **Never show an exception to the user.** The catch-all handler logs and renders `error.html`.
 3. **Inline `<script>` needs `nonce="{{ request.state.csp_nonce }}"`**; never add
    `'unsafe-inline'` or `'unsafe-eval'` to the CSP. Pyodide (v0.5.0) gets `'wasm-unsafe-eval'`
