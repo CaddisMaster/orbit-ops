@@ -5,7 +5,7 @@
 {% block scripts %}{% if terminal_spec %}
   <script src="{{ static_url('js/manual.js') }}" defer></script>
   {# The shell's parts, in shell.js's PARTS order, then shell.js itself (#255). #}
-  {% for part in ["base", "machine", "parse", "editor", "expand", "run", "builtins", "files", "text", "system", "network", "dns"] %}
+  {% for part in ["base", "machine", "parse", "editor", "expand", "run", "builtins", "files", "text", "system", "network", "dns", "systemd"] %}
   <script src="{{ static_url('js/shell/' ~ part ~ '.js') }}" defer></script>
   {% endfor %}
   <script src="{{ static_url('js/shell.js') }}" defer></script>

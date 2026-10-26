@@ -14,7 +14,7 @@
 (function (root, factory) {
   // The parts, in the order they load. module.html loads them in this order
   // too, before this file (a test holds the two equal).
-  var PARTS = ["base", "machine", "parse", "editor", "expand", "run", "builtins", "files", "text", "system", "network", "dns"];
+  var PARTS = ["base", "machine", "parse", "editor", "expand", "run", "builtins", "files", "text", "system", "network", "dns", "systemd"];
   if (typeof module === "object" && module.exports) {
     PARTS.forEach(function (p) { require("./shell/" + p + ".js"); });
     module.exports = factory(require("./shell/base.js"));
@@ -83,8 +83,13 @@
 
   // The same checks as app/terminal.py's passes(), so the console can say
   // "done" the moment it is. The server re-checks; this is only a preview.
-  function passes(check, state, cwd, processes) {
+  function passes(check, state, cwd, processes, units) {
     var named = function (name) { return (processes || []).filter(function (p) { return procName(p.command) === name; }); };
+    var active = function (name) { return (units || []).some(function (u) { return u.name === name && u.state === "active"; }); };
+    if ("active" in check) return active(check.active);
+    if ("inactive" in check) return !active(check.inactive);
+    if ("enabled" in check) return enabled(check.enabled, state);
+    if ("disabled" in check) return !enabled(check.disabled, state);
     if ("cwd" in check) return cwd === check.cwd;
     if ("running" in check) return named(check.running).some(function (p) { return p.alive; });
     if ("stopped" in check) return !named(check.stopped).some(function (p) { return p.alive; });
@@ -130,6 +135,16 @@
     return false;
   }
 
+  // Is there a link to `name` in some target's .wants/, as `systemctl enable`
+  // makes? The same rule as app/terminal.py enabled() (#303).
+  function enabled(name, state) {
+    var prefix = "/etc/systemd/system/";
+    return Object.keys(state).some(function (path) {
+      var rest = path.slice(prefix.length).split("/");
+      return path.indexOf(prefix) === 0 && rest.length === 2 && /\.wants$/.test(rest[0]) && rest[1] === name && state[path].type === "link";
+    });
+  }
+
   // "50M" → bytes (K, M, G are powers of 1024, as in the exercise files).
   function parseSize(text) {
     var m = /^(\d+(?:\.\d+)?)([KMG]?)$/.exec(String(text));
@@ -148,7 +163,8 @@
     var state = this.state();
     var cwd = this.cwd;
     var procs = this.processes();
-    return checks.filter(function (c) { return passes(c, state, cwd, procs); }).length;
+    var units = this.units();
+    return checks.filter(function (c) { return passes(c, state, cwd, procs, units); }).length;
   };
 
   Shell.prototype.solved = function (checks) {

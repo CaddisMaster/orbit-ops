@@ -1,4 +1,4 @@
-// The station console's shell, part 5 of 12 (#255): expanding words.
+// The station console's shell, part 5 of 13 (#255): expanding words.
 // Parameters, globs, braces, $(…), arithmetic, and test / [[ ]].
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));

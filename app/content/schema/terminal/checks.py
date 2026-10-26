@@ -90,9 +90,30 @@ class SignalledCheck(_Strict):
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
 
 
+UnitRef = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_.-]*\.(service|timer)$", max_length=64)]
+
+
+class ActiveCheck(_Strict):
+    active: UnitRef  # #303: the unit is running (a timer: waiting), as `systemctl is-active` says active
+
+
+class InactiveCheck(_Strict):
+    inactive: UnitRef  # not active: stopped, failed, or never started
+
+
+class EnabledCheck(_Strict):
+    enabled: UnitRef  # starts at boot: a link to it in some target's .wants/ under /etc/systemd/system
+
+
+class DisabledCheck(_Strict):
+    disabled: UnitRef  # no such link
+
+
+UnitCheck = ActiveCheck | InactiveCheck | EnabledCheck | DisabledCheck
+
 TerminalCheck = (
     ModeCheck | OwnerCheck | ExistsCheck | MissingCheck | ExecutableCheck | ContainsCheck | LacksCheck | CwdCheck
-    | RunningCheck | StoppedCheck | SignalledCheck | SymlinkCheck | FilesUnderCheck
+    | RunningCheck | StoppedCheck | SignalledCheck | SymlinkCheck | FilesUnderCheck | UnitCheck
 )
 
 
@@ -105,6 +126,8 @@ def check_path(check: TerminalCheck) -> str:
         case ContainsCheck(contains=p) | LacksCheck(lacks=p) | CwdCheck(cwd=p) | SymlinkCheck(symlink=p) | FilesUnderCheck(files_under=p):
             return p
         case RunningCheck(running=p) | StoppedCheck(stopped=p) | SignalledCheck(signalled=p):
+            return p
+        case ActiveCheck(active=p) | InactiveCheck(inactive=p) | EnabledCheck(enabled=p) | DisabledCheck(disabled=p):
             return p
     raise TypeError(check)
 

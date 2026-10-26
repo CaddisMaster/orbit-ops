@@ -1,4 +1,4 @@
-// The station console's shell, part 1 of 12 (#255): what every other part
+// The station console's shell, part 1 of 13 (#255): what every other part
 // shares. The station's clock, paths, the output sink, the helpers commands
 // use (flags, lines, modes, sizes), and the network's addresses and defaults.
 // Pure: no Shell here.

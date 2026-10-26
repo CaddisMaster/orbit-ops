@@ -1,4 +1,4 @@
-// The station console's shell, part 10 of 12 (#255): users, processes and
+// The station console's shell, part 10 of 13 (#255): users, processes and
 // cron. id, sudo, usermod, ps, kill, jobs, free and crontab.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));

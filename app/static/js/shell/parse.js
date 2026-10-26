@@ -1,4 +1,4 @@
-// The station console's shell, part 3 of 12 (#255): reading a command line.
+// The station console's shell, part 3 of 13 (#255): reading a command line.
 // The lexer and the parser that turn a line or a script into commands, and
 // the errors they throw.
 (function (root, factory) {

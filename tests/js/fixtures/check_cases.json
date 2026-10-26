@@ -90,6 +90,50 @@
    "owner": "cadet",
    "group": "crew",
    "contents": "echo ok\n"
+  },
+  "/etc/systemd/system": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "root",
+   "group": "root",
+   "contents": ""
+  },
+  "/etc/systemd/system/multi-user.target.wants": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "root",
+   "group": "root",
+   "contents": ""
+  },
+  "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+   "type": "link",
+   "mode": 511,
+   "owner": "root",
+   "group": "root",
+   "contents": "",
+   "target": "/usr/lib/systemd/system/scrubberd.service"
+  },
+  "/etc/systemd/system/o2-backup.service": {
+   "type": "file",
+   "mode": 420,
+   "owner": "root",
+   "group": "root",
+   "contents": "[Service]\nExecStart=/x\n"
+  },
+  "/etc/systemd/system/o2-backup.service.d": {
+   "type": "dir",
+   "mode": 493,
+   "owner": "root",
+   "group": "root",
+   "contents": ""
+  },
+  "/etc/systemd/system/o2-backup.service.d/o2-backup.service": {
+   "type": "link",
+   "mode": 511,
+   "owner": "root",
+   "group": "root",
+   "contents": "",
+   "target": "/etc/systemd/system/o2-backup.service"
   }
  },
  "cwd": "/s",
@@ -522,6 +566,76 @@
     "executable": "/s/nope.sh"
    },
    "expect": false
+  },
+  {
+   "name": "active: a running unit",
+   "check": {
+    "active": "scrubberd.service"
+   },
+   "expect": true
+  },
+  {
+   "name": "active: a failed unit isn't",
+   "check": {
+    "active": "o2-backup.service"
+   },
+   "expect": false
+  },
+  {
+   "name": "active: restarting isn't active yet",
+   "check": {
+    "active": "o2-monitor.service"
+   },
+   "expect": false
+  },
+  {
+   "name": "active: a unit the console never saw",
+   "check": {
+    "active": "nothing.service"
+   },
+   "expect": false
+  },
+  {
+   "name": "inactive: failed counts as not active",
+   "check": {
+    "inactive": "o2-backup.service"
+   },
+   "expect": true
+  },
+  {
+   "name": "inactive: a running unit isn't",
+   "check": {
+    "inactive": "scrubberd.service"
+   },
+   "expect": false
+  },
+  {
+   "name": "enabled: a link in a .wants/ directory",
+   "check": {
+    "enabled": "scrubberd.service"
+   },
+   "expect": true
+  },
+  {
+   "name": "enabled: a link somewhere else doesn't count",
+   "check": {
+    "enabled": "o2-backup.service"
+   },
+   "expect": false
+  },
+  {
+   "name": "disabled: no .wants/ link",
+   "check": {
+    "disabled": "o2-backup.service"
+   },
+   "expect": true
+  },
+  {
+   "name": "disabled: an enabled unit isn't",
+   "check": {
+    "disabled": "scrubberd.service"
+   },
+   "expect": false
   }
  ],
  "processes": [
@@ -548,6 +662,20 @@
    "command": "-bash",
    "alive": true,
    "signals": []
+  }
+ ],
+ "units": [
+  {
+   "name": "scrubberd.service",
+   "state": "active"
+  },
+  {
+   "name": "o2-backup.service",
+   "state": "failed"
+  },
+  {
+   "name": "o2-monitor.service",
+   "state": "activating"
   }
  ]
 }

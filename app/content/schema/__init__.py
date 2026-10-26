@@ -44,11 +44,15 @@ from .syllabus import (
 )
 from .terminal.addresses import HOST_NAME, STATION_RANGES, HostName, Port, Proto, station_address
 from .terminal.checks import (
+    ActiveCheck,
     ContainsCheck,
     CwdCheck,
+    DisabledCheck,
+    EnabledCheck,
     ExecutableCheck,
     ExistsCheck,
     FilesUnderCheck,
+    InactiveCheck,
     LacksCheck,
     MissingCheck,
     ModeCheck,
@@ -60,6 +64,7 @@ from .terminal.checks import (
     StoppedCheck,
     SymlinkCheck,
     TerminalCheck,
+    UnitCheck,
     check_path,
     describe,
 )
@@ -68,12 +73,15 @@ from .terminal.exercise import KNOWN_GIDS, TerminalExercise
 from .terminal.files import STATION_NOW, AbsPath, Account, FsEntry, LinkTarget, Octal, Size, SizeText, Stamp, size_bytes
 from .terminal.firewall import UFW_INSTALLED, FirewallRule, FirewallSpec, ufw_conf, ufw_rules
 from .terminal.network import ConnectionSpec, HostSpec, InterfaceSpec, ListenSpec, NetworkSpec, RouteSpec, ServiceSpec
+from .terminal.services import ADMIN_DIR, VENDOR_DIR, SystemdUnit, parse_unit, valid_calendar
 from .terminal.system import AccountSpec, DiskSpec, MemorySpec, ProcessSpec, proc_name
 
 __all__ = [
     "AbsPath",
     "Account",
     "AccountSpec",
+    "ActiveCheck",
+    "ADMIN_DIR",
     "Avatar",
     "BadgeRule",
     "BadgeSpec",
@@ -90,11 +98,13 @@ __all__ = [
     "ContainsLabCheck",
     "CwdCheck",
     "describe",
+    "DisabledCheck",
     "DiskSpec",
     "DnsRecord",
     "DnsSpec",
     "Drill",
     "Emblem",
+    "EnabledCheck",
     "ETC_HOSTS",
     "ExecutableCheck",
     "ExistsCheck",
@@ -107,6 +117,7 @@ __all__ = [
     "HOST_NAME",
     "HostName",
     "HostSpec",
+    "InactiveCheck",
     "InterfaceSpec",
     "KNOWN_GIDS",
     "Lab",
@@ -129,6 +140,7 @@ __all__ = [
     "NotContainsLabCheck",
     "Octal",
     "OwnerCheck",
+    "parse_unit",
     "Port",
     "proc_name",
     "ProcessSpec",
@@ -155,6 +167,7 @@ __all__ = [
     "StreakRule",
     "Syllabus",
     "SymlinkCheck",
+    "SystemdUnit",
     "TerminalCheck",
     "TerminalExercise",
     "Text",
@@ -162,8 +175,11 @@ __all__ = [
     "ufw_conf",
     "UFW_INSTALLED",
     "ufw_rules",
+    "UnitCheck",
     "UnitCompleteRule",
     "UnitEmblem",
     "UnitSpec",
+    "valid_calendar",
+    "VENDOR_DIR",
     "WindowEvent",
 ]
