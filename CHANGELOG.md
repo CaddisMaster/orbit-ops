@@ -14,6 +14,11 @@ and why it matters, not what the diff says.
   unit needs `daemon-reload`, and timers show their next run on the station clock. Output was
   checked against systemd 255 on Ubuntu 24.04. Tasks can check that a unit is active, inactive,
   enabled or disabled, and the server grades it from what the console reports.
+- The console has a journal (#304): `journalctl` reads an exercise's log entries and what
+  systemd writes as units start, stop, crash and restart, by unit, time window (`--since`,
+  `--until`), priority, line count and boot, and `systemctl status` ends with the unit's
+  latest lines. As on Ubuntu, reading it takes `sudo` or the `adm` group. This is where Unit
+  1.5's last module finds what happened on the night of the outage.
 
 ## [0.12.1] — 2026-10-25
 

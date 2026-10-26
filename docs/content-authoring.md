@@ -437,6 +437,28 @@ Services (#303) are systemd units, for Unit 1.5:
   `Interactive authentication required.`, as Ubuntu's systemctl does when nothing can ask for a
   password. Over a real ssh session, polkit may ask for one itself: a lesson shouldn't promise
   either, beyond "use sudo".
+- **The journal (#304)** is the exercise's `journal:` entries plus what systemd logs as the
+  console runs: `Started`, `Stopping`/`Stopped`, `Main process exited, code=…`, `Failed with
+  result '…'`, `Scheduled restart job, restart counter is at N`, the start limit's lines, each
+  at journald's priority (start and stop info, an exit notice, a kill or a failure warning,
+  `Failed to start` err). Entries are dated on the station clock:
+
+  ```yaml
+  journal:                      # before 09:00 on 2026-10-08; sorted for you
+    - {time: "2026-10-08 02:39:58", identifier: scrubber-flush, pid: 5121, unit: cron.service,
+       priority: warning, message: "reply: FLUSH"}       # priority: info by default
+    - {time: "2026-10-08 02:40:00", identifier: systemd, pid: 1, unit: scrubberd.service,
+       message: "Stopping scrubberd.service - Scrubber controller..."}
+  ```
+
+  `unit` is what `-u` matches: give a program's lines the unit that ran it (a cron job's are
+  `cron.service`'s), and systemd's own lines the unit they're about. **The console booted at
+  08:00**, so anything earlier is the previous boot: `-b` hides it, `-b -1` shows it, a plain
+  read prints a `-- Boot ID --` line between them, and `systemctl status` shows only the lines
+  of the unit's latest start. **Reading it needs root, `adm` or `systemd-journal`**: anyone
+  else gets journald's hint and `No journal files were opened due to insufficient
+  permissions.` (everything on the console is the system's), and `systemctl status` without
+  its log lines. On a real server you'd also see your own session's lines.
 - **Check a Try it against real systemd**, which a plain `ubuntu:24.04` container doesn't run:
   install `systemd systemd-sysv` in one and start it as `/sbin/init`, privileged, with
   `--cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock`. A
@@ -536,8 +558,11 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     `-w` on a filtered port takes 2 min 14 s, as the kernel's retries do.
   - services (#303): `systemctl` `status start stop restart reload enable disable (--now)
     is-active is-enabled is-failed (-q) list-units (--type --state --failed --all)
-    list-unit-files list-timers (--all) cat daemon-reload`, with a name or a glob (`'o2-*'`).
-    Output is systemd 255.4's on Ubuntu 24.04; memory, CPU and task counts are fixed.
+    list-unit-files list-timers (--all) cat daemon-reload`, with a name or a glob (`'o2-*'`),
+    and `status -n N`; `journalctl` (#304) `-u UNIT (repeatable) -S/--since -U/--until -p
+    PRIO[..PRIO] -n [N] -r -b [0|-1] -o short|short-iso|cat -q -x -e -f` (`-f` prints and says
+    it can't follow). Output is systemd 255.4's on Ubuntu 24.04; memory, CPU and task counts
+    are fixed, and the host is `meridian`.
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
     sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
     foreground `sleep N` jumps N.

@@ -28,7 +28,7 @@ from .dns import ETC_HOSTS
 from .files import AbsPath, Account, FsEntry, _parent, size_bytes
 from .firewall import UFW_INSTALLED, ufw_conf, ufw_rules
 from .network import NetworkSpec
-from .services import ADMIN_DIR, VENDOR_DIR, SystemdUnit
+from .services import ADMIN_DIR, VENDOR_DIR, JournalEntry, SystemdUnit
 from .system import AccountSpec, DiskSpec, MemorySpec, ProcessSpec, proc_name
 
 KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
@@ -50,6 +50,7 @@ class TerminalExercise(_Strict):
     memory: MemorySpec | None = None
     network: NetworkSpec | None = None  # #164; without it, NetworkSpec's defaults
     services: Annotated[list[SystemdUnit], Field(max_length=20)] = []  # #303: systemd's units
+    journal: Annotated[list[JournalEntry], Field(max_length=200)] = []  # #304: the log so far
     files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
     checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
     success: Text = "Okafor's voice crackles over the comm: \"Confirmed. Nice work, cadet.\""

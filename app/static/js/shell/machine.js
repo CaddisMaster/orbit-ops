@@ -86,7 +86,7 @@
     this.sourceDepth = 0;
     this.noErrexit = 0;
     this.logins = []; // shells stacked by `sudo -i`, popped by `exit`
-    this.bootUnits(spec.services || []); // #303: systemd's units, from systemd.js
+    this.bootUnits(spec.services || [], spec.journal || []); // #303, #304: systemd's units and journal, from systemd.js
   }
 
   // bash's \w: ~ for a real home directory, otherwise the path. An exercise's

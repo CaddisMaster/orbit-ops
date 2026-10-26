@@ -16,7 +16,7 @@ from app.main import app
 from app.terminal import Node, UnitState, client_spec, grade, passes
 from tests.conftest import csrf
 from tests.test_progress import complete
-from tests.test_terminal import _attempts, _write
+from tests.test_terminal import JS, _attempts, _write
 
 SERVICES = """terminal:
   task: Bring the O2 monitor up, and keep it up.
@@ -238,3 +238,60 @@ def test_the_console_reports_its_units_and_the_server_records_them(logged_in, se
     assert response.json() == {"correct": True}
     [(_, _, correct, submitted)] = _attempts(user.id)
     assert correct and submitted["units"] == units
+
+
+JOURNAL = """  journal:
+    - {time: "2026-10-08 02:40:00", identifier: systemd, pid: 1, unit: scrubberd.service, message: "Stopping scrubberd.service - Scrubber controller..."}
+    - {time: "2026-10-08 02:39:58", identifier: scrubber-flush, pid: 5121, unit: cron.service, priority: warning, message: "reply: FLUSH"}
+"""
+
+
+def _with_journal(journal=JOURNAL):
+    return SERVICES.replace("  files:\n", journal + "  files:\n")
+
+
+def test_the_console_is_sent_the_journal_oldest_first(tmp_path):
+    spec = client_spec(_exercise(tmp_path, _with_journal()))
+    assert spec["journal"] == [
+        {"time": "2026-10-08T02:39:58", "identifier": "scrubber-flush", "pid": 5121, "unit": "cron.service",
+         "priority": "warning", "message": "reply: FLUSH"},
+        {"time": "2026-10-08T02:40:00", "identifier": "systemd", "pid": 1, "unit": "scrubberd.service",
+         "priority": "info", "message": "Stopping scrubberd.service - Scrubber controller..."},
+    ]
+
+
+def test_an_exercise_without_a_journal_sends_none(tmp_path):
+    assert "journal" not in client_spec(_exercise(tmp_path))
+
+
+@pytest.mark.criterion(304, "The journal is validated with the content")
+def test_a_journal_entry_whose_time_doesnt_parse_fails_naming_the_file_and_the_entry(tmp_path):
+    _write(tmp_path, _with_journal(JOURNAL.replace('"2026-10-08 02:39:58"', '"2026-10-08 02:39"')))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    message = str(exc.value)
+    assert "core/shell/02-two.md: terminal.journal.1.time:" in message
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expect"),
+    [
+        ('"2026-10-08 02:39:58"', '"2026-02-30 02:39:58"', "journal: 2026-02-30 02:39:58 is not a date and time"),
+        ('"2026-10-08 02:39:58"', '"2026-10-08 09:30:00"', "journal: 2026-10-08 09:30:00 is after the station's clock"),
+        ("priority: warning", "priority: loud", "terminal.journal.1.priority"),
+        ("identifier: scrubber-flush", "identifier: scrubber flush", "terminal.journal.1.identifier"),
+        ("unit: cron.service", "unit: cron", "terminal.journal.1.unit"),
+    ],
+)
+def test_a_wrong_journal_entry_fails_naming_what_is_wrong(tmp_path, old, new, expect):
+    _write(tmp_path, _with_journal(JOURNAL.replace(old, new)))
+    with pytest.raises(ContentError) as exc:
+        load_catalog(tmp_path)
+    assert expect in str(exc.value)
+
+
+def test_the_priorities_are_journalds():
+    from app.content.schema import PRIORITIES
+
+    js = (JS / "shell/systemd.js").read_text()
+    assert 'var PRIORITIES = ["' + '", "'.join(PRIORITIES) + '"];' in js

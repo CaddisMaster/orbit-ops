@@ -73,7 +73,15 @@ from .terminal.exercise import KNOWN_GIDS, TerminalExercise
 from .terminal.files import STATION_NOW, AbsPath, Account, FsEntry, LinkTarget, Octal, Size, SizeText, Stamp, size_bytes
 from .terminal.firewall import UFW_INSTALLED, FirewallRule, FirewallSpec, ufw_conf, ufw_rules
 from .terminal.network import ConnectionSpec, HostSpec, InterfaceSpec, ListenSpec, NetworkSpec, RouteSpec, ServiceSpec
-from .terminal.services import ADMIN_DIR, VENDOR_DIR, SystemdUnit, parse_unit, valid_calendar
+from .terminal.services import (
+    ADMIN_DIR,
+    PRIORITIES,
+    VENDOR_DIR,
+    JournalEntry,
+    SystemdUnit,
+    parse_unit,
+    valid_calendar,
+)
 from .terminal.system import AccountSpec, DiskSpec, MemorySpec, ProcessSpec, proc_name
 
 __all__ = [
@@ -118,6 +126,7 @@ __all__ = [
     "HostName",
     "HostSpec",
     "InactiveCheck",
+    "JournalEntry",
     "InterfaceSpec",
     "KNOWN_GIDS",
     "Lab",
@@ -142,6 +151,7 @@ __all__ = [
     "OwnerCheck",
     "parse_unit",
     "Port",
+    "PRIORITIES",
     "proc_name",
     "ProcessSpec",
     "ProcName",

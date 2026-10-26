@@ -223,6 +223,12 @@ def client_spec(exercise: TerminalExercise) -> dict:
             if exercise.services
             else {}
         ),
+        # #304: the journal before the console started, oldest first.
+        **(
+            {"journal": [{**e.model_dump(), "time": e.time.replace(" ", "T")} for e in sorted(exercise.journal, key=lambda e: e.time)]}
+            if exercise.journal
+            else {}
+        ),
         "fs": exercise.starting_fs(),
         "processes": [
             {"command": p.command, "user": p.user or exercise.user, "cpu": p.cpu, "mem": p.mem, "ignores": p.ignores}
