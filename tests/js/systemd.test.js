@@ -74,7 +74,8 @@ test("systemctl shows what is running and what failed", () => {
     "     Memory: 1.2M (peak: 1.6M)\n" +
     "        CPU: 12ms\n" +
     "     CGroup: /system.slice/scrubberd.service\n" +
-    "             └─600 /usr/local/sbin/scrubberd\n");
+    "             └─600 /usr/local/sbin/scrubberd\n\n" +
+    "Oct 08 08:00:00 meridian systemd[1]: Started scrubberd.service - Scrubber controller.\n");
   assert.equal(sh.lastStatus, 0);
   assert.equal(run(sh, "systemctl status o2-backup.service"),
     "○ o2-backup.service - O2 backup feed\n" +
@@ -87,7 +88,10 @@ test("systemctl shows what is running and what failed", () => {
     "     Active: failed (Result: exit-code) since Thu 2026-10-08 08:00:00 UTC; 1h 0min ago\n" +
     "   Duration: 2ms\n" +
     "   Main PID: 623 (code=exited, status=1/FAILURE)\n" +
-    "        CPU: 2ms\n");
+    "        CPU: 2ms\n\n" +
+    "Oct 08 08:00:00 meridian systemd[1]: Started recycler.service - Water recycler.\n" +
+    "Oct 08 08:00:00 meridian systemd[1]: recycler.service: Main process exited, code=exited, status=1/FAILURE\n" +
+    "Oct 08 08:00:00 meridian systemd[1]: recycler.service: Failed with result 'exit-code'.\n");
   assert.equal(sh.lastStatus, 3);
   assert.equal(run(sh, "systemctl list-units --type=service --failed"),
     "  UNIT             LOAD   ACTIVE SUB    DESCRIPTION\n" +
@@ -173,7 +177,11 @@ test("Stopping leaves the unit inactive, with how long it ran", () => {
     "   Duration: 1h 32s\n" +
     "    Process: 600 ExecStart=/usr/local/sbin/scrubberd (code=killed, signal=TERM)\n" +
     "   Main PID: 600 (code=killed, signal=TERM)\n" +
-    "        CPU: 2ms\n");
+    "        CPU: 2ms\n\n" +
+    "Oct 08 08:00:00 meridian systemd[1]: Started scrubberd.service - Scrubber controller.\n" +
+    "Oct 08 09:00:32 meridian systemd[1]: Stopping scrubberd.service - Scrubber controller...\n" +
+    "Oct 08 09:00:32 meridian systemd[1]: scrubberd.service: Deactivated successfully.\n" +
+    "Oct 08 09:00:32 meridian systemd[1]: Stopped scrubberd.service - Scrubber controller.\n");
   assert.doesNotMatch(run(sh, "ps aux"), /scrubberd/);
   run(sh, "systemctl restart scrubberd");
   assert.match(run(sh, "systemctl status scrubberd"), /Active: active \(running\) since Thu 2026-10-08 09:00:35 UTC; 1s ago\n {3}Main PID: \d+ \(scrubberd\)/);
@@ -338,7 +346,10 @@ EOF`);
     "× noexec.service\n     Loaded: loaded (/etc/systemd/system/noexec.service; static)\n" +
     "     Active: failed (Result: exit-code) since Thu 2026-10-08 09:00:03 UTC; 1s ago\n   Duration: 1ms\n" +
     "    Process: 2041 ExecStart=/usr/local/sbin/missing-prog (code=exited, status=203/EXEC)\n" +
-    "   Main PID: 2041 (code=exited, status=203/EXEC)\n        CPU: 0\n");
+    "   Main PID: 2041 (code=exited, status=203/EXEC)\n        CPU: 0\n\n" +
+    "Oct 08 09:00:03 meridian systemd[1]: Started noexec.service.\n" +
+    "Oct 08 09:00:03 meridian systemd[1]: noexec.service: Main process exited, code=exited, status=203/EXEC\n" +
+    "Oct 08 09:00:03 meridian systemd[1]: noexec.service: Failed with result 'exit-code'.\n");
   run(sh, "systemctl start baduser");
   assert.match(run(sh, "systemctl status baduser"), /\(code=exited, status=217\/USER\)\n {3}Main PID/);
 });
@@ -354,7 +365,8 @@ test("Timers run on the station clock", () => {
     "     Loaded: loaded (/etc/systemd/system/air-sample.timer; disabled; preset: enabled)\n" +
     "     Active: active (waiting) since Thu 2026-10-08 08:00:00 UTC; 1h 0min ago\n" +
     "    Trigger: Fri 2026-10-09 03:00:00 UTC; 17h left\n" +
-    "   Triggers: ○ air-sample.service\n");
+    "   Triggers: ○ air-sample.service\n\n" +
+    "Oct 08 08:00:00 meridian systemd[1]: Started air-sample.timer - Air sample every night.\n");
   run(sh, "systemctl stop air-sample.timer");
   assert.equal(run(sh, "systemctl list-timers --all"),
     "NEXT LEFT LAST PASSED UNIT             ACTIVATES\n-       - -         - air-sample.timer air-sample.service\n\n1 timers listed.\n");
@@ -399,5 +411,5 @@ EOF`);
 test("systemctl has a manual page, --help and a line in help", () => {
   const sh = new Shell(spec());
   assert.match(run(sh, "systemctl --help"), /systemctl enable \| disable \[--now\] UNIT/);
-  assert.match(run(sh, "help"), /services: +systemctl\n/);
+  assert.match(run(sh, "help"), /services: +systemctl journalctl\n/);
 });

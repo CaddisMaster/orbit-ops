@@ -16,8 +16,9 @@
 })(typeof self !== "undefined" ? self : this, function (S) {
   "use strict";
 
-  var COMMANDS = S.COMMANDS, DAYS = S.DAYS, join = S.join, lines = S.lines, ok = S.ok, padLeft = S.padLeft,
-    padRight = S.padRight, procName = S.procName, Shell = S.Shell, START_TIME = S.START_TIME, unlines = S.unlines;
+  var COMMANDS = S.COMMANDS, DAYS = S.DAYS, join = S.join, lines = S.lines, MONTHS = S.MONTHS, ok = S.ok,
+    padLeft = S.padLeft, padRight = S.padRight, parseStamp = S.parseStamp, procName = S.procName, Shell = S.Shell,
+    START_TIME = S.START_TIME, unlines = S.unlines;
 
   var VENDOR_DIR = "/usr/lib/systemd/system";
   var ADMIN_DIR = "/etc/systemd/system";
@@ -114,9 +115,15 @@
   // --- the manager's state -----------------------------------------------------------------
   // Boot: every unit the exercise lists starts as it says. Called by the Shell
   // constructor (machine.js) once the filesystem is in place.
-  Shell.prototype.bootUnits = function (specs) {
+  Shell.prototype.bootUnits = function (specs, journal) {
     var sh = this;
-    this.sd = { programs: {}, units: {}, bootPid: 600 };
+    this.sd = { programs: {}, units: {}, bootPid: 600, journal: [], invocations: 0 };
+    // #304: the journal so far. Entries from before this boot are the last boot's.
+    (journal || []).forEach(function (e) {
+      var t = Math.round((parseStamp(e.time) - START_TIME) / 1000);
+      sh.sd.journal.push({ t: t, ident: e.identifier, pid: e.pid === undefined ? null : e.pid, unit: e.unit || null,
+        prio: PRIORITIES.indexOf(e.priority || "info"), msg: e.message });
+    });
     (specs || []).forEach(function (s) {
       sh.sd.programs[s.name] = { exits: s.exits === undefined ? null : s.exits, runsFor: s.runs_for || 0 };
       var u = sh.unit(s.name);
@@ -126,6 +133,10 @@
         u.pid = sh.sd.bootPid;
         sh.sd.bootPid += 23;
         Object.assign(u, { state: "failed", result: "exit-code", since: BOOT, started: BOOT, ended: { code: s.exits || 1, at: BOOT } });
+        u.inv = ++sh.sd.invocations;
+        sh.logUnit(u, BOOT, 6, "Started " + titled(u) + ".");
+        sh.logUnit(u, BOOT, 5, u.name + ": Main process exited, " + exitStatus(u.ended));
+        sh.logUnit(u, BOOT, 4, u.name + ": Failed with result 'exit-code'.");
       }
     });
   };
@@ -150,7 +161,7 @@
     if (!u) {
       var path = this.unitPath(name);
       u = { name: name, kind: kindOf(name), path: path, text: path ? this.fs[path].contents : null, state: "inactive",
-        result: null, since: null, started: null, pid: null, proc: null, ended: null, restarted: false, starts: [] };
+        result: null, since: null, started: null, pid: null, proc: null, ended: null, restarted: false, starts: [], restarts: 0 };
       if (path) this.sd.units[name] = u;
     }
     return u;
@@ -196,6 +207,8 @@
     u.since = t;
     u.ended = null;
     u.result = null;
+    u.inv = ++this.sd.invocations; // each start is an invocation: status shows the latest one's lines
+    this.logUnit(u, t, 6, "Started " + titled(u) + ".");
     if (u.kind === "timer") { u.state = "active"; return; }
     var start = (last(sec, "Service", "ExecStart") || "").replace(/^[-@+!]+/, "");
     var program = start.split(/\s+/)[0];
@@ -213,6 +226,15 @@
       u.state = "failed";
       u.result = "exit-code";
       u.ended = { code: why, at: t };
+      if (why === 217) {
+        // Logged by the forked child before it runs anything: systemd names it
+        // "(" + the program, first letter dropped, + ")", as the real one showed.
+        var base = program.slice(program.lastIndexOf("/") + 1);
+        this.sd.journal.push({ t: t, ident: "(" + base.slice(1) + ")", pid: pid, unit: u.name, prio: 3, inv: u.inv,
+          msg: u.name + ": Failed to determine user credentials: No such process" });
+      }
+      this.logUnit(u, t, 5, u.name + ": Main process exited, " + exitStatus(u.ended));
+      this.logUnit(u, t, 4, u.name + ": Failed with result 'exit-code'.");
       return;
     }
     var proc = { pid: pid, ppid: 1, user: user, command: start, tty: "?", cpu: 0, mem: 0.1, start: t, alive: true,
@@ -233,8 +255,16 @@
       for (var guard = 0; guard < 50 && u.kind === "service"; guard++) {
         if (u.state === "activating") {
           if (u.restartAt > sh.clock) return;
+          u.restarts += 1;
+          sh.logUnit(u, u.restartAt, 6, u.name + ": Scheduled restart job, restart counter is at " + u.restarts + ".");
           var recent = u.starts.filter(function (s) { return s > u.restartAt - START_WINDOW; });
-          if (recent.length >= START_LIMIT) { u.state = "failed"; return; }
+          if (recent.length >= START_LIMIT) {
+            u.state = "failed";
+            sh.logUnit(u, u.restartAt, 4, u.name + ": Start request repeated too quickly.");
+            sh.logUnit(u, u.restartAt, 4, u.name + ": Failed with result '" + u.result + "'.");
+            sh.logUnit(u, u.restartAt, 3, "Failed to start " + titled(u) + ".");
+            return;
+          }
           sh.activate(u, u.restartAt);
           u.restarted = true;
           continue;
@@ -253,6 +283,11 @@
         var clean = sig ? sig !== "KILL" : false;
         u.result = clean ? "success" : sig ? "signal" : "exit-code";
         u.since = at;
+        if (clean) sh.logUnit(u, at, 6, u.name + ": Deactivated successfully.");
+        else {
+          sh.logUnit(u, at, sig ? 4 : 5, u.name + ": Main process exited, " + exitStatus(u.ended));
+          sh.logUnit(u, at, 4, u.name + ": Failed with result '" + u.result + "'.");
+        }
         var restart = last(parseUnit(u.text), "Service", "Restart") || "no";
         if (restart === "always" || (restart === "on-failure" && !clean)) {
           var delay = parseFloat(last(parseUnit(u.text), "Service", "RestartSec") || "0.1");
@@ -278,6 +313,10 @@
   Shell.prototype.stopUnit = function (u) {
     this.syncUnits();
     if (u.state === "active" || u.state === "activating") {
+      // A timer just stops; a service is asked to (TERM) first.
+      if (u.kind === "service") this.logUnit(u, this.clock, 6, "Stopping " + titled(u) + "...");
+      this.logUnit(u, this.clock, 6, u.name + ": Deactivated successfully.");
+      this.logUnit(u, this.clock, 6, "Stopped " + titled(u) + ".");
       if (u.proc && u.proc.alive) {
         u.proc.signals.push("TERM");
         u.proc.alive = false;
@@ -297,12 +336,192 @@
     if (u.state === "active") return;
     u.starts = [];
     u.restarted = false;
+    u.restarts = 0;
     this.activate(u, this.clock);
   };
 
   // The units as plain data, the shape the server grades (app/terminal.py UnitState).
   Shell.prototype.units = function () {
     return this.loadedUnits().map(function (u) { return { name: u.name, state: u.state }; });
+  };
+
+  // --- the journal (#304) --------------------------------------------------------------------
+  // journald's lines, as systemd 255 writes them: `systemd[1]: ...` about a
+  // unit, and the exercise's own entries from programs. Each is dated on the
+  // station clock (seconds from the console's start), with its priority.
+  var PRIORITIES = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
+  var BOOT_IDS = { "0": "5f1c0e9a2b7d4c3e8a6f1d2b9c4e7a30", "-1": "c2a94e7b1f3d4a8e9b5c6d0e7f2a1b48" };
+  Shell.prototype.logUnit = function (u, t, prio, msg) {
+    this.sd.journal.push({ t: t, ident: "systemd", pid: 1, unit: u.name, prio: prio, msg: msg, inv: u.inv });
+  };
+  // "scrubberd.service - Scrubber controller", or the name alone without a Description.
+  function titled(u) {
+    var d = last(parseUnit(u.text), "Unit", "Description");
+    return u.name + (d ? " - " + d : "");
+  }
+  function exitStatus(e) {
+    if (e.signal) return "code=killed, status=" + { HUP: 1, INT: 2, KILL: 9, TERM: 15 }[e.signal] + "/" + e.signal;
+    return "code=exited, status=" + e.code + (STATUS_NAMES[e.code] ? "/" + STATUS_NAMES[e.code] : "");
+  }
+  // The journal so far, oldest first (a stable sort: same-second lines keep their order).
+  Shell.prototype.journal = function () {
+    this.syncUnits();
+    return this.sd.journal.map(function (e, i) { return [e, i]; })
+      .sort(function (a, b) { return a[0].t - b[0].t || a[1] - b[1]; })
+      .map(function (p) { return Object.assign({ boot: p[0].t < BOOT ? -1 : 0 }, p[0]); });
+  };
+  function journalLine(sh, e, format) {
+    if (format === "cat") return e.msg;
+    var d = clockDate(e.t);
+    var when = format === "short-iso"
+      ? d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds()) + "+00:00"
+      : MONTHS[d.getMonth()] + " " + pad2(d.getDate()) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
+    return when + " meridian " + e.ident + (e.pid === null ? "" : "[" + e.pid + "]") + ": " + e.msg;
+  }
+  // May this user read the whole journal? root, and the adm and systemd-journal groups.
+  Shell.prototype.readsJournal = function () {
+    return this.user === "root" || this.groups.indexOf("adm") !== -1 || this.groups.indexOf("systemd-journal") !== -1;
+  };
+
+  // A --since/--until time as journalctl reads it, in seconds on the station
+  // clock: "2026-10-08 02:30[:00]", "2026-10-08", "02:30", today, yesterday,
+  // tomorrow, now, and "-1h" or "1h ago" (s, min, h, d, w).
+  Shell.prototype.journalTime = function (text) {
+    var now = this.now();
+    var day = function (offset) { return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset); };
+    var at;
+    var m;
+    if (text === "now") at = now;
+    else if (text === "today") at = day(0);
+    else if (text === "yesterday") at = day(-1);
+    else if (text === "tomorrow") at = day(1);
+    else if ((m = /^(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d)(?::(\d\d))?)?$/.exec(text))) {
+      at = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+      if (at.getMonth() !== +m[2] - 1 || +(m[4] || 0) > 23 || +(m[5] || 0) > 59) return null;
+    } else if ((m = /^(\d\d?):(\d\d)(?::(\d\d))?$/.exec(text))) {
+      if (+m[1] > 23 || +m[2] > 59) return null;
+      at = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +m[1], +m[2], +(m[3] || 0));
+    } else if ((m = /^(?:-(\d+)\s*(s|sec|min|m|h|d|w)|(\d+)\s*(s|sec|min|m|h|d|w) ago)$/.exec(text))) {
+      var n = +(m[1] || m[3]);
+      var unit = { s: 1, sec: 1, min: 60, m: 60, h: 3600, d: 86400, w: 604800 }[m[2] || m[4]];
+      at = new Date(now.getTime() - n * unit * 1000);
+    } else return null;
+    return Math.round((at - START_TIME) / 1000);
+  };
+
+  function priorityRange(text) {
+    var level = function (p) { return /^[0-7]$/.test(p) ? +p : PRIORITIES.indexOf(p); };
+    var parts = text.split("..");
+    var lo = parts.length === 2 ? level(parts[0]) : 0;
+    var hi = level(parts[parts.length - 1]);
+    if (parts.length > 2 || lo === -1 || hi === -1) return null;
+    return [Math.min(lo, hi), Math.max(lo, hi)];
+  }
+
+  var JOURNAL_HINT = "Hint: You are currently not seeing messages from other users and the system.\n" +
+    "      Users in groups 'adm', 'systemd-journal' can see all messages.\n      Pass -q to turn off this notice.\n";
+
+  // journalctl's own complaints have no "journalctl: " in front, unlike a bad option.
+  function bare(message) { var e = new Error(message); e.bare = true; throw e; }
+
+  COMMANDS.journalctl = function (rawArgs) {
+    try { return this.journalctl(rawArgs); } catch (e) {
+      if (e.bare) return { out: "", err: e.message + "\n", code: 1 };
+      throw e;
+    }
+  };
+  Shell.prototype.journalctl = function (rawArgs) {
+    var o = { units: [], since: null, until: null, prio: null, n: null, reverse: false, boot: null, format: "short", quiet: false, follow: false };
+    var VALUED = "upnoSU";
+    var args = rawArgs.slice();
+    var take = function (name) {
+      if (!args.length) throw new Error("option requires an argument -- '" + name + "'");
+      return args.shift();
+    };
+    var set = function (name, value) {
+      if (name === "u" || name === "unit") o.units.push(unitName(value));
+      else if (name === "p" || name === "priority") { o.prio = priorityRange(value); if (!o.prio) bare("Unknown log level " + value); }
+      else if (name === "n" || name === "lines") {
+        if (!/^\d+$/.test(value)) bare("Failed to parse lines '" + value + "'");
+        o.n = +value;
+      } else if (name === "o" || name === "output") {
+        if (["short", "cat", "short-iso"].indexOf(value) === -1) throw new Error("-o " + value + " isn't supported on this console; try short, short-iso or cat");
+        o.format = value;
+      } else if (name === "S" || name === "since" || name === "U" || name === "until") {
+        var t = this.journalTime(value);
+        if (t === null) bare("Failed to parse timestamp: " + value);
+        if (name === "S" || name === "since") o.since = t; else o.until = t;
+      }
+    }.bind(this);
+    var bootArg = function () {
+      if (args.length && /^-?\d+$/.test(args[0])) return +args.shift();
+      return 0;
+    };
+    while (args.length) {
+      var a = args.shift();
+      var long = /^--([a-z-]+)(?:=(.*))?$/.exec(a);
+      if (long) {
+        var name = long[1];
+        if (["unit", "priority", "lines", "output", "since", "until"].indexOf(name) !== -1) {
+          if (name === "lines" && long[2] === undefined && !(args.length && /^\d+$/.test(args[0]))) { o.n = 10; continue; }
+          set(name, long[2] !== undefined ? long[2] : take(name));
+        } else if (name === "reverse") o.reverse = true;
+        else if (name === "quiet") o.quiet = true;
+        else if (name === "boot") o.boot = long[2] !== undefined ? +long[2] : bootArg();
+        else if (name === "follow") o.follow = true;
+        else if (["no-pager", "pager-end", "catalog", "no-hostname"].indexOf(name) === -1 || name === "no-hostname") {
+          throw new Error(a + " isn't supported on this console; try journalctl --help");
+        }
+        continue;
+      }
+      if (a.length > 1 && a[0] === "-") {
+        for (var j = 1; j < a.length; j++) {
+          var f = a[j];
+          var rest = a.slice(j + 1);
+          if (VALUED.indexOf(f) !== -1) {
+            if (f === "n" && !rest && !(args.length && /^\d+$/.test(args[0]))) { o.n = 10; break; }
+            set(f, rest || take(f));
+            break;
+          }
+          if (f === "b") { o.boot = rest ? +rest : bootArg(); break; }
+          if (f === "r") o.reverse = true;
+          else if (f === "q") o.quiet = true;
+          else if (f === "f") o.follow = true;
+          else if (f !== "x" && f !== "e") throw new Error(("-" + f) + " isn't supported on this console; try journalctl --help");
+        }
+        continue;
+      }
+      throw new Error("matching on fields (" + a + ") isn't supported on this console; try -u UNIT");
+    }
+    if (o.boot !== null && isNaN(o.boot)) bare("Failed to parse boot descriptor");
+    var err = "";
+    if (!this.readsJournal()) {
+      // Everything on the console's journal is the system's, so a user outside
+      // adm and systemd-journal reads nothing at all, as on a fresh server.
+      return { out: "", err: (o.quiet ? "" : JOURNAL_HINT) + "No journal files were opened due to insufficient permissions.\n", code: 1 };
+    }
+    if (o.boot !== null && o.boot !== 0 && o.boot !== -1) {
+      return { out: "", err: "No journal boot entry found from the specified boot offset (" + (o.boot > 0 ? "+" : "") + o.boot + ").\n", code: 1 };
+    }
+    var entries = this.journal().filter(function (e) {
+      if (o.boot !== null && e.boot !== o.boot) return false;
+      if (o.units.length && o.units.indexOf(e.unit) === -1) return false;
+      if (o.prio && (e.prio < o.prio[0] || e.prio > o.prio[1])) return false;
+      if (o.since !== null && e.t < o.since) return false;
+      if (o.until !== null && e.t > o.until) return false;
+      return true;
+    });
+    if (o.n !== null) entries = o.n ? entries.slice(-o.n) : [];
+    if (o.reverse) entries.reverse();
+    if (!entries.length) return { out: "-- No entries --\n", err: err, code: 0 };
+    var sh = this;
+    var out = [];
+    entries.forEach(function (e, i) {
+      if (i > 0 && e.boot !== entries[i - 1].boot && o.format !== "cat") out.push("-- Boot " + BOOT_IDS[String(e.boot)] + " --");
+      out.push(journalLine(sh, e, o.format));
+    });
+    if (o.follow) err += "journalctl: -f can't follow on this console; these are the lines so far\n";
+    return { out: unlines(out), err: err, code: 0 };
   };
 
   // --- systemctl -----------------------------------------------------------------------------
@@ -323,7 +542,16 @@
     return !!path && this.fs[path].contents !== u.text;
   };
 
-  Shell.prototype.unitStatus = function (u) {
+  // The last `n` journal lines of the unit's latest invocation, under its
+  // status (#304). Only for those who may read the journal, as on Ubuntu.
+  Shell.prototype.statusLog = function (u, n) {
+    if (!this.readsJournal() || !u.inv || n === 0) return "";
+    var sh = this;
+    var mine = this.journal().filter(function (e) { return e.unit === u.name && e.inv === u.inv; }).slice(-n);
+    return mine.length ? "\n" + unlines(mine.map(function (e) { return journalLine(sh, e, "short"); })) : "";
+  };
+
+  Shell.prototype.unitStatus = function (u, n) {
     var sh = this;
     var desc = description(u);
     var dot = u.state === "failed" ? "×" : u.state === "inactive" ? "○" : "●";
@@ -345,7 +573,7 @@
       out.push("    Trigger: " + (next ? timestamp(next) + "; " + relative(Math.round((next - this.now()) / 1000)) + " left" : "n/a"));
       var target = this.unit(activates(u));
       out.push("   Triggers: " + (target.state === "failed" ? "×" : target.state === "inactive" ? "○" : "●") + " " + target.name);
-      return unlines(out);
+      return unlines(out) + this.statusLog(u, n);
     }
     var docs = last(parseUnit(u.text), "Unit", "Documentation");
     if (docs) out.push("       Docs: " + docs);
@@ -367,7 +595,7 @@
       out.push("   Main PID: " + u.pid + " (" + exitText(u.ended) + ")");
       out.push("        CPU: " + (u.ended.code > 200 ? "0" : "2ms"));
     }
-    return unlines(out);
+    return unlines(out) + this.statusLog(u, n);
   };
   function activates(u) {
     return last(parseUnit(u.text), "Timer", "Unit") || u.name.replace(/\.timer$/, ".service");
@@ -408,13 +636,18 @@
   var CHANGES = ["start", "stop", "restart", "reload", "enable", "disable", "daemon-reload"];
 
   COMMANDS.systemctl = function (rawArgs) {
-    var o = { type: null, state: [], all: false, now: false, quiet: false, failed: false };
+    var o = { type: null, state: [], all: false, now: false, quiet: false, failed: false, lines: 10 };
     var words = [];
     for (var i = 0; i < rawArgs.length; i++) {
       var a = rawArgs[i];
       var eq = /^--(type|state)=(.*)$/.exec(a);
       if (eq) { if (eq[1] === "type") o.type = eq[2]; else o.state = o.state.concat(eq[2].split(",")); }
       else if (a === "-t" || a === "--type") o.type = rawArgs[++i];
+      else if (/^(-n|--lines)$/.test(a) || /^(-n|--lines=)\d+$/.test(a)) {
+        var count = /\d+$/.test(a) ? a.match(/\d+$/)[0] : rawArgs[++i];
+        if (!/^\d+$/.test(count || "")) return { out: "", err: "Failed to parse lines '" + (count || "") + "'\n", code: 1 };
+        o.lines = +count;
+      }
       else if (a === "--state") o.state = o.state.concat((rawArgs[++i] || "").split(","));
       else if (a === "-a" || a === "--all") o.all = true;
       else if (a === "--now") o.now = true;
@@ -458,7 +691,7 @@
         var u = sh.unit(n);
         if (!u.path) { err += "Unit " + n + " could not be found.\n"; code = Math.max(code, 4); return; }
         if (sh.changedOnDisk(u)) err += "Warning: The unit file, source configuration file or drop-ins of " + n + " changed on disk. Run 'systemctl daemon-reload' to reload units.\n";
-        texts.push(sh.unitStatus(u));
+        texts.push(sh.unitStatus(u, o.lines));
         if (u.state !== "active" && code === 0) code = 3;
       });
       return { out: texts.join("\n"), err: err, code: code };

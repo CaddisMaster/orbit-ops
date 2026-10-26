@@ -557,6 +557,22 @@
         ["daemon-reload", "load every unit file again, after editing one"],
       ],
     },
+    journalctl: {
+      summary: "print log entries from the systemd journal",
+      synopsis: ["journalctl [-u UNIT] [--since TIME] [--until TIME] [-p PRIORITY] [-n N] [-r] [-b [-1]] [-o short|short-iso|cat]"],
+      description: "Print the journal: what services, systemd itself and other programs have logged, oldest first, as DATE HOST PROGRAM[PID]: MESSAGE. Filters combine: -u scrubberd --since 02:30 is that unit's lines from 02:30 on. Times may be \"2026-10-08 02:30\", 02:30 (today), today, yesterday, now, -1h or \"2h ago\". Priorities, most urgent first: emerg (0), alert, crit, err, warning, notice, info, debug (7); -p warning shows warning and everything more urgent, and -p err..warning a range. Reading other users' and the system's lines needs root (sudo) or membership of adm or systemd-journal; without it you're told you can't see them. Lines from before the last boot are kept: -b shows only this boot, -b -1 the one before, and a plain read marks each boot with a -- Boot ID -- line.",
+      options: [
+        ["-u, --unit UNIT", "only this unit's lines (and systemd's lines about it); give it more than once for several"],
+        ["-S, --since TIME / -U, --until TIME", "only lines from TIME on, or up to TIME"],
+        ["-p, --priority PRIORITY", "only lines at PRIORITY or more urgent"],
+        ["-n, --lines N", "only the last N lines (10 if N isn't given)"],
+        ["-r, --reverse", "newest first"],
+        ["-b [0 | -1]", "this boot's lines, or the previous boot's"],
+        ["-o cat", "the messages alone, no date or program; -o short-iso for full dates"],
+        ["-q, --quiet", "don't print the hint about lines you can't see"],
+        ["-x, -e", "accepted, as in journalctl -xeu UNIT; there's no pager to jump to the end of"],
+      ],
+    },
     ssh: {
       summary: "OpenSSH remote login client",
       synopsis: ["ssh [-l USER] [USER@]HOST COMMAND"],

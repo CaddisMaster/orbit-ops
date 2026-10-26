@@ -8,11 +8,13 @@ reports beside the processes (app/terminal.py Report.units).
 """
 
 import re
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
 from ..base import _Strict
+from .files import STATION_NOW
 
 VENDOR_DIR = "/usr/lib/systemd/system"
 ADMIN_DIR = "/etc/systemd/system"
@@ -154,3 +156,35 @@ class SystemdUnit(_Strict):
         """The service a timer starts: Unit=, or the one with the timer's name."""
         named = self.sections().get("Timer", {}).get("Unit")
         return named[-1] if named else self.name.removesuffix(".timer") + ".service"
+
+
+# The journal (#304). journald's priorities, by name; a number 0-7 works too.
+PRIORITIES = ("emerg", "alert", "crit", "err", "warning", "notice", "info", "debug")
+JournalTime = Annotated[str, Field(pattern=r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$")]  # "2026-10-08 02:40:00"
+
+
+class JournalEntry(_Strict):
+    """A line in the journal from before the console started: a program's
+    message (`identifier[pid]: message`), and the unit it belongs to, for
+    `journalctl -u`. The console adds systemd's own lines as units start,
+    stop and fail. Entries before the console's boot (08:00, an hour before
+    login) are from the previous boot, so `-b` hides them and `-b -1` shows them."""
+
+    time: JournalTime
+    identifier: Annotated[str, Field(pattern=r"^[A-Za-z0-9_.@()-]+$", max_length=40)]
+    pid: Annotated[int, Field(ge=1, le=4_194_304)] | None = None  # null: no [pid], as kernel lines have
+    unit: UnitName | None = None
+    priority: Literal["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"] = "info"
+    message: Annotated[str, Field(min_length=1, max_length=500)]
+
+    @model_validator(mode="after")
+    def _when(self):
+        try:
+            at = datetime.fromisoformat(self.time)
+        except ValueError:
+            raise ValueError(f"journal: {self.time} is not a date and time") from None
+        if at >= STATION_NOW:
+            raise ValueError(f"journal: {self.time} is after the station's clock ({STATION_NOW:%Y-%m-%d %H:%M})")
+        if "\n" in self.message:
+            raise ValueError(f"journal: the {self.time} entry is more than one line")
+        return self
