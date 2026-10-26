@@ -78,6 +78,11 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **"From another host" is `ssh HOST 'COMMAND'`** (#166), for hosts with `login: true`; only
   `nc`, `curl`, `ping`, `hostname`, `echo`, `true` and `false` exist there. Real ssh, chosen
   over an invented command.
+- **The console's systemd is its unit files** (#303): units are files read live, enabling is the
+  `.wants/` link, and running is runtime state reported as `units`. An exercise declares what
+  each program does (`exits`, `runs_for`), since nothing runs. Only declared units exist, so a
+  module that mentions `ssh.service` declares it. Reading the journal needs root or `adm`, and
+  module 06's reveal relies on that (#304).
 - **Labs that read live services check only what can't change** (#170–#173): a redirect's
   `Location`, a certificate's subject and `O = Let's Encrypt` (never its intermediate or dates),
   GitHub's permanent facts and published fingerprint, and the shape of anything that grows.
@@ -130,6 +135,44 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-26: Dependabot cleared, #258, and the console's systemd and journal (#303, #304)
+
+- **Dependabot:** #297 (actions) merged. #298 (pip, 12 updates), and #299 after it, closed
+  themselves when asked to `@dependabot rebase` once #297 put them behind `main`, so the 12
+  were re-applied by hand as #300 (dev image rebuilt, suite green). The 13th, jiter, came
+  as #301 and merged. fastapi went 0.143 → 0.161. #253 is gone with them.
+- **#302 (#258):** non-negotiable #1 now says what a second account needs (database-backed
+  limiters, a server-checkable challenge verdict). It matters more since `/admin` can create
+  accounts (#282).
+- **Milestone v0.13.0 — systemd** (13) filed: console issues #303 and #304, then module
+  issues #305–#310. All console tasks, no labs: a Mac has no systemd. Sean approved the
+  breakdown unchanged.
+- **#311 (#303):** `systemctl`, unit files and timers in `shell/systemd.js` (part 13), with
+  `services:` in the schema and the `active`/`inactive`/`enabled`/`disabled` checks.
+- **#312 (#304):** `journalctl` and `journal:`, systemd's own log lines at journald's
+  priorities, boots (the console boots at 08:00, so the outage night is `-b -1`), the
+  non-adm refusal, and `systemctl status`'s log tail.
+- Both were compared line by line with systemd 255.4 booted as PID 1 in a privileged
+  `ubuntu:24.04` container (`docs/content-authoring.md` has the recipe). The only exception is
+  the `-- Boot ID --` line: containers share the host's boot, so it's taken from systemd's
+  source.
+- Gotchas:
+  - ⚠️ **`@dependabot rebase` on a group PR can close it** ("updatable in another way")
+    instead of rebasing. Merge one group PR, wait for Dependabot to re-cut the rest, and
+    don't ask it to rebase.
+  - ⚠️ **Branch protection wants PRs up to date with `main`**, so merging one PR blocks
+    the next until it's rebased.
+  - ⚠️ **The console has no `printf`.** A `printf '…' > f` in a test leaves an empty file. Write
+    files in tests with a heredoc through `sh.run`.
+  - ⚠️ **A plain `ubuntu:24.04` container has no systemd as PID 1**, and without `polkitd` a
+    non-root `systemctl` says `Failed to connect to bus`. Install both to compare outputs.
+- **Left for Sean:** the same items as 2026-10-25 (confirm the production reset, the two
+  leftover files on the droplet, the `281-admin-panel` branch, #260). The `sysref` systemd
+  container on the VM can go (`docker rm -f sysref`) once Unit 1.5's Try it runs are done.
+- **Next:** #305, Unit 1.5 module 01 "What a service is", then #306–#310 in order. The reveal
+  is #310. Nothing has been released since v0.12.1: the systemd console work is on `main`,
+  unreleased.
 
 ### 2026-10-25: `/cycle`, the admin panel, and v0.12.0 and v0.12.1 shipped
 
@@ -233,51 +276,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
      unit files, `journalctl -u/--since/--until` in a new `shell/systemd.js` and
      `schema/terminal/services.py`), then ~6 module issues, with the mystery's reveal last
      (`docs/story.md`).
-
-### 2026-10-23: container hardening (#263–#266)
-
-- **The old architecture review file is gone.** All its findings were already filed as
-  #255–#260. Only "share tooling with Budget Buddy" has no issue of its own (#260 covers part).
-- **Filed from the container-hardening handoff** (checked against the code first) and merged
-  on Sean's word, one PR each:
-  - #267 (#263): root owns `/app`. The app user has no home or login shell, and `psql` is
-    gone. CI runs the built image and fails if `appuser` can write anything under `/app` or
-    `/opt/pyodide` (it fails `main`'s old image with `appuser can write /app/scripts`).
-  - #268 (#264): `web` is read-only with a tmpfs `/tmp`, `cap_drop: [ALL]`,
-    `no-new-privileges` and `pids_limit: 100`. The smoke run uses the same flags for both
-    migrations and the app. `--forwarded-allow-ips "*"` stays, with a comment saying why.
-    Checked on the production compose file locally: `docker inspect`, migrations through
-    `compose run web`, and module 08's Python challenge passing in Playwright.
-  - #269 (#265): Grype (`anchore/scan-action` v7.4.2, Grype v0.120.1) scans on every PR, and a
-    read-only `scan` job scans the pushed digest before the deploy. Release builds get
-    `sbom: true` and `provenance: mode=max`. **The gate's first catch:** CVE-2026-19445
-    (CRITICAL) in Python 3.14.7, so the base image moved to 3.14.8.
-  - #270 (part of #266): Postgres pinned as `16.15@sha256:9e2cf628…` in the compose file, CI
-    and the smoke run, held equal by a test, with `no-new-privileges` on `db`. RUNBOOK §5 is
-    rewritten as the procedure. It was rehearsed on a throwaway stack: the guard refused before,
-    the dump was verified, the data was intact, `web` was never restarted and `/healthz` stayed
-    200, and the guard passed after.
-- **Two specs were corrected on contact with the code.** #264's last scenario became a local
-  production-compose run (the droplet check is now "After the release"). #265 scans before
-  deploy rather than before push, to keep the scanner away from `packages: write`.
-- Gotchas:
-  - ⚠️ **Docker's `--tmpfs` is `noexec`.** The backup-script tests run a stub `docker` from
-    `tmp_path`, so the dev override needs `/tmp:exec`. Overriding a list takes compose's
-    `!override` tag, which `yaml.safe_load` can't read. The repo tests have a loader for it.
-  - ⚠️ **pytest-xdist outgrows `pids_limit: 100`** (threads count), so dev sets 1000.
-  - ⚠️ **A new CVE can fail a PR that didn't touch the image.** Fix it in its own PR, and don't
-    ignore it in `.grype.yaml` just to get a PR through.
-  - ⚠️ **Nothing proposes Postgres bumps.** `dependabot.yml` has no `docker-compose` entry.
-- **Not released.** v0.11.0 is still in production. The next release carries #263–#266 and is
-  the first run of the `scan` job, the SBOM/provenance step and the locked-down smoke test.
-- **Left for Sean, in this order:**
-  1. From the Mac at a quiet time: RUNBOOK §5, "changing the db service", with `main`'s
-     `docker-compose.yml`. Comment the two `postgres --version` lines and both `/healthz`
-     results on #266, then close it. **Until then the release guard refuses every release.**
-  2. Cut the release when he chooses. Afterwards: #264's "After the release" check
-     (`docker inspect orbit-ops-web-1`, a Python challenge on learn.seandesmet.com) and the
-     SBOM check in #269's body.
-  3. Delete the untracked `orbit-ops-container-hardening-handoff.md` once #266 is closed.
-     Budget Buddy has its own copy and hasn't started it. BB can copy these four PRs.
-- **Next:** #255 (split `shell.js`) before Unit 1.5, as planned. The quick ones still fit
-  anywhere: #256, #258, #248, plus #260's decision and Dependabot's #253.
