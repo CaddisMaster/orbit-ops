@@ -1,4 +1,4 @@
-// The station console's shell, part 7 of 12 (#255): the shell's own commands
+// The station console's shell, part 7 of 13 (#255): the shell's own commands
 // and its environment (cd, echo, set, read, trap, export, source, bash…).
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));
@@ -83,6 +83,7 @@
         "  editing:   nano less man crontab\n" +
         "  disk:      find du df free tar gzip gunzip zcat ln readlink\n" +
         "  network:   ip ss ping nc hostname dig host curl ufw ssh\n" +
+        "  services:  systemctl\n" +
         "  console:   clear help exit\n" +
         "  scripts:   if/elif/else, for, while/until, case, break continue, test [ ] [[ ]], read\n" +
         "  robust:    name() { … }, local return shift, set -euo pipefail, trap, <<EOF, mktemp\n" +

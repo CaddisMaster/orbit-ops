@@ -388,6 +388,61 @@ HTTP and logging in elsewhere (#166) hang off the same block:
   names come from DNS (not the console's `/etc/hosts`), and other hosts answer as their specs
   say. Any other host refuses with `Permission denied (publickey)`.
 
+Services (#303) are systemd units, for Unit 1.5:
+
+```yaml
+  services:
+    - name: scrubberd.service   # .service or .timer, in full
+      enabled: true             # a link in each WantedBy target's .wants/ (needs [Install])
+      unit: |                   # the unit file; it goes in /usr/lib/systemd/system
+        [Unit]
+        Description=Scrubber controller
+        [Service]
+        ExecStart=/usr/local/sbin/scrubberd
+        User=scrubber
+        [Install]
+        WantedBy=multi-user.target
+    - name: o2-backup.service
+      state: inactive           # active (the default), inactive or failed
+      dir: /etc/systemd/system  # the admin's copy, which wins over the vendor's
+      unit: "[Service]\nExecStart=/usr/local/sbin/o2-backupd\n"
+    - name: o2-monitor.service  # no unit: the learner writes it (#308)
+      state: inactive
+      exits: 1                  # its program crashes with status 1 ...
+      runs_for: 600             # ... after 600 s; without exits, it runs until stopped
+    - name: air-sample.timer
+      unit: "[Timer]\nOnCalendar=*-*-* 03:00:00\n"   # starts air-sample.service, which must be listed
+```
+
+- **Unit files are ordinary files**, read live, and **enabling is a link** in
+  `/etc/systemd/system/TARGET.wants/`, as `systemctl enable` makes. A running service is a
+  process `ps` shows, as its `User=` (root by default), with its own PID; stopping it sends
+  TERM. Only the keys the unit teaches are allowed (`Description Documentation After Before
+  Wants Requires`, `Type ExecStart ExecReload User Group Environment WorkingDirectory Restart
+  RestartSec`, `OnCalendar Persistent Unit`, `WantedBy`); a typo fails the content.
+  `ExecStart`'s program must be a file you list (or under `/usr/bin` or `/bin`), and `User=` an
+  account.
+- **The console can't run the program**, so `exits`/`runs_for` say what it does. A program that
+  exits leaves its unit `failed` (`status=1/FAILURE`), unless `Restart=on-failure` (or `always`)
+  brings it back after `RestartSec`; one that fails 5 times in 10 s stays failed, as systemd's
+  start limit says. Killing the main process with TERM leaves it inactive, with KILL failed. A
+  learner's unit whose program isn't there fails with `203/EXEC`, an unknown `User=` with
+  `217/USER`, and one with no `ExecStart` is refused as a bad setting.
+- **An edited unit needs `daemon-reload`**: `status` and `cat` warn until then, and a start uses
+  the version loaded. A new file loads on first use, as on a real system, and `enable` reloads.
+- **Timers** don't fire: `list-timers` and `status` show the next run from `OnCalendar` against
+  the station clock. The console reads a shorthand (`minutely hourly daily weekly monthly`) or
+  `[DAY ]*-*-* HH:MM[:SS]`, where the hour and minute may be `*` or `*/N`.
+- **Changing anything needs `sudo`; reading doesn't.** Without it, the console refuses with
+  `Interactive authentication required.`, as Ubuntu's systemctl does when nothing can ask for a
+  password. Over a real ssh session, polkit may ask for one itself: a lesson shouldn't promise
+  either, beyond "use sudo".
+- **Check a Try it against real systemd**, which a plain `ubuntu:24.04` container doesn't run:
+  install `systemd systemd-sysv` in one and start it as `/sbin/init`, privileged, with
+  `--cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock`. A
+  non-root user there gets `Failed to connect to bus` until `polkitd` is installed, which
+  Ubuntu Server has.
+
 `/etc/passwd`, `/etc/group`, `/etc/hosts`, `/etc/resolv.conf`, `/etc/ufw/{ufw.conf,user.rules,user6.rules}` and `/root` are generated from these unless you list them yourself.
 Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group is 1000.
 
@@ -400,7 +455,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
   the rest of the mode, so `chmod +x`, `u+x` and `755` all pass; #70), `{contains: P, text: "…"}`, `{lacks: P, text: "…"}` (P is there and the text isn't in it, #200: how a task says "and no more"), `{cwd: P}` (the console must end in directory
   P, for navigation tasks), and for processes `{running: NAME}`, `{stopped: NAME}` and
   `{signalled: NAME, with: TERM}` (NAME is the program's file name, as `ps` shows it; `stopped`
-  and `signalled` must name a starting process). For files on disk (#67): `{symlink: P, target:
+  and `signalled` must name a starting process). For systemd (#303): `{active: UNIT}`,
+  `{inactive: UNIT}` (stopped, failed or never started), `{enabled: UNIT}` and `{disabled: UNIT}`
+  (UNIT in full, `scrubberd.service`; `inactive` and `disabled` must name a unit in `services:`).
+  For files on disk (#67): `{symlink: P, target:
   T}` (a link at P pointing at exactly T, as written) and `{files_under: DIR, name: "*.gz",
   max_size: 50M, max_age: 30}` (every file below DIR whose name matches, if `name` is given, is at
   most that big and changed at most that many days ago; it needs `max_size`, `max_age` or both,
@@ -476,6 +534,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
     Ubuntu 24.04's (dig and host as BIND 9.18's against a bind9 resolver, curl 8.5.0's, ufw 0.36.2's), column for column (`ss` as when piped, which is how it sizes columns without
     a terminal). Round-trip times are made up but fixed. Waiting is station time: `nc` without
     `-w` on a filtered port takes 2 min 14 s, as the kernel's retries do.
+  - services (#303): `systemctl` `status start stop restart reload enable disable (--now)
+    is-active is-enabled is-failed (-q) list-units (--type --state --failed --all)
+    list-unit-files list-timers (--all) cat daemon-reload`, with a name or a glob (`'o2-*'`).
+    Output is systemd 255.4's on Ubuntu 24.04; memory, CPU and task counts are fixed.
   - processes: `ps (aux, -ef, --sort) pgrep (-a -f -l -u) pkill kill (-9, -TERM, -s, %job)
     sleep jobs fg bg`, `cmd &`, `$!`. Time is simulated: a second per command, and a
     foreground `sleep N` jumps N.

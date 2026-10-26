@@ -323,12 +323,13 @@ def test_the_server_agrees_with_the_shared_check_cases():
     data = json.loads((FIXTURES / "check_cases.json").read_text())
     state = {p: Node(**n) for p, n in data["state"].items()}
     adapter = TypeAdapter(TerminalCheck)
-    from app.terminal import Process
+    from app.terminal import Process, UnitState
 
     processes = [Process(**p) for p in data["processes"]]
+    units = [UnitState(**u) for u in data["units"]]
     for case in data["cases"]:
         check = adapter.validate_python(case["check"])
-        assert passes(check, state, data["cwd"], processes) is case["expect"], case["name"]
+        assert passes(check, state, data["cwd"], processes, units) is case["expect"], case["name"]
 
 
 def test_a_cwd_check_must_name_a_starting_directory(tmp_path):

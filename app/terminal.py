@@ -20,14 +20,19 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.content.schema import (
+    ADMIN_DIR,
     STATION_NOW,
     AbsPath,
     Account,
+    ActiveCheck,
     ContainsCheck,
     CwdCheck,
+    DisabledCheck,
+    EnabledCheck,
     ExecutableCheck,
     ExistsCheck,
     FilesUnderCheck,
+    InactiveCheck,
     LacksCheck,
     LinkTarget,
     MissingCheck,
@@ -46,6 +51,7 @@ from app.content.schema import (
 
 MAX_NODES = 500
 MAX_PROCESSES = 200
+MAX_UNITS = 100
 MAX_CONTENTS = 20_000  # characters per file
 
 
@@ -80,6 +86,16 @@ class Process(BaseModel):
     signals: Annotated[list[Signal], Field(max_length=50)] = []
 
 
+class UnitState(BaseModel):
+    """A unit as the console left it (#303). Enabled-ness isn't here: it's the
+    links in the filesystem, as on a real system."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: Annotated[str, Field(max_length=64)]
+    state: Literal["active", "inactive", "failed", "activating"]
+
+
 class Report(BaseModel):
     """What the console POSTs: the state it ended with and its own verdict."""
 
@@ -88,6 +104,7 @@ class Report(BaseModel):
     state: dict[AbsPath, Node]
     cwd: AbsPath  # where the console ended up, for `cwd` checks
     processes: Annotated[list[Process], Field(max_length=MAX_PROCESSES)] = []
+    units: Annotated[list[UnitState], Field(max_length=MAX_UNITS)] = []
     passed: bool  # the browser's claim; recorded, never believed
 
     @field_validator("state")
@@ -98,9 +115,30 @@ class Report(BaseModel):
         return state
 
 
-def passes(check: TerminalCheck, state: dict[str, Node], cwd: str, processes: list[Process] = ()) -> bool:
+def enabled(name: str, state: dict[str, Node]) -> bool:
+    """Is there a link to `name` in some target's .wants/, as `systemctl enable` makes?"""
+    prefix = ADMIN_DIR + "/"
+    return any(
+        path.startswith(prefix) and path.endswith(".wants/" + name) and path.count("/") == ADMIN_DIR.count("/") + 2
+        and node.type == "link"
+        for path, node in state.items()
+    )
+
+
+def passes(
+    check: TerminalCheck, state: dict[str, Node], cwd: str, processes: list[Process] = (), units: list[UnitState] = ()
+) -> bool:
     named = lambda name: [p for p in processes if proc_name(p.command) == name]  # noqa: E731
+    active = lambda name: any(u.name == name and u.state == "active" for u in units)  # noqa: E731
     match check:
+        case ActiveCheck(active=name):
+            return active(name)
+        case InactiveCheck(inactive=name):
+            return not active(name)
+        case EnabledCheck(enabled=name):
+            return enabled(name, state)
+        case DisabledCheck(disabled=name):
+            return not enabled(name, state)
         case RunningCheck(running=name):
             return any(p.alive for p in named(name))
         case StoppedCheck(stopped=name):
@@ -148,8 +186,14 @@ def passes(check: TerminalCheck, state: dict[str, Node], cwd: str, processes: li
     return False
 
 
-def grade(exercise: TerminalExercise, state: dict[str, Node], cwd: str, processes: list[Process] = ()) -> bool:
-    return all(passes(check, state, cwd, processes) for check in exercise.checks)
+def grade(
+    exercise: TerminalExercise,
+    state: dict[str, Node],
+    cwd: str,
+    processes: list[Process] = (),
+    units: list[UnitState] = (),
+) -> bool:
+    return all(passes(check, state, cwd, processes, units) for check in exercise.checks)
 
 
 def client_spec(exercise: TerminalExercise) -> dict:
@@ -173,6 +217,12 @@ def client_spec(exercise: TerminalExercise) -> dict:
         # Only when set, so exercises without one keep their exact shape; the
         # console's DEFAULT_NETWORK is NetworkSpec's defaults.
         **({"network": exercise.network.model_dump()} if exercise.network else {}),
+        # #303: how each unit starts and what its program does. Its file is in fs.
+        **(
+            {"services": [u.model_dump(include={"name", "state", "exits", "runs_for"}) for u in exercise.services]}
+            if exercise.services
+            else {}
+        ),
         "fs": exercise.starting_fs(),
         "processes": [
             {"command": p.command, "user": p.user or exercise.user, "cpu": p.cpu, "mem": p.mem, "ignores": p.ignores}

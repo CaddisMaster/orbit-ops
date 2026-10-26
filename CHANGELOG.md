@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- The station console has systemd (#303), for Unit 1.5: `systemctl` starts, stops, enables and
+  reads units whose files are ordinary files in `/usr/lib/systemd/system` and
+  `/etc/systemd/system`. Enabling makes the same `.wants/` link a real server does, a running
+  service is a process `ps` can see, `Restart=on-failure` brings a crashed one back, an edited
+  unit needs `daemon-reload`, and timers show their next run on the station clock. Output was
+  checked against systemd 255 on Ubuntu 24.04. Tasks can check that a unit is active, inactive,
+  enabled or disabled, and the server grades it from what the console reports.
+
 ## [0.12.1] — 2026-10-25
 
 One fix, with nothing to do on the server: the laptop screen's text stays a normal reading

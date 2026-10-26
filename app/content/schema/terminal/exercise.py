@@ -6,11 +6,15 @@ from pydantic import Field, model_validator
 
 from ..base import Text, _Strict
 from .checks import (
+    ActiveCheck,
     ContainsCheck,
     CwdCheck,
+    DisabledCheck,
+    EnabledCheck,
     ExecutableCheck,
     ExistsCheck,
     FilesUnderCheck,
+    InactiveCheck,
     LacksCheck,
     RunningCheck,
     SignalledCheck,
@@ -24,6 +28,7 @@ from .dns import ETC_HOSTS
 from .files import AbsPath, Account, FsEntry, _parent, size_bytes
 from .firewall import UFW_INSTALLED, ufw_conf, ufw_rules
 from .network import NetworkSpec
+from .services import ADMIN_DIR, VENDOR_DIR, SystemdUnit
 from .system import AccountSpec, DiskSpec, MemorySpec, ProcessSpec, proc_name
 
 KNOWN_GIDS = {"root": 0, "adm": 4, "sudo": 27, "docker": 998}
@@ -44,6 +49,7 @@ class TerminalExercise(_Strict):
     disk: DiskSpec | None = None
     memory: MemorySpec | None = None
     network: NetworkSpec | None = None  # #164; without it, NetworkSpec's defaults
+    services: Annotated[list[SystemdUnit], Field(max_length=20)] = []  # #303: systemd's units
     files: Annotated[list[FsEntry], Field(min_length=1, max_length=100)]
     checks: Annotated[list[TerminalCheck], Field(min_length=1, max_length=10)]
     success: Text = "Okafor's voice crackles over the comm: \"Confirmed. Nice work, cadet.\""
@@ -75,6 +81,21 @@ class TerminalExercise(_Strict):
                     fs.setdefault(parent, {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
                 mode = 0o640 if path.endswith(".rules") else 0o644  # ufw's rules are root's to read
                 fs[path] = {"type": "file", "mode": mode, "owner": "root", "group": "root", "contents": contents}
+        if self.services:
+            # #303: the unit files, and a link in each WantedBy target's .wants/
+            # for an enabled unit, as `systemctl enable` makes.
+            for d in ("/etc", "/etc/systemd", ADMIN_DIR, "/usr", "/usr/lib", "/usr/lib/systemd", VENDOR_DIR):
+                fs.setdefault(d, {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
+            for u in self.services:
+                if u.unit is not None and u.path not in listed:
+                    fs[u.path] = {"type": "file", "mode": 0o644, "owner": "root", "group": "root", "contents": u.unit}
+                if u.enabled:
+                    for target in u.wanted_by():
+                        wants = f"{ADMIN_DIR}/{target}.wants"
+                        fs.setdefault(wants, {"type": "dir", "mode": 0o755, "owner": "root", "group": "root", "contents": ""})
+                        fs[f"{wants}/{u.name}"] = {
+                            "type": "link", "mode": 0o777, "owner": "root", "group": "root", "contents": "", "target": u.path,
+                        }
         if "/root" not in listed:
             fs["/root"] = {"type": "dir", "mode": 0o700, "owner": "root", "group": "root", "contents": ""}
         for entry in self.files:
@@ -164,7 +185,26 @@ class TerminalExercise(_Strict):
             for c in self.network.connections:
                 if c.process not in started | {"sshd"}:
                     raise ValueError(f"network: connection {c.remote}: no starting process is called {c.process}")
+        units = {u.name: u for u in self.services}
+        if len(units) != len(self.services):
+            raise ValueError("services: a unit is listed twice")
+        for u in self.services:
+            where = f"services: {u.name}"
+            for user in u.sections().get("Service", {}).get("User", []):
+                if user not in users:
+                    raise ValueError(f"{where}: User={user} is not an account")
+            program = u.program()
+            if program and fs.get(program, {}).get("type") != "file" and not program.startswith(("/usr/bin/", "/bin/")):
+                raise ValueError(f"{where}: ExecStart's {program} is not a file in the starting filesystem")
+            if u.kind == "timer" and u.activates() not in units:
+                raise ValueError(f"{where}: it starts {u.activates()}, which isn't in services")
+            if u.state == "active" and u.exits is not None and u.runs_for == 0:
+                raise ValueError(f"{where}: a program that exits at once can't start active; give runs_for")
         for i, check in enumerate(self.checks):
+            # A unit that must end stopped or disabled must be there to start with;
+            # active and enabled may name a unit the learner writes (#308).
+            if isinstance(check, InactiveCheck | DisabledCheck) and check_path(check) not in units:
+                raise ValueError(f"checks.{i} ({describe(check)}): {check_path(check)} is not in services")
             if isinstance(check, StoppedCheck | SignalledCheck) and check_path(check) not in started:
                 raise ValueError(f"checks.{i} ({describe(check)}): no starting process is called {check_path(check)}")
         for i, check in enumerate(self.checks):
@@ -175,7 +215,7 @@ class TerminalExercise(_Strict):
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.cwd} is not a directory in the starting filesystem")
             if isinstance(check, FilesUnderCheck) and fs.get(check.files_under, {}).get("type") != "dir":
                 raise ValueError(f"checks.{i} ({describe(check)}): {check.files_under} is not a directory in the starting filesystem")
-            if isinstance(check, RunningCheck | StoppedCheck | SignalledCheck):
+            if isinstance(check, RunningCheck | StoppedCheck | SignalledCheck | ActiveCheck | InactiveCheck | EnabledCheck | DisabledCheck):
                 continue
             creatable = ExistsCheck | ExecutableCheck | ContainsCheck | LacksCheck | CwdCheck | SymlinkCheck | FilesUnderCheck
             if not isinstance(check, creatable) and check_path(check) not in fs:

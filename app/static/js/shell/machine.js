@@ -1,4 +1,4 @@
-// The station console's shell, part 2 of 12 (#255): the Shell itself and the
+// The station console's shell, part 2 of 13 (#255): the Shell itself and the
 // machine under it. Its state, the filesystem with Linux permissions, and the
 // users and groups in /etc/passwd and /etc/group.
 (function (root, factory) {
@@ -86,6 +86,7 @@
     this.sourceDepth = 0;
     this.noErrexit = 0;
     this.logins = []; // shells stacked by `sudo -i`, popped by `exit`
+    this.bootUnits(spec.services || []); // #303: systemd's units, from systemd.js
   }
 
   // bash's \w: ~ for a real home directory, otherwise the path. An exercise's

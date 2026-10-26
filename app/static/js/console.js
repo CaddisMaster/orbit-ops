@@ -90,7 +90,7 @@
     // What the task's checks can see: once it differs from the start, the
     // learner has changed something, and the status line counts the checks.
     function snapshot() {
-      return JSON.stringify([sh.state(), sh.cwd, sh.processes()]);
+      return JSON.stringify([sh.state(), sh.cwd, sh.processes(), sh.units()]);
     }
 
     function showProgress() {
@@ -255,7 +255,7 @@
       fetch(reportUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
-        body: JSON.stringify({ state: sh.state(), cwd: sh.cwd, processes: sh.processes(), passed: true }),
+        body: JSON.stringify({ state: sh.state(), cwd: sh.cwd, processes: sh.processes(), units: sh.units(), passed: true }),
         credentials: "same-origin",
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })

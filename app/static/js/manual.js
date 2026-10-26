@@ -540,6 +540,23 @@
         ["delete NUM", "remove rule NUM from status numbered (it asks first)"],
       ],
     },
+    systemctl: {
+      summary: "control the systemd system and service manager",
+      synopsis: ["systemctl status UNIT...", "systemctl start | stop | restart | reload UNIT...", "systemctl enable | disable [--now] UNIT...", "systemctl is-active | is-enabled | is-failed UNIT...", "systemctl list-units [--type=TYPE] [--state=STATE] [--failed] [--all]", "systemctl list-unit-files [--type=TYPE]", "systemctl list-timers [--all]", "systemctl cat UNIT...", "systemctl daemon-reload"],
+      description: "Ask systemd, the service manager (PID 1), about its units and change them. A unit is a service (a program it runs and watches) or a timer (which starts a service on a schedule), each described by a unit file. The admin's files in /etc/systemd/system win over the packages' in /usr/lib/systemd/system. A name without a suffix means NAME.service. Starting runs a unit now; enabling makes it start at boot, by linking it into the .wants/ directory of the target its [Install] section names. One doesn't do the other, unless --now is given. After editing a unit file, run daemon-reload, or systemd keeps using the version it loaded. Changing anything needs root (sudo); reading doesn't. Exit status: 0 when the unit is active (or enabled, or failed, for is-enabled and is-failed), 3 when it's not, 4 when there's no such unit.",
+      options: [
+        ["status UNIT", "is it running, since when, its main process, and whether it's enabled"],
+        ["start, stop, restart UNIT", "run it now, stop it, or both"],
+        ["reload UNIT", "ask it to reread its configuration, if it has an ExecReload="],
+        ["enable, disable UNIT", "start it at boot, or don't (--now: start or stop it too)"],
+        ["is-active, is-enabled, is-failed UNIT", "print one word, for scripts (-q: print nothing)"],
+        ["list-units", "the units that are running or failed (--all: every loaded one; --failed; --state=inactive)"],
+        ["list-unit-files", "every unit file and whether it's enabled, disabled or static (can't be enabled)"],
+        ["list-timers", "when each timer runs next (NEXT, LEFT) and which service it starts"],
+        ["cat UNIT", "print the unit file, with its path"],
+        ["daemon-reload", "load every unit file again, after editing one"],
+      ],
+    },
     ssh: {
       summary: "OpenSSH remote login client",
       synopsis: ["ssh [-l USER] [USER@]HOST COMMAND"],

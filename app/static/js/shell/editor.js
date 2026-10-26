@@ -1,4 +1,4 @@
-// The station console's shell, part 4 of 12 (#255): nano, the pager (less,
+// The station console's shell, part 4 of 13 (#255): nano, the pager (less,
 // more) and man, as state objects console.js draws in the panel (#66).
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));

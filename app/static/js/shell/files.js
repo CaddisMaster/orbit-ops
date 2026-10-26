@@ -1,4 +1,4 @@
-// The station console's shell, part 8 of 12 (#255): commands for files and
+// The station console's shell, part 8 of 13 (#255): commands for files and
 // disks. ls, cp, mv, rm, chmod, find, du, df, tar, gzip, ln and stat.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));

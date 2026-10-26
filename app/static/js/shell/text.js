@@ -1,4 +1,4 @@
-// The station console's shell, part 9 of 12 (#255): commands for text.
+// The station console's shell, part 9 of 13 (#255): commands for text.
 // grep, wc, sort, uniq, tee, head, tail, cut, awk and sed.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));

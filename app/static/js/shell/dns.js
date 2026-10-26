@@ -1,4 +1,4 @@
-// The station console's shell, part 12 of 12 (#255): names (#165). /etc/hosts,
+// The station console's shell, part 12 of 13 (#255): names (#165). /etc/hosts,
 // the resolver, dig, host and getent hosts.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));

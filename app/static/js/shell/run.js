@@ -1,4 +1,4 @@
-// The station console's shell, part 6 of 12 (#255): running what the parser
+// The station console's shell, part 6 of 13 (#255): running what the parser
 // read. Lists, pipelines, redirects, compound commands, jobs and signals,
 // scripts and functions, and finding a command by name.
 (function (root, factory) {
