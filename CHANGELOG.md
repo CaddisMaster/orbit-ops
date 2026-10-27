@@ -30,6 +30,11 @@ and why it matters, not what the diff says.
   `disable` as links in `.wants/`, `--now`, `is-active` and `is-enabled`, and why it all needs
   `sudo`. On the console, the two services somebody starts by hand every morning are enabled
   at last, the recycler comes back, and a maintenance purge left running is stopped.
+- Unit 1.5 module 03, *Reading unit files* (#307): `systemctl cat`, the `[Unit]`, `[Service]`
+  and `[Install]` sections, `ExecStart=` and `User=` (none means root), `After=` versus
+  `Wants=` versus `Requires=`, and why the administrator's copy in `/etc/systemd/system`
+  beats the package's in `/usr/lib/systemd/system`. On the console, you read what each
+  life-support service runs and as whom, and find the one whose copy in `/etc` runs it as root.
 
 ## [0.12.1] — 2026-10-25
 

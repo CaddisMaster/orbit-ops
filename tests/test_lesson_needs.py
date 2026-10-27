@@ -368,6 +368,17 @@ NEEDS = {
         "is-active takes several names at once": "Both take several names at once, one answer per line",
         "enable and disable print no link line when there's nothing to change": "there's no `Created symlink`\nor `Removed` line",
     },
+    "unit-files": {
+        "systemctl cat prints the unit file in use": "prints the one systemd is using",
+        "its first line is the path": "with its path on a `#` line first",
+        "ExecStart's first word is the program": "the program's full path first, then\nits options",
+        "no User= means root": "With no `User=` line, it runs as root.",
+        "Requires= is the dependency": "**start UNIT too, and depend on it**",
+        "Wants= isn't a dependency": "**start UNIT too**, and carry on whether it works or not",
+        "/etc beats /usr/lib": "a file here with the same name is used instead",
+        "the path shows which copy is in use": "says which copy is in use",
+        "listing /etc/systemd/system shows the admin's copies": "Listing `/etc/systemd/system` shows every copy an\nadministrator made",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",

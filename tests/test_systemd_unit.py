@@ -179,3 +179,87 @@ def test_module_02s_figures_match_the_console():
     )
     for name in services:
         assert name not in quoted, name
+
+
+# --- 03: Reading unit files (#307) ------------------------------------------------------------
+UNITS = "/home/cadet/units.txt"
+READ = [
+    "scrubberd.service /usr/local/sbin/scrubberd scrubber",
+    "recycler.service /usr/local/sbin/recyclerd water",
+    "co2-monitor.service /usr/local/sbin/co2-monitor sensors",
+    "o2-backup.service /usr/local/sbin/o2-backupd root",
+    "requires co2-monitor.service",
+    "override o2-backup.service",
+]
+
+
+@pytest.mark.criterion(307, "Module 03 of Unit 1.5 is complete content")
+def test_module_03_is_complete_content():
+    module = next(m for m in load_catalog().unit_modules("systemd") if m.slug == "unit-files")
+    _complete_content(module)
+
+
+@pytest.mark.criterion(307, "Module 03's task can be solved with what the lesson teaches")
+def test_module_03s_end_state_passes_on_the_server():
+    exercise = _module("unit-files").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd)
+    assert grade(exercise, _with_file(start, UNITS, "\n".join(READ) + "\n"), exercise.cwd)
+
+
+@pytest.mark.criterion(307, "Module 03's task can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("wrong", "right"),
+    [
+        ("o2-backup.service /usr/local/sbin/o2-backupd o2feed", READ[3]),  # read the package's copy
+        ("scrubberd.service /usr/local/sbin/scrubberd --cycle 90 scrubber", READ[0]),  # options kept
+        ("scrubberd.service scrubberd scrubber", READ[0]),  # not the full path
+        ("requires thermal-reg.service", READ[4]),  # Wants= taken for Requires=
+        ("override recycler.service", READ[5]),  # the wrong override
+    ],
+    ids=["vendor-copy", "with-options", "bare-name", "wants-not-requires", "wrong-override"],
+)
+def test_module_03_refuses_the_misreadings(wrong, right):
+    exercise = _module("unit-files").terminal
+    report = "\n".join(READ).replace(right, wrong) + "\n"
+    assert not grade(exercise, _with_file(_start(exercise), UNITS, report), exercise.cwd)
+
+
+def test_module_03_also_refuses_both_requires_answers():
+    exercise = _module("unit-files").terminal
+    report = "\n".join(READ + ["requires thermal-reg.service"]) + "\n"
+    assert not grade(exercise, _with_file(_start(exercise), UNITS, report), exercise.cwd)
+
+
+def test_module_03s_figures_match_the_units():
+    from app.content.schema.terminal.services import VENDOR_DIR, parse_unit
+
+    module = _module("unit-files")
+    exercise = module.terminal
+    services = {s.name: s for s in exercise.services}
+    texts = {c.text for c in exercise.checks if hasattr(c, "contains")}
+    # Each service line is the unit's own ExecStart program and User= (root without one).
+    for name in ("scrubberd.service", "recycler.service", "co2-monitor.service", "o2-backup.service"):
+        unit = services[name]
+        user = unit.sections()["Service"].get("User", ["root"])[-1]
+        assert f"{name} {unit.program()} {user}" in texts
+    recycler = services["recycler.service"].sections()["Unit"]
+    assert f"requires {recycler['Requires'][0]}" in texts and recycler["Wants"] != recycler["Requires"]
+    # The override: the admin's copy is what's used, and the package's copy beside it differs
+    # exactly in User=, which is why it's root.
+    backup = services["o2-backup.service"]
+    assert backup.dir == "/etc/systemd/system" and f"override {backup.name}" in texts
+    vendor = next(f for f in exercise.files if f.path == f"{VENDOR_DIR}/{backup.name}")
+    assert parse_unit(vendor.contents)["Service"]["User"] == ["o2feed"] and "User" not in backup.sections()["Service"]
+    # MERIDIAN's counts: five services, six unit files.
+    files = len(exercise.services) + sum(f.path.endswith(".service") for f in exercise.files)
+    assert f"LIFE SUPPORT SERVICES · {len(exercise.services)} ·" in _said(module, "open") and f"UNIT FILES: {files}" in _said(module, "open")
+    # Every user named exists as an account.
+    assert {"scrubber", "water", "sensors", "o2feed"} <= {a.name for a in exercise.accounts}
+    # The lesson's examples use none of the task's services.
+    quoted = module.body_html + " ".join(
+        [q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+        + [c.front_html + c.back_html for c in module.cards]
+    )
+    for name in services:
+        assert name.removesuffix(".service") not in quoted, name
