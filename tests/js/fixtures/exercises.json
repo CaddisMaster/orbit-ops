@@ -5053,6 +5053,391 @@
    "user": "cadet"
   }
  },
+ "start-stop-enable": {
+  "solution": [
+   "systemctl list-units --type=service --all",
+   "systemctl enable --now o2-backup",
+   "sudo systemctl enable --now o2-backup",
+   "meridian",
+   "sudo systemctl enable --now cabin-fans",
+   "sudo systemctl start recycler",
+   "sudo systemctl stop o2-purge",
+   "systemctl is-enabled o2-purge",
+   "systemctl is-active o2-backup cabin-fans recycler o2-purge"
+  ],
+  "source": "core/systemd/02-start-stop-enable.md",
+  "spec": {
+   "checks": [
+    {
+     "active": "o2-backup.service"
+    },
+    {
+     "enabled": "o2-backup.service"
+    },
+    {
+     "active": "cabin-fans.service"
+    },
+    {
+     "enabled": "cabin-fans.service"
+    },
+    {
+     "active": "recycler.service"
+    },
+    {
+     "inactive": "o2-purge.service"
+    },
+    {
+     "disabled": "o2-purge.service"
+    },
+    {
+     "active": "scrubberd.service"
+    },
+    {
+     "active": "co2-monitor.service"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.0.1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants/co2-monitor.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/co2-monitor.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/recycler.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/recycler.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/scrubberd.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/thermal-reg.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/thermal-reg.service",
+     "type": "link"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=no\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system/cabin-fans.service": {
+     "contents": "[Unit]\nDescription=Life support: cabin fans\n\n[Service]\nExecStart=/usr/local/sbin/cabin-fansd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/co2-monitor.service": {
+     "contents": "[Unit]\nDescription=Life support: CO2 monitor\n\n[Service]\nExecStart=/usr/local/sbin/co2-monitor\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/o2-backup.service": {
+     "contents": "[Unit]\nDescription=Life support: O2 backup feed\n\n[Service]\nExecStart=/usr/local/sbin/o2-backupd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/o2-purge.service": {
+     "contents": "[Unit]\nDescription=O2 line purge (maintenance only)\n\n[Service]\nExecStart=/usr/local/sbin/o2-purge\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/recycler.service": {
+     "contents": "[Unit]\nDescription=Life support: water recycler\n\n[Service]\nExecStart=/usr/local/sbin/recyclerd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/scrubberd.service": {
+     "contents": "[Unit]\nDescription=Life support: scrubber controller\n\n[Service]\nExecStart=/usr/local/sbin/scrubberd\nExecReload=/bin/kill -HUP $MAINPID\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/thermal-reg.service": {
+     "contents": "[Unit]\nDescription=Life support: thermal regulator\n\n[Service]\nExecStart=/usr/local/sbin/thermal-regd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/cabin-fansd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/co2-monitor": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/o2-backupd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/o2-purge": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/recyclerd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubberd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/thermal-regd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "password": "meridian",
+   "processes": [],
+   "services": [
+    {
+     "exits": null,
+     "name": "scrubberd.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "thermal-reg.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "recycler.service",
+     "runs_for": 0,
+     "state": "failed"
+    },
+    {
+     "exits": null,
+     "name": "co2-monitor.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "o2-backup.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": null,
+     "name": "cabin-fans.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": null,
+     "name": "o2-purge.service",
+     "runs_for": 0,
+     "state": "active"
+    }
+   ],
+   "success": "Okafor checks the list twice. \"Running, and they'll still be running tomorrow. Nobody walks the rounds at 08:00 any more.\"",
+   "user": "cadet"
+  }
+ },
  "text-tools": {
   "solution": [
    "head -n 3 /var/log/docking/access.log",
@@ -5412,6 +5797,365 @@
    "password": null,
    "processes": [],
    "success": "\"Found it,\" Okafor says. \"Now read the scrubbers' log: when did B go down? Remember where the logs live; you'll be back.\"",
+   "user": "cadet"
+  }
+ },
+ "unit-files": {
+  "solution": [
+   "systemctl cat scrubberd recycler co2-monitor",
+   "systemctl cat o2-backup",
+   "ls /etc/systemd/system",
+   "echo \"scrubberd.service /usr/local/sbin/scrubberd scrubber\" > ~/units.txt",
+   "echo \"recycler.service /usr/local/sbin/recyclerd water\" >> ~/units.txt",
+   "echo \"co2-monitor.service /usr/local/sbin/co2-monitor sensors\" >> ~/units.txt",
+   "echo \"o2-backup.service /usr/local/sbin/o2-backupd root\" >> ~/units.txt",
+   "echo \"requires co2-monitor.service\" >> ~/units.txt",
+   "echo \"override o2-backup.service\" >> ~/units.txt"
+  ],
+  "source": "core/systemd/03-unit-files.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/units.txt",
+     "text": "scrubberd.service /usr/local/sbin/scrubberd scrubber"
+    },
+    {
+     "contains": "/home/cadet/units.txt",
+     "text": "recycler.service /usr/local/sbin/recyclerd water"
+    },
+    {
+     "contains": "/home/cadet/units.txt",
+     "text": "co2-monitor.service /usr/local/sbin/co2-monitor sensors"
+    },
+    {
+     "contains": "/home/cadet/units.txt",
+     "text": "o2-backup.service /usr/local/sbin/o2-backupd root"
+    },
+    {
+     "contains": "/home/cadet/units.txt",
+     "text": "requires co2-monitor.service"
+    },
+    {
+     "contains": "/home/cadet/units.txt",
+     "text": "override o2-backup.service"
+    },
+    {
+     "lacks": "/home/cadet/units.txt",
+     "text": "requires thermal-reg"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\nscrubber:x:990:\nwater:x:991:\nsensors:x:992:\no2feed:x:993:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nscrubber:x:990:990:Scrubber controller:/var/lib/scrubber:/usr/sbin/nologin\nwater:x:991:991:Water recycler:/var/lib/water:/usr/sbin/nologin\nsensors:x:992:992:Station sensors:/var/lib/sensors:/usr/sbin/nologin\no2feed:x:993:993:O2 backup feed:/var/lib/o2feed:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.0.1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants/co2-monitor.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/co2-monitor.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/o2-backup.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/etc/systemd/system/o2-backup.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/recycler.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/recycler.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/scrubberd.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/thermal-reg.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/thermal-reg.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/o2-backup.service": {
+     "contents": "[Unit]\nDescription=Life support: O2 backup feed\n\n[Service]\nExecStart=/usr/local/sbin/o2-backupd --verbose\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=no\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system/co2-monitor.service": {
+     "contents": "[Unit]\nDescription=Life support: CO2 monitor\n\n[Service]\nExecStart=/usr/local/sbin/co2-monitor --interval 30\nUser=sensors\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/o2-backup.service": {
+     "contents": "[Unit]\nDescription=Life support: O2 backup feed\n\n[Service]\nExecStart=/usr/local/sbin/o2-backupd\nUser=o2feed\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/recycler.service": {
+     "contents": "[Unit]\nDescription=Life support: water recycler\nRequires=co2-monitor.service\nAfter=co2-monitor.service\nWants=thermal-reg.service\n\n[Service]\nExecStart=/usr/local/sbin/recyclerd -c /etc/recycler.conf\nUser=water\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/scrubberd.service": {
+     "contents": "[Unit]\nDescription=Life support: scrubber controller\nAfter=network.target\n\n[Service]\nExecStart=/usr/local/sbin/scrubberd --cycle 90\nUser=scrubber\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/thermal-reg.service": {
+     "contents": "[Unit]\nDescription=Life support: thermal regulator\n\n[Service]\nExecStart=/usr/local/sbin/thermal-regd\nUser=sensors\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/co2-monitor": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/o2-backupd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/recyclerd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubberd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/thermal-regd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "services": [
+    {
+     "exits": null,
+     "name": "scrubberd.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "co2-monitor.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "recycler.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "thermal-reg.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "o2-backup.service",
+     "runs_for": 0,
+     "state": "active"
+    }
+   ],
+   "success": "Okafor reads the o2-backup line twice. \"Root. In the copy in /etc. Somebody 'fixed' that one by hand.\"",
    "user": "cadet"
   }
  },

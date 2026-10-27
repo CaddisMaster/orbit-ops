@@ -25,6 +25,16 @@ and why it matters, not what the diff says.
   `--failed`, and the difference between `inactive` (off, and nothing complains) and `failed`
   (it tried and broke). On the console, after a power cycle, you list the life-support
   services that are down and how: two crashed, and two were never started at all.
+- Unit 1.5 module 02, *Starting, stopping and enabling* (#306): running now versus starting at
+  boot, `start`/`stop`/`restart`, `reload` or `restart` after a config change, `enable` and
+  `disable` as links in `.wants/`, `--now`, `is-active` and `is-enabled`, and why it all needs
+  `sudo`. On the console, the two services somebody starts by hand every morning are enabled
+  at last, the recycler comes back, and a maintenance purge left running is stopped.
+- Unit 1.5 module 03, *Reading unit files* (#307): `systemctl cat`, the `[Unit]`, `[Service]`
+  and `[Install]` sections, `ExecStart=` and `User=` (none means root), `After=` versus
+  `Wants=` versus `Requires=`, and why the administrator's copy in `/etc/systemd/system`
+  beats the package's in `/usr/lib/systemd/system`. On the console, you read what each
+  life-support service runs and as whom, and find the one whose copy in `/etc` runs it as root.
 - Unit 1.5 module 04, *Writing a service* (#308): a unit file of your own in
   `/etc/systemd/system`, written with `sudo nano` or `echo … | sudo tee -a`, with `User=`,
   `Environment=`, `Restart=on-failure` and `RestartSec=`, then `daemon-reload` and
