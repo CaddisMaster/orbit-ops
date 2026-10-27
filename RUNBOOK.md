@@ -243,7 +243,7 @@ systemctl list-timers orbit-ops-backup.timer --no-pager
 ```bash
 systemctl start orbit-ops-backup.service
 journalctl -u orbit-ops-backup.service -n 5 --no-pager -o cat
-ls -l /opt/orbit-ops/backups/ | tail -n 3
+ls -l /opt/orbit-ops/backups/nightly-*
 ```
 
 Go on only if the journal says `backup ok: backups/nightly-…` and the file is
