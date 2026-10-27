@@ -25,6 +25,11 @@ and why it matters, not what the diff says.
   `--failed`, and the difference between `inactive` (off, and nothing complains) and `failed`
   (it tried and broke). On the console, after a power cycle, you list the life-support
   services that are down and how: two crashed, and two were never started at all.
+- Unit 1.5 module 02, *Starting, stopping and enabling* (#306): running now versus starting at
+  boot, `start`/`stop`/`restart`, `reload` or `restart` after a config change, `enable` and
+  `disable` as links in `.wants/`, `--now`, `is-active` and `is-enabled`, and why it all needs
+  `sudo`. On the console, the two services somebody starts by hand every morning are enabled
+  at last, the recycler comes back, and a maintenance purge left running is stopped.
 
 ## [0.12.1] — 2026-10-25
 
