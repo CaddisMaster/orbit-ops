@@ -35,6 +35,11 @@ and why it matters, not what the diff says.
   `Wants=` versus `Requires=`, and why the administrator's copy in `/etc/systemd/system`
   beats the package's in `/usr/lib/systemd/system`. On the console, you read what each
   life-support service runs and as whom, and find the one whose copy in `/etc` runs it as root.
+- Unit 1.5 module 04, *Writing a service* (#308): a unit file of your own in
+  `/etc/systemd/system`, written with `sudo nano` or `echo … | sudo tee -a`, with `User=`,
+  `Environment=`, `Restart=on-failure` and `RestartSec=`, then `daemon-reload` and
+  `enable --now`, and what `203/EXEC` and `217/USER` mean. On the console, you write the new O2
+  monitor's unit, and when its program crashes, the unit brings it back.
 
 ## [0.12.1] — 2026-10-25
 

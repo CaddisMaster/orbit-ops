@@ -6515,6 +6515,269 @@
    "user": "cadet"
   }
  },
+ "writing-a-service": {
+  "solution": [
+   "echo '[Unit]' | sudo tee /etc/systemd/system/o2-monitor.service",
+   "meridian",
+   "echo 'Description=Life support: O2 monitor' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo '[Service]' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo 'ExecStart=/usr/local/sbin/o2-monitor' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo 'User=o2mon' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo 'Environment=O2_FLOOR_PCT=19.5' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo 'Restart=on-failure' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo 'RestartSec=5' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo '[Install]' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "echo 'WantedBy=multi-user.target' | sudo tee -a /etc/systemd/system/o2-monitor.service",
+   "sudo systemctl daemon-reload",
+   "sudo systemctl enable --now o2-monitor",
+   "sleep 700",
+   "systemctl status o2-monitor"
+  ],
+  "source": "core/systemd/04-writing-a-service.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/etc/systemd/system/o2-monitor.service",
+     "text": "Description=Life support: O2 monitor"
+    },
+    {
+     "contains": "/etc/systemd/system/o2-monitor.service",
+     "text": "ExecStart=/usr/local/sbin/o2-monitor"
+    },
+    {
+     "contains": "/etc/systemd/system/o2-monitor.service",
+     "text": "User=o2mon"
+    },
+    {
+     "contains": "/etc/systemd/system/o2-monitor.service",
+     "text": "Environment=O2_FLOOR_PCT=19.5"
+    },
+    {
+     "contains": "/etc/systemd/system/o2-monitor.service",
+     "text": "Restart=on-failure"
+    },
+    {
+     "contains": "/etc/systemd/system/o2-monitor.service",
+     "text": "RestartSec=5"
+    },
+    {
+     "active": "o2-monitor.service"
+    },
+    {
+     "enabled": "o2-monitor.service"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\nscrubber:x:990:\no2mon:x:994:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nscrubber:x:990:990:Scrubber controller:/var/lib/scrubber:/usr/sbin/nologin\no2mon:x:994:994:O2 monitor:/var/lib/o2mon:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.0.1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/scrubberd.service",
+     "type": "link"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=no\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system/scrubberd.service": {
+     "contents": "[Unit]\nDescription=Life support: scrubber controller\n\n[Service]\nExecStart=/usr/local/sbin/scrubberd\nUser=scrubber\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/o2-monitor": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubberd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "password": "meridian",
+   "processes": [],
+   "services": [
+    {
+     "exits": null,
+     "name": "scrubberd.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": 1,
+     "name": "o2-monitor.service",
+     "runs_for": 600,
+     "state": "inactive"
+    }
+   ],
+   "success": "The O2 monitor's light goes green. Okafor watches it for a long moment. \"It'll fall over tonight, and get straight back up. That's all I ever wanted from it.\"",
+   "user": "cadet"
+  }
+ },
  "your-first-script": {
   "solution": [
    "cat sticky-note.txt",

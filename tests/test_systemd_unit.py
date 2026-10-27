@@ -263,3 +263,92 @@ def test_module_03s_figures_match_the_units():
     )
     for name in services:
         assert name.removesuffix(".service") not in quoted, name
+
+
+# --- 04: Writing a service (#308) -------------------------------------------------------------
+UNIT_FILE = "/etc/systemd/system/o2-monitor.service"
+WRITTEN = """[Unit]
+Description=Life support: O2 monitor
+
+[Service]
+ExecStart=/usr/local/sbin/o2-monitor
+User=o2mon
+Environment=O2_FLOOR_PCT=19.5
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+"""
+O2_WANTS = "/etc/systemd/system/multi-user.target.wants/o2-monitor.service"
+
+
+def _written(state, unit=WRITTEN, enabled=True):
+    state = {**state, UNIT_FILE: Node(type="file", mode=0o644, owner="root", group="root", contents=unit)}
+    if enabled:
+        state[O2_WANTS] = Node(type="link", mode=0o777, owner="root", group="root", target=UNIT_FILE)
+    return state
+
+
+UP = [UnitState(name="o2-monitor.service", state="active"), UnitState(name="scrubberd.service", state="active")]
+
+
+@pytest.mark.criterion(308, "Module 04 of Unit 1.5 is complete content")
+def test_module_04_is_complete_content():
+    module = next(m for m in load_catalog().unit_modules("systemd") if m.slug == "writing-a-service")
+    _complete_content(module)
+
+
+@pytest.mark.criterion(308, "Module 04's task can be solved with what the lesson teaches")
+def test_module_04s_end_state_passes_on_the_server():
+    exercise = _module("writing-a-service").terminal
+    start = _start(exercise)
+    assert UNIT_FILE not in start
+    assert not grade(exercise, start, exercise.cwd, [], [UnitState(name="o2-monitor.service", state="inactive")])
+    assert grade(exercise, _written(start), exercise.cwd, [], UP)
+
+
+@pytest.mark.criterion(308, "Module 04's task can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("unit", "enabled", "units"),
+    [
+        (WRITTEN.replace("User=o2mon\n", ""), True, UP),  # runs as root
+        (WRITTEN.replace("Restart=on-failure", "Restart=always"), True, UP),  # always, not on-failure
+        (WRITTEN.replace("RestartSec=5\n", ""), True, UP),  # no wait between tries
+        (WRITTEN.replace("Environment=O2_FLOOR_PCT=19.5\n", ""), True, UP),  # no alarm setting
+        (WRITTEN, False, UP),  # started, never enabled
+        (WRITTEN, True, [UnitState(name="o2-monitor.service", state="inactive")]),  # enabled, not started
+        (WRITTEN.replace("Restart=on-failure\n", ""), True, [UnitState(name="o2-monitor.service", state="failed")]),  # crashed, stayed down
+    ],
+    ids=["no-user", "restart-always", "no-restartsec", "no-environment", "not-enabled", "not-started", "crashed"],
+)
+def test_module_04_refuses_the_half_units(unit, enabled, units):
+    exercise = _module("writing-a-service").terminal
+    assert not grade(exercise, _written(_start(exercise), unit, enabled), exercise.cwd, [], units)
+
+
+def test_module_04s_unit_loads_and_its_figures_match():
+    from app.content.schema.terminal.services import SystemdUnit
+
+    module = _module("writing-a-service")
+    exercise = module.terminal
+    # The reference unit is valid by the console's own rules, and its program and user exist.
+    written = SystemdUnit(name="o2-monitor.service", unit=WRITTEN, dir="/etc/systemd/system", enabled=True)
+    assert written.program() in {f.path for f in exercise.files}
+    assert "o2mon" in {a.name for a in exercise.accounts}
+    # The program crashes, so a unit without Restart= would leave it failed (the task's hint).
+    monitor = next(s for s in exercise.services if s.name == "o2-monitor.service")
+    assert monitor.unit is None and monitor.exits and monitor.runs_for == 600 and "sleep 700" in exercise.task
+    # The solution writes the same unit, line for line.
+    lines = [s.split("'")[1] for s in exercise.solution if "| sudo tee" in s]
+    assert [line for line in WRITTEN.splitlines() if line] == lines
+    # MERIDIAN's readout is the checks.
+    done = _said(module, "console_done")
+    assert "USER: O2MON" in done and "RESTART: ON-FAILURE · 5 S" in done
+    # The lesson's examples use none of the task's settings.
+    quoted = module.body_html + " ".join(
+        [q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+        + [c.front_html + c.back_html for c in module.cards]
+    )
+    for figure in ("o2-monitor", "o2mon", "O2_FLOOR_PCT", "19.5"):
+        assert figure not in quoted, figure
