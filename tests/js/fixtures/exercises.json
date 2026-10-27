@@ -4599,6 +4599,460 @@
    "user": "cadet"
   }
  },
+ "services": {
+  "solution": [
+   "systemctl --failed",
+   "systemctl list-units --type=service --all",
+   "systemctl status o2-backup",
+   "echo \"recycler.service failed\" > ~/down.txt",
+   "echo \"co2-monitor.service failed\" >> ~/down.txt",
+   "echo \"o2-backup.service inactive\" >> ~/down.txt",
+   "echo \"cabin-fans.service inactive\" >> ~/down.txt",
+   "cat ~/down.txt"
+  ],
+  "source": "core/systemd/01-services.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/down.txt",
+     "text": "recycler.service failed"
+    },
+    {
+     "contains": "/home/cadet/down.txt",
+     "text": "co2-monitor.service failed"
+    },
+    {
+     "contains": "/home/cadet/down.txt",
+     "text": "o2-backup.service inactive"
+    },
+    {
+     "contains": "/home/cadet/down.txt",
+     "text": "cabin-fans.service inactive"
+    },
+    {
+     "lacks": "/home/cadet/down.txt",
+     "text": "scrubberd"
+    },
+    {
+     "lacks": "/home/cadet/down.txt",
+     "text": "thermal-reg"
+    },
+    {
+     "lacks": "/home/cadet/down.txt",
+     "text": "galley-display"
+    },
+    {
+     "lacks": "/home/cadet/down.txt",
+     "text": "hydroponics"
+    },
+    {
+     "lacks": "/home/cadet/down.txt",
+     "text": "cron"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.0.1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants/co2-monitor.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/co2-monitor.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/cron.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/cron.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/galley-display.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/galley-display.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/recycler.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/recycler.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/scrubberd.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/thermal-reg.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/thermal-reg.service",
+     "type": "link"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=no\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system/cabin-fans.service": {
+     "contents": "[Unit]\nDescription=Life support: cabin fans\n\n[Service]\nExecStart=/usr/local/sbin/cabin-fansd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/co2-monitor.service": {
+     "contents": "[Unit]\nDescription=Life support: CO2 monitor\n\n[Service]\nExecStart=/usr/local/sbin/co2-monitor\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/cron.service": {
+     "contents": "[Unit]\nDescription=Regular background program processing daemon\n\n[Service]\nExecStart=/usr/sbin/cron -f -P\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/galley-display.service": {
+     "contents": "[Unit]\nDescription=Galley menu display\n\n[Service]\nExecStart=/usr/local/sbin/galley-display\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/hydroponics-lights.service": {
+     "contents": "[Unit]\nDescription=Hydroponics grow lights\n\n[Service]\nExecStart=/usr/local/sbin/grow-lights\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/o2-backup.service": {
+     "contents": "[Unit]\nDescription=Life support: O2 backup feed\n\n[Service]\nExecStart=/usr/local/sbin/o2-backupd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/recycler.service": {
+     "contents": "[Unit]\nDescription=Life support: water recycler\n\n[Service]\nExecStart=/usr/local/sbin/recyclerd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/scrubberd.service": {
+     "contents": "[Unit]\nDescription=Life support: scrubber controller\n\n[Service]\nExecStart=/usr/local/sbin/scrubberd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/thermal-reg.service": {
+     "contents": "[Unit]\nDescription=Life support: thermal regulator\n\n[Service]\nExecStart=/usr/local/sbin/thermal-regd\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/cabin-fansd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/co2-monitor": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/galley-display": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/grow-lights": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/o2-backupd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/recyclerd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubberd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/thermal-regd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/sbin/cron": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [],
+   "password": null,
+   "processes": [],
+   "services": [
+    {
+     "exits": null,
+     "name": "scrubberd.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "thermal-reg.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": 1,
+     "name": "recycler.service",
+     "runs_for": 0,
+     "state": "failed"
+    },
+    {
+     "exits": 1,
+     "name": "co2-monitor.service",
+     "runs_for": 0,
+     "state": "failed"
+    },
+    {
+     "exits": null,
+     "name": "o2-backup.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": null,
+     "name": "cabin-fans.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": 1,
+     "name": "galley-display.service",
+     "runs_for": 0,
+     "state": "failed"
+    },
+    {
+     "exits": null,
+     "name": "hydroponics-lights.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": null,
+     "name": "cron.service",
+     "runs_for": 0,
+     "state": "active"
+    }
+   ],
+   "success": "Okafor reads the list and taps the bottom two. \"Those didn't crash. Nobody ever started them.\"",
+   "user": "cadet"
+  }
+ },
  "text-tools": {
   "solution": [
    "head -n 3 /var/log/docking/access.log",

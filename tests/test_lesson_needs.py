@@ -344,6 +344,17 @@ NEEDS = {
         "use the name, not the address": "Use the name, not the address",
         "write it down before stopping anything": "**Killing the process closes its\nconnection, and the peer, the PID and the command line go with it.**",
     },
+    "services": {
+        "list-units lists every service, one row each": "lists them all, one row each",
+        "--all brings the inactive ones back": "**Without `--all`, inactive units are left out.**",
+        "--failed lists only the failed ones": "**only the failed units**",
+        "the ACTIVE column is the state": "The **ACTIVE** column is the state",
+        "the DESCRIPTION column is the description": "the **DESCRIPTION** column is the text after the dash",
+        "inactive is a state worth reporting": "**`inactive` complains about nothing.**",
+        "failed means it went wrong": "**`failed` is systemd telling you something\nbroke**",
+        "status takes a name without .service": "You can leave `.service` off a name",
+        "a unit's full name ends in its type": "its type is the end of its name",
+    },
     "finding-things-and-disk-space": {
         "df shows how full the disk is": "how big each filesystem is",
         "du finds what's using it": "how much the files under each PATH add up to",
