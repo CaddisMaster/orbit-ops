@@ -8,7 +8,7 @@ systemctl itself is tests/test_systemd.py's and tests/js/systemd.test.js's."""
 import pytest
 
 from app.content import load_catalog
-from app.terminal import Node, grade
+from app.terminal import Node, UnitState, grade
 from tests.test_bash_scripting import _complete_content, _said, _start
 
 
@@ -98,6 +98,87 @@ def test_module_01s_figures_match_the_console():
     for service in exercise.services:
         if service.name != "cron.service":
             assert service.name.removesuffix(".service") not in quoted, service.name
+
+
+# --- 02: Starting, stopping and enabling (#306) -----------------------------------------------
+WANTS = "/etc/systemd/system/multi-user.target.wants"
+
+
+def _enabled(state, *names):
+    links = {
+        f"{WANTS}/{n}": Node(type="link", mode=0o777, owner="root", group="root", target=f"/usr/lib/systemd/system/{n}")
+        for n in names
+    }
+    return {**state, **links}
+
+
+def _units(**states):
+    """The console's report: every service's state, the starting ones unless given."""
+    exercise = _module("start-stop-enable").terminal
+    return [UnitState(name=s.name, state=states.get(s.name.removesuffix(".service").replace("-", "_"), s.state)) for s in exercise.services]
+
+
+DONE = {"o2_backup": "active", "cabin_fans": "active", "recycler": "active", "o2_purge": "inactive"}
+
+
+@pytest.mark.criterion(306, "Module 02 of Unit 1.5 is complete content")
+def test_module_02_is_complete_content():
+    module = load_catalog().unit_modules("systemd")[1]
+    assert module.slug == "start-stop-enable"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(306, "Module 02's task can be solved with what the lesson teaches")
+def test_module_02s_end_state_passes_on_the_server():
+    exercise = _module("start-stop-enable").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd, [], _units())
+    done = _enabled(start, "o2-backup.service", "cabin-fans.service")
+    assert grade(exercise, done, exercise.cwd, [], _units(**DONE))
+
+
+@pytest.mark.criterion(306, "Module 02's task can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("enabled", "states"),
+    [
+        ([], DONE),  # started by hand again, never enabled
+        (["o2-backup.service", "cabin-fans.service"], {**DONE, "o2_backup": "inactive", "cabin_fans": "inactive"}),  # enabled, not started
+        (["o2-backup.service", "cabin-fans.service"], {**DONE, "recycler": "failed"}),  # the recycler left down
+        (["o2-backup.service", "cabin-fans.service"], {**DONE, "o2_purge": "active"}),  # the purge left running
+        (["o2-backup.service", "cabin-fans.service", "o2-purge.service"], DONE),  # the purge enabled
+        (["o2-backup.service", "cabin-fans.service"], {**DONE, "scrubberd": "inactive"}),  # the wrong one stopped
+    ],
+    ids=["started-not-enabled", "enabled-not-started", "recycler-down", "purge-running", "purge-enabled", "scrubberd-stopped"],
+)
+def test_module_02_refuses_the_half_fixes(enabled, states):
+    exercise = _module("start-stop-enable").terminal
+    end = _enabled(_start(exercise), *enabled)
+    assert not grade(exercise, end, exercise.cwd, [], _units(**states))
+
+
+def test_module_02s_figures_match_the_console():
+    module = _module("start-stop-enable")
+    exercise = module.terminal
+    services = {s.name.removesuffix(".service"): s for s in exercise.services}
+    # The two that are started by hand every morning start inactive and disabled; the
+    # recycler failed though enabled; the purge is running and was never enabled.
+    for name in ("o2-backup", "cabin-fans"):
+        assert services[name].state == "inactive" and not services[name].enabled
+    assert services["recycler"].state == "failed" and services["recycler"].exits is None  # fixed: a start holds
+    assert services["o2-purge"].state == "active" and not services["o2-purge"].enabled
+    opened = _said(module, "open")
+    for name in ("o2-backup", "cabin-fans", "recycler"):
+        assert f"{name.upper()} · {services[name].state.upper()}" in opened
+    # sudo is needed, and the solution shows the refusal first.
+    assert "sudo" in exercise.groups and exercise.password == "meridian" and "`meridian`" in exercise.task
+    assert exercise.solution[1].startswith("systemctl enable")
+    # The lesson's examples use none of the task's services.
+    quoted = module.body_html + " ".join(
+        [q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+        + [c.front_html + c.back_html for c in module.cards]
+    )
+    for name in services:
+        assert name not in quoted, name
 
 
 # --- 03: Reading unit files (#307) ------------------------------------------------------------
