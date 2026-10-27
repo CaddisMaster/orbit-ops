@@ -121,7 +121,8 @@ Until those two keys are set the app connects as the owner, which works but is n
 **Deploy** = publish a GitHub Release `vX.Y.Z` (see `VERSIONING.md`). `release.yml` builds and
 pushes the image with an SBOM and provenance attached, boots it against a scratch Postgres
 (migrations + `/healthz`), scans it with Grype (a fixable CRITICAL fails the release), waits for your
-approval, then over SSH: pins `TAG` in `.env`, takes a verified `pg_dump` (`scripts/backup_db.sh`), pulls `web`, runs
+approval, then over SSH: installs the release's `docker-compose.yml` and the backup script the
+nightly timer runs (§6), pins `TAG` in `.env`, takes a verified `pg_dump` (`scripts/backup_db.sh`), pulls `web`, runs
 `alembic upgrade head` from the **new** image, `up -d`, and checks the running `APP_VERSION`
 and the public `/healthz` both report the new version.
 
@@ -180,13 +181,73 @@ installs the same file, and its guard then sees no `db` change.
 
 ## 6. Backups and restore
 
-- Every deploy writes `backups/pre-deploy-<timestamp>.sql.gz`; the newest 14 are kept.
-- A deploy's dump counts only if `pg_dump` exited 0 **and** the dump ends with `PostgreSQL
-  database dump complete`; otherwise the deploy stops before migrating and no file is kept
-  (`scripts/backup_db.sh`, #116). It writes `<file>.partial` first, so a dump that died midway
-  can leave at most a `.partial`, which is safe to delete.
-- Off-box copies: add `/opt/orbit-ops/backups` to whatever already copies Budget Buddy's
-  backups off the droplet (see that RUNBOOK §7).
+What exists, all in `/opt/orbit-ops/backups`:
+
+| Dump | When | Kept | Made by |
+|---|---|---|---|
+| `pre-deploy-<timestamp>.sql.gz` | every deploy, before migrating | newest 14 | `release.yml` |
+| `nightly-<timestamp>.sql.gz` | 03:30 New York time, and at boot after a missed night | newest 14 | `orbit-ops-backup.timer` (#324) |
+
+- ⚠️ **No dump leaves the droplet yet.** Budget Buddy's off-box export doesn't include this
+  directory until BB #535 lands. Until then, losing the droplet loses every dump. `.env` and
+  the compose file aren't in any backup either: `.env` is recovered from Bitwarden (#320), and
+  the compose file is in git at the release's tag.
+- Both kinds go through `scripts/backup_db.sh` (#116): a dump counts only if `pg_dump` exited 0
+  **and** the dump ends with `PostgreSQL database dump complete`. Otherwise no file is kept: the
+  deploy stops before migrating, or the nightly unit fails. It writes `<file>.partial` first, so
+  a dump that died midway leaves at most a `.partial`, which is safe to delete. Old nightly
+  dumps are pruned only after a good one, so a run of failures never eats the ones left.
+- The nightly unit runs `/opt/orbit-ops/backup_db.sh`, the copy **each release installs**, so
+  it is always the script the deploy itself uses. Its files are `infra/systemd/` in the repo.
+- A failed night shows in `systemctl --failed` and in
+  `journalctl -u orbit-ops-backup.service`. Nothing alerts on it.
+
+### Installing the nightly backup (once)
+
+From a Mac terminal, as root on the droplet. Until #322's Ansible role owns these files, this
+is how they get there. `SHA` is a `main` commit that has #324, and each `*_SUM` is that file's
+`sha256sum` there. The release after #324 ships the script itself, so step 1 only matters
+before then (it's harmless after).
+
+1. The backup script, fetched at the commit and checked:
+
+```bash
+cd /opt/orbit-ops
+curl -fsSL "https://raw.githubusercontent.com/CaddisMaster/orbit-ops/$SHA/scripts/backup_db.sh" -o .backup_db.sh.new
+echo "$SCRIPT_SUM  .backup_db.sh.new" | sha256sum -c
+chown deploy:deploy .backup_db.sh.new && chmod 755 .backup_db.sh.new && mv .backup_db.sh.new backup_db.sh
+```
+
+2. The two unit files:
+
+```bash
+cd /etc/systemd/system
+curl -fsSL "https://raw.githubusercontent.com/CaddisMaster/orbit-ops/$SHA/infra/systemd/orbit-ops-backup.service" -o orbit-ops-backup.service
+curl -fsSL "https://raw.githubusercontent.com/CaddisMaster/orbit-ops/$SHA/infra/systemd/orbit-ops-backup.timer" -o orbit-ops-backup.timer
+echo "$SERVICE_SUM  orbit-ops-backup.service" | sha256sum -c
+echo "$TIMER_SUM  orbit-ops-backup.timer" | sha256sum -c
+chmod 644 orbit-ops-backup.service orbit-ops-backup.timer
+systemd-analyze verify orbit-ops-backup.service orbit-ops-backup.timer && echo verify ok
+```
+
+3. Turn the timer on and see its next run (07:30 or 08:30 UTC, depending on daylight saving):
+
+```bash
+systemctl daemon-reload
+systemctl enable --now orbit-ops-backup.timer
+systemctl list-timers orbit-ops-backup.timer --no-pager
+```
+
+4. One run now, rather than waiting for tonight:
+
+```bash
+systemctl start orbit-ops-backup.service
+journalctl -u orbit-ops-backup.service -n 5 --no-pager -o cat
+ls -l /opt/orbit-ops/backups/ | tail -n 3
+```
+
+Go on only if the journal says `backup ok: backups/nightly-…` and the file is
+`-rw------- deploy deploy`.
 
 Restore into the live database (stops the app first):
 

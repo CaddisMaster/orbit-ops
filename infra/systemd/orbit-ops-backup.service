@@ -1,0 +1,25 @@
+# #324 — the nightly database dump. Installed by hand (RUNBOOK §6) until the
+# Ansible app role (#322) owns it; started only by orbit-ops-backup.timer.
+#
+# The script is the copy each release installs in /opt/orbit-ops, so it is the
+# same verified dump the deploy takes (scripts/backup_db.sh). It reads .env from
+# the working directory.
+#
+# Little sandboxing on purpose: the script needs the docker socket, and access to
+# that is root-equivalent, so ProtectSystem= and friends would add little but
+# ways to break.
+[Unit]
+Description=Orbit Ops nightly database backup
+Documentation=https://github.com/CaddisMaster/orbit-ops/blob/main/RUNBOOK.md
+After=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/orbit-ops
+ExecStart=/bin/bash /opt/orbit-ops/backup_db.sh nightly 14
+# A dump holds every learner row: readable by deploy alone.
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes

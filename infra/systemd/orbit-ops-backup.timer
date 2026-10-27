@@ -1,0 +1,14 @@
+# #324 — runs orbit-ops-backup.service once a night.
+#
+# The time is New York's (APP_TIMEZONE), whatever the droplet's own clock is set
+# to, so it stays in Sean's small hours across daylight saving. Persistent=true runs a missed night's dump as soon
+# as the droplet is back, after a reboot or an outage.
+[Unit]
+Description=Nightly Orbit Ops database backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

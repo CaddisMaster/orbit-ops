@@ -1,13 +1,17 @@
 #!/bin/bash
 # #116 — take a verified pg_dump before a deploy changes anything.
 #
-# Runs ON the Droplet, from the deploy directory, piped in over ssh by
-# release.yml:
+# Runs ON the Droplet, from the deploy directory, two ways:
 #
 #   ssh ... "cd /opt/orbit-ops && bash -s -- pre-deploy" < scripts/backup_db.sh
+#       release.yml, before migrations. It prunes pre-deploy dumps itself.
+#   bash /opt/orbit-ops/backup_db.sh nightly 14
+#       orbit-ops-backup.service (#324), from the copy each release installs.
+#       The second argument keeps only the newest 14 `nightly-` dumps.
 #
 # Prints `backup ok: <file> (<bytes> bytes)` and exits 0 only when the dump is
-# whole. Any other exit stops the deploy before migrations and the image swap.
+# whole. Any other exit stops the deploy before migrations and the image swap,
+# or fails the nightly unit (`systemctl --failed`).
 #
 # ⚠️ bash, not sh. The check this replaced was `pg_dump | gzip > f; gzip -t f`
 # under `set -e` alone: a pipeline's status is its LAST command's, so a failed
@@ -22,6 +26,11 @@
 set -euo pipefail
 
 PREFIX="${1:-pre-deploy}"
+KEEP="${2:-}"
+case "$KEEP" in
+  "" | [1-9] | [1-9][0-9] | [1-9][0-9][0-9]) ;;
+  *) echo "::error::KEEP must be a whole number from 1 to 999, not '$KEEP'."; exit 2 ;;
+esac
 
 set -a
 . ./.env
@@ -35,7 +44,7 @@ PARTIAL="${DUMP}.partial"
 
 fail() {
   rm -f "$PARTIAL"
-  echo "::error::$1 No backup was kept, and the deploy stops here."
+  echo "::error::$1 No backup was kept (a deploy stops here)."
   exit 1
 }
 
@@ -58,3 +67,9 @@ esac
 
 mv "$PARTIAL" "$DUMP"
 echo "backup ok: $DUMP ($(stat -c%s "$DUMP") bytes)"
+
+# Only after a good dump, so a run of failures never eats the dumps that are left.
+# The names sort by time, and the glob can't match a `.partial`.
+if [ -n "$KEEP" ]; then
+  printf '%s\n' backups/"${PREFIX}"-*.sql.gz | sort -r | tail -n +"$((KEEP + 1))" | xargs -r rm --
+fi
