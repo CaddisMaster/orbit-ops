@@ -47,6 +47,12 @@ and why it matters, not what the diff says.
   runs, so it can't drift from the deploy's. The dumps don't leave the droplet yet; that is
   Budget Buddy #535. Installing the timer is a one-time step in RUNBOOK §6.
 
+### Security
+- Database dumps are always private to `deploy` (#326). The deploy's pre-migration dumps were
+  created world-readable (`-rw-rw-r--`) because of the SSH session's umask. Their folder was
+  already `drwx------`, so no other account could reach them, but a dump copied out would have
+  kept the loose mode. The ones already on the droplet were fixed by hand.
+
 ## [0.12.1] — 2026-10-25
 
 One fix, with nothing to do on the server: the laptop screen's text stays a normal reading
