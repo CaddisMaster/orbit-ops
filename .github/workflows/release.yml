@@ -183,6 +183,21 @@ jobs:
               "umask 022 && cat > ${APP_DIR}/.docker-compose.yml.new" < docker-compose.yml
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
               "cd ${APP_DIR} && sh -s -- '${EXPECTED}' '${VERSION}' release" < scripts/install_compose.sh
+      # #324: the nightly unit runs this copy, so every release refreshes it and it
+      # can't drift from the one the deploy pipes in below. Hash-checked like the
+      # compose file (a dropped stream still ends cat with 0), and renamed into
+      # place, so a timer run already reading the old file keeps its inode.
+      - name: Ship the release's backup script
+        run: |
+          EXPECTED="$(sha256sum scripts/backup_db.sh | cut -d' ' -f1)"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \
+              "set -e
+               cd ${APP_DIR}
+               umask 022
+               cat > .backup_db.sh.new
+               echo '${EXPECTED}  .backup_db.sh.new' | sha256sum -c --quiet
+               chmod 755 .backup_db.sh.new
+               mv .backup_db.sh.new backup_db.sh" < scripts/backup_db.sh
       - name: Pin TAG and start the database
         run: |
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes "${USER_NAME}@${HOST}" \

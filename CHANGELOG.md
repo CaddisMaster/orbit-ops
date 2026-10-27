@@ -40,6 +40,12 @@ and why it matters, not what the diff says.
   `Environment=`, `Restart=on-failure` and `RestartSec=`, then `daemon-reload` and
   `enable --now`, and what `203/EXEC` and `217/USER` mean. On the console, you write the new O2
   monitor's unit, and when its program crashes, the unit brings it back.
+- The droplet dumps the database every night (#324), not only on deploy. Before this, anything
+  done between releases was in no backup at all. A systemd timer runs the deploy's own verified
+  dump at 03:30 New York time (and catches up after downtime), keeps the newest 14, and fails
+  visibly in `systemctl --failed` when a dump is bad. Each release installs the script the timer
+  runs, so it can't drift from the deploy's. The dumps don't leave the droplet yet; that is
+  Budget Buddy #535. Installing the timer is a one-time step in RUNBOOK §6.
 
 ## [0.12.1] — 2026-10-25
 
