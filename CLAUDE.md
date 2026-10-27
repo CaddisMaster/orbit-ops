@@ -101,6 +101,8 @@ See `docs/status.md`. **v0.12.1** is in production (2026-10-25). On `main`, unre
 v0.13.0 console work for Unit 1.5, `systemctl` and unit files (#303) and `journalctl` (#304),
 Unit 1.5 modules 01–04 (#305–#308), and the Dependabot bumps (fastapi 0.161). Next: #309
 (timers), then #310, the journal and the mystery's reveal. #260 waits on Sean's decision.
+Also on `main`: the nightly backup timer (#324, installed on the droplet 2026-10-27) and private
+dumps (#326). Milestone *Infrastructure as code* (#320–#323) runs alongside Budget Buddy's (BB #529–#535).
 
 ## Maintainer notes (local only)
 

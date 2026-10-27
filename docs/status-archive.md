@@ -4,6 +4,52 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-25: `/cycle`, the admin panel, and v0.12.0 and v0.12.1 shipped
+
+- **`/cycle`** (a user-level skill in `personal-vault`, shared with Budget Buddy): Sean approves
+  a queue of issues once, Claude merges the auto-tagged ones on green and leaves stop-tagged
+  ones (auth, migrations, visual, AI spend, content) as open PRs. Two rounds ran this session.
+  Voice dictation was looked at first and dropped: Claude Code's `/voice` needs a local mic,
+  and the VM has none.
+- **v0.12.0, the admin panel** (milestone filed this session, #280–#285, PRs #286–#291):
+  - #286 (#280): migration `0010`, `users.is_admin`. Verified by hand on a scratch database
+    (a user made at 0009 upgrades to false; downgrade drops only the column).
+  - #287 (#281): `/admin`, `require_admin` (404), `confirm_password`, the full progress reset
+    (six tables; `users` and `ai_requests` stay), `create_user.py --admin`.
+  - #288 (#282): create accounts, `PASSWORD_MIN_LENGTH` shared with the script.
+  - #289 (#285): `/admin/ai` (from `app.spend`, so it can't disagree with the gate) and
+    `/admin/system`. `path_separator = os` in `alembic.ini` silences Alembic's warning.
+  - #290 (#283): a page per account (new password, log out everywhere, delete, progress JSON);
+    acting on yourself keeps the current session.
+  - #291 (#284): reset one module or unit (XP refs matched with `split_part`, card reviews on
+    part 2), and `/admin/preview/<slug>`, read-only, no answers. All 38 modules preview.
+  - Shipped as v0.12.0 (#292, run `40223396007`): `backup ok (8629 bytes)`, `running version
+    0.12.0`. Sean promoted his account from the Mac and confirmed `/admin` works.
+- **v0.12.1** (#293, #294, #295): the screen's text no longer grows with the window. Sean
+  picked from screenshots; checked at three sizes in Playwright, the console answering `pwd`.
+  Release run `40226594551`: `backup ok (5291 bytes)`, `running version 0.12.1`. The dump was
+  smaller than v0.12.0's 8629 bytes, which fits Sean having reset his progress from `/admin`.
+- Gotchas:
+  - ⚠️ **`ci.yml` runs only on PRs into `main`.** A PR stacked on another branch shows no
+    checks at all. Build each issue off `main` instead, and merge `main` in after its
+    neighbour lands.
+  - ⚠️ **The permission classifier refused a force-push plus a remote branch delete**, and
+    then `gh release create` ("Create Public Surface") until Sean said "publish" in so many
+    words. Merging `main` into the branch (a normal push) worked in place of the force-push.
+  - ⚠️ **"Keep both sides" on add/add conflicts can drop a shared line**: a function lost its
+    closing `)`. Where a branch's change sits inside code `main` reworked, take `main`'s file
+    and re-apply the branch's additions instead.
+  - ⚠️ A literal apostrophe in a Jinja template isn't escaped (only variables are), so a test
+    looks for `'`, not `&#39;`.
+- **Left for Sean:**
+  - Confirm the reset of his production progress took (the smaller dump suggests it did), and replay.
+  - From the Mac: `rm docker-compose.yml.v0.11.0 backups/pre-db-change.sql.gz` in
+    `/opt/orbit-ops`, and delete the leftover `281-admin-panel` branch on GitHub.
+  - #260 still waits on his decision.
+- **Next:** #258 (a docs note), Dependabot's #253 in its own release, then Unit 1.5,
+  *systemd & services*, as a **v0.13.0** milestone (a console issue for `systemctl`, unit files
+  and `journalctl`, then ~6 modules, the mystery's reveal last).
+
 ### 2026-10-24: two splits, #266 on the droplet, and v0.11.1 shipped
 
 - **Merged on Sean's word**, one issue and one PR each:
