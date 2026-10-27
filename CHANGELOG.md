@@ -19,6 +19,12 @@ and why it matters, not what the diff says.
   `--until`), priority, line count and boot, and `systemctl status` ends with the unit's
   latest lines. As on Ubuntu, reading it takes `sudo` or the `adm` group. This is where Unit
   1.5's last module finds what happened on the night of the outage.
+- Unit 1.5 module 01, *What a service is* (#305), the first module of systemd & services and
+  the unit's first content, so it's no longer "Coming soon". It teaches daemons, systemd as
+  PID 1, unit types, `systemctl status` line by line, `list-units` with `--all` and
+  `--failed`, and the difference between `inactive` (off, and nothing complains) and `failed`
+  (it tried and broke). On the console, after a power cycle, you list the life-support
+  services that are down and how: two crashed, and two were never started at all.
 
 ## [0.12.1] — 2026-10-25
 
