@@ -97,9 +97,9 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.12.1** is in production (2026-10-25). On `main`, unreleased: the
-v0.13.0 console work for Unit 1.5, `systemctl` and unit files (#303) and `journalctl` (#304), plus
-the Dependabot bumps (fastapi 0.161). Next: the six module issues #305–#310, the mystery's reveal
-last. #260 waits on Sean's decision.
+v0.13.0 console work for Unit 1.5, `systemctl` and unit files (#303) and `journalctl` (#304),
+Unit 1.5 modules 01–04 (#305–#308), and the Dependabot bumps (fastapi 0.161). Next: #309
+(timers), then #310, the journal and the mystery's reveal. #260 waits on Sean's decision.
 
 ## Maintainer notes (local only)
 

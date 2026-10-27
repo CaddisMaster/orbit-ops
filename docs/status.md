@@ -136,6 +136,50 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-10-27: Unit 1.5 modules 01–04 (#305–#308)
+
+- **#314 (#305), module 01 *What a service is*:** daemons, systemd as PID 1, `systemctl
+  status` line by line, `list-units` with `--all`/`--failed`, inactive versus failed. Unit 1.5
+  is no longer "Coming soon". New test file `tests/test_systemd_unit.py` for the unit.
+- **`/cycle`, queue #306–#308.** All content, so all stop-tagged: built to green PRs and left
+  open. Sean then asked for them merged, in order:
+  - #315 (#306), module 02 *Starting, stopping and enabling*: active versus enabled,
+    `reload`/`restart`, `enable` as a `.wants/` link, `--now`, sudo.
+  - #316 (#307), module 03 *Reading unit files*: `systemctl cat`, the three sections, no
+    `User=` means root, `After`/`Wants`/`Requires`, `/etc` beats `/usr/lib`. The `o2-backup`
+    admin copy that runs as root is a new story beat, closed as "not sabotage".
+  - #317 (#308), module 04 *Writing a service*: a unit of your own (`sudo nano` taught there,
+    since Unit 1.2 isn't a prerequisite), `Restart=on-failure`, `RestartSec=`, `203/EXEC` and
+    `217/USER`. Played in the browser with nano, not just `tee`.
+- Every module had the content-reviewer, `/beginner-audit` and gotcha-auditor passes, a Try it
+  run in the `sysref` container (systemd 255.4 as PID 1) as `cadet`, and a browser play as
+  `verify-bot`.
+- **Real systemd corrected the drafts** (now in the lessons):
+  - `list-units --all` omits a disabled, never-started unit: it isn't loaded. The console
+    loads every unit at boot, and module 01 says so. Matching it would be a console issue.
+  - A new copy in `/etc` needs `daemon-reload` before `systemctl cat` shows it, and `status`
+    doesn't warn about it (it warns only for an edited, loaded file).
+  - `Requires=` without `After=` doesn't stop a unit starting when its requirement fails;
+    with `After=` it does. Stopping the requirement stops it either way; a crash doesn't.
+  - `enable` on a unit with no `[Install]` prints the "no installation config" note, exits 0,
+    and `--now` still starts it. The start limit is 5 starts in 10 s, then `failed`.
+- Gotchas:
+  - ⚠️ **Git's merge mixes up two sections appended at the same place** when they share closing
+    lines (`    },`, a figures test's last lines). The conflict hunks looked like "keep both"
+    and dropped a test's tail and broke `NEEDS`. For parallel module branches, rebuild each
+    shared file as `main`'s version plus the branch's own section, and diff against `main`.
+  - ⚠️ **A CHANGELOG splice that searches for the next `- `** walks into the previous release
+    when the entry is the last one under Unreleased. Insert after the entry's own indented lines.
+  - The cleanup's `sudo` in `sysref` times out between commands: `echo meridian | sudo -S -v` first.
+- **Left for Sean:**
+  - Module 03's "not sabotage" line, and Okafor's promise there to put `o2-backup` right, which
+    nothing pays off yet. Drop it, or have #309/#310 fix it.
+  - The same carried items: confirm the production reset, the two leftover files on the droplet,
+    the `281-admin-panel` branch, #260.
+- **Next:** #309 (module 05, timers), then #310 (the journal and the mystery's reveal), which
+  closes the milestone. Nothing released since v0.12.1: v0.13.0 is the console's systemd and
+  journal plus modules 01–04 so far. `sysref` stays until #310's Try it is done.
+
 ### 2026-10-26: Dependabot cleared, #258, and the console's systemd and journal (#303, #304)
 
 - **Dependabot:** #297 (actions) merged. #298 (pip, 12 updates), and #299 after it, closed
@@ -219,60 +263,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Next:** #258 (a docs note), Dependabot's #253 in its own release, then Unit 1.5,
   *systemd & services*, as a **v0.13.0** milestone (a console issue for `systemctl`, unit files
   and `journalctl`, then ~6 modules, the mystery's reveal last).
-
-### 2026-10-24: two splits, #266 on the droplet, and v0.11.1 shipped
-
-- **Merged on Sean's word**, one issue and one PR each:
-  - #272 (#255): `shell.js` (6,275 lines) is 12 classic scripts under `app/static/js/shell/`
-    sharing a namespace `S`, plus `shell.js` as the public face, loaded last. ES modules were
-    ruled out because CI's Node might not `require()` them. A generator (acorn, in the
-    scratchpad) moved every chunk unchanged and computed the imports, and a line diff showed
-    only the old `COMMANDS` literal's 3 framing lines gone. `module.html` loops over the parts,
-    and a test holds the loop's order equal to `PARTS`. Checked in Playwright with no CSP errors.
-  - #273 (#257): `schema.py` (1,136 lines) is `app/content/schema/`, with `terminal/` holding
-    one file per spec family. Generated the same way. `addresses.py` and `Message` in `comms.py`
-    exist to keep the imports one-way. `__init__` re-exports all 95 public names.
-  - #276 (#256): the Pyodide version lives only in `scripts/fetch_pyodide.py`, and the app
-    imports it. CI's image job checks that `/opt/pyodide/pyodide.mjs` carries the served version.
-  - #277 (#248): `/beginner-audit` titles scenarios as plain sentences, with `# covers N`
-    comments. A fresh audit of Unit 1.2 module 01 passed `check_criteria` as filed.
-  - #274: RUNBOOK §5 now matches the real run (row counts, a private dump, the compose file
-    fetched at a commit and its checksum checked).
-- **#266 was applied on the droplet by Sean from the Mac** (RUNBOOK §5): Postgres 16.14 →
-  16.15 with `no-new-privileges`, and both apps stayed healthy. The rows `8|19|7` were the same
-  before and after, which also confirms migration `0007` on production. Closed with the results
-  in a comment.
-- **Shipped v0.11.1** on Sean's go:
-  - the CHANGELOG cut was #275, with #249 moved under Fixed to match a PATCH;
-  - release run `40144135611`, the first real run of SBOM/provenance, the locked-down smoke
-    test and the `scan` job, all green;
-  - the database guard accepted the compose file, `backup ok (8096 bytes)`, `running version
-    0.11.1`;
-  - all 12 `shell/*.js` files are served on production, and Budget Buddy is 200.
-- Gotchas:
-  - ⚠️ **Write overwrites an existing file without warning.** #277 created
-    `tests/test_beginner_audit.py`, which already held #217's four tests, and dropped them.
-    #278 restored them. Its first body said "a PR that closes #217", which linked #217, so the
-    criteria check failed until the wording changed. That's the gotcha in `docs/gotchas.md`,
-    still live.
-  - ⚠️ The dev `web` container can't write to the bind mount, so `ruff --fix` in it fails. Run
-    the pinned ruff from a scratch venv on the host.
-  - ⚠️ Pasting a block that ends with a heading line runs the heading as a command on the
-    droplet. Harmless here (`Then: command not found`), but keep paste blocks pure commands.
-- **Left for Sean:**
-  - Open module 08 on learn.seandesmet.com: run a console command (the split shell's first
-    production load) and the bonus Python challenge (#264's check after the release).
-  - From the Mac: `docker inspect orbit-ops-web-1` (read-only, `[ALL]`, no-new-privileges),
-    then delete `docker-compose.yml.v0.11.0` and `backups/pre-db-change.sql.gz` from
-    `/opt/orbit-ops`.
-  - Decide #260 (Claude's view: delete `sweeper` and `test-first`; keep `gotcha-auditor` only
-    as a required pre-PR step).
-  - Unit 1.2 module 01's audit (8 findings, the worst being nano's exit question, recognising
-    vim, `NAME(N)` → `man N NAME`, and Git assumed in Q3/Q4) is in this session's transcript,
-    not filed. Decide whether Unit 1.2 gets the Unit 1.1 audit treatment before Unit 1.5.
-- **Next:**
-  1. #258 (a short docs note), then Dependabot's #253 in its own release.
-  2. Unit 1.5, *systemd & services*: a v0.12.0 milestone, a console issue (`systemctl`,
-     unit files, `journalctl -u/--since/--until` in a new `shell/systemd.js` and
-     `schema/terminal/services.py`), then ~6 module issues, with the mystery's reveal last
-     (`docs/story.md`).
