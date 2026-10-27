@@ -4,6 +4,63 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-24: two splits, #266 on the droplet, and v0.11.1 shipped
+
+- **Merged on Sean's word**, one issue and one PR each:
+  - #272 (#255): `shell.js` (6,275 lines) is 12 classic scripts under `app/static/js/shell/`
+    sharing a namespace `S`, plus `shell.js` as the public face, loaded last. ES modules were
+    ruled out because CI's Node might not `require()` them. A generator (acorn, in the
+    scratchpad) moved every chunk unchanged and computed the imports, and a line diff showed
+    only the old `COMMANDS` literal's 3 framing lines gone. `module.html` loops over the parts,
+    and a test holds the loop's order equal to `PARTS`. Checked in Playwright with no CSP errors.
+  - #273 (#257): `schema.py` (1,136 lines) is `app/content/schema/`, with `terminal/` holding
+    one file per spec family. Generated the same way. `addresses.py` and `Message` in `comms.py`
+    exist to keep the imports one-way. `__init__` re-exports all 95 public names.
+  - #276 (#256): the Pyodide version lives only in `scripts/fetch_pyodide.py`, and the app
+    imports it. CI's image job checks that `/opt/pyodide/pyodide.mjs` carries the served version.
+  - #277 (#248): `/beginner-audit` titles scenarios as plain sentences, with `# covers N`
+    comments. A fresh audit of Unit 1.2 module 01 passed `check_criteria` as filed.
+  - #274: RUNBOOK §5 now matches the real run (row counts, a private dump, the compose file
+    fetched at a commit and its checksum checked).
+- **#266 was applied on the droplet by Sean from the Mac** (RUNBOOK §5): Postgres 16.14 →
+  16.15 with `no-new-privileges`, and both apps stayed healthy. The rows `8|19|7` were the same
+  before and after, which also confirms migration `0007` on production. Closed with the results
+  in a comment.
+- **Shipped v0.11.1** on Sean's go:
+  - the CHANGELOG cut was #275, with #249 moved under Fixed to match a PATCH;
+  - release run `40144135611`, the first real run of SBOM/provenance, the locked-down smoke
+    test and the `scan` job, all green;
+  - the database guard accepted the compose file, `backup ok (8096 bytes)`, `running version
+    0.11.1`;
+  - all 12 `shell/*.js` files are served on production, and Budget Buddy is 200.
+- Gotchas:
+  - ⚠️ **Write overwrites an existing file without warning.** #277 created
+    `tests/test_beginner_audit.py`, which already held #217's four tests, and dropped them.
+    #278 restored them. Its first body said "a PR that closes #217", which linked #217, so the
+    criteria check failed until the wording changed. That's the gotcha in `docs/gotchas.md`,
+    still live.
+  - ⚠️ The dev `web` container can't write to the bind mount, so `ruff --fix` in it fails. Run
+    the pinned ruff from a scratch venv on the host.
+  - ⚠️ Pasting a block that ends with a heading line runs the heading as a command on the
+    droplet. Harmless here (`Then: command not found`), but keep paste blocks pure commands.
+- **Left for Sean:**
+  - Open module 08 on learn.seandesmet.com: run a console command (the split shell's first
+    production load) and the bonus Python challenge (#264's check after the release).
+  - From the Mac: `docker inspect orbit-ops-web-1` (read-only, `[ALL]`, no-new-privileges),
+    then delete `docker-compose.yml.v0.11.0` and `backups/pre-db-change.sql.gz` from
+    `/opt/orbit-ops`.
+  - Decide #260 (Claude's view: delete `sweeper` and `test-first`; keep `gotcha-auditor` only
+    as a required pre-PR step).
+  - Unit 1.2 module 01's audit (8 findings, the worst being nano's exit question, recognising
+    vim, `NAME(N)` → `man N NAME`, and Git assumed in Q3/Q4) is in this session's transcript,
+    not filed. Decide whether Unit 1.2 gets the Unit 1.1 audit treatment before Unit 1.5.
+- **Next:**
+  1. #258 (a short docs note), then Dependabot's #253 in its own release.
+  2. Unit 1.5, *systemd & services*: a v0.12.0 milestone, a console issue (`systemctl`,
+     unit files, `journalctl -u/--since/--until` in a new `shell/systemd.js` and
+     `schema/terminal/services.py`), then ~6 module issues, with the mystery's reveal last
+     (`docs/story.md`).
+
 ### 2026-10-23: container hardening (#263–#266)
 
 - **The old architecture review file is gone.** All its findings were already filed as
