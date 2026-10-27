@@ -25,6 +25,11 @@ and why it matters, not what the diff says.
   `--failed`, and the difference between `inactive` (off, and nothing complains) and `failed`
   (it tried and broke). On the console, after a power cycle, you list the life-support
   services that are down and how: two crashed, and two were never started at all.
+- Unit 1.5 module 03, *Reading unit files* (#307): `systemctl cat`, the `[Unit]`, `[Service]`
+  and `[Install]` sections, `ExecStart=` and `User=` (none means root), `After=` versus
+  `Wants=` versus `Requires=`, and why the administrator's copy in `/etc/systemd/system`
+  beats the package's in `/usr/lib/systemd/system`. On the console, you read what each
+  life-support service runs and as whom, and find the one whose copy in `/etc` runs it as root.
 
 ## [0.12.1] — 2026-10-25
 
