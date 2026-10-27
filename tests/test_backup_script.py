@@ -33,7 +33,7 @@ esac
 """
 
 
-def _run(tmp_path: Path, stub: str, *args: str) -> subprocess.CompletedProcess:
+def _run(tmp_path: Path, stub: str, *args: str, umask: str = "022") -> subprocess.CompletedProcess:
     """Pipe the script into `bash -s -- pre-deploy` from a deploy directory, as release.yml does.
     Other arguments replace `pre-deploy`: the nightly unit's are `nightly 14`."""
     bin_dir = tmp_path / "bin"
@@ -46,7 +46,7 @@ def _run(tmp_path: Path, stub: str, *args: str) -> subprocess.CompletedProcess:
     (deploy / ".env").write_text("DB_USER=orbit\nDB_NAME=orbit\n")
     env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "STUB": stub, "HEADER": HEADER, "FOOTER": FOOTER}
     return subprocess.run(
-        ["bash", "-s", "--", *(args or ("pre-deploy",))],
+        ["bash", "-c", f"umask {umask} && exec bash -s -- {' '.join(args or ('pre-deploy',))}"],
         input=SCRIPT.read_text(),
         cwd=deploy,
         env=env,
@@ -194,3 +194,12 @@ def test_the_timer_runs_nightly_and_catches_up_after_downtime():
     assert timer["Timer"]["Persistent"] == "true"
     assert timer["Install"]["WantedBy"] == "timers.target"
     assert "Unit" not in timer["Timer"]  # so it starts the service of the same name
+
+
+@pytest.mark.criterion(326, "Every dump is readable by its owner only")
+@pytest.mark.parametrize("args", [(), ("nightly", "14")])
+def test_a_dump_is_private_whatever_the_callers_umask(tmp_path, args):
+    result = _run(tmp_path, "good", *args, umask="002")  # release.yml's SSH session
+    assert result.returncode == 0, result.stdout + result.stderr
+    [dump] = _backups(tmp_path)
+    assert dump.stat().st_mode & 0o777 == 0o600

@@ -24,6 +24,10 @@
 #   - the completion line catches a dump that stopped early without saying so.
 #     pg_dump writes `-- PostgreSQL database dump complete` near its end.
 set -euo pipefail
+# #326: a dump holds every learner row. release.yml's SSH session has umask 002,
+# which left pre-deploy dumps world-readable; the nightly unit's UMask= is only a
+# second layer now.
+umask 077
 
 PREFIX="${1:-pre-deploy}"
 KEEP="${2:-}"
