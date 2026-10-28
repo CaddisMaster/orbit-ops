@@ -6,6 +6,16 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-10-28
+
+Unit 1.5, systemd & services, the last unit of the Life Support deck. The station console now
+has systemd and a journal, and the deck's mystery ends: the journal from the night of the outage
+shows what stopped scrubber B. The database is also dumped every night now, not only on deploy.
+
+**Server:** no migrations and no new env vars. This is the first deploy to install
+`backup_db.sh` in `/opt/orbit-ops` for the nightly timer (#324). It replaces the copy installed
+by hand on 2026-10-27, which predates #326's private dumps.
+
 ### Added
 - The station console has systemd (#303), for Unit 1.5: `systemctl` starts, stops, enables and
   reads units whose files are ordinary files in `/usr/lib/systemd/system` and
@@ -57,6 +67,11 @@ and why it matters, not what the diff says.
   visibly in `systemctl --failed` when a dump is bad. Each release installs the script the timer
   runs, so it can't drift from the deploy's. The dumps don't leave the droplet yet; that is
   Budget Buddy #535. Installing the timer is a one-time step in RUNBOOK §6.
+
+### Changed
+- Dependencies updated (#297, #300, #301): FastAPI 0.143 → 0.161, Starlette 1.9, pydantic
+  2.14, pydantic-settings 2.16, Alembic 1.20, and the pinned GitHub Actions. Nothing a learner
+  sees changes.
 
 ### Security
 - Database dumps are always private to `deploy` (#326). The deploy's pre-migration dumps were
