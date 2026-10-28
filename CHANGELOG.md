@@ -40,6 +40,12 @@ and why it matters, not what the diff says.
   `Environment=`, `Restart=on-failure` and `RestartSec=`, then `daemon-reload` and
   `enable --now`, and what `203/EXEC` and `217/USER` mean. On the console, you write the new O2
   monitor's unit, and when its program crashes, the unit brings it back.
+- Unit 1.5 module 06, *The journal* (#310), the end of systemd & services and of the Life
+  Support deck's mystery: what a journal line says, why reading it takes `sudo` or `adm`,
+  `journalctl` with `-u`, `--since`/`--until`, `-p`, `-n`, `-r` and `-b`, saving a window with
+  `sudo journalctl … > FILE`, and taking a cron job out of service by moving its file. On the
+  console, the journal for 02:30–02:45 on the night of the outage shows who stopped scrubber B.
+  You file it as evidence, retire the job and bring the controller back.
 - The droplet dumps the database every night (#324), not only on deploy. Before this, anything
   done between releases was in no backup at all. A systemd timer runs the deploy's own verified
   dump at 03:30 New York time (and catches up after downtime), keeps the newest 14, and fails
