@@ -4,6 +4,44 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-26: Dependabot cleared, #258, and the console's systemd and journal (#303, #304)
+
+- **Dependabot:** #297 (actions) merged. #298 (pip, 12 updates), and #299 after it, closed
+  themselves when asked to `@dependabot rebase` once #297 put them behind `main`, so the 12
+  were re-applied by hand as #300 (dev image rebuilt, suite green). The 13th, jiter, came
+  as #301 and merged. fastapi went 0.143 → 0.161. #253 is gone with them.
+- **#302 (#258):** non-negotiable #1 now says what a second account needs (database-backed
+  limiters, a server-checkable challenge verdict). It matters more since `/admin` can create
+  accounts (#282).
+- **Milestone v0.13.0 — systemd** (13) filed: console issues #303 and #304, then module
+  issues #305–#310. All console tasks, no labs: a Mac has no systemd. Sean approved the
+  breakdown unchanged.
+- **#311 (#303):** `systemctl`, unit files and timers in `shell/systemd.js` (part 13), with
+  `services:` in the schema and the `active`/`inactive`/`enabled`/`disabled` checks.
+- **#312 (#304):** `journalctl` and `journal:`, systemd's own log lines at journald's
+  priorities, boots (the console boots at 08:00, so the outage night is `-b -1`), the
+  non-adm refusal, and `systemctl status`'s log tail.
+- Both were compared line by line with systemd 255.4 booted as PID 1 in a privileged
+  `ubuntu:24.04` container (`docs/content-authoring.md` has the recipe). The only exception is
+  the `-- Boot ID --` line: containers share the host's boot, so it's taken from systemd's
+  source.
+- Gotchas:
+  - ⚠️ **`@dependabot rebase` on a group PR can close it** ("updatable in another way")
+    instead of rebasing. Merge one group PR, wait for Dependabot to re-cut the rest, and
+    don't ask it to rebase.
+  - ⚠️ **Branch protection wants PRs up to date with `main`**, so merging one PR blocks
+    the next until it's rebased.
+  - ⚠️ **The console has no `printf`.** A `printf '…' > f` in a test leaves an empty file. Write
+    files in tests with a heredoc through `sh.run`.
+  - ⚠️ **A plain `ubuntu:24.04` container has no systemd as PID 1**, and without `polkitd` a
+    non-root `systemctl` says `Failed to connect to bus`. Install both to compare outputs.
+- **Left for Sean:** the same items as 2026-10-25 (confirm the production reset, the two
+  leftover files on the droplet, the `281-admin-panel` branch, #260). The `sysref` systemd
+  container on the VM can go (`docker rm -f sysref`) once Unit 1.5's Try it runs are done.
+- **Next:** #305, Unit 1.5 module 01 "What a service is", then #306–#310 in order. The reveal
+  is #310. Nothing has been released since v0.12.1: the systemd console work is on `main`,
+  unreleased.
+
 ### 2026-10-25: `/cycle`, the admin panel, and v0.12.0 and v0.12.1 shipped
 
 - **`/cycle`** (a user-level skill in `personal-vault`, shared with Budget Buddy): Sean approves

@@ -128,6 +128,7 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.13.0 | 2026-10-28 | Unit 1.5 systemd & services complete (6 modules, *Daemons Tamed*), and the Life Support mystery's reveal in the journal (#310): the console's `systemctl`, unit files and timers (#303) and `journalctl` (#304). The nightly database dump (#324) with private dumps (#326), its script installed by each deploy. No migrations
 | 0.12.1 | 2026-10-25 | The laptop screen's text stops growing with the window: 13.5–15.5px at every size, 14.9px at 1864×984 (#293). A PATCH. No migrations |
 | 0.12.0 | 2026-10-25 | The admin panel (#280–#285): reset a learner's progress (all, or one module or unit), preview any module, create and manage accounts (password, log out everywhere, delete, JSON export), AI spend and System pages; destructive actions re-ask the password. Migration `0010` (`users.is_admin`) |
 | 0.11.1 | 2026-10-24 | Hardening, nothing new for the learner: root-owned image code, `web` read-only with no capabilities (#263, #264), Grype scans and an SBOM/provenance on every release (#265), Postgres pinned by digest, applied by hand first (#266); `shell.js` split into 12 parts (#255), the schema a package (#257); two Unit 1.1 tasks check what they ask (#249). A PATCH. No migrations |
@@ -145,6 +146,57 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-28: Unit 1.5 finished (#309, #310), and v0.13.0 shipped
+
+- **`/cycle`, queue #309 → #310.** Both are content, so both were tagged stop: built to green
+  PRs, then merged when Sean said so.
+  - #330 (#309), module 05 *Timers*: reading a cron line (cron is new here, since Unit 1.5 needs
+    only Unit 1.1), a `.timer` plus a `Type=oneshot` `.service`, `OnCalendar=` next to cron,
+    `Persistent=true`, enabling `NAME.timer` in full, `list-timers`. The console task moves the
+    weekly filter report from `/etc/cron.d` to a timer.
+  - #331 (#310), module 06 *The journal*, **the mystery's reveal**. The 02:30–02:45 window on
+    2026-10-08 (the previous boot) shows `CRON[5120]` starting `scrubber-flush`, `reply: FLUSH`
+    and `Stopping scrubberd` two seconds later. The learner files the window and the cron file in
+    `~/evidence` and restarts `scrubberd`, and Mission opens an inquiry into the depot.
+    `docs/story.md`'s 1.5 row is written. Who sent FLUSH stays for Unit 4.5.
+- **Real systemd corrected the drafts** (checked in `sysref`, systemd 255.4 as PID 1):
+  - `*-*-* *:*/15:00` is refused (the real step form is `*:00/15`). The console accepts it, so
+    the lesson teaches no step forms.
+  - `ExecStart=` has no shell: `>/dev/null 2>&1` arrives as arguments. A minutely timer fires
+    up to a minute late (`AccuracySec=1min`). `User=nobody` logs a "not safe" warning.
+  - A user outside `adm` gets `-- No entries --` for a service once they have journal lines of
+    their own. The console models a user with none (`No journal files were opened…`).
+  - A cron job that exits at once (`logger`) isn't filed under `cron.service`: it has no
+    `_SYSTEMD_UNIT`. Module 06 reads a window across all units for that reason.
+- **Filed #329:** the console's timers versus systemd: `*/N` steps, no `Type=oneshot`, no
+  `TriggeredBy:`, `Triggers:` glyph, and no log lines in `status` for an inactive unit.
+- **v0.13.0 released and deployed** on Sean's go. #332 cut the CHANGELOG and added a missing
+  line for the Dependabot bumps. Run `40713662755`, commit `51c5f83`, no migrations.
+  `backup ok: … pre-deploy-20261028-152437.sql.gz (5290 bytes)`, and `/healthz` reports 0.13.0,
+  with Budget Buddy still `ok`. It was the first deploy to install `backup_db.sh` for the
+  nightly timer, replacing the hand-installed copy from before #326.
+- Gotchas:
+  - Building two module branches in parallel worked this time: after the first merged, each
+    shared file was rebuilt as `main`'s plus the branch's own section. Each diff against `main`
+    then matched the branch's additions line for line.
+  - A module's test that indexes `unit_modules(...)[n]` breaks on a branch built without the
+    module before it. Find the module by slug.
+  - The console's `sudo` remembers the password for 15 simulated minutes, so a solution replayed
+    after another `sudo` sends `meridian` as a command. Harmless in CI, which starts fresh.
+- **Left for Sean:**
+  - From the Mac: check that `/opt/orbit-ops/backup_db.sh` is `755 deploy`, that the new
+    pre-deploy dump is `-rw-------`, and that `orbit-ops-backup.timer` is still scheduled. Then
+    delete `docker-compose.yml.v0.11.0` and `backups/pre-db-change.sql.gz`. This release is healthy.
+  - Unit 1.4 module 10 has `scrubber-flush` still running at 09:00, while Unit 1.5's console
+    rebooted at 08:00. Left alone.
+  - Module 03's `o2-backup` promise ("we'll put it right") is never paid off: drop the line, or
+    fix it in a later unit.
+  - Module 05 is about 1,200 words against the 900 guide.
+  - `sysref` can go (`docker rm -f sysref`), unless #329 wants it for comparisons.
+  - Still carried: the BB #530 Mac-clone decision, #320's `bw` location, #260.
+- **Next:** #319 (cache the real curriculum in tests, auto), then #329 (console timers, auto).
+  Sean approved that queue. After them, #321.
 
 ### 2026-10-27 (later): secrets, CI/CD and infrastructure as code; nightly backups live
 
@@ -224,41 +276,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Next:** #309 (module 05, timers), then #310 (the journal and the mystery's reveal), which
   closes the milestone. Nothing released since v0.12.1: v0.13.0 is the console's systemd and
   journal plus modules 01–04 so far. `sysref` stays until #310's Try it is done.
-
-### 2026-10-26: Dependabot cleared, #258, and the console's systemd and journal (#303, #304)
-
-- **Dependabot:** #297 (actions) merged. #298 (pip, 12 updates), and #299 after it, closed
-  themselves when asked to `@dependabot rebase` once #297 put them behind `main`, so the 12
-  were re-applied by hand as #300 (dev image rebuilt, suite green). The 13th, jiter, came
-  as #301 and merged. fastapi went 0.143 → 0.161. #253 is gone with them.
-- **#302 (#258):** non-negotiable #1 now says what a second account needs (database-backed
-  limiters, a server-checkable challenge verdict). It matters more since `/admin` can create
-  accounts (#282).
-- **Milestone v0.13.0 — systemd** (13) filed: console issues #303 and #304, then module
-  issues #305–#310. All console tasks, no labs: a Mac has no systemd. Sean approved the
-  breakdown unchanged.
-- **#311 (#303):** `systemctl`, unit files and timers in `shell/systemd.js` (part 13), with
-  `services:` in the schema and the `active`/`inactive`/`enabled`/`disabled` checks.
-- **#312 (#304):** `journalctl` and `journal:`, systemd's own log lines at journald's
-  priorities, boots (the console boots at 08:00, so the outage night is `-b -1`), the
-  non-adm refusal, and `systemctl status`'s log tail.
-- Both were compared line by line with systemd 255.4 booted as PID 1 in a privileged
-  `ubuntu:24.04` container (`docs/content-authoring.md` has the recipe). The only exception is
-  the `-- Boot ID --` line: containers share the host's boot, so it's taken from systemd's
-  source.
-- Gotchas:
-  - ⚠️ **`@dependabot rebase` on a group PR can close it** ("updatable in another way")
-    instead of rebasing. Merge one group PR, wait for Dependabot to re-cut the rest, and
-    don't ask it to rebase.
-  - ⚠️ **Branch protection wants PRs up to date with `main`**, so merging one PR blocks
-    the next until it's rebased.
-  - ⚠️ **The console has no `printf`.** A `printf '…' > f` in a test leaves an empty file. Write
-    files in tests with a heredoc through `sh.run`.
-  - ⚠️ **A plain `ubuntu:24.04` container has no systemd as PID 1**, and without `polkitd` a
-    non-root `systemctl` says `Failed to connect to bus`. Install both to compare outputs.
-- **Left for Sean:** the same items as 2026-10-25 (confirm the production reset, the two
-  leftover files on the droplet, the `281-admin-panel` branch, #260). The `sysref` systemd
-  container on the VM can go (`docker rm -f sysref`) once Unit 1.5's Try it runs are done.
-- **Next:** #305, Unit 1.5 module 01 "What a service is", then #306–#310 in order. The reveal
-  is #310. Nothing has been released since v0.12.1: the systemd console work is on `main`,
-  unreleased.
