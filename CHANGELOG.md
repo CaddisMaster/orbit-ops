@@ -40,6 +40,11 @@ and why it matters, not what the diff says.
   `Environment=`, `Restart=on-failure` and `RestartSec=`, then `daemon-reload` and
   `enable --now`, and what `203/EXEC` and `217/USER` mean. On the console, you write the new O2
   monitor's unit, and when its program crashes, the unit brings it back.
+- Unit 1.5 module 05, *Timers* (#309): reading a cron line field by field, a timer as a
+  `.timer` and a `Type=oneshot` `.service`, `OnCalendar=` next to cron's fields, `Persistent=true`,
+  enabling the `.timer` by its full name, `list-timers`, and why a job's output belongs in the
+  journal rather than `/dev/null` (`ExecStart=` has no shell to redirect it anyway). On the
+  console, you move the weekly filter report from `/etc/cron.d` to a timer on the same schedule.
 - The droplet dumps the database every night (#324), not only on deploy. Before this, anything
   done between releases was in no backup at all. A systemd timer runs the deploy's own verified
   dump at 03:30 New York time (and catches up after downtime), keeps the newest 14, and fails
