@@ -40,6 +40,11 @@ and why it matters, not what the diff says.
   `Environment=`, `Restart=on-failure` and `RestartSec=`, then `daemon-reload` and
   `enable --now`, and what `203/EXEC` and `217/USER` mean. On the console, you write the new O2
   monitor's unit, and when its program crashes, the unit brings it back.
+- Unit 1.5 module 05, *Timers* (#309): reading a cron line field by field, a timer as a
+  `.timer` and a `Type=oneshot` `.service`, `OnCalendar=` next to cron's fields, `Persistent=true`,
+  enabling the `.timer` by its full name, `list-timers`, and why a job's output belongs in the
+  journal rather than `/dev/null` (`ExecStart=` has no shell to redirect it anyway). On the
+  console, you move the weekly filter report from `/etc/cron.d` to a timer on the same schedule.
 - Unit 1.5 module 06, *The journal* (#310), the end of systemd & services and of the Life
   Support deck's mystery: what a journal line says, why reading it takes `sudo` or `adm`,
   `journalctl` with `-u`, `--since`/`--until`, `-p`, `-n`, `-r` and `-b`, saving a window with

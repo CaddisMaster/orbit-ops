@@ -6280,6 +6280,332 @@
    "user": "cadet"
   }
  },
+ "timers": {
+  "solution": [
+   "cat /etc/cron.d/filter-report",
+   "echo '[Unit]' | sudo tee /etc/systemd/system/filter-report.service",
+   "meridian",
+   "echo 'Description=Life support: scrubber filter report' | sudo tee -a /etc/systemd/system/filter-report.service",
+   "echo '[Service]' | sudo tee -a /etc/systemd/system/filter-report.service",
+   "echo 'Type=oneshot' | sudo tee -a /etc/systemd/system/filter-report.service",
+   "echo 'ExecStart=/usr/local/sbin/filter-report' | sudo tee -a /etc/systemd/system/filter-report.service",
+   "echo 'User=scrubber' | sudo tee -a /etc/systemd/system/filter-report.service",
+   "echo '[Unit]' | sudo tee /etc/systemd/system/filter-report.timer",
+   "echo 'Description=Life support: scrubber filter report, Mondays' | sudo tee -a /etc/systemd/system/filter-report.timer",
+   "echo '[Timer]' | sudo tee -a /etc/systemd/system/filter-report.timer",
+   "echo 'OnCalendar=Mon *-*-* 06:30:00' | sudo tee -a /etc/systemd/system/filter-report.timer",
+   "echo 'Persistent=true' | sudo tee -a /etc/systemd/system/filter-report.timer",
+   "echo '[Install]' | sudo tee -a /etc/systemd/system/filter-report.timer",
+   "echo 'WantedBy=timers.target' | sudo tee -a /etc/systemd/system/filter-report.timer",
+   "sudo systemctl daemon-reload",
+   "sudo systemctl enable --now filter-report.timer",
+   "sudo rm /etc/cron.d/filter-report",
+   "systemctl list-timers"
+  ],
+  "source": "core/systemd/05-timers.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/etc/systemd/system/filter-report.service",
+     "text": "ExecStart=/usr/local/sbin/filter-report"
+    },
+    {
+     "contains": "/etc/systemd/system/filter-report.service",
+     "text": "User=scrubber"
+    },
+    {
+     "contains": "/etc/systemd/system/filter-report.service",
+     "text": "Type=oneshot"
+    },
+    {
+     "lacks": "/etc/systemd/system/filter-report.service",
+     "text": "/dev/null"
+    },
+    {
+     "contains": "/etc/systemd/system/filter-report.timer",
+     "text": "OnCalendar=Mon *-*-* 06:30"
+    },
+    {
+     "contains": "/etc/systemd/system/filter-report.timer",
+     "text": "Persistent=true"
+    },
+    {
+     "active": "filter-report.timer"
+    },
+    {
+     "enabled": "filter-report.timer"
+    },
+    {
+     "missing": "/etc/cron.d/filter-report"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/cron.d": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/cron.d/filter-report": {
+     "contents": "# Scrubber filter wear report, for the Monday crew briefing.\n30 6 * * 1 scrubber /usr/local/sbin/filter-report >/dev/null 2>&1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\nscrubber:x:990:\nairlab:x:993:\ncrew:x:1000:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nscrubber:x:990:990:Scrubber controller:/var/lib/scrubber:/usr/sbin/nologin\nairlab:x:993:993:Air sampling:/var/lib/airlab:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.0.1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/scrubberd.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/timers.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/timers.target.wants/air-sample.timer": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/air-sample.timer",
+     "type": "link"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=no\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system/air-sample.service": {
+     "contents": "[Unit]\nDescription=Life support: air sample\n\n[Service]\nType=oneshot\nExecStart=/usr/local/sbin/air-sample\nUser=airlab\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/air-sample.timer": {
+     "contents": "[Unit]\nDescription=Life support: air sample every night\n\n[Timer]\nOnCalendar=*-*-* 03:00:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/scrubberd.service": {
+     "contents": "[Unit]\nDescription=Life support: scrubber controller\n\n[Service]\nExecStart=/usr/local/sbin/scrubberd\nUser=scrubber\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/air-sample": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/filter-report": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubberd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "password": "meridian",
+   "processes": [],
+   "services": [
+    {
+     "exits": null,
+     "name": "scrubberd.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "air-sample.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": null,
+     "name": "air-sample.timer",
+     "runs_for": 0,
+     "state": "active"
+    }
+   ],
+   "success": "Okafor reads the timer's next run off your screen. \"Monday, 06:30. And if it fails, it'll say so where we can read it.\"",
+   "user": "cadet"
+  }
+ },
  "unit-files": {
   "solution": [
    "systemctl cat scrubberd recycler co2-monitor",
