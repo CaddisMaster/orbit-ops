@@ -352,3 +352,116 @@ def test_module_04s_unit_loads_and_its_figures_match():
     )
     for figure in ("o2-monitor", "o2mon", "O2_FLOOR_PCT", "19.5"):
         assert figure not in quoted, figure
+
+
+# --- 05: Timers (#309) ------------------------------------------------------------------------
+CRON = "/etc/cron.d/filter-report"
+REPORT_SERVICE = "/etc/systemd/system/filter-report.service"
+REPORT_TIMER = "/etc/systemd/system/filter-report.timer"
+REPORT_WANTS = "/etc/systemd/system/timers.target.wants/filter-report.timer"
+SERVICE = """[Unit]
+Description=Life support: scrubber filter report
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/filter-report
+User=scrubber
+"""
+TIMER = """[Unit]
+Description=Life support: scrubber filter report, Mondays
+
+[Timer]
+OnCalendar=Mon *-*-* 06:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+"""
+WAITING = [UnitState(name="filter-report.timer", state="active"), UnitState(name="scrubberd.service", state="active")]
+
+
+def _timed(state, service=SERVICE, timer=TIMER, enabled=True, cron_gone=True):
+    root = {"mode": 0o644, "owner": "root", "group": "root"}
+    state = {**state, REPORT_SERVICE: Node(type="file", contents=service, **root), REPORT_TIMER: Node(type="file", contents=timer, **root)}
+    if enabled:
+        state[REPORT_WANTS] = Node(type="link", mode=0o777, owner="root", group="root", target=REPORT_TIMER)
+    if cron_gone:
+        del state[CRON]
+    return state
+
+
+@pytest.mark.criterion(309, "Module 05 of Unit 1.5 is complete content")
+def test_module_05_is_complete_content():
+    module = load_catalog().unit_modules("systemd")[4]
+    assert module.slug == "timers"
+    _complete_content(module)
+
+
+@pytest.mark.criterion(309, "Module 05's task can be solved with what the lesson teaches")
+def test_module_05s_end_state_passes_on_the_server():
+    exercise = _module("timers").terminal
+    start = _start(exercise)
+    assert REPORT_SERVICE not in start and REPORT_TIMER not in start
+    assert not grade(exercise, start, exercise.cwd, [], [UnitState(name="scrubberd.service", state="active")])
+    assert grade(exercise, _timed(start), exercise.cwd, [], WAITING)
+    # Six figures (`06:30`) or five (`06:30:00`): systemd reads both the same.
+    assert grade(exercise, _timed(start, timer=TIMER.replace("06:30:00", "06:30")), exercise.cwd, [], WAITING)
+
+
+@pytest.mark.criterion(309, "Module 05's task can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("change", "units"),
+    [
+        ({"timer": TIMER.replace("Mon *-*-* 06:30:00", "*-*-* 06:30:00")}, WAITING),  # every day, not Mondays
+        ({"timer": TIMER.replace("Mon ", "Sun ")}, WAITING),  # day 1 read as Sunday
+        ({"timer": TIMER.replace("06:30:00", "30:06:00")}, WAITING),  # cron's order, kept
+        ({"timer": TIMER.replace("Persistent=true\n", "")}, WAITING),  # skips a missed Monday
+        ({"service": SERVICE.replace("User=scrubber\n", "")}, WAITING),  # runs as root
+        ({"service": SERVICE.replace("Type=oneshot\n", "")}, WAITING),  # a daemon, not a job
+        ({"service": SERVICE.replace("filter-report\n", "filter-report >/dev/null 2>&1\n")}, WAITING),  # still throws it away
+        ({"cron_gone": False}, WAITING),  # runs twice
+        ({"enabled": False}, WAITING),  # started, gone at the next boot
+        ({}, [UnitState(name="filter-report.timer", state="inactive")]),  # enabled, never started
+    ],
+    ids=["daily", "sunday", "cron-order", "not-persistent", "as-root", "not-oneshot", "redirected", "cron-left", "not-enabled", "not-started"],
+)
+def test_module_05_refuses_the_half_moves(change, units):
+    exercise = _module("timers").terminal
+    assert not grade(exercise, _timed(_start(exercise), **change), exercise.cwd, [], units)
+
+
+def test_module_05s_units_load_and_its_figures_match():
+    from datetime import timedelta
+
+    from app.content.schema.terminal.files import STATION_NOW
+    from app.content.schema.terminal.services import SystemdUnit, parse_unit
+
+    module = _module("timers")
+    exercise = module.terminal
+    # The reference units are valid by the console's own rules, and the program and user exist.
+    service = SystemdUnit(name="filter-report.service", unit=SERVICE, dir="/etc/systemd/system")
+    SystemdUnit(name="filter-report.timer", unit=TIMER, dir="/etc/systemd/system", enabled=True)
+    assert service.program() in {f.path for f in exercise.files}
+    # The cron line and the units say the same thing: minute 30, hour 6, day 1 (Monday), as scrubber.
+    cron = next(f for f in exercise.files if f.path == CRON).contents
+    minute, hour, dom, month, dow, user, program, *rest = next(line for line in cron.splitlines() if not line.startswith("#")).split()
+    assert (dom, month, dow, rest) == ("*", "*", "1", [">/dev/null", "2>&1"])
+    assert parse_unit(TIMER)["Timer"]["OnCalendar"] == [f"Mon *-*-* {int(hour):02}:{int(minute):02}:00"]
+    assert parse_unit(SERVICE)["Service"]["ExecStart"] == [program] and f"User={user}" in SERVICE
+    assert user in {a.name for a in exercise.accounts}
+    # The solution writes the same two units, line for line.
+    written = [s.split("'")[1] for s in exercise.solution if "| sudo tee" in s]
+    assert written == [line for line in (SERVICE + TIMER).splitlines() if line]
+    # MERIDIAN's next run is the Monday after the station's clock.
+    monday = STATION_NOW + timedelta(days=(7 - STATION_NOW.weekday()) % 7 or 7)
+    done = _said(module, "console_done")
+    assert f"NEXT: MON {monday:%Y-%m-%d} {hour.zfill(2)}:{minute}" in done
+    # The open beat names the job, not its translation: that's the task.
+    assert "FILTER-REPORT" in _said(module, "open") and user.upper() not in _said(module, "open")
+    # The lesson's examples use none of the task's figures.
+    quoted = module.body_html + " ".join(
+        [q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+        + [c.front_html + c.back_html for c in module.cards]
+    )
+    for figure in ("filter-report", "06:30", "6 * * 1"):
+        assert figure not in quoted, figure
