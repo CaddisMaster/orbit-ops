@@ -465,3 +465,106 @@ def test_module_05s_units_load_and_its_figures_match():
     )
     for figure in ("filter-report", "06:30", "6 * * 1"):
         assert figure not in quoted, figure
+
+
+# --- 06: The journal (#310) -------------------------------------------------------------------
+EVIDENCE = "/home/cadet/evidence"
+MAINT = "/etc/cron.d/scrubber-maint"
+UP_AGAIN = [UnitState(name="scrubberd.service", state="active")]
+
+
+def _journal_lines(exercise, since="2026-10-08 02:30", until="2026-10-08 02:45"):
+    """The journal's lines in a window, as journalctl prints them (the console's own format)."""
+    from datetime import datetime
+
+    out = []
+    for e in exercise.journal:
+        at = datetime.fromisoformat(e.time)
+        if datetime.fromisoformat(since) <= at <= datetime.fromisoformat(until):
+            out.append(f"{at:%b %d %H:%M:%S} meridian {e.identifier}[{e.pid}]: {e.message}")
+    return "\n".join(out) + "\n"
+
+
+def _filed(state, exercise, log=None, moved=True):
+    crew = {"owner": "cadet", "group": "crew"}
+    state = {**state, EVIDENCE: Node(type="dir", mode=0o775, **crew)}
+    state[f"{EVIDENCE}/outage.log"] = Node(type="file", mode=0o664, contents=_journal_lines(exercise) if log is None else log, **crew)
+    if moved:
+        state[f"{EVIDENCE}/scrubber-maint"] = state.pop(MAINT)
+    return state
+
+
+@pytest.mark.criterion(310, "Module 06 of Unit 1.5 is complete content")
+def test_module_06_is_complete_content():
+    module = next(m for m in load_catalog().unit_modules("systemd") if m.slug == "the-journal")
+    assert load_catalog().unit_modules("systemd")[-1].slug == module.slug  # the unit's last module, the reveal
+    _complete_content(module)
+
+
+@pytest.mark.criterion(310, "Module 06's task can be solved with what the lesson teaches")
+def test_module_06s_end_state_passes_on_the_server():
+    exercise = _module("the-journal").terminal
+    start = _start(exercise)
+    assert not grade(exercise, start, exercise.cwd, [], [UnitState(name="scrubberd.service", state="inactive")])
+    assert grade(exercise, _filed(start, exercise), exercise.cwd, [], UP_AGAIN)
+
+
+@pytest.mark.criterion(310, "Module 06's task can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("change", "units"),
+    [
+        ({"log": "everything"}, UP_AGAIN),  # the whole journal, not the window
+        ({"log": "scrubberd"}, UP_AGAIN),  # -u scrubberd: the cron job's lines are missing
+        ({"log": "early"}, UP_AGAIN),  # --since 02:00: the drone's first attempts too
+        ({"log": "no-sudo"}, UP_AGAIN),  # journalctl without sudo
+        ({"moved": "deleted"}, UP_AGAIN),  # the evidence is gone
+        ({"moved": "copied"}, UP_AGAIN),  # still in cron.d, so it runs again tonight
+        ({}, [UnitState(name="scrubberd.service", state="inactive")]),  # the controller left down
+    ],
+    ids=["whole-journal", "one-unit", "too-early", "no-sudo", "deleted", "copied", "not-started"],
+)
+def test_module_06_refuses_the_half_jobs(change, units):
+    exercise = _module("the-journal").terminal
+    start = _start(exercise)
+    logs = {
+        "everything": _journal_lines(exercise, "2026-10-08 00:00", "2026-10-08 08:59"),
+        "scrubberd": "".join(line + "\n" for line in _journal_lines(exercise).splitlines() if "scrubberd[" in line or "systemd[1]" in line),
+        "early": _journal_lines(exercise, "2026-10-08 02:00", "2026-10-08 02:45"),
+        "no-sudo": "No journal files were opened due to insufficient permissions.\n",
+    }
+    state = _filed(start, exercise, log=logs.get(change.get("log")), moved=change.get("moved", True) is True)
+    if change.get("moved") == "copied":
+        state[f"{EVIDENCE}/scrubber-maint"] = start[MAINT]
+    assert not grade(exercise, state, exercise.cwd, [], units)
+
+
+def test_module_06s_journal_tells_the_story_and_its_figures_match():
+    module = _module("the-journal")
+    exercise = module.terminal
+    window = _journal_lines(exercise)
+    # The reveal is in the window, in order: cron starts the job, it reports, the reply, the stop.
+    order = ["CRON[5120]: (root) CMD (/usr/local/sbin/scrubber-flush", "sending controller state to 203.0.113.47",
+             "reply: FLUSH", "Stopping scrubberd.service"]
+    assert [window.index(o) for o in order] == sorted(window.index(o) for o in order)
+    # docs/story.md's times and addresses: drone 02:11–02:34, job 02:35, scrubber B offline 02:40.
+    drone = [e.time for e in exercise.journal if "md-3" in e.message]
+    assert drone[0].endswith("02:11:04") and drone[-1].startswith("2026-10-08 02:34")
+    assert "10.4.2.17" in " ".join(e.message for e in exercise.journal if "md-3" in e.message)
+    # The cron file is the one Units 1.2–1.4 found, byte for byte.
+    networking = _module("following-a-connection").terminal
+    assert next(f for f in exercise.files if f.path == MAINT).contents == next(f for f in networking.files if f.path == MAINT).contents
+    # The task's checks hold the window's edges: a line just outside each is in the journal.
+    lacks = [c.text for c in exercise.checks if hasattr(c, "lacks")]
+    outside = [line for line in _journal_lines(exercise, "2026-10-08 00:00", "2026-10-08 08:59").splitlines() if line not in window]
+    assert all(any(text in line for line in outside) for text in lacks)
+    # MERIDIAN's readouts are the journal's times.
+    said = _said(module)
+    for at, what in (("08:06", "COMMAND=/usr/bin/systemctl stop scrubberd"), ("02:39:58", "reply: FLUSH"), ("02:40:00", "Stopping scrubberd")):
+        assert at in said and any(e.time.split(" ")[1].startswith(at) and what in e.message for e in exercise.journal), at
+    # The lesson's examples use none of the task's units, times or files.
+    quoted = module.body_html + " ".join(
+        [q.q + (q.code or "") + " ".join(getattr(q, "options", [])) for q in module.quiz]
+        + [c.front_html + c.back_html for c in module.cards]
+    )
+    for figure in ("scrubber", "02:30", "02:45", "outage.log", "~/evidence"):
+        assert figure not in quoted, figure

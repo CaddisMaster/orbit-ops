@@ -5800,6 +5800,486 @@
    "user": "cadet"
   }
  },
+ "the-journal": {
+  "solution": [
+   "mkdir ~/evidence",
+   "sudo journalctl --since \"2026-10-08 02:30\" --until \"2026-10-08 02:45\" > ~/evidence/outage.log",
+   "meridian",
+   "cat ~/evidence/outage.log",
+   "sudo mv /etc/cron.d/scrubber-maint ~/evidence/",
+   "sudo systemctl start scrubberd",
+   "systemctl status scrubberd"
+  ],
+  "source": "core/systemd/06-the-journal.md",
+  "spec": {
+   "checks": [
+    {
+     "contains": "/home/cadet/evidence/outage.log",
+     "text": "scrubber-flush[5121]: reply: FLUSH"
+    },
+    {
+     "contains": "/home/cadet/evidence/outage.log",
+     "text": "systemd[1]: Stopping scrubberd.service"
+    },
+    {
+     "contains": "/home/cadet/evidence/outage.log",
+     "text": "CRON[5120]: (root) CMD"
+    },
+    {
+     "lacks": "/home/cadet/evidence/outage.log",
+     "text": "port 50122"
+    },
+    {
+     "lacks": "/home/cadet/evidence/outage.log",
+     "text": "Accepted publickey for okafor"
+    },
+    {
+     "missing": "/etc/cron.d/scrubber-maint"
+    },
+    {
+     "contains": "/home/cadet/evidence/scrubber-maint",
+     "text": "/usr/local/sbin/scrubber-flush"
+    },
+    {
+     "active": "scrubberd.service"
+    }
+   ],
+   "cwd": "/home/cadet",
+   "env": {},
+   "fs": {
+    "/": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/cron.d": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/cron.d/scrubber-maint": {
+     "contents": "# nightly controller flush. do not remove\n35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/group": {
+     "contents": "root:x:0:\nsudo:x:27:cadet\nscrubber:x:990:\nmd-3:x:995:\ncrew:x:1000:\nokafor:x:1001:\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/hosts": {
+     "contents": "127.0.0.1 localhost\n127.0.1.1 meridian\n\n# The following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/passwd": {
+     "contents": "root:x:0:0:root:/root:/bin/bash\nscrubber:x:990:990:Scrubber controller:/var/lib/scrubber:/usr/sbin/nologin\nmd-3:x:995:995:Maintenance drone MD-3:/var/lib/md-3:/usr/sbin/nologin\nokafor:x:1001:1001:Okafor:/home/okafor:/usr/sbin/nologin\ncadet:x:1000:1000:Cadet:/home/cadet:/bin/bash\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/resolv.conf": {
+     "contents": "nameserver 10.4.0.1\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/systemd/system/multi-user.target.wants/cron.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/cron.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/scrubberd.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/scrubberd.service",
+     "type": "link"
+    },
+    "/etc/systemd/system/multi-user.target.wants/ssh.service": {
+     "contents": "",
+     "group": "root",
+     "mode": 511,
+     "owner": "root",
+     "target": "/usr/lib/systemd/system/ssh.service",
+     "type": "link"
+    },
+    "/etc/ufw": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/etc/ufw/ufw.conf": {
+     "contents": "# /etc/ufw/ufw.conf\n#\n\n# Set to yes to start on boot. If setting this remotely, be sure to add a rule\n# to allow your remote connection before starting ufw. Eg: 'ufw allow 22/tcp'\nENABLED=no\n\n# Please use the 'ufw' command to set the loglevel. Eg: 'ufw logging medium'.\n# See 'man ufw' for details.\nLOGLEVEL=low\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user.rules": {
+     "contents": "*filter\n:ufw-user-input - [0:0]\n:ufw-user-output - [0:0]\n:ufw-user-forward - [0:0]\n:ufw-user-limit - [0:0]\n:ufw-user-limit-accept - [0:0]\n### RULES ###\n-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw-user-limit -j REJECT\n-A ufw-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/etc/ufw/user6.rules": {
+     "contents": "*filter\n:ufw6-user-input - [0:0]\n:ufw6-user-output - [0:0]\n:ufw6-user-forward - [0:0]\n:ufw6-user-limit - [0:0]\n:ufw6-user-limit-accept - [0:0]\n### RULES ###\n-A ufw6-user-limit -m limit --limit 3/minute -j LOG --log-prefix \"[UFW LIMIT BLOCK] \"\n-A ufw6-user-limit -j REJECT\n-A ufw6-user-limit-accept -j ACCEPT\nCOMMIT\n",
+     "group": "root",
+     "mode": 416,
+     "owner": "root",
+     "type": "file"
+    },
+    "/home": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/home/cadet": {
+     "contents": "",
+     "group": "crew",
+     "mode": 493,
+     "owner": "cadet",
+     "type": "dir"
+    },
+    "/root": {
+     "contents": "",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/lib/systemd/system/cron.service": {
+     "contents": "[Unit]\nDescription=Regular background program processing daemon\nDocumentation=man:cron(8)\n\n[Service]\nExecStart=/usr/sbin/cron -f -P\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/scrubberd.service": {
+     "contents": "[Unit]\nDescription=Life support: scrubber controller\n\n[Service]\nExecStart=/usr/local/sbin/scrubberd\nUser=scrubber\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/lib/systemd/system/ssh.service": {
+     "contents": "[Unit]\nDescription=OpenBSD Secure Shell server\nDocumentation=man:sshd(8) man:sshd_config(5)\nAfter=network.target\n\n[Service]\nExecStart=/usr/sbin/sshd -D\n\n[Install]\nWantedBy=multi-user.target\n",
+     "group": "root",
+     "mode": 420,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/local/sbin/scrubber-flush": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 448,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/local/sbin/scrubberd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/sbin": {
+     "contents": "",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "dir"
+    },
+    "/usr/sbin/cron": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    },
+    "/usr/sbin/sshd": {
+     "contents": "#!/bin/sh\n",
+     "group": "root",
+     "mode": 493,
+     "owner": "root",
+     "type": "file"
+    }
+   },
+   "group": "crew",
+   "groups": [
+    "sudo"
+   ],
+   "journal": [
+    {
+     "identifier": "sshd",
+     "message": "Failed password for md-3 from 10.4.2.17 port 50122 ssh2",
+     "pid": 4412,
+     "priority": "info",
+     "time": "2026-10-08T02:11:04",
+     "unit": "ssh.service"
+    },
+    {
+     "identifier": "sshd",
+     "message": "Failed password for md-3 from 10.4.2.17 port 50188 ssh2",
+     "pid": 4415,
+     "priority": "info",
+     "time": "2026-10-08T02:22:47",
+     "unit": "ssh.service"
+    },
+    {
+     "identifier": "scrubberd",
+     "message": "cycle 1141: CO2 0.31%, bed B adsorbing",
+     "pid": 702,
+     "priority": "info",
+     "time": "2026-10-08T02:28:00",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "scrubberd",
+     "message": "cycle 1142: CO2 0.31%, bed B regenerating",
+     "pid": 702,
+     "priority": "info",
+     "time": "2026-10-08T02:33:00",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "sshd",
+     "message": "Failed password for md-3 from 10.4.2.17 port 50241 ssh2",
+     "pid": 4418,
+     "priority": "info",
+     "time": "2026-10-08T02:34:51",
+     "unit": "ssh.service"
+    },
+    {
+     "identifier": "CRON",
+     "message": "(root) CMD (/usr/local/sbin/scrubber-flush >/dev/null 2>&1)",
+     "pid": 5120,
+     "priority": "info",
+     "time": "2026-10-08T02:35:01",
+     "unit": "cron.service"
+    },
+    {
+     "identifier": "scrubber-flush",
+     "message": "sending controller state to 203.0.113.47",
+     "pid": 5121,
+     "priority": "notice",
+     "time": "2026-10-08T02:35:02",
+     "unit": "cron.service"
+    },
+    {
+     "identifier": "scrubberd",
+     "message": "cycle 1143: CO2 0.32%, bed B regenerating",
+     "pid": 702,
+     "priority": "info",
+     "time": "2026-10-08T02:38:00",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "scrubber-flush",
+     "message": "reply: FLUSH",
+     "pid": 5121,
+     "priority": "warning",
+     "time": "2026-10-08T02:39:58",
+     "unit": "cron.service"
+    },
+    {
+     "identifier": "scrubber-flush",
+     "message": "stopping scrubberd.service",
+     "pid": 5121,
+     "priority": "warning",
+     "time": "2026-10-08T02:39:59",
+     "unit": "cron.service"
+    },
+    {
+     "identifier": "systemd",
+     "message": "Stopping scrubberd.service - Life support: scrubber controller...",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T02:40:00",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "systemd",
+     "message": "scrubberd.service: Deactivated successfully.",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T02:40:01",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "systemd",
+     "message": "Stopped scrubberd.service - Life support: scrubber controller.",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T02:40:01",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "sshd",
+     "message": "Accepted publickey for okafor from 10.4.0.5 port 50300 ssh2",
+     "pid": 4420,
+     "priority": "info",
+     "time": "2026-10-08T02:52:30",
+     "unit": "ssh.service"
+    },
+    {
+     "identifier": "systemd",
+     "message": "Started scrubberd.service - Life support: scrubber controller.",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T08:00:00",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "sudo",
+     "message": "  okafor : TTY=pts/0 ; PWD=/home/okafor ; USER=root ; COMMAND=/usr/bin/systemctl stop scrubberd",
+     "pid": 811,
+     "priority": "info",
+     "time": "2026-10-08T08:06:40",
+     "unit": null
+    },
+    {
+     "identifier": "systemd",
+     "message": "Stopping scrubberd.service - Life support: scrubber controller...",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T08:06:40",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "systemd",
+     "message": "scrubberd.service: Deactivated successfully.",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T08:06:41",
+     "unit": "scrubberd.service"
+    },
+    {
+     "identifier": "systemd",
+     "message": "Stopped scrubberd.service - Life support: scrubber controller.",
+     "pid": 1,
+     "priority": "info",
+     "time": "2026-10-08T08:06:41",
+     "unit": "scrubberd.service"
+    }
+   ],
+   "password": "meridian",
+   "processes": [],
+   "services": [
+    {
+     "exits": null,
+     "name": "scrubberd.service",
+     "runs_for": 0,
+     "state": "inactive"
+    },
+    {
+     "exits": null,
+     "name": "cron.service",
+     "runs_for": 0,
+     "state": "active"
+    },
+    {
+     "exits": null,
+     "name": "ssh.service",
+     "runs_for": 0,
+     "state": "active"
+    }
+   ],
+   "success": "Okafor reads the log twice: the reply, then the stop, two seconds apart. \"FLUSH,\" he says. \"Somebody told our scrubber to stop, and it did as it was told.\"",
+   "user": "cadet"
+  }
+ },
  "timers": {
   "solution": [
    "cat /etc/cron.d/filter-report",
