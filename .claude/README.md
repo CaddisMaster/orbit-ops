@@ -6,7 +6,7 @@ fixing. Ported from Budget Buddy.
 
 ```
 .claude/
-  agents/                   # sweeper, test-first (edit) · gotcha-auditor, release-prep (report, read-only)
+  agents/                   # gotcha-auditor, release-prep, content-reviewer (report, read-only)
   skills/verify/            # drive the real HTTP surface at :5002 (CSRF cookie jar included)
   skills/beginner-audit/    # /beginner-audit <slug>: read a module as a beginner, report an issue body (read-only)
   commands/wrap.md          # /wrap — the end-of-session sequence
