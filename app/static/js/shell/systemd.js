@@ -127,7 +127,7 @@
   // constructor (machine.js) once the filesystem is in place.
   Shell.prototype.bootUnits = function (specs, journal) {
     var sh = this;
-    this.sd = { programs: {}, units: {}, bootPid: 600, journal: [], invocations: 0 };
+    this.sd = { programs: {}, units: {}, bootPid: 600, journal: [] };
     // #304: the journal so far. Entries from before this boot are the last boot's.
     (journal || []).forEach(function (e) {
       var t = Math.round((parseStamp(e.time) - START_TIME) / 1000);
@@ -138,12 +138,12 @@
       sh.sd.programs[s.name] = { exits: s.exits === undefined ? null : s.exits, runsFor: s.runs_for || 0 };
       var u = sh.unit(s.name);
       if (!u.path) return;
+      if (s.state !== "inactive") sh.markStart(u, BOOT);
       if (s.state === "active") sh.activate(u, BOOT);
       else if (s.state === "failed") {
         u.pid = sh.sd.bootPid;
         sh.sd.bootPid += 23;
         Object.assign(u, { state: "failed", result: "exit-code", since: BOOT, started: BOOT, ended: { code: s.exits || 1, at: BOOT } });
-        u.inv = ++sh.sd.invocations;
         sh.logUnit(u, BOOT, 6, "Started " + titled(u) + ".");
         sh.logUnit(u, BOOT, 5, u.name + ": Main process exited, " + exitStatus(u.ended));
         sh.logUnit(u, BOOT, 4, u.name + ": Failed with result 'exit-code'.");
@@ -171,7 +171,7 @@
     if (!u) {
       var path = this.unitPath(name);
       u = { name: name, kind: kindOf(name), path: path, text: path ? this.fs[path].contents : null, state: "inactive",
-        result: null, since: null, started: null, pid: null, proc: null, ended: null, restarted: false, starts: [], restarts: 0 };
+        result: null, since: null, started: null, logFrom: null, pid: null, proc: null, ended: null, restarted: false, starts: [], restarts: 0 };
       if (path) this.sd.units[name] = u;
     }
     return u;
@@ -217,7 +217,6 @@
     u.since = t;
     u.ended = null;
     u.result = null;
-    u.inv = ++this.sd.invocations; // each start is an invocation: status shows the latest one's lines
     u.starting = u.kind === "service" && oneshot(u);
     this.logUnit(u, t, 6, (u.starting ? "Starting " : "Started ") + titled(u) + (u.starting ? "..." : "."));
     if (u.kind === "timer") { u.state = "active"; return; }
@@ -242,7 +241,7 @@
         // Logged by the forked child before it runs anything: systemd names it
         // "(" + the program, first letter dropped, + ")", as the real one showed.
         var base = program.slice(program.lastIndexOf("/") + 1);
-        this.sd.journal.push({ t: t, ident: "(" + base.slice(1) + ")", pid: pid, unit: u.name, prio: 3, inv: u.inv,
+        this.sd.journal.push({ t: t, ident: "(" + base.slice(1) + ")", pid: pid, unit: u.name, prio: 3,
           msg: u.name + ": Failed to determine user credentials: No such process" });
       }
       this.logUnit(u, t, 5, u.name + ": Main process exited, " + exitStatus(u.ended));
@@ -313,6 +312,7 @@
           var delay = parseFloat(last(parseUnit(u.text), "Service", "RestartSec") || "0.1");
           u.state = "activating";
           u.restartAt = at + Math.max(0, Math.ceil(isNaN(delay) ? 0 : delay));
+          sh.markStart(u, at); // waiting to restart counts as leaving failed, after the crash's lines
           continue;
         }
         u.state = clean ? "inactive" : "failed";
@@ -361,6 +361,7 @@
     u.starts = [];
     u.restarted = false;
     u.restarts = 0;
+    this.markStart(u, this.clock);
     this.activate(u, this.clock);
     if (!u.starting || noBlock) return !noBlock && oneshot(u) && u.state === "failed";
     this.clock = Math.max(this.clock, u.proc.end);
@@ -380,7 +381,7 @@
   var PRIORITIES = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
   var BOOT_IDS = { "0": "5f1c0e9a2b7d4c3e8a6f1d2b9c4e7a30", "-1": "c2a94e7b1f3d4a8e9b5c6d0e7f2a1b48" };
   Shell.prototype.logUnit = function (u, t, prio, msg) {
-    this.sd.journal.push({ t: t, ident: "systemd", pid: 1, unit: u.name, prio: prio, msg: msg, inv: u.inv });
+    this.sd.journal.push({ t: t, ident: "systemd", pid: 1, unit: u.name, prio: prio, msg: msg });
   };
   // "scrubberd.service - Scrubber controller", or the name alone without a Description.
   function titled(u) {
@@ -396,7 +397,13 @@
     this.syncUnits();
     return this.sd.journal.map(function (e, i) { return [e, i]; })
       .sort(function (a, b) { return a[0].t - b[0].t || a[1] - b[1]; })
-      .map(function (p) { return Object.assign({ boot: p[0].t < BOOT ? -1 : 0 }, p[0]); });
+      .map(function (p) { return Object.assign({ boot: p[0].t < BOOT ? -1 : 0, seq: p[1] }, p[0]); });
+  };
+  // The unit leaves inactive or failed at `t`: status shows its lines from here
+  // on, as systemd does from InactiveExitTimestamp (#335). A restart from
+  // auto-restart doesn't count, since the unit never went back to inactive.
+  Shell.prototype.markStart = function (u, t) {
+    u.logFrom = { t: t, seq: this.sd.journal.length };
   };
   function journalLine(sh, e, format) {
     if (format === "cat") return e.msg;
@@ -571,12 +578,17 @@
     return !!path && this.fs[path].contents !== u.text;
   };
 
-  // The last `n` journal lines of the unit's latest invocation, under its
-  // status (#304). Only for those who may read the journal, as on Ubuntu.
+  // The last `n` journal lines under a unit's status (#304), picked as systemd
+  // 255 picks them (#335): this boot's lines for the unit, from the moment it
+  // last left inactive or failed, or all of this boot's if it never has. Only
+  // for those who may read the journal, as on Ubuntu.
   Shell.prototype.statusLog = function (u, n) {
-    if (!this.readsJournal() || !u.inv || n === 0) return "";
+    if (!this.readsJournal() || n === 0) return "";
     var sh = this;
-    var mine = this.journal().filter(function (e) { return e.unit === u.name && e.inv === u.inv; }).slice(-n);
+    var from = u.logFrom;
+    var mine = this.journal().filter(function (e) {
+      return e.unit === u.name && e.boot === 0 && (!from || e.t > from.t || (e.t === from.t && e.seq >= from.seq));
+    }).slice(-n);
     return mine.length ? "\n" + unlines(mine.map(function (e) { return journalLine(sh, e, "short"); })) : "";
   };
 
