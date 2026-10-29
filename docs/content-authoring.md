@@ -462,8 +462,10 @@ Services (#303) are systemd units, for Unit 1.5:
   `unit` is what `-u` matches: give a program's lines the unit that ran it (a cron job's are
   `cron.service`'s), and systemd's own lines the unit they're about. **The console booted at
   08:00**, so anything earlier is the previous boot: `-b` hides it, `-b -1` shows it, a plain
-  read prints a `-- Boot ID --` line between them, and `systemctl status` shows only the lines
-  of the unit's latest start. **Reading it needs root, `adm` or `systemd-journal`**: anyone
+  read prints a `-- Boot ID --` line between them. `systemctl status` shows the unit's lines
+  from this boot only, from its latest start on, as systemd 255 does (#335). A unit that hasn't
+  started on the console shows all its lines from this boot, so an inactive unit's earlier run
+  is there. One waiting in `auto-restart` shows none. **Reading it needs root, `adm` or `systemd-journal`**: anyone
   else gets journald's hint and `No journal files were opened due to insufficient
   permissions.` (everything on the console is the system's), and `systemctl status` without
   its log lines. On a real server you'd also see your own session's lines.
