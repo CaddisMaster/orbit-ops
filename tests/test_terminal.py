@@ -21,7 +21,7 @@ from app.content import ContentError, get_catalog, load_catalog
 from app.db import SessionLocal
 from app.main import app
 from app.models import ExerciseAttempt
-from tests.conftest import csrf
+from tests.conftest import csrf, real_catalog
 from tests.test_progress import complete
 from tests.test_xp import MODULE, SYLLABUS
 
@@ -141,7 +141,7 @@ def test_unlisted_parent_directories_exist_owned_by_root(tmp_path):
 def test_the_real_exercises_load_and_start_unsolved():
     from app.terminal import Node, grade
 
-    catalog = load_catalog()
+    catalog = real_catalog()
     exercises = {slug: m.terminal for slug, m in catalog.modules.items() if m.terminal}
     assert {"files-and-globs", "permissions"} <= exercises.keys()
     for exercise in exercises.values():
@@ -282,7 +282,7 @@ FIXTURES = Path(__file__).resolve().parent / "js" / "fixtures"
 
 @pytest.mark.criterion(36, "The shell-ready modules have console tasks")
 def test_the_shell_ready_modules_have_console_tasks():
-    unit = load_catalog().unit_modules("linux-shell")
+    unit = real_catalog().unit_modules("linux-shell")
     with_tasks = {m.position for m in unit if m.terminal}
     assert {1, 2, 3, 4, 7, 8} <= with_tasks
 
@@ -354,7 +354,7 @@ def test_a_cwd_check_is_graded_against_where_the_console_ended(logged_in, tmp_pa
 # --- #37: users, environment and processes -------------------------------------------------
 @pytest.mark.criterion(37, "The new modules have console tasks")
 def test_users_processes_and_environment_modules_have_console_tasks():
-    unit = load_catalog().unit_modules("linux-shell")
+    unit = real_catalog().unit_modules("linux-shell")
     assert {1, 2, 3, 4, 5, 6, 7, 8, 9} <= {m.position for m in unit if m.terminal}
     # ...each with a reference solution, which tests/js/solutions.test.js runs.
     assert all(m.terminal.solution for m in unit if m.terminal)
@@ -437,7 +437,7 @@ def test_the_sudo_password_is_sent_only_for_exercises_that_set_one(tmp_path):
 
     _write(tmp_path)
     assert client_spec(load_catalog(tmp_path).modules["two"].terminal)["password"] is None
-    assert client_spec(load_catalog().modules["users-and-sudo"].terminal)["password"] == "meridian"
+    assert client_spec(real_catalog().modules["users-and-sudo"].terminal)["password"] == "meridian"
 
 
 # --- #67: sizes, ages and symlinks ---------------------------------------------------------
@@ -814,7 +814,7 @@ def test_a_lacks_check_on_a_missing_file_fails():
 def test_module_07_refuses_the_whole_log_in_alerts():
     from app.terminal import grade
 
-    exercise = load_catalog().modules["pipes-and-redirection"].terminal
+    exercise = real_catalog().modules["pipes-and-redirection"].terminal
     log = next(f.contents for f in exercise.files if f.path == "/station/reactor/core.log")
     listing = "ls: cannot access '/station/reactor-b': No such file or directory\n/station/reactor:\ncoolant.log\ncore.log\n"
     alerts = "".join(line + "\n" for line in log.splitlines() if "ALERT" in line)
@@ -826,7 +826,7 @@ def test_module_07_refuses_the_whole_log_in_alerts():
 def test_module_08_refuses_every_address_in_noisy():
     from app.terminal import grade
 
-    exercise = load_catalog().modules["text-tools"].terminal
+    exercise = real_catalog().modules["text-tools"].terminal
     top = "      9 10.4.2.17\n      6 10.4.7.3\n      4 192.168.8.40\n"
     rest = "      2 172.16.0.5\n      2 10.4.2.90\n      1 192.168.8.41\n      1 10.4.9.12\n"
     assert grade(exercise, _made(exercise, noisy_txt=top), exercise.cwd)

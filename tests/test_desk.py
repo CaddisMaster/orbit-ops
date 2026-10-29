@@ -15,7 +15,7 @@ from app.content import ContentError, get_catalog, load_catalog
 from app.db import SessionLocal
 from app.main import app
 from app.models import ModuleProgress, XpEvent
-from tests.conftest import csrf
+from tests.conftest import csrf, real_catalog
 from tests.test_progress import complete
 from tests.test_terminal import TERMINAL, _state
 from tests.test_xp import MODULE, SYLLABUS
@@ -246,7 +246,7 @@ def test_bad_comms_are_reported(tmp_path, change, expect):
 
 
 def test_the_real_cast_and_the_pilot_module():
-    catalog = load_catalog()
+    catalog = real_catalog()
     assert set(catalog.cast) == {"okafor", "meridian", "mission"}
     pilot = catalog.modules["permissions"].comms
     assert pilot.open and pilot.console_done and pilot.complete and pilot.window == {"complete": "shuttle-dock"}
@@ -255,7 +255,7 @@ def test_the_real_cast_and_the_pilot_module():
 # --- #45: all of Unit 1.1 on comms ----------------------------------------------------------
 @pytest.mark.criterion(45, "Every Unit 1.1 module is told on comms")
 def test_every_unit_1_1_module_is_told_on_comms():
-    for module in load_catalog().unit_modules("linux-shell"):
+    for module in real_catalog().unit_modules("linux-shell"):
         assert module.comms and module.comms.open and module.comms.complete, module.slug
         assert bool(module.comms.console_done) == bool(module.terminal), module.slug
 
@@ -264,7 +264,7 @@ def test_the_stations_figures_match_the_exercises():
     # MERIDIAN quotes numbers; they must be true of the console the learner sees.
     from app.terminal import client_spec
 
-    catalog = load_catalog()
+    catalog = real_catalog()
 
     def said(slug):
         return " ".join(html for beat in catalog.modules[slug].comms_html.values() for _, html in beat)
@@ -286,7 +286,7 @@ def test_the_stations_figures_match_the_exercises():
 
 @pytest.mark.criterion(45, "The unit's end is marked outside the window")
 def test_the_units_end_is_marked_outside_the_window(logged_in, user):
-    unit = load_catalog().unit_modules("linux-shell")
+    unit = real_catalog().unit_modules("linux-shell")
     with SessionLocal() as db:
         for m in unit[:-1]:
             db.add(ModuleProgress(user_id=user.id, module_slug=m.slug, status="complete", score=100, completed_at=datetime.now(UTC)))

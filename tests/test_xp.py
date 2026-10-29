@@ -19,6 +19,7 @@ from app.game.levels import level_for, rank_for, standing, xp_for_level
 from app.game.xp import PERFECT_QUIZ_BONUS, total_xp
 from app.main import app
 from app.models import XpEvent
+from tests.conftest import real_catalog
 from tests.test_progress import answer, complete
 
 SYLLABUS = """
@@ -119,7 +120,7 @@ def test_bad_rank_bands_fail_validation(tmp_path, ranks, expect):
 
 
 def test_the_real_curriculum_has_ranks_from_cadet():
-    ranks = load_catalog().ranks
+    ranks = real_catalog().ranks
     assert ranks[0] == RankSpec(title="Cadet", level=1)
     assert ranks[-1].title == "Station Commander"
 

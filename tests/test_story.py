@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.content import load_catalog
+from tests.conftest import real_catalog
 
 STORY = (Path(__file__).resolve().parents[1] / "docs" / "story.md").read_text()
 
@@ -29,7 +29,7 @@ def test_story_md_names_the_cause_and_every_clue():
 
 
 def test_the_written_clues_name_real_modules():
-    catalog = load_catalog()
+    catalog = real_catalog()
     titles = {m.title for m in catalog.ordered_modules()}
     for clue in _clues():
         if clue["status"].startswith("written"):
@@ -37,7 +37,7 @@ def test_the_written_clues_name_real_modules():
 
 
 def test_the_stories_times_agree_with_the_content():
-    catalog = load_catalog()
+    catalog = real_catalog()
     assert "02:40 scrubber B: offline" in str(catalog.modules["the-filesystem"].terminal.files)
     assert "35 2 * * *" in str(catalog.modules["scheduling-with-cron"].terminal.files)
     assert "02:35" in STORY and "02:40" in STORY

@@ -7,13 +7,13 @@ systemctl itself is tests/test_systemd.py's and tests/js/systemd.test.js's."""
 
 import pytest
 
-from app.content import load_catalog
 from app.terminal import Node, UnitState, grade
+from tests.conftest import real_catalog
 from tests.test_bash_scripting import _complete_content, _said, _start
 
 
 def _module(slug):
-    return load_catalog().modules[slug]
+    return real_catalog().modules[slug]
 
 
 def _with_file(state, path, contents):
@@ -36,7 +36,7 @@ LINES = [
 
 @pytest.mark.criterion(305, "Module 01 of Unit 1.5 is complete content")
 def test_module_01_is_complete_content():
-    module = load_catalog().unit_modules("systemd")[0]
+    module = real_catalog().unit_modules("systemd")[0]
     assert module.slug == "services"
     _complete_content(module)
 
@@ -123,7 +123,7 @@ DONE = {"o2_backup": "active", "cabin_fans": "active", "recycler": "active", "o2
 
 @pytest.mark.criterion(306, "Module 02 of Unit 1.5 is complete content")
 def test_module_02_is_complete_content():
-    module = load_catalog().unit_modules("systemd")[1]
+    module = real_catalog().unit_modules("systemd")[1]
     assert module.slug == "start-stop-enable"
     _complete_content(module)
 
@@ -195,7 +195,7 @@ READ = [
 
 @pytest.mark.criterion(307, "Module 03 of Unit 1.5 is complete content")
 def test_module_03_is_complete_content():
-    module = next(m for m in load_catalog().unit_modules("systemd") if m.slug == "unit-files")
+    module = next(m for m in real_catalog().unit_modules("systemd") if m.slug == "unit-files")
     _complete_content(module)
 
 
@@ -295,7 +295,7 @@ UP = [UnitState(name="o2-monitor.service", state="active"), UnitState(name="scru
 
 @pytest.mark.criterion(308, "Module 04 of Unit 1.5 is complete content")
 def test_module_04_is_complete_content():
-    module = next(m for m in load_catalog().unit_modules("systemd") if m.slug == "writing-a-service")
+    module = next(m for m in real_catalog().unit_modules("systemd") if m.slug == "writing-a-service")
     _complete_content(module)
 
 
@@ -392,7 +392,7 @@ def _timed(state, service=SERVICE, timer=TIMER, enabled=True, cron_gone=True):
 
 @pytest.mark.criterion(309, "Module 05 of Unit 1.5 is complete content")
 def test_module_05_is_complete_content():
-    module = load_catalog().unit_modules("systemd")[4]
+    module = real_catalog().unit_modules("systemd")[4]
     assert module.slug == "timers"
     _complete_content(module)
 
@@ -496,8 +496,8 @@ def _filed(state, exercise, log=None, moved=True):
 
 @pytest.mark.criterion(310, "Module 06 of Unit 1.5 is complete content")
 def test_module_06_is_complete_content():
-    module = next(m for m in load_catalog().unit_modules("systemd") if m.slug == "the-journal")
-    assert load_catalog().unit_modules("systemd")[-1].slug == module.slug  # the unit's last module, the reveal
+    module = next(m for m in real_catalog().unit_modules("systemd") if m.slug == "the-journal")
+    assert real_catalog().unit_modules("systemd")[-1].slug == module.slug  # the unit's last module, the reveal
     _complete_content(module)
 
 

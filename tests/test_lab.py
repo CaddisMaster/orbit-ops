@@ -26,7 +26,7 @@ from app.content.schema import (
 from app.db import SessionLocal
 from app.main import app
 from app.models import BadgeEarned, ExerciseAttempt, XpEvent
-from tests.conftest import csrf
+from tests.conftest import csrf, real_catalog
 from tests.test_progress import complete
 from tests.test_xp import MODULE, SYLLABUS
 
@@ -172,7 +172,7 @@ def test_a_lab_from_someone_off_the_cast_is_refused(tmp_path):
 
 @pytest.mark.criterion(121, "Every lab's example passes its own checks")
 def test_every_labs_example_passes_its_own_checks(labs):
-    for catalog in (load_catalog(), labs):  # the real curriculum, and this file's
+    for catalog in (real_catalog(), labs):  # the real curriculum, and this file's
         for module in catalog.modules.values():
             if module.lab:
                 verdict = lab.grade(module.lab, [box.example for box in module.lab.boxes])

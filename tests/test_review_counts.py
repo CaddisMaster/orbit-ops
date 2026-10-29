@@ -9,10 +9,10 @@ import re
 import pytest
 from sqlalchemy import select
 
-from app.content import load_catalog
 from app.db import SessionLocal
 from app.game import xp
 from app.models import ActivityDay, XpEvent
+from tests.conftest import real_catalog
 from tests.test_review import _complete, _grade
 from tests.test_streaks import TODAY, clock  # noqa: F401  (fixture)
 
@@ -36,7 +36,7 @@ def _active_days(user_id):
 
 
 def _card_ids(*modules):
-    cards = load_catalog().cards()
+    cards = real_catalog().cards()
     return [c for c in cards if c.split("/")[0] in modules]
 
 
@@ -111,4 +111,4 @@ def test_nothing_due_shows_nothing(logged_in):
 
 def test_every_review_ref_fits_the_ledger():
     # xp_events.ref is varchar(128); a review's ref is "YYYY-MM-DD/<module>/<card>".
-    assert max(len(f"2026-10-08/{card}") for card in load_catalog().cards()) <= 128
+    assert max(len(f"2026-10-08/{card}") for card in real_catalog().cards()) <= 128

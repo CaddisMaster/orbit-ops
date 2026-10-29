@@ -5,6 +5,7 @@ Parallel-safe by construction: every test that needs a user makes its own,
 with a unique username, and deletes it afterwards.
 """
 
+import functools
 import os
 import re
 import uuid
@@ -17,7 +18,9 @@ from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
+import app.main as app_main
 from app import security
+from app.content import Catalog, load_catalog
 from app.db import SessionLocal
 from app.main import app
 from app.models import User
@@ -29,6 +32,22 @@ from app.security import hash_password, login_limiter
 # #384).
 security._hasher = PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
 security._DUMMY_HASH = security._hasher.hash("dummy")
+
+
+@functools.cache
+def real_catalog() -> Catalog:
+    """The real curriculum, parsed once per test process (#319). A parse takes
+    about 0.3 s and the suite asked for one about 800 times, from tests and from
+    the lifespan of every TestClient. Tests only read the catalog, so they share
+    it. A test that builds its own content still calls load_catalog(tmp_path),
+    and test_content.py's "the real curriculum loads" still parses content/
+    uncached, so a broken module fails there by name."""
+    return load_catalog()
+
+
+# The app's lifespan loads the catalog on each TestClient start; in tests it
+# gets the shared one. Only the name app.main looks up changes, not the app.
+app_main.load_catalog = real_catalog
 
 PASSWORD = "correct horse battery staple"
 _CSRF_RE = re.compile(r'name="csrf_token" value="([^"]+)"')

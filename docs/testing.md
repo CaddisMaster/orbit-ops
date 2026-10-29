@@ -30,6 +30,10 @@ time, so tests always see the current schema.
   them afterwards, which is what makes `-n auto` safe.
 - **Password hashing is cheap in tests** (`tests/conftest.py` swaps the argon2 parameters).
   Production parameters cost 64 MiB per hash; eight workers would exceed the container limit.
+- **The real curriculum is parsed once per test process** (#319). Read it with
+  `tests.conftest.real_catalog()`, never `load_catalog()`; the app's lifespan gets the same
+  object in tests. A test with content of its own calls `load_catalog(tmp_path)`. Only
+  `test_the_real_curriculum_loads` parses `content/` uncached, and a test enforces that.
 - **CSRF is never disabled in tests.** `tests.conftest.csrf(client)` reads the token from a
   rendered form, the way a browser does; `login(client, username)` uses it.
 - **Claim acceptance criteria** with `@pytest.mark.criterion(<issue>, "<Scenario title>")`.
