@@ -228,6 +228,20 @@ def test_the_release_scans_the_pushed_digest_before_deploying():
     assert "scan" in jobs["deploy"]["needs"]
 
 
+@pytest.mark.criterion(321, "Both architectures are scanned")
+def test_the_release_builds_and_scans_both_architectures():
+    jobs = _workflow("release.yml")["jobs"]
+    steps = jobs["build-push"]["steps"]
+    platforms = next(step for step in steps if step.get("id") == "push")["with"]["platforms"].split(",")
+    assert platforms == ["linux/amd64", "linux/arm64"]
+    # arm64 is built under QEMU on the amd64 runner, set up before buildx.
+    actions = [step.get("uses", "").split("@")[0] for step in steps]
+    assert actions.index("docker/setup-qemu-action") < actions.index("docker/setup-buildx-action")
+    # One scan leg per architecture, each telling grype which one to read from the index.
+    assert jobs["scan"]["strategy"]["matrix"]["platform"] == platforms
+    assert _scan_step(jobs["scan"]["steps"])["env"] == {"GRYPE_PLATFORM": "${{ matrix.platform }}"}
+
+
 @pytest.mark.criterion(265, "CI scans the image on every PR")
 def test_ci_scans_the_built_image_the_same_way():
     ci = _scan_step(_workflow("ci.yml")["jobs"]["docker-build"]["steps"])["with"]

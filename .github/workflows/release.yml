@@ -52,6 +52,11 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "sha_short=${sha_short}" >> "$GITHUB_OUTPUT"
           echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+      # #321: arm64 too, for staging on the arm64 VM. QEMU emulates it on the
+      # amd64 runner; the droplet still pulls amd64 from the same tag.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
@@ -64,7 +69,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           # #265: what's in the image (SBOM) and how it was built (provenance),
           # attached to the pushed image as attestations.
           sbom: true
@@ -133,18 +138,25 @@ jobs:
   # that downloads more code) never runs beside the packages:write token. A
   # failing scan stops the deploy, as a failing smoke test does; the pushed
   # tag is never deployed. Same settings as ci.yml's scan, held equal by
-  # tests/test_repo_hardening.py.
+  # tests/test_repo_hardening.py. The digest is the multi-arch index (#321),
+  # so each architecture is scanned in its own leg: grype reads GRYPE_PLATFORM
+  # and otherwise scans only the runner's own.
   scan:
-    name: Pushed image has no fixable critical vulnerability
+    name: Pushed image has no fixable critical vulnerability (${{ matrix.platform }})
     needs: build-push
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Scan the pushed image
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        env:
+          GRYPE_PLATFORM: ${{ matrix.platform }}
         with:
           image: ${{ env.IMAGE }}@${{ needs.build-push.outputs.digest }}
           grype-version: v0.120.1
