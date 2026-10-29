@@ -221,7 +221,7 @@ comms:
   console_done:
     - {from: meridian, text: "O2-BACKUP.SERVICE · /ETC/SYSTEMD/SYSTEM · OVERRIDES PACKAGE COPY · USER: ROOT (PACKAGE COPY: O2FEED)"}
     - {from: okafor, text: "Someone copied o2-backup into /etc to get more logging out of it, and dropped the User= line on the way. So it's been running as root."}
-    - {from: okafor, text: "That's not sabotage. That's somebody debugging in a hurry and never cleaning up. We'll put it right when we write units of our own."}
+    - {from: okafor, text: "That's not sabotage. That's somebody debugging in a hurry and never cleaning up."}
   complete:
     - {from: okafor, text: "You can read them now. Tomorrow you write one: the new O2 monitor arrived without a unit file, and nothing on this station runs without one."}
 ---
