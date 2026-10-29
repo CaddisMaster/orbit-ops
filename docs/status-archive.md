@@ -4,6 +4,50 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-27: Unit 1.5 modules 01–04 (#305–#308)
+
+- **#314 (#305), module 01 *What a service is*:** daemons, systemd as PID 1, `systemctl
+  status` line by line, `list-units` with `--all`/`--failed`, inactive versus failed. Unit 1.5
+  is no longer "Coming soon". New test file `tests/test_systemd_unit.py` for the unit.
+- **`/cycle`, queue #306–#308.** All content, so all stop-tagged: built to green PRs and left
+  open. Sean then asked for them merged, in order:
+  - #315 (#306), module 02 *Starting, stopping and enabling*: active versus enabled,
+    `reload`/`restart`, `enable` as a `.wants/` link, `--now`, sudo.
+  - #316 (#307), module 03 *Reading unit files*: `systemctl cat`, the three sections, no
+    `User=` means root, `After`/`Wants`/`Requires`, `/etc` beats `/usr/lib`. The `o2-backup`
+    admin copy that runs as root is a new story beat, closed as "not sabotage".
+  - #317 (#308), module 04 *Writing a service*: a unit of your own (`sudo nano` taught there,
+    since Unit 1.2 isn't a prerequisite), `Restart=on-failure`, `RestartSec=`, `203/EXEC` and
+    `217/USER`. Played in the browser with nano, not just `tee`.
+- Every module had the content-reviewer, `/beginner-audit` and gotcha-auditor passes, a Try it
+  run in the `sysref` container (systemd 255.4 as PID 1) as `cadet`, and a browser play as
+  `verify-bot`.
+- **Real systemd corrected the drafts** (now in the lessons):
+  - `list-units --all` omits a disabled, never-started unit: it isn't loaded. The console
+    loads every unit at boot, and module 01 says so. Matching it would be a console issue.
+  - A new copy in `/etc` needs `daemon-reload` before `systemctl cat` shows it, and `status`
+    doesn't warn about it (it warns only for an edited, loaded file).
+  - `Requires=` without `After=` doesn't stop a unit starting when its requirement fails;
+    with `After=` it does. Stopping the requirement stops it either way; a crash doesn't.
+  - `enable` on a unit with no `[Install]` prints the "no installation config" note, exits 0,
+    and `--now` still starts it. The start limit is 5 starts in 10 s, then `failed`.
+- Gotchas:
+  - ⚠️ **Git's merge mixes up two sections appended at the same place** when they share closing
+    lines (`    },`, a figures test's last lines). The conflict hunks looked like "keep both"
+    and dropped a test's tail and broke `NEEDS`. For parallel module branches, rebuild each
+    shared file as `main`'s version plus the branch's own section, and diff against `main`.
+  - ⚠️ **A CHANGELOG splice that searches for the next `- `** walks into the previous release
+    when the entry is the last one under Unreleased. Insert after the entry's own indented lines.
+  - The cleanup's `sudo` in `sysref` times out between commands: `echo meridian | sudo -S -v` first.
+- **Left for Sean:**
+  - Module 03's "not sabotage" line, and Okafor's promise there to put `o2-backup` right, which
+    nothing pays off yet. Drop it, or have #309/#310 fix it.
+  - The same carried items: confirm the production reset, the two leftover files on the droplet,
+    the `281-admin-panel` branch, #260.
+- **Next:** #309 (module 05, timers), then #310 (the journal and the mystery's reveal), which
+  closes the milestone. Nothing released since v0.12.1: v0.13.0 is the console's systemd and
+  journal plus modules 01–04 so far. `sysref` stays until #310's Try it is done.
+
 ### 2026-10-26: Dependabot cleared, #258, and the console's systemd and journal (#303, #304)
 
 - **Dependabot:** #297 (actions) merged. #298 (pip, 12 updates), and #299 after it, closed

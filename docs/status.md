@@ -152,6 +152,60 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-10-29: two `/cycle` rounds, the open questions answered, droplet checks done
+
+- **`/cycle`, queue #319 → #329 (auto) → #321 (stop).** Merged:
+  - #334 (#319): the real curriculum is parsed once per test process. On one worker, 235 of 249 s
+    were 804 parses of `content/`, 298 of them the lifespan of each `TestClient`. Now
+    `tests.conftest.real_catalog()` (cached), and `app.main.load_catalog` is rebound to it in
+    tests only. CI's "Run tests" went **196 s → 26 s**, `./test.sh` about 45 s → 8 s. A test
+    keeps every other test off bare `load_catalog()`.
+  - #336 (#329): the console's timers match systemd 255. `OnCalendar=` takes `START/STEP`
+    (`*:00/15`) and refuses `*/N` and a step that can't repeat (`*:45/15`), in the schema and
+    the console both. `Type=oneshot` is `activating (start)` while it runs, `start` waits for it
+    on the station clock (`--no-block` doesn't), then `inactive (dead)` `status=0/SUCCESS`, or a
+    failed start with systemd's `Job for … failed`. `exits: 0` is a clean exit. `TriggeredBy: ●`
+    for an active timer, and `Triggers: ●` always.
+  - #337 (#321, `Part of`): release images for `linux/amd64,linux/arm64` (QEMU), a Grype scan
+    leg per platform with `GRYPE_PLATFORM` (checked locally that grype honours it, and that
+    scan-action passes its env through). Merged on Sean's word.
+- **Second round:** nothing was runnable unattended, so Sean picked #335's criteria. Filed #335
+  from #329's comment; criteria written from `sysref` and v255's `show_journal_by_unit`:
+  `status` shows the unit's lines **from this boot, from when it last left inactive or failed**,
+  not by invocation, and none while in auto-restart. #338 merged.
+- **Open questions answered with Sean** (asked with a recommendation each):
+  - #260: keep `gotcha-auditor`, delete `sweeper` and `test-first` (#339, a standing decision).
+  - #320: `bw` runs on the VM for local (npm `@bitwarden/cli`, as the VM is arm64), the Mac for
+    prod; Sean does the vault writes. Recorded on #320 and BB #530.
+  - BB #530 / #322: a throwaway pinned `git clone --depth 1` on the Mac for each check-mode run.
+  - Module 03's unpaid `o2-backup` promise dropped (#340, #341). Played with Playwright as
+    `verify-bot` after marking the 12 modules before it complete; deleted afterwards.
+  - Module 05's length stays. `sysref` is removed.
+- **Droplet, checked by Sean from the Mac:** `backup_db.sh` is `755 deploy:deploy`, every dump
+  `-rw-------`, nightly dumps ran 2026-10-28 and 10-29 at 07:30 UTC (5290–5291 bytes), the
+  timer is scheduled, the service `inactive`. `docker-compose.yml.v0.11.0` and
+  `backups/pre-db-change.sql.gz` are deleted. The v0.13.0 follow-up is closed.
+- Gotchas:
+  - ⚠️ **The dev container can't write the repo**, so `ruff --fix` fails with `E902`. Apply
+    `ruff check --diff` with `git apply -p0` instead.
+  - **A container restart keeps the host's boot ID**: `sysref` can't show "previous boot"
+    behaviour. That part of #335 came from systemd's source.
+  - Real `systemctl status` of an unloaded (garbage-collected) unit drops `since` and
+    `Duration:` but still shows the journal lines. The console keeps every unit loaded.
+  - The gotcha-auditor earned its keep: it caught #336's JS parser accepting steps the schema
+    refused, and a gap in #334's guard test.
+  - A PR that falls `BEHIND` after a neighbour merges: `gh pr update-branch`, wait for CI, merge.
+- **Left for Sean:**
+  - Next release: check `docker buildx imagetools inspect` lists both platforms, pull the tag on
+    the VM and see `/healthz`, both scan legs green, and note `build-push`'s new time (#321
+    stays open until then).
+  - #320's seeding (vault writes) once the scripts exist. Still: 8 apt updates and the 26.04
+    upgrade on the droplet.
+- **Unreleased on `main`:** #336, #338 (console code, so the next release is a MINOR: v0.14.0),
+  #337 (release workflow), #341 (content), #334 and #339 (tests, docs).
+- **Next:** #320 (scripts + RUNBOOK; Sean seeds), then cut a release when Sean says, which also
+  proves #321. #322 waits on BB #530; #323 on #322.
+
 ### 2026-10-28: Unit 1.5 finished (#309, #310), and v0.13.0 shipped
 
 - **`/cycle`, queue #309 → #310.** Both are content, so both were tagged stop: built to green
@@ -237,47 +291,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   carried items from the earlier session today stand.
 - **Next:** #320 (Bitwarden), #321 (multi-arch). #322 waits on BB #530. The curriculum's #309
   and #310 are still open for v0.13.0; nothing released since v0.12.1.
-
-### 2026-10-27: Unit 1.5 modules 01–04 (#305–#308)
-
-- **#314 (#305), module 01 *What a service is*:** daemons, systemd as PID 1, `systemctl
-  status` line by line, `list-units` with `--all`/`--failed`, inactive versus failed. Unit 1.5
-  is no longer "Coming soon". New test file `tests/test_systemd_unit.py` for the unit.
-- **`/cycle`, queue #306–#308.** All content, so all stop-tagged: built to green PRs and left
-  open. Sean then asked for them merged, in order:
-  - #315 (#306), module 02 *Starting, stopping and enabling*: active versus enabled,
-    `reload`/`restart`, `enable` as a `.wants/` link, `--now`, sudo.
-  - #316 (#307), module 03 *Reading unit files*: `systemctl cat`, the three sections, no
-    `User=` means root, `After`/`Wants`/`Requires`, `/etc` beats `/usr/lib`. The `o2-backup`
-    admin copy that runs as root is a new story beat, closed as "not sabotage".
-  - #317 (#308), module 04 *Writing a service*: a unit of your own (`sudo nano` taught there,
-    since Unit 1.2 isn't a prerequisite), `Restart=on-failure`, `RestartSec=`, `203/EXEC` and
-    `217/USER`. Played in the browser with nano, not just `tee`.
-- Every module had the content-reviewer, `/beginner-audit` and gotcha-auditor passes, a Try it
-  run in the `sysref` container (systemd 255.4 as PID 1) as `cadet`, and a browser play as
-  `verify-bot`.
-- **Real systemd corrected the drafts** (now in the lessons):
-  - `list-units --all` omits a disabled, never-started unit: it isn't loaded. The console
-    loads every unit at boot, and module 01 says so. Matching it would be a console issue.
-  - A new copy in `/etc` needs `daemon-reload` before `systemctl cat` shows it, and `status`
-    doesn't warn about it (it warns only for an edited, loaded file).
-  - `Requires=` without `After=` doesn't stop a unit starting when its requirement fails;
-    with `After=` it does. Stopping the requirement stops it either way; a crash doesn't.
-  - `enable` on a unit with no `[Install]` prints the "no installation config" note, exits 0,
-    and `--now` still starts it. The start limit is 5 starts in 10 s, then `failed`.
-- Gotchas:
-  - ⚠️ **Git's merge mixes up two sections appended at the same place** when they share closing
-    lines (`    },`, a figures test's last lines). The conflict hunks looked like "keep both"
-    and dropped a test's tail and broke `NEEDS`. For parallel module branches, rebuild each
-    shared file as `main`'s version plus the branch's own section, and diff against `main`.
-  - ⚠️ **A CHANGELOG splice that searches for the next `- `** walks into the previous release
-    when the entry is the last one under Unreleased. Insert after the entry's own indented lines.
-  - The cleanup's `sudo` in `sysref` times out between commands: `echo meridian | sudo -S -v` first.
-- **Left for Sean:**
-  - Module 03's "not sabotage" line, and Okafor's promise there to put `o2-backup` right, which
-    nothing pays off yet. Drop it, or have #309/#310 fix it.
-  - The same carried items: confirm the production reset, the two leftover files on the droplet,
-    the `281-admin-panel` branch, #260.
-- **Next:** #309 (module 05, timers), then #310 (the journal and the mystery's reveal), which
-  closes the milestone. Nothing released since v0.12.1: v0.13.0 is the console's systemd and
-  journal plus modules 01–04 so far. `sysref` stays until #310's Try it is done.
