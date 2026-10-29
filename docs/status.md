@@ -123,6 +123,11 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Orbit Ops dumps its own database nightly; BB ships it off the droplet** (option B, 2026-10-27).
   `orbit-ops-backup.timer` (#324) runs the deploy's own `backup_db.sh`, which each release
   installs in `/opt/orbit-ops`. The off-box copy is BB #535. Every dump is `600` (#326).
+- **Agents earn their place** (#260, 2026-10-29). `sweeper` and `test-first` were deleted from
+  `.claude/agents/`: ported from Budget Buddy at bootstrap, never used here, and each was a file
+  to keep in step with BB's. `gotcha-auditor` stays and runs on every branch diff before its PR
+  (as `/cycle` does). It earned that on 2026-10-29 by catching #329's JS calendar parser
+  accepting steps the schema refused. BB's copies are unaffected.
 
 ## Release ledger
 
