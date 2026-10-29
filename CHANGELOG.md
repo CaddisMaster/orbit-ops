@@ -13,6 +13,10 @@ and why it matters, not what the diff says.
   while its program runs, `systemctl start` waits for it, and it finishes `inactive (dead)` with
   `status=0/SUCCESS` and the journal's `Finished` line, or fails its start out loud. A service
   shows `TriggeredBy:` for the timer that starts it, and `Triggers:` always shows `●`.
+- `systemctl status` on the station console picks its journal lines as systemd 255 does (#335):
+  the unit's lines from this boot, from its last start on. A unit that starts inactive now
+  shows what it logged earlier in the boot, rather than nothing, and lines from the previous
+  boot never appear. A service waiting to restart shows none.
 
 ## [0.13.0] — 2026-10-28
 

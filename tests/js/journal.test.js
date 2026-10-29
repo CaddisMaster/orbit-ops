@@ -157,6 +157,57 @@ test("systemctl status shows the latest log lines", () => {
   assert.doesNotMatch(run(sh, "systemctl status scrubberd -n 0"), /\n\n/);
 });
 
+// Which lines status shows, as systemd 255 picks them (#335): the unit's lines
+// of this boot, from when it last left inactive or failed. Checked in sysref
+// and in v255's show_journal_by_unit (this boot only, from InactiveExitTimestamp).
+const MONITOR = { "/etc/systemd/system/o2-monitor.service": file(CRASHY) };
+const monitorLine = (time, message) => ({ time, identifier: "o2-monitor", pid: 700, unit: "o2-monitor.service", priority: "info", message });
+
+test("An inactive unit's status shows this boot's lines, with no since", () => {
+  const journal = Array.from({ length: 11 }, (_, i) => monitorLine(`2026-10-08T08:${String(10 + i).padStart(2, "0")}:00`, `sample ${i + 1}`));
+  const sh = new Shell(spec({ fs: MONITOR, services: [{ name: "o2-monitor.service", state: "inactive", exits: null, runs_for: 0 }], journal }));
+  const status = run(sh, "systemctl status o2-monitor").split("\n");
+  assert.equal(status[2], "     Active: inactive (dead)");
+  assert.equal(status[3], "");
+  assert.deepEqual(status.slice(4, -1), journal.slice(1).map((e) => `Oct 08 ${e.time.slice(11)} meridian o2-monitor[700]: ${e.message}`));
+});
+
+test("Lines from the previous boot are never in status", () => {
+  const journal = [monitorLine("2026-10-08T02:30:00", "sample before the outage")];
+  const sh = new Shell(spec({ fs: MONITOR, services: [{ name: "o2-monitor.service", state: "inactive", exits: null, runs_for: 0 }], journal }));
+  assert.equal(run(sh, "systemctl status o2-monitor"),
+    "○ o2-monitor.service - O2 monitor\n" +
+    "     Loaded: loaded (/etc/systemd/system/o2-monitor.service; static)\n" +
+    "     Active: inactive (dead)\n");
+  assert.equal(run(sh, "journalctl -u o2-monitor -b -1 -o cat"), "sample before the outage\n");
+});
+
+test("Status shows a unit's lines from its last start on", () => {
+  const sh = new Shell(spec({ fs: MONITOR, services: [{ name: "o2-monitor.service", state: "inactive", exits: null, runs_for: 0 }] }));
+  run(sh, "systemctl start o2-monitor");
+  run(sh, "systemctl stop o2-monitor");
+  run(sh, "systemctl start o2-monitor");
+  const lines = run(sh, "systemctl status o2-monitor").split("\n\n")[1];
+  assert.equal(lines, "Oct 08 09:00:03 meridian systemd[1]: Started o2-monitor.service - O2 monitor.\n");
+});
+
+test("A service waiting to restart shows no lines, then lines from the restart", () => {
+  const unit = CRASHY.replace("[Service]\n", "[Service]\nRestart=on-failure\nRestartSec=5\n");
+  const sh = new Shell(spec({
+    fs: { "/etc/systemd/system/o2-monitor.service": file(unit) },
+    services: [{ name: "o2-monitor.service", state: "inactive", exits: 1, runs_for: 2 }],
+  }));
+  run(sh, "systemctl start o2-monitor"); // 09:00:01, crashes at 09:00:03, restarts at 09:00:08
+  run(sh, "sleep 2");
+  const waiting = run(sh, "systemctl status o2-monitor");
+  assert.match(waiting, /Active: activating \(auto-restart\) \(Result: exit-code\)/);
+  assert.doesNotMatch(waiting, /\n\n/);
+  run(sh, "sleep 2"); // status at 09:00:09: running again, until 09:00:10
+  assert.equal(run(sh, "systemctl status o2-monitor").split("\n\n")[1],
+    "Oct 08 09:00:08 meridian systemd[1]: o2-monitor.service: Scheduled restart job, restart counter is at 1.\n" +
+    "Oct 08 09:00:08 meridian systemd[1]: Started o2-monitor.service - O2 monitor.\n");
+});
+
 test("-b is this boot, -b -1 the one before, and a plain read marks where they meet", () => {
   const sh = new Shell(spec());
   assert.doesNotMatch(run(sh, "journalctl -b"), /02:40/);
