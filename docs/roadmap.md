@@ -129,7 +129,7 @@ These are copied from `/home/sean/Developer/personal-projects/budget-buddy` and 
 - `.pre-commit-config.yaml`, `pyproject.toml` (ruff rules), `pytest.ini` (`criterion` marker, `loadgroup`), and `test.sh`.
 - `VERSIONING.md` (0.MINOR.PATCH), `CONTRIBUTING.md` (issue → `<n>-slug` branch → PR with `Closes #N` → squash merge; one migration per PR), and `CHANGELOG.md` with `[Unreleased]`.
 - `CLAUDE.md` follows BB's short "Before you… read…" table format. `docs/` gets architecture, gotchas, testing, deployment, delegation, status and a new `content-authoring.md`. `RUNBOOK.md` is also added.
-- `.claude/`: `settings.json` (allowlist, deny reading `.env`), the changelog-guard Stop hook, the agents (`sweeper`, `test-first`, `gotcha-auditor`, `release-prep`), the `/wrap` command, and the `verify` skill pointed at `localhost:5002`. A new `content-reviewer` agent checks a written module for accuracy and schema compliance before Sean plays it (#124).
+- `.claude/`: `settings.json` (allowlist, deny reading `.env`), the changelog-guard Stop hook, the agents (`gotcha-auditor`, `release-prep`; `sweeper` and `test-first` were dropped unused in #260), the `/wrap` command, and the `verify` skill pointed at `localhost:5002`. A new `content-reviewer` agent checks a written module for accuracy and schema compliance before Sean plays it (#124).
 - BB's self-checking tests are ported: `test_pinned_dependencies`, `test_csp`, `test_hardening`, `test_doc_claims`, `test_deploy_pinning`.
 - The Playwright e2e tests (Pyodide challenge, HTMX quiz flow) are new. Playwright is preferred over Claude in Chrome.
 
