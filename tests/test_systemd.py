@@ -132,6 +132,8 @@ def test_a_service_with_no_execstart_fails_naming_the_file_and_the_unit(tmp_path
          "services: o2-monitor.service: a unit with no file can only start inactive and disabled"),
         ("    - name: o2-monitor.service", "    - name: o2-monitor",
          "String should match pattern"),
+        ("      state: inactive\n      dir: /etc/systemd/system\n", "      state: failed\n      exits: 0\n      dir: /etc/systemd/system\n",
+         "services: o2-backup.service: a failed unit's program exits with a status other than 0"),
     ],
 )
 def test_a_wrong_unit_fails_naming_what_is_wrong(tmp_path, old, new, expect):
@@ -147,7 +149,7 @@ TIMER = """    - name: air-sample.timer
 """
 
 
-@pytest.mark.parametrize("calendar", ["*-*-* 03:00:00", "daily", "Mon *-*-* 06:30", "*-*-* *:*/15:00"])
+@pytest.mark.parametrize("calendar", ["*-*-* 03:00:00", "daily", "Mon *-*-* 06:30", "*-*-* *:00/15:00"])
 def test_a_timer_reads_the_schedules_the_console_does(tmp_path, calendar):
     text = SERVICES.replace("  files:\n", TIMER.format(calendar=calendar) + "  files:\n").replace(
         "    - name: o2-backup.service", "    - name: air-sample.service"
@@ -155,7 +157,7 @@ def test_a_timer_reads_the_schedules_the_console_does(tmp_path, calendar):
     assert _exercise(tmp_path, text).services[-1].activates() == "air-sample.service"
 
 
-@pytest.mark.parametrize("calendar", ["03:00", "*-*-* 25:00", "every night", "*-*-* 03:61"])
+@pytest.mark.parametrize("calendar", ["03:00", "*-*-* 25:00", "every night", "*-*-* 03:61", "*-*-* *:*/15:00"])
 def test_a_timer_with_a_schedule_the_console_cant_read_fails(tmp_path, calendar):
     text = SERVICES.replace("  files:\n", TIMER.format(calendar=calendar) + "  files:\n")
     _write(tmp_path, text.replace("    - name: o2-backup.service", "    - name: air-sample.service").replace(
@@ -173,8 +175,41 @@ def test_a_timer_must_start_a_listed_service(tmp_path):
 
 def test_calendar_forms_match_the_consoles():
     # shell/systemd.js calendarNext reads the same forms; tests/js/systemd.test.js runs them.
-    assert all(valid_calendar(s) for s in ("hourly", "daily", "weekly", "monthly", "Sat *-*-* 06:30", "*-*-* *:*/15:00"))
+    assert all(valid_calendar(s) for s in ("hourly", "daily", "weekly", "monthly", "Sat *-*-* 06:30", "*-*-* *:00/15:00"))
     assert not any(valid_calendar(s) for s in ("yearly", "*-*-* */0:00", "Monday *-*-* 06:30", "2026-10-08 03:00"))
+
+
+# What systemd-analyze calendar (systemd 255.4) accepts and refuses (#329).
+@pytest.mark.criterion(329, "The console reads OnCalendar steps as systemd does")
+@pytest.mark.parametrize(
+    ("spec", "valid"),
+    [
+        ("*-*-* *:00/15:00", True),
+        ("*-*-* *:5/15", True),
+        ("*-*-* *:44/15", True),
+        ("*-*-* *:00/59", True),
+        ("*-*-* 0/6:00:00", True),
+        ("*-*-* 19/4:00", True),
+        ("*-*-* *:*/15:00", False),
+        ("*-*-* */2:00", False),
+        ("*-*-* *:45/15", False),
+        ("*-*-* *:00/60", False),
+        ("*-*-* *:00/0", False),
+        ("*-*-* 20/4:00", False),
+        ("*-*-* 00/24:00", False),
+    ],
+)
+def test_calendar_steps_are_systemds(spec, valid):
+    assert valid_calendar(spec) is valid
+
+
+@pytest.mark.criterion(329, "The console reads OnCalendar steps as systemd does")
+def test_a_timer_with_a_star_step_fails_the_content(tmp_path):
+    text = SERVICES.replace("  files:\n", TIMER.format(calendar="*-*-* *:*/15:00") + "  files:\n")
+    _write(tmp_path, text.replace("    - name: o2-backup.service", "    - name: air-sample.service").replace(
+        "{inactive: o2-backup.service}", "{inactive: air-sample.service}"))
+    with pytest.raises(ContentError, match=r"OnCalendar=\*-\*-\* \*:\*/15:00 isn't a schedule the console reads"):
+        load_catalog(tmp_path)
 
 
 LINK = {"type": "link", "mode": 0o777, "owner": "root", "group": "root", "target": "/etc/systemd/system/o2-monitor.service"}

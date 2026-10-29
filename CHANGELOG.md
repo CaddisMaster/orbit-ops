@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- The station console's timers behave the way systemd 255's do (#329). `OnCalendar=` takes
+  systemd's `*:00/15` step form and refuses `*/15`, as the real one does, so a lesson can no
+  longer teach a schedule a server would reject. A `Type=oneshot` service is `activating`
+  while its program runs, `systemctl start` waits for it, and it finishes `inactive (dead)` with
+  `status=0/SUCCESS` and the journal's `Finished` line, or fails its start out loud. A service
+  shows `TriggeredBy:` for the timer that starts it, and `Triggers:` always shows `●`.
+
 ## [0.13.0] — 2026-10-28
 
 Unit 1.5, systemd & services, the last unit of the Life Support deck. The station console now
