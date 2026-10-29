@@ -9,7 +9,9 @@
 //
 // The console can't run a unit's program, so the exercise says what it does
 // (schema/terminal/services.py SystemdUnit): run until stopped, or exit with
-// a status after some seconds. Time is the station clock's (sh.now()).
+// a status after some seconds. A Type=oneshot service is `activating` while
+// its program runs and `start` waits for it, as systemd's does (#329). Time
+// is the station clock's (sh.now()).
 (function (root, factory) {
   if (typeof module === "object" && module.exports) factory(require("./base.js"));
   else factory(root.OrbitShellParts);
@@ -26,7 +28,7 @@
   var START_LIMIT = 5; // starts within START_WINDOW seconds before systemd gives up (StartLimitBurst)
   var START_WINDOW = 10;
   // Exit statuses systemd names (the LSB ones, and its own for a failed exec).
-  var STATUS_NAMES = { 1: "FAILURE", 2: "INVALIDARGUMENT", 3: "NOTIMPLEMENTED", 4: "NOPERMISSION", 5: "NOTINSTALLED",
+  var STATUS_NAMES = { 0: "SUCCESS", 1: "FAILURE", 2: "INVALIDARGUMENT", 3: "NOTIMPLEMENTED", 4: "NOPERMISSION", 5: "NOTINSTALLED",
     6: "NOTCONFIGURED", 7: "NOTRUNNING", 203: "EXEC", 217: "USER" };
   var DENIED = "Interactive authentication required.";
 
@@ -87,18 +89,26 @@
 
   // OnCalendar's next time after `after` (a Date), for the forms services.py
   // valid_calendar accepts: a shorthand, or [DAY ]*-*-* HH:MM[:SS] where the
-  // hour and minute may be *, */N or a number.
+  // hour and minute may be *, a number, or START/STEP (`*:00/15`: 00, 15, 30
+  // and 45). systemd has no */N form (#329).
   function calendarNext(spec, after) {
     var shorthands = { minutely: "*-*-* *:*:00", hourly: "*-*-* *:00:00", daily: "*-*-* 00:00:00", weekly: "Mon *-*-* 00:00:00" };
     if (spec === "monthly") {
       return new Date(after.getFullYear(), after.getMonth() + 1, 1);
     }
     var full = shorthands[spec] || spec;
-    var p = /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun) )?\*-\*-\* (\d{1,2}|\*|\*\/\d{1,2}):(\d{1,2}|\*|\*\/\d{1,2})(?::(\d{1,2}))?$/.exec(full);
+    var p = /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun) )?\*-\*-\* (\d{1,2}|\*|\d{1,2}\/\d{1,2}):(\d{1,2}|\*|\d{1,2}\/\d{1,2})(?::(\d{1,2}))?$/.exec(full);
     if (!p) return null;
+    // A START/STEP must repeat within its field, or systemd refuses the whole spec (`*:45/15`).
+    var repeats = function (field, top) {
+      var step = field.split("/");
+      return step.length !== 2 || (+step[1] > 0 && +step[0] + +step[1] <= top);
+    };
+    if (!repeats(p[2], 23) || !repeats(p[3], 59)) return null;
     var fits = function (field, n) {
       if (field === "*") return true;
-      if (field.indexOf("*/") === 0) return n % +field.slice(2) === 0;
+      var step = field.split("/");
+      if (step.length === 2) return n >= +step[0] && (n - +step[0]) % +step[1] === 0;
       return n === +field;
     };
     var second = p[4] === undefined ? 0 : +p[4];
@@ -208,7 +218,8 @@
     u.ended = null;
     u.result = null;
     u.inv = ++this.sd.invocations; // each start is an invocation: status shows the latest one's lines
-    this.logUnit(u, t, 6, "Started " + titled(u) + ".");
+    u.starting = u.kind === "service" && oneshot(u);
+    this.logUnit(u, t, 6, (u.starting ? "Starting " : "Started ") + titled(u) + (u.starting ? "..." : "."));
     if (u.kind === "timer") { u.state = "active"; return; }
     var start = (last(sec, "Service", "ExecStart") || "").replace(/^[-@+!]+/, "");
     var program = start.split(/\s+/)[0];
@@ -223,6 +234,7 @@
     var why = file.error || file.node.type !== "file" || !(file.node.mode & 0o111) ? 203 : !this.account(user) ? 217 : null;
     if (why) {
       u.proc = null;
+      u.starting = false;
       u.state = "failed";
       u.result = "exit-code";
       u.ended = { code: why, at: t };
@@ -235,15 +247,19 @@
       }
       this.logUnit(u, t, 5, u.name + ": Main process exited, " + exitStatus(u.ended));
       this.logUnit(u, t, 4, u.name + ": Failed with result 'exit-code'.");
+      if (oneshot(u)) this.logUnit(u, t, 3, "Failed to start " + titled(u) + ".");
       return;
     }
     var proc = { pid: pid, ppid: 1, user: user, command: start, tty: "?", cpu: 0, mem: 0.1, start: t, alive: true,
       signals: [], ignores: [], unit: u.name };
-    if (behaviour.exits !== null) { proc.end = t + behaviour.runsFor; proc.exits = behaviour.exits; }
+    // A oneshot's program does its work and exits, cleanly unless the exercise says otherwise.
+    var exits = behaviour.exits !== null ? behaviour.exits : u.starting ? 0 : null;
+    if (exits !== null) { proc.end = t + behaviour.runsFor; proc.exits = exits; }
     this.procs.push(proc);
     u.proc = proc;
-    u.state = "active";
+    u.state = u.starting ? "activating" : "active";
   };
+  function oneshot(u) { return last(parseUnit(u.text), "Service", "Type") === "oneshot"; }
 
   // Catch the units up with the clock: a program that exited, or was killed,
   // leaves its unit inactive or failed, and Restart= may bring it back.
@@ -253,7 +269,7 @@
     Object.keys(this.sd.units).forEach(function (n) {
       var u = sh.sd.units[n];
       for (var guard = 0; guard < 50 && u.kind === "service"; guard++) {
-        if (u.state === "activating") {
+        if (u.state === "activating" && !u.starting) {
           if (u.restartAt > sh.clock) return;
           u.restarts += 1;
           sh.logUnit(u, u.restartAt, 6, u.name + ": Scheduled restart job, restart counter is at " + u.restarts + ".");
@@ -270,7 +286,7 @@
           continue;
         }
         var p = u.proc;
-        if (u.state !== "active" || !p) return;
+        if ((u.state !== "active" && !u.starting) || !p) return;
         // It exited if its time came before anything killed it (reap() may
         // have marked it dead at that time, without a signal).
         var byExit = p.end !== undefined && p.end <= sh.clock && (p.diedAt === undefined || p.end <= p.diedAt);
@@ -280,14 +296,18 @@
         p.alive = false;
         u.ended = sig ? { signal: sig, at: at } : { code: p.exits, at: at };
         u.proc = null;
-        var clean = sig ? sig !== "KILL" : false;
+        var clean = sig ? sig !== "KILL" : p.exits === 0;
         u.result = clean ? "success" : sig ? "signal" : "exit-code";
         u.since = at;
+        var started = u.starting;
+        u.starting = false;
         if (clean) sh.logUnit(u, at, 6, u.name + ": Deactivated successfully.");
         else {
           sh.logUnit(u, at, sig ? 4 : 5, u.name + ": Main process exited, " + exitStatus(u.ended));
           sh.logUnit(u, at, 4, u.name + ": Failed with result '" + u.result + "'.");
         }
+        // A oneshot that was still starting says how its start went.
+        if (started) sh.logUnit(u, at, clean ? 6 : 3, (clean ? "Finished " : "Failed to start ") + titled(u) + ".");
         var restart = last(parseUnit(u.text), "Service", "Restart") || "no";
         if (restart === "always" || (restart === "on-failure" && !clean)) {
           var delay = parseFloat(last(parseUnit(u.text), "Service", "RestartSec") || "0.1");
@@ -326,18 +346,26 @@
       u.result = null;
       u.since = this.clock;
       u.proc = null;
+      u.starting = false;
     } else if (u.state === "failed") {
       u.state = "inactive";
       u.result = null;
     }
   };
-  Shell.prototype.startUnit = function (u) {
+  // Start a unit. A oneshot's start waits for its program to finish (unless
+  // --no-block): the station clock jumps ahead, as `sleep` makes it. True if
+  // the start it waited for failed.
+  Shell.prototype.startUnit = function (u, noBlock) {
     this.syncUnits();
-    if (u.state === "active") return;
+    if (u.state === "active" || u.starting) return false;
     u.starts = [];
     u.restarted = false;
     u.restarts = 0;
     this.activate(u, this.clock);
+    if (!u.starting || noBlock) return !noBlock && oneshot(u) && u.state === "failed";
+    this.clock = Math.max(this.clock, u.proc.end);
+    this.syncUnits();
+    return u.state === "failed" || (u.state === "activating" && u.result !== "success");
   };
 
   // The units as plain data, the shape the server grades (app/terminal.py UnitState).
@@ -532,6 +560,7 @@
     return "code=exited, status=" + e.code + (STATUS_NAMES[e.code] ? "/" + STATUS_NAMES[e.code] : "");
   }
   function sub(u) {
+    if (u.starting) return "start";
     if (u.state === "activating") return "auto-restart";
     if (u.state === "failed") return "failed";
     if (u.state === "inactive") return "dead";
@@ -562,7 +591,8 @@
       : "loaded (" + u.path + "; " + enabled + (enabled === "static" ? "" : "; preset: enabled") + ")";
     out.push("     Loaded: " + loaded);
     var since = u.since === null ? "" : " since " + timestamp(clockDate(u.since)) + "; " + relative(Math.max(0, this.clock - u.since)) + " ago";
-    var active = u.state === "activating" ? "activating (auto-restart) (Result: " + u.result + ")" :
+    var active = u.starting ? "activating (start)" :
+      u.state === "activating" ? "activating (auto-restart) (Result: " + u.result + ")" :
       u.state === "failed" ? "failed (Result: " + u.result + ")" :
       u.state === "inactive" ? "inactive (dead)" : "active (" + sub(u) + ")";
     out.push("     Active: " + active + since);
@@ -571,13 +601,18 @@
       if (u.state !== "active" && u.started !== null) out.push("   Duration: " + timespan(u.since - u.started));
       var next = u.state === "active" ? this.timerNext(u) : null;
       out.push("    Trigger: " + (next ? timestamp(next) + "; " + relative(Math.round((next - this.now()) / 1000)) + " left" : "n/a"));
-      var target = this.unit(activates(u));
-      out.push("   Triggers: " + (target.state === "failed" ? "×" : target.state === "inactive" ? "○" : "●") + " " + target.name);
+      // The dot is coloured by the service's state on a terminal, but it's always ●.
+      out.push("   Triggers: ● " + activates(u));
       return unlines(out) + this.statusLog(u, n);
     }
+    // The timers that start this service, while they're loaded: on the
+    // console, while they're active (systemd unloads a stopped one).
+    this.loadedUnits().forEach(function (t) {
+      if (t.kind === "timer" && t.state === "active" && activates(t) === u.name) out.push("TriggeredBy: ● " + t.name);
+    });
     var docs = last(parseUnit(u.text), "Unit", "Documentation");
     if (docs) out.push("       Docs: " + docs);
-    if (u.state === "active" && u.proc) {
+    if ((u.state === "active" || u.starting) && u.proc) {
       out.push("   Main PID: " + u.proc.pid + " (" + procName(u.proc.command) + ")");
       out.push("      Tasks: 1 (limit: 2275)");
       out.push("     Memory: 1.2M (peak: 1.6M)");
@@ -586,10 +621,12 @@
       out.push("             └─" + u.proc.pid + " " + u.proc.command);
     } else if (u.ended) {
       // A program that couldn't be run at all (203/EXEC, 217/USER) lasted a millisecond.
-      if (u.state !== "activating") out.push("   Duration: " + (u.ended.code > 200 ? "1ms" : timespan(Math.max(0, u.ended.at - u.started))));
+      // A oneshot never became active, so it has no Duration, and always names its process.
+      var once = oneshot(u);
+      if (u.state !== "activating" && !once) out.push("   Duration: " + (u.ended.code > 200 ? "1ms" : timespan(Math.max(0, u.ended.at - u.started))));
       var start = (last(parseUnit(u.text), "Service", "ExecStart") || "").replace(/^[-@+!]+/, "");
       // A plain crash shows only its Main PID; anything else names the process too.
-      if (u.ended.signal || u.restarted || u.state === "activating" || u.ended.code > 200) {
+      if (u.ended.signal || u.restarted || u.state === "activating" || u.ended.code > 200 || once) {
         out.push("    Process: " + u.pid + " ExecStart=" + start + " (" + exitText(u.ended) + ")");
       }
       out.push("   Main PID: " + u.pid + " (" + exitText(u.ended) + ")");
@@ -651,6 +688,7 @@
       else if (a === "--state") o.state = o.state.concat((rawArgs[++i] || "").split(","));
       else if (a === "-a" || a === "--all") o.all = true;
       else if (a === "--now") o.now = true;
+      else if (a === "--no-block") o.noBlock = true;
       else if (a === "-q" || a === "--quiet") o.quiet = true;
       else if (a === "--failed") o.failed = true;
       else if (a === "--no-pager" || a === "-l" || a === "--full" || a === "--no-legend") { if (a === "--no-legend") o.noLegend = true; }
@@ -722,7 +760,11 @@
           return;
         }
         if (verb === "stop" || verb === "restart") sh.stopUnit(u);
-        if (verb !== "stop") sh.startUnit(u);
+        if (verb !== "stop" && sh.startUnit(u, o.noBlock)) {
+          err += "Job for " + n + " failed because the control process exited with error code.\n" +
+            'See "systemctl status ' + n + '" and "journalctl -xeu ' + n + '" for details.\n';
+          code = 1;
+        }
       });
       return { out: "", err: err, code: code };
     }
@@ -756,7 +798,7 @@
         }
         if (o.now) {
           var u = this.unit(n);
-          if (verb === "enable") this.startUnit(u); else this.stopUnit(u);
+          if (verb === "enable") this.startUnit(u, o.noBlock); else this.stopUnit(u);
         }
       }
       this.daemonReload(); // enabling reloads the manager, as the real one does

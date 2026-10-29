@@ -31,12 +31,14 @@ KNOWN_KEYS = {
 }
 
 # OnCalendar as the console reads it: a shorthand, or [DAY ]*-*-* HH:MM[:SS]
-# where each of the hour and minute is a number, * or */N. Kept equal to the
-# console's parser (shell/systemd.js calendarNext) by a test.
+# where each of the hour and minute is a number, * or START/STEP (`*:00/15`).
+# systemd refuses */N, and a START/STEP that can't repeat within the field
+# (`*:45/15`), so the console does too (#329). Kept equal to the console's
+# parser (shell/systemd.js calendarNext) by a test.
 CALENDAR_SHORTHANDS = ("minutely", "hourly", "daily", "weekly", "monthly")
 CALENDAR = re.compile(
     r"^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun) )?\*-\*-\* "
-    r"(\d{1,2}|\*|\*/\d{1,2}):(\d{1,2}|\*|\*/\d{1,2})(?::(\d{1,2}))?$"
+    r"(\d{1,2}|\*|\d{1,2}/\d{1,2}):(\d{1,2}|\*|\d{1,2}/\d{1,2})(?::(\d{1,2}))?$"
 )
 
 
@@ -70,9 +72,10 @@ def valid_calendar(spec: str) -> bool:
     def within(field: str, top: int) -> bool:
         if field == "*":
             return True
-        step = field.startswith("*/")
-        n = int(field[2:] if step else field)
-        return 0 < n <= top if step else n <= top
+        if "/" in field:
+            start, step = (int(n) for n in field.split("/"))
+            return step > 0 and start + step <= top
+        return int(field) <= top
 
     return within(hour, 23) and within(minute, 59) and (second is None or int(second) <= 59)
 
@@ -82,7 +85,9 @@ class SystemdUnit(_Strict):
 
     `exits` and `runs_for` say what its program does, since the console can't
     run it: with `exits`, the program stops with that status after `runs_for`
-    seconds (a crash); without, it runs until stopped. A unit with no `unit`
+    seconds (0 is a clean exit, anything else a crash); without, it runs until
+    stopped. A Type=oneshot service's program exits 0 unless `exits` says
+    otherwise (#329). A unit with no `unit`
     text has no file yet. It's the program's behaviour, waiting for the unit
     file the learner writes (#308)."""
 
@@ -91,7 +96,7 @@ class SystemdUnit(_Strict):
     dir: Literal["/usr/lib/systemd/system", "/etc/systemd/system"] = VENDOR_DIR
     state: Literal["active", "inactive", "failed"] = "active"
     enabled: bool = False
-    exits: Annotated[int, Field(ge=1, le=255)] | None = None
+    exits: Annotated[int, Field(ge=0, le=255)] | None = None
     runs_for: Annotated[int, Field(ge=0, le=86400)] = 0
 
     @property
@@ -137,6 +142,8 @@ class SystemdUnit(_Strict):
                 raise ValueError(f"{where}: [Service] has no ExecStart")
             if not program.startswith("/"):
                 raise ValueError(f"{where}: ExecStart must start with an absolute path")
+            if self.state == "failed" and self.exits == 0:
+                raise ValueError(f"{where}: a failed unit's program exits with a status other than 0")
         else:
             timer = sections.get("Timer", {})
             if "Service" in sections:

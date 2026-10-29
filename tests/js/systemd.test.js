@@ -365,7 +365,7 @@ test("Timers run on the station clock", () => {
     "     Loaded: loaded (/etc/systemd/system/air-sample.timer; disabled; preset: enabled)\n" +
     "     Active: active (waiting) since Thu 2026-10-08 08:00:00 UTC; 1h 0min ago\n" +
     "    Trigger: Fri 2026-10-09 03:00:00 UTC; 17h left\n" +
-    "   Triggers: ○ air-sample.service\n\n" +
+    "   Triggers: ● air-sample.service\n\n" +
     "Oct 08 08:00:00 meridian systemd[1]: Started air-sample.timer - Air sample every night.\n");
   run(sh, "systemctl stop air-sample.timer");
   assert.equal(run(sh, "systemctl list-timers --all"),
@@ -381,8 +381,95 @@ test("A timer's schedule: hourly, a weekday, and every quarter hour", () => {
   assert.equal(next("daily"), new Date(2026, 9, 9, 0, 0).toString());
   assert.equal(next("weekly"), new Date(2026, 9, 12, 0, 0).toString());
   assert.equal(next("Sat *-*-* 06:30"), new Date(2026, 9, 10, 6, 30).toString());
-  assert.equal(next("*-*-* *:*/15:00"), new Date(2026, 9, 8, 9, 15).toString());
+  // systemd's steps are START/STEP, from START up to the field's top (#329)
+  assert.equal(next("*-*-* *:00/15:00"), new Date(2026, 9, 8, 9, 15).toString());
+  assert.equal(next("*-*-* *:44/15"), new Date(2026, 9, 8, 9, 44).toString());
+  assert.equal(next("*-*-* 1/6:30"), new Date(2026, 9, 8, 13, 30).toString());
+  // systemd refuses */N, and a step that can't repeat within its field, as services.py does
+  ["*-*-* *:*/15:00", "*-*-* *:45/15", "*-*-* *:00/60", "*-*-* *:00/0", "*-*-* 20/4:00", "*-*-* 00/24:00"].forEach((spec) => {
+    assert.equal(calendarNext(spec, at), null, spec);
+  });
   assert.equal(next("*-*-* 09:00:00"), new Date(2026, 9, 9, 9, 0).toString()); // now isn't next
+});
+
+// systemd 255.4, Type=oneshot with `sh -c "echo probing; sleep 3"` and a
+// failing one, started with and without --no-block (#329).
+test("A oneshot service is activating while it runs, then inactive (dead)", () => {
+  const STAMP = "[Unit]\nDescription=Stamp job\n\n[Service]\nType=oneshot\nExecStart=/usr/local/sbin/stamp\n";
+  const sh = new Shell(spec({
+    fs: { "/etc/systemd/system/stamp.service": file(STAMP), "/usr/local/sbin/stamp": file("#!/bin/bash\n", 0o755) },
+    services: [{ name: "stamp.service", state: "inactive", exits: null, runs_for: 10 }],
+  }));
+  run(sh, "systemctl start --no-block stamp");
+  assert.equal(sh.lastStatus, 0);
+  assert.match(run(sh, "systemctl status stamp"), new RegExp(
+    "^● stamp\\.service - Stamp job\n" +
+    " {5}Loaded: loaded \\(/etc/systemd/system/stamp\\.service; static\\)\n" +
+    " {5}Active: activating \\(start\\) since Thu 2026-10-08 09:00:01 UTC; 1s ago\n" +
+    " {3}Main PID: (\\d+) \\(stamp\\)\n"));
+  assert.equal(sh.lastStatus, 3);
+  assert.equal(run(sh, "systemctl is-active stamp"), "activating\n");
+  assert.match(run(sh, "systemctl list-units stamp.service"), /stamp\.service loaded activating start Stamp job/);
+  run(sh, "sleep 10");
+  const pid = sh.sd.units["stamp.service"].pid;
+  assert.equal(run(sh, "systemctl status stamp"),
+    "○ stamp.service - Stamp job\n" +
+    "     Loaded: loaded (/etc/systemd/system/stamp.service; static)\n" +
+    "     Active: inactive (dead) since Thu 2026-10-08 09:00:11 UTC; " + (sh.clock - 11) + "s ago\n" +
+    "    Process: " + pid + " ExecStart=/usr/local/sbin/stamp (code=exited, status=0/SUCCESS)\n" +
+    "   Main PID: " + pid + " (code=exited, status=0/SUCCESS)\n" +
+    "        CPU: 2ms\n\n" +
+    "Oct 08 09:00:01 meridian systemd[1]: Starting stamp.service - Stamp job...\n" +
+    "Oct 08 09:00:11 meridian systemd[1]: stamp.service: Deactivated successfully.\n" +
+    "Oct 08 09:00:11 meridian systemd[1]: Finished stamp.service - Stamp job.\n");
+  // Without --no-block, start waits for the program: the station clock moves on 10 seconds.
+  const before = sh.clock;
+  run(sh, "systemctl start stamp");
+  assert.equal(sh.lastStatus, 0);
+  assert.equal(sh.clock - before, 1 + 10); // the command's own second, then the program's 10
+  assert.match(run(sh, "systemctl status stamp"), /Active: inactive \(dead\)/);
+});
+
+test("A failed oneshot fails its start, as systemd says", () => {
+  const sh = new Shell(spec({
+    fs: { "/etc/systemd/system/probe.service": file("[Unit]\nDescription=Probe\n\n[Service]\nType=oneshot\nExecStart=/usr/local/sbin/air-sample\n") },
+    services: [{ name: "probe.service", state: "inactive", exits: 1, runs_for: 1 }],
+  }));
+  const r = sh.run("systemctl start probe");
+  assert.equal(r.output, "Job for probe.service failed because the control process exited with error code.\n" +
+    'See "systemctl status probe.service" and "journalctl -xeu probe.service" for details.\n');
+  assert.equal(sh.lastStatus, 1);
+  assert.match(run(sh, "systemctl status probe"), new RegExp(
+    "^× probe\\.service - Probe\n.*\n {5}Active: failed \\(Result: exit-code\\) since [^\n]*\n" +
+    " {4}Process: \\d+ ExecStart=/usr/local/sbin/air-sample \\(code=exited, status=1/FAILURE\\)\n" +
+    " {3}Main PID: \\d+ \\(code=exited, status=1/FAILURE\\)\n {8}CPU: 2ms\n\n" +
+    ".* Starting probe\\.service - Probe\\.\\.\\.\n" +
+    ".* probe\\.service: Main process exited, code=exited, status=1/FAILURE\n" +
+    ".* probe\\.service: Failed with result 'exit-code'\\.\n" +
+    ".* Failed to start probe\\.service - Probe\\.\n$"));
+});
+
+test("A timer and its service name each other with ●, whatever the state", () => {
+  const sh = new Shell(spec());
+  assert.equal(run(sh, "systemctl status air-sample.service"),
+    "○ air-sample.service - Air sample\n" +
+    "     Loaded: loaded (/etc/systemd/system/air-sample.service; static)\n" +
+    "     Active: inactive (dead)\n" +
+    "TriggeredBy: ● air-sample.timer\n");
+  assert.match(run(sh, "systemctl status air-sample.timer"), /\n {3}Triggers: ● air-sample\.service\n/);
+  // A stopped timer is unloaded on a real system, so the service no longer names it.
+  run(sh, "systemctl stop air-sample.timer");
+  assert.doesNotMatch(run(sh, "systemctl status air-sample.service"), /TriggeredBy/);
+  assert.match(run(sh, "systemctl status air-sample.timer"), /\n {3}Triggers: ● air-sample\.service\n/);
+});
+
+test("A simple service whose program exits 0 is inactive, not failed", () => {
+  const sh = new Shell(spec({ services: [{ name: "o2-backup.service", state: "inactive", exits: 0, runs_for: 0 }] }));
+  sh.sd.programs["o2-backup.service"] = { exits: 0, runsFor: 0 };
+  run(sh, "systemctl start o2-backup");
+  assert.equal(sh.lastStatus, 0);
+  assert.equal(run(sh, "systemctl is-active o2-backup"), "inactive\n");
+  assert.match(run(sh, "journalctl -u o2-backup"), /Started o2-backup\.service - O2 backup feed\.\n.*o2-backup\.service: Deactivated successfully\.\n$/);
 });
 
 test("Service checks grade the end state", () => {

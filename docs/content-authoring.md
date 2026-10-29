@@ -423,16 +423,24 @@ Services (#303) are systemd units, for Unit 1.5:
   `ExecStart`'s program must be a file you list (or under `/usr/bin` or `/bin`), and `User=` an
   account.
 - **The console can't run the program**, so `exits`/`runs_for` say what it does. A program that
-  exits leaves its unit `failed` (`status=1/FAILURE`), unless `Restart=on-failure` (or `always`)
+  exits 0 leaves its unit `inactive (dead)`; any other status leaves it `failed` (`status=1/FAILURE`), unless `Restart=on-failure` (or `always`)
   brings it back after `RestartSec`; one that fails 5 times in 10 s stays failed, as systemd's
   start limit says. Killing the main process with TERM leaves it inactive, with KILL failed. A
   learner's unit whose program isn't there fails with `203/EXEC`, an unknown `User=` with
   `217/USER`, and one with no `ExecStart` is refused as a bad setting.
+- **A `Type=oneshot` service** (#329) is `activating (start)` while its program runs (`runs_for`
+  seconds), then `inactive (dead)` with `status=0/SUCCESS`, or `failed` if `exits` says so. Its
+  journal has `Starting …`, `Deactivated successfully.` and `Finished …` (or `Failed to start
+  …`). `systemctl start` waits for it, moving the station clock on, unless `--no-block`.
+  The program prints nothing to the journal: an exercise that needs its output says so in
+  `journal:`. A service started by an active timer shows `TriggeredBy: ● NAME.timer`.
 - **An edited unit needs `daemon-reload`**: `status` and `cat` warn until then, and a start uses
   the version loaded. A new file loads on first use, as on a real system, and `enable` reloads.
 - **Timers** don't fire: `list-timers` and `status` show the next run from `OnCalendar` against
   the station clock. The console reads a shorthand (`minutely hourly daily weekly monthly`) or
-  `[DAY ]*-*-* HH:MM[:SS]`, where the hour and minute may be `*` or `*/N`.
+  `[DAY ]*-*-* HH:MM[:SS]`, where the hour and minute may be `*`, a number, or `START/STEP`
+  (`*:00/15` is every quarter hour). systemd has no `*/N` form, so the content refuses it, and
+  a `START/STEP` that can't repeat (`*:45/15`), as `systemd-analyze calendar` does.
 - **Changing anything needs `sudo`; reading doesn't.** Without it, the console refuses with
   `Interactive authentication required.`, as Ubuntu's systemctl does when nothing can ask for a
   password. Over a real ssh session, polkit may ask for one itself: a lesson shouldn't promise
