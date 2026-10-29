@@ -15,6 +15,7 @@ import pytest
 
 from app.content import ContentError, load_catalog
 from app.content.loader import CONTENT_DIR
+from tests.conftest import real_catalog
 
 SYLLABUS = """
 tracks:
@@ -77,6 +78,35 @@ def test_app_startup_exposes_the_catalog(client):
     assert "the-filesystem" in catalog.modules
 
 
+@pytest.mark.criterion(319, "The real curriculum is parsed once per test process")
+def test_tests_and_the_app_share_one_real_catalog(client):
+    assert real_catalog() is real_catalog()
+    assert client.app.state.catalog is real_catalog()  # the lifespan's load, in tests
+
+
+@pytest.mark.criterion(319, "The real curriculum is parsed once per test process")
+def test_only_the_real_curriculum_loads_test_parses_content_itself():
+    uncached = []
+    for path in sorted(Path(__file__).parent.glob("test_*.py")):
+        for func in ast.walk(ast.parse(path.read_text())):
+            if isinstance(func, ast.FunctionDef):
+                for call in ast.walk(func):
+                    if (
+                        isinstance(call, ast.Call)
+                        and getattr(call.func, "id", None) == "load_catalog"
+                        and (not call.args or getattr(call.args[0], "id", None) == "CONTENT_DIR")
+                    ):
+                        uncached.append(f"{path.name}::{func.name}")
+    assert uncached == ["test_content.py::test_the_real_curriculum_loads"], "use real_catalog() from tests.conftest"
+
+
+@pytest.mark.criterion(319, "Tests with their own content still load it fresh")
+def test_a_tree_of_its_own_is_loaded_fresh(tmp_path):
+    catalog = load_catalog(write_tree(tmp_path, files={"core/shell/01-first.md": MODULE}))
+    assert catalog is not real_catalog()
+    assert list(catalog.modules) == ["first"]
+
+
 def test_a_valid_tree_builds_the_catalog(tmp_path):
     catalog = load_catalog(
         write_tree(tmp_path, files={"core/shell/01-first.md": MODULE, "core/shell/02-second.md": MODULE})
@@ -91,6 +121,7 @@ def test_a_valid_tree_builds_the_catalog(tmp_path):
 
 # --- invalid modules name the file and the field -------------------------------
 @pytest.mark.criterion(4, "An invalid module fails CI, not production")
+@pytest.mark.criterion(319, "A broken module still fails the suite by name")
 def test_choice_answer_out_of_range_names_file_and_field(tmp_path):
     bad = MODULE.replace("answer: 0", "answer: 5")
     found = problems(write_tree(tmp_path, files={"core/shell/01-first.md": bad}))
@@ -222,7 +253,7 @@ def test_inline_markdown_renders_code_and_escapes_html():
 
 
 # --- the real curriculum follows the authoring guidelines (docs/content-authoring.md) ---
-@pytest.mark.parametrize("module", load_catalog().ordered_modules(), ids=lambda m: m.slug)
+@pytest.mark.parametrize("module", real_catalog().ordered_modules(), ids=lambda m: m.slug)
 def test_real_modules_follow_the_authoring_guidelines(module):
     assert 10 <= module.minutes <= 20, "a daily module is 15–20 minutes (10 at the least)"
     assert 3 <= len(module.quiz) <= 5, "quiz: 3–5 questions"
@@ -271,7 +302,7 @@ def test_no_console_task_needs_an_untaught_command():
     import re
 
     taught = ""
-    catalog = load_catalog()
+    catalog = real_catalog()
     for module in [m for unit in ("linux-shell", "bash-scripting", "git", "networking") for m in catalog.unit_modules(unit)]:
         taught += " " + _prose_text(module)  # this module's lesson, and every earlier one
         if not module.terminal:
@@ -295,7 +326,7 @@ def test_shell_keywords_are_not_commands():
 
 @pytest.mark.criterion(80, "Reading a file is taught before it's needed")
 def test_reading_a_file_is_taught_in_module_01():
-    first = load_catalog().unit_modules("linux-shell")[0]
+    first = real_catalog().unit_modules("linux-shell")[0]
     text = _taught_text(first)
     reading = text.index("Looking, moving and reading")
     assert reading < text.index("Try it")
@@ -306,7 +337,7 @@ def test_reading_a_file_is_taught_in_module_01():
 
 @pytest.mark.criterion(80, "The tasks say to read")
 def test_the_tasks_say_to_read():
-    first, second = load_catalog().unit_modules("linux-shell")[:2]
+    first, second = real_catalog().unit_modules("linux-shell")[:2]
     assert "when did scrubber B go offline?" in " ".join(first.terminal.task.split())
     assert "read it (`cat` prints a file)" in " ".join(second.terminal.task.split())
 
@@ -314,7 +345,7 @@ def test_the_tasks_say_to_read():
 # --- #85: "comms" names one place on the station ------------------------------------------
 @pytest.mark.criterion(85, '"Comms" names one place on the station')
 def test_comms_names_one_place_on_the_station():
-    catalog = load_catalog()
+    catalog = real_catalog()
     for track in catalog.tracks:
         if track.deck == "Comms, Sensors & Shields":
             continue
@@ -364,7 +395,7 @@ def test_lesson_headings_get_ids_that_cant_clash_with_the_page():
 
 def test_every_real_card_points_at_its_lesson_section():
     # backfilled with #104; the loader has already checked each one is a heading
-    for module in load_catalog().ordered_modules():
+    for module in real_catalog().ordered_modules():
         for card in module.cards:
             assert card.section_anchor and f'id="{card.section_anchor}"' in module.body_html, card.id
 
@@ -375,7 +406,7 @@ SHELL_SECTION = "The shell: what reads your commands"
 
 @pytest.mark.criterion(196, "Module 01 says what the shell is")
 def test_module_01_says_what_the_shell_is():
-    first = load_catalog().unit_modules("linux-shell")[0]
+    first = real_catalog().unit_modules("linux-shell")[0]
     body = " ".join(first.body_html.split())
     assert body.index(f">{SHELL_SECTION}</h2>") < body.index(">One tree, one root</h2>")
     section = body[body.index(SHELL_SECTION) : body.index(">One tree, one root</h2>")]
@@ -389,7 +420,7 @@ def test_module_01_says_what_the_shell_is():
 
 @pytest.mark.criterion(196, "Module 03's globs point back to it")
 def test_module_03s_globs_point_back_to_module_01():
-    third = load_catalog().unit_modules("linux-shell")[2]
+    third = real_catalog().unit_modules("linux-shell")[2]
     body = " ".join(third.body_html.split())
     globs = body[body.index(">Globs: patterns the shell expands</h2>") :]
     assert "In module 01, the shell reads the whole line before the command runs" in globs.split("</h2>", 2)[1]
@@ -397,7 +428,7 @@ def test_module_03s_globs_point_back_to_module_01():
 
 # --- #206: module 04 says how to work the numbers out -----------------------------
 def _permissions():
-    module = load_catalog().modules["permissions"]
+    module = real_catalog().modules["permissions"]
     return module, " ".join(module.body_html.split())
 
 
@@ -443,7 +474,7 @@ def test_module_04_doesnt_hand_over_its_quiz_answers():
 
 # --- #210: module 05's second task is findable ------------------------------------------
 def _users_and_sudo():
-    module = load_catalog().modules["users-and-sudo"]
+    module = real_catalog().modules["users-and-sudo"]
     return module, " ".join(module.body_html.split())
 
 
@@ -483,7 +514,7 @@ def test_module_05_teaches_su_before_its_card():
 
 # --- #214: module 06 says what $? is ---------------------------------------------------
 def _processes():
-    module = load_catalog().modules["processes-and-signals"]
+    module = real_catalog().modules["processes-and-signals"]
     return module, " ".join(module.body_html.split())
 
 
@@ -505,7 +536,7 @@ def test_module_06_says_silence_means_success():
 
 # --- #216: module 07 reads for a beginner -----------------------------------------------
 def _pipes():
-    module = load_catalog().modules["pipes-and-redirection"]
+    module = real_catalog().modules["pipes-and-redirection"]
     return module, " ".join(module.body_html.split())
 
 
@@ -549,7 +580,7 @@ def test_module_07_practises_tee():
 
 # --- #224: module 01 reads for a day-1 beginner ------------------------------------------
 def _filesystem():
-    module = load_catalog().modules["the-filesystem"]
+    module = real_catalog().modules["the-filesystem"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -617,7 +648,7 @@ def test_module_01s_smaller_wording():
 
 # --- #226: module 02 reads for a beginner who has done module 01 --------------------------
 def _navigating():
-    module = load_catalog().modules["navigating"]
+    module = real_catalog().modules["navigating"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -677,7 +708,7 @@ def test_module_02s_ls_d_uses_a_real_path():
 
 # --- #228: module 03 reads for a beginner who has done 01 and 02 --------------------------
 def _globs():
-    module = load_catalog().modules["files-and-globs"]
+    module = real_catalog().modules["files-and-globs"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -748,7 +779,7 @@ def test_module_03_explains_the_trailing_slash():
 
 # --- #232: module 04 reads for a beginner who has done 01 to 03 ---------------------------
 def _perms_plain():
-    module = load_catalog().modules["permissions"]
+    module = real_catalog().modules["permissions"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -818,7 +849,7 @@ def test_module_04s_task_matches_its_three_files():
 
 # --- #234: module 05 reads for a beginner who has done 01 to 04 ---------------------------
 def _sudo_plain():
-    module = load_catalog().modules["users-and-sudo"]
+    module = real_catalog().modules["users-and-sudo"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -901,7 +932,7 @@ def test_module_05s_task_says_when_its_done():
 
 # --- #237: module 06 reads for a beginner who has done 01 to 05 ---------------------------
 def _signals_plain():
-    module = load_catalog().modules["processes-and-signals"]
+    module = real_catalog().modules["processes-and-signals"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -972,7 +1003,7 @@ def test_module_06s_task_says_when_its_done():
 
 # --- #239: module 07 reads for a beginner who has done 01 to 06 ---------------------------
 def _pipes_plain():
-    module = load_catalog().modules["pipes-and-redirection"]
+    module = real_catalog().modules["pipes-and-redirection"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -1038,7 +1069,7 @@ def test_module_07s_task_says_when_its_done():
 
 # --- #241: module 08 reads for a beginner who has done 01 to 07 ---------------------------
 def _text_tools_plain():
-    module = load_catalog().modules["text-tools"]
+    module = real_catalog().modules["text-tools"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -1128,7 +1159,7 @@ def test_module_08s_smaller_fixes():
 
 # --- #243: module 09 reads for a beginner who has done 01 to 08 ---------------------------
 def _env_plain():
-    module = load_catalog().modules["environment-and-path"]
+    module = real_catalog().modules["environment-and-path"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):
@@ -1202,7 +1233,7 @@ def test_module_09_says_export_is_silent_and_drops_jargon():
 
 # --- #245: module 10 reads for a beginner who has done 01 to 09 ---------------------------
 def _packages_plain():
-    module = load_catalog().modules["packages"]
+    module = real_catalog().modules["packages"]
     lesson, try_it = module.body_html.split('<h2 id="sec-try-it">Try it</h2>')
 
     def plain(fragment):

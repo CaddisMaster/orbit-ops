@@ -17,7 +17,7 @@ from app.content import ContentError, get_catalog, load_catalog
 from app.db import SessionLocal
 from app.main import app
 from app.models import XpEvent
-from tests.conftest import csrf
+from tests.conftest import csrf, real_catalog
 from tests.test_progress import complete
 from tests.test_xp import MODULE
 
@@ -144,6 +144,6 @@ def test_a_badge_line_from_outside_the_cast_fails_naming_the_badge(tmp_path):
 
 
 def test_the_real_ranks_have_lines_for_every_promotion():
-    catalog = load_catalog()
+    catalog = real_catalog()
     assert all(catalog.rank_comms[r.title] for r in catalog.ranks[1:])
     assert all(catalog.badge_comms[b.slug] for b in catalog.badges)

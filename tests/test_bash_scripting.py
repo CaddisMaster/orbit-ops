@@ -9,14 +9,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.content import load_catalog
 from app.db import SessionLocal
 from app.models import ModuleProgress
 from app.terminal import Node, client_spec, grade
+from tests.conftest import real_catalog
 
 
 def _module(slug):
-    return load_catalog().modules[slug]
+    return real_catalog().modules[slug]
 
 
 def _said(module, beat=None):
@@ -42,7 +42,7 @@ def _complete_content(module):
 
 def _unit_1_1_done(user):
     with SessionLocal() as db:
-        for m in load_catalog().unit_modules("linux-shell"):
+        for m in real_catalog().unit_modules("linux-shell"):
             db.add(ModuleProgress(user_id=user.id, module_slug=m.slug, status="complete", score=100, completed_at=datetime.now(UTC)))
         db.commit()
 
@@ -67,7 +67,7 @@ CONF = "/etc/scrubber/scrubber.conf"
 
 @pytest.mark.criterion(68, "Module 01 of Unit 1.2 is complete content")
 def test_module_01_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[0]
+    module = real_catalog().unit_modules("bash-scripting")[0]
     assert module.slug == "reading-and-editing"
     _complete_content(module)
 
@@ -150,7 +150,7 @@ def _cleaned(start, *, gzipped=True, keep_debug=True, delete_old=True, link="/va
 
 @pytest.mark.criterion(69, "Module 02 of Unit 1.2 is complete content")
 def test_module_02_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[1]
+    module = real_catalog().unit_modules("bash-scripting")[1]
     assert module.slug == "finding-things-and-disk-space"
     _complete_content(module)
 
@@ -216,7 +216,7 @@ def _scripted(start, *, mode=0o775, shebang=True, report=True):
 
 @pytest.mark.criterion(70, "Module 03 of Unit 1.2 is complete content")
 def test_module_03_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[2]
+    module = real_catalog().unit_modules("bash-scripting")[2]
     assert module.slug == "your-first-script"
     _complete_content(module)
 
@@ -279,7 +279,7 @@ def _reported(start, *, total=True, arithmetic=True, spare_parts=True):
 
 @pytest.mark.criterion(71, "Module 04 of Unit 1.2 is complete content")
 def test_module_04_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[3]
+    module = real_catalog().unit_modules("bash-scripting")[3]
     assert module.slug == "variables-and-quoting"
     _complete_content(module)
 
@@ -339,7 +339,7 @@ def _tested(start, *, guard=True, alert_below=19.5, alert_exit=1):
 
 @pytest.mark.criterion(72, "Module 05 of Unit 1.2 is complete content")
 def test_module_05_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[4]
+    module = real_catalog().unit_modules("bash-scripting")[4]
     assert module.slug == "conditionals"
     _complete_content(module)
 
@@ -406,7 +406,7 @@ def _deck_readings(start, *, quoted=True, over=lambda ppm: ppm > LIMIT, line=-1,
 
 @pytest.mark.criterion(73, "Module 06 of Unit 1.2 is complete content")
 def test_module_06_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[5]
+    module = real_catalog().unit_modules("bash-scripting")[5]
     assert module.slug == "loops"
     _complete_content(module)
 
@@ -478,7 +478,7 @@ def _calls_logged(start, *, usage_status=2, unknown_status=1, default_days=1, qu
 
 @pytest.mark.criterion(74, "Module 07 of Unit 1.2 is complete content")
 def test_module_07_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[6]
+    module = real_catalog().unit_modules("bash-scripting")[6]
     assert module.slug == "arguments-and-input"
     _complete_content(module)
 
@@ -551,7 +551,7 @@ def _librarised(start, *, limit=5000, at_limit_is_over=False, sourced_by=(DECK_R
 
 @pytest.mark.criterion(75, "Module 08 of Unit 1.2 is complete content")
 def test_module_08_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[7]
+    module = real_catalog().unit_modules("bash-scripting")[7]
     assert module.slug == "functions"
     _complete_content(module)
 
@@ -622,7 +622,7 @@ def _hardened(start, *, stops=True, trapped=True, cleaned=True, good_run=True):
 
 @pytest.mark.criterion(76, "Module 09 of Unit 1.2 is complete content")
 def test_module_09_is_complete_content():
-    module = load_catalog().unit_modules("bash-scripting")[8]
+    module = real_catalog().unit_modules("bash-scripting")[8]
     assert module.slug == "robust-scripts"
     _complete_content(module)
 
@@ -693,7 +693,7 @@ def _scheduled(start, *, shift_job=SHIFT_JOB, backup_job=BACKUP_JOB, ran_by_hand
 
 @pytest.mark.criterion(77, "Module 10 of Unit 1.2 is complete content")
 def test_module_10_is_complete_content():
-    modules = load_catalog().unit_modules("bash-scripting")
+    modules = real_catalog().unit_modules("bash-scripting")
     assert len(modules) == 10 and modules[9].slug == "scheduling-with-cron"  # Unit 1.2 is whole
     _complete_content(modules[9])
 

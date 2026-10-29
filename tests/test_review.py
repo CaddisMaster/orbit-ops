@@ -17,7 +17,7 @@ from app.db import SessionLocal
 from app.game import srs
 from app.game.srs import Schedule, review
 from app.models import CardState, ModuleProgress
-from tests.conftest import csrf
+from tests.conftest import csrf, real_catalog
 from tests.test_streaks import TODAY, clock  # noqa: F401  (fixture)
 from tests.test_xp import MODULE, SYLLABUS
 
@@ -62,7 +62,7 @@ def test_failing_a_new_card_is_not_a_lapse():
 # --- card ids ---------------------------------------------------------------------------------
 @pytest.mark.criterion(51, "Cards have stable ids")
 def test_cards_have_stable_ids():
-    catalog = load_catalog()
+    catalog = real_catalog()
     cards = catalog.cards()
     assert len(cards) == sum(len(m.cards) for m in catalog.modules.values()) >= 30  # unique across the curriculum
     for card_id, card in cards.items():
@@ -95,7 +95,7 @@ def test_a_card_without_a_usable_id_is_refused(tmp_path, cards, expect):
 
 
 def test_cards_render_inline_markdown():
-    card = load_catalog().cards()["the-filesystem/etc"]
+    card = real_catalog().cards()["the-filesystem/etc"]
     assert card.front_html == "What lives in <code>/etc</code>?"
 
 
@@ -136,7 +136,7 @@ def test_a_completed_modules_cards_join_the_queue(logged_in, user):
     page = logged_in.get("/review").text
     assert _shown(page) == "navigating/ls-lah"
     assert "<span>Watch drill · 3 items · from: Life Support</span>" in page
-    catalog = load_catalog()
+    catalog = real_catalog()
     with SessionLocal() as db:
         due = srs.queue(db, user.id, catalog, {"navigating"}, TODAY).due
     assert [c.module for c in due] == ["navigating"] * 3  # not files-and-globs, which isn't complete
@@ -230,7 +230,7 @@ def test_the_review_queue_is_a_watch_drill(logged_in, user):
 
 @pytest.mark.criterion(82, "Clearing the drill gets a word from the crew")
 def test_clearing_the_drill_gets_a_word_from_the_crew(logged_in, user):
-    catalog = load_catalog()
+    catalog = real_catalog()
     slug, html = catalog.drill_cleared[TODAY.toordinal() % len(catalog.drill_cleared)]  # picked by the date
     _complete(user.id, "navigating")
     for card in ("navigating/ls-lah", "navigating/cd-dash"):
@@ -245,7 +245,7 @@ def test_the_drill_lines_rotate_by_date():
 
     from app.routers.review import _cleared_line
 
-    catalog = load_catalog()
+    catalog = real_catalog()
     lines = {_cleared_line(catalog, TODAY + timedelta(days=n))["html"] for n in range(len(catalog.drill_cleared))}
     assert len(lines) == len(catalog.drill_cleared) >= 3
 

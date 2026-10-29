@@ -12,7 +12,7 @@ import re
 
 import pytest
 
-from app.content import load_catalog
+from tests.conftest import real_catalog
 
 
 def _sections(module) -> list[str]:
@@ -534,7 +534,7 @@ NEEDS = {
 
 def _modules_with_tasks():
     """Every module with a console task or a lab."""
-    return [m for m in load_catalog().ordered_modules() if m.terminal or m.lab]
+    return [m for m in real_catalog().ordered_modules() if m.terminal or m.lab]
 
 
 @pytest.mark.criterion(101, "Every console task's needs are written down")
@@ -570,7 +570,7 @@ CONSOLE_LACKS = {
 
 
 @pytest.mark.criterion(101, "The console is described truthfully")
-@pytest.mark.parametrize("module", load_catalog().ordered_modules(), ids=lambda m: m.slug)
+@pytest.mark.parametrize("module", real_catalog().ordered_modules(), ids=lambda m: m.slug)
 def test_lessons_say_when_the_console_lacks_something(module):
     for section in _sections(module):
         text = _text(section, code_blocks=True) + " " + section

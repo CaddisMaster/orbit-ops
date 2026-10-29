@@ -9,11 +9,11 @@ import re
 import pytest
 
 from app import lab
-from app.content import load_catalog
+from tests.conftest import real_catalog
 
 
 def _module(slug):
-    return load_catalog().modules[slug]
+    return real_catalog().modules[slug]
 
 
 def _complete_content(module):
@@ -34,7 +34,7 @@ CLEAN = "On branch master\nnothing to commit, working tree clean\n"
 
 @pytest.mark.criterion(125, "Module 01 of Unit 1.3 is complete content")
 def test_module_01_is_complete_content():
-    module = load_catalog().unit_modules("git")[0]
+    module = real_catalog().unit_modules("git")[0]
     assert module.slug == "your-first-repository"
     _complete_content(module)
 
@@ -87,7 +87,7 @@ REGEN_LEFT = "@@ -10,4 +10,4 @@ regen_vent = overboard\n-regen_temp_c = 200\n+re
 
 @pytest.mark.criterion(126, "Module 02 of Unit 1.3 is complete content")
 def test_module_02_is_complete_content():
-    module = load_catalog().unit_modules("git")[1]
+    module = real_catalog().unit_modules("git")[1]
     assert module.slug == "staging-and-diffs"
     _complete_content(module)
 
@@ -134,7 +134,7 @@ Date:   Mon Sep 14 09:00:00 2026 +0000
 
 @pytest.mark.criterion(127, "Module 03 of Unit 1.3 is complete content")
 def test_module_03_is_complete_content():
-    module = load_catalog().unit_modules("git")[2]
+    module = real_catalog().unit_modules("git")[2]
     assert module.slug == "reading-history"
     _complete_content(module)
 
@@ -202,7 +202,7 @@ def test_module_03s_setup_builds_the_depot_sync_commit():
     assert any("> etc/cron.d/scrubber-maint" in line for line in depot)  # added in that commit
     assert any("depot-key-a1" in line for line in depot)  # with the drone's new list
     assert 'c Okafor 2026-10-05' in setup  # and it isn't the newest commit, so it has to be searched for
-    cron = load_catalog().modules["scheduling-with-cron"].terminal.files
+    cron = real_catalog().modules["scheduling-with-cron"].terminal.files
     planted = next(f.contents for f in cron if f.path == "/etc/cron.d/scrubber-maint")
     assert "35 2 * * *  root  /usr/local/sbin/scrubber-flush >/dev/null 2>&1" in planted
     assert "scrubber-flush" in module.lab.task and "git log -S" in module.lab.task
@@ -234,7 +234,7 @@ GRAPH = """*   c15b2f8 (HEAD -> main) Merge branch 'pump-schedule'
 
 @pytest.mark.criterion(128, "Module 04 of Unit 1.3 is complete content")
 def test_module_04_is_complete_content():
-    module = load_catalog().unit_modules("git")[3]
+    module = real_catalog().unit_modules("git")[3]
     assert module.slug == "branches-and-merging"
     _complete_content(module)
 
@@ -289,7 +289,7 @@ MERGED = """*   a843d66 (HEAD -> main) Merge galley-warning: CO2 warning at 1200
 
 @pytest.mark.criterion(129, "Module 05 of Unit 1.3 is complete content")
 def test_module_05_is_complete_content():
-    module = load_catalog().unit_modules("git")[4]
+    module = real_catalog().unit_modules("git")[4]
     assert module.slug == "merge-conflicts"
     _complete_content(module)
 
@@ -330,7 +330,7 @@ LOG3 = """388e174 (HEAD -> main, origin/main, origin/HEAD) Add the beacon interv
 
 @pytest.mark.criterion(130, "Module 06 of Unit 1.3 is complete content")
 def test_module_06_is_complete_content():
-    module = load_catalog().unit_modules("git")[5]
+    module = real_catalog().unit_modules("git")[5]
     assert module.slug == "remotes"
     _complete_content(module)
 
@@ -365,7 +365,7 @@ REFLOG = "5b9d2d9 HEAD@{3}: commit: Raise the battery reserve to 35%\n"
 
 @pytest.mark.criterion(131, "Module 07 of Unit 1.3 is complete content")
 def test_module_07_is_complete_content():
-    module = load_catalog().unit_modules("git")[6]
+    module = real_catalog().unit_modules("git")[6]
     assert module.slug == "undoing-things"
     _complete_content(module)
 
@@ -424,11 +424,11 @@ CONF = "corridor_night_pct = 20\ncabin_night_pct = 40\nnight_starts = 21:00\nnig
 
 @pytest.mark.criterion(132, "Module 08 of Unit 1.3 is complete content")
 def test_module_08_is_complete_content():
-    module = load_catalog().unit_modules("git")[7]
+    module = real_catalog().unit_modules("git")[7]
     assert module.slug == "working-together"
     _complete_content(module)
     assert module.lab.ai_review and module.lab.rubric, "the unit's first lab reviewed by Claude (#122)"
-    assert module.slug == load_catalog().unit_modules("git")[-1].slug, "the end of the unit"
+    assert module.slug == real_catalog().unit_modules("git")[-1].slug, "the end of the unit"
 
 
 def test_module_08s_lab_passes_any_machines_output():

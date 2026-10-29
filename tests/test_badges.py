@@ -16,6 +16,7 @@ from app.db import SessionLocal
 from app.game.badges import Facts, qualifying
 from app.main import app
 from app.models import BadgeEarned, ModuleProgress
+from tests.conftest import real_catalog
 from tests.test_progress import complete
 from tests.test_streaks import _seed, active, clock  # noqa: F401  (fixture)
 from tests.test_xp import SYLLABUS, _write
@@ -107,7 +108,7 @@ def test_bad_badge_definitions_are_reported(tmp_path, replace, with_, expect):
 
 
 def test_the_real_curriculum_has_a_badge_for_every_unit_and_the_streaks():
-    catalog = load_catalog()
+    catalog = real_catalog()
     rules = [b.rule for b in catalog.badges]
     assert {r.unit_complete for r in rules if isinstance(r, UnitCompleteRule)} == set(catalog.units)
     assert sorted(r.streak for r in rules if isinstance(r, StreakRule)) == [7, 30, 100]

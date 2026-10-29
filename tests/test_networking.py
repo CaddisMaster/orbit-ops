@@ -8,13 +8,13 @@ import ipaddress
 
 import pytest
 
-from app.content import load_catalog
 from app.terminal import Node, Process, grade, passes
+from tests.conftest import real_catalog
 from tests.test_bash_scripting import _complete_content, _said, _start
 
 
 def _module(slug):
-    return load_catalog().modules[slug]
+    return real_catalog().modules[slug]
 
 
 def _with_file(state, path, contents):
@@ -34,7 +34,7 @@ LINES = [
 
 @pytest.mark.criterion(167, "Module 01 of Unit 1.4 is complete content")
 def test_module_01_is_complete_content():
-    module = load_catalog().unit_modules("networking")[0]
+    module = real_catalog().unit_modules("networking")[0]
     assert module.slug == "addresses-and-ports"
     _complete_content(module)
 
@@ -114,7 +114,7 @@ def _fixed_hosts(start, drop="10.4.1.14 mission.meridian\n"):
 
 @pytest.mark.criterion(168, "Module 02 of Unit 1.4 is complete content")
 def test_module_02_is_complete_content():
-    module = load_catalog().unit_modules("networking")[1]
+    module = real_catalog().unit_modules("networking")[1]
     assert module.slug == "names-and-dns"
     _complete_content(module)
 
@@ -188,7 +188,7 @@ def _relays(verdicts):
 
 @pytest.mark.criterion(169, "Module 03 of Unit 1.4 is complete content")
 def test_module_03_is_complete_content():
-    module = load_catalog().unit_modules("networking")[2]
+    module = real_catalog().unit_modules("networking")[2]
     assert module.slug == "is-it-reachable"
     _complete_content(module)
 
@@ -292,7 +292,7 @@ FOLLOWED = "200 https://learn.seandesmet.com/healthz\n"
 
 @pytest.mark.criterion(170, "Module 04 of Unit 1.4 is complete content")
 def test_module_04_is_complete_content():
-    module = load_catalog().unit_modules("networking")[3]
+    module = real_catalog().unit_modules("networking")[3]
     assert module.slug == "http-by-hand"
     _lab_content(module)
 
@@ -348,7 +348,7 @@ FIRST = "2026-10-08T18:46:54Z\n"
 
 @pytest.mark.criterion(171, "Module 05 of Unit 1.4 is complete content")
 def test_module_05_is_complete_content():
-    module = load_catalog().unit_modules("networking")[4]
+    module = real_catalog().unit_modules("networking")[4]
     assert module.slug == "apis-and-json"
     _lab_content(module)
 
@@ -406,7 +406,7 @@ VALID = "Certificate will not expire\n"
 
 @pytest.mark.criterion(172, "Module 06 of Unit 1.4 is complete content")
 def test_module_06_is_complete_content():
-    module = load_catalog().unit_modules("networking")[5]
+    module = real_catalog().unit_modules("networking")[5]
     assert module.slug == "tls-and-certificates"
     _lab_content(module)
 
@@ -459,7 +459,7 @@ GITHUB = "256 SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU github.com (ED2
 
 @pytest.mark.criterion(173, "Module 07 of Unit 1.4 is complete content")
 def test_module_07_is_complete_content():
-    module = load_catalog().unit_modules("networking")[6]
+    module = real_catalog().unit_modules("networking")[6]
     assert module.slug == "ssh-keys"
     _lab_content(module)
 
@@ -540,7 +540,7 @@ FORWARD = "user okafor\nhostname relay.meridian.example\nlocalforward 8080 [loca
 
 @pytest.mark.criterion(174, "Module 08 of Unit 1.4 is complete content")
 def test_module_08_is_complete_content():
-    module = load_catalog().unit_modules("networking")[7]
+    module = real_catalog().unit_modules("networking")[7]
     assert module.slug == "copying-and-tunnels"
     _lab_content(module)
 
@@ -614,7 +614,7 @@ def _fixed(start, tuples=None, enabled=True, feed='{"relay":"relay.meridian","up
 
 @pytest.mark.criterion(175, "Module 09 of Unit 1.4 is complete content")
 def test_module_09_is_complete_content():
-    module = load_catalog().unit_modules("networking")[8]
+    module = real_catalog().unit_modules("networking")[8]
     assert module.slug == "firewalls"
     _complete_content(module)
 
@@ -698,7 +698,7 @@ def _written_up(start, lines=FOUND):
 
 @pytest.mark.criterion(176, "Module 10 of Unit 1.4 is complete content")
 def test_module_10_is_complete_content():
-    module = load_catalog().unit_modules("networking")[9]
+    module = real_catalog().unit_modules("networking")[9]
     assert module.slug == "following-a-connection"
     _complete_content(module)
 

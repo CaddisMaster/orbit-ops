@@ -15,7 +15,7 @@ from app import challenge
 from app.content import ContentError, load_catalog
 from app.db import SessionLocal
 from app.models import ExerciseAttempt, XpEvent
-from tests.conftest import csrf
+from tests.conftest import csrf, real_catalog
 from tests.test_review import _complete
 from tests.test_terminal import TERMINAL
 from tests.test_xp import MODULE, SYLLABUS
@@ -52,7 +52,7 @@ def _challenge_xp(user_id):
 # --- content -------------------------------------------------------------------------------
 @pytest.mark.criterion(54, "Every challenge's solution passes and its starter fails")
 def test_every_challenges_solution_passes_and_its_starter_fails():
-    modules = [m for m in load_catalog().modules.values() if m.challenge]
+    modules = [m for m in real_catalog().modules.values() if m.challenge]
     assert modules
     for module in modules:
         assert all(challenge.run_in_cpython(module, module.challenge.solution)), module.slug
@@ -61,7 +61,7 @@ def test_every_challenges_solution_passes_and_its_starter_fails():
 
 @pytest.mark.criterion(54, "There is a real challenge")
 def test_there_is_a_real_challenge():
-    module = load_catalog().modules["text-tools"]
+    module = real_catalog().modules["text-tools"]
     assert module.challenge and module.challenge_inputs["log"].count("\n") == 25  # the console's access.log
     naive = "def failed_logins(log):\n    return sum('POST /login' in l and '401' in l for l in log.splitlines())"
     assert challenge.run_in_cpython(module, naive) == [True, True, True, False, False]  # the checks catch the shortcut
@@ -69,7 +69,7 @@ def test_there_is_a_real_challenge():
 
 def test_the_challenge_agrees_with_meridian():
     # The task and the first check quote MERIDIAN's figure; it must be the log's.
-    module = load_catalog().modules["text-tools"]
+    module = real_catalog().modules["text-tools"]
     log = module.challenge_inputs["log"].splitlines()
     failed = sum('"POST /login ' in line and line.split('"')[2].split()[0] == "401" for line in log)
     assert f"failed_logins(log) == {failed}" in module.challenge.checks[0].check
@@ -112,7 +112,7 @@ def test_a_bad_challenge_is_refused(tmp_path, challenge_yaml, terminal, expect):
 
 
 def test_the_page_never_gets_the_solution():
-    module = load_catalog().modules["text-tools"]
+    module = real_catalog().modules["text-tools"]
     spec = challenge.client_spec(module)
     assert set(spec) == {"inputs", "starter", "checks", "says"}
     assert "parts = line.split" not in json.dumps(spec)  # the reference answer's code

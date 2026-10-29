@@ -14,6 +14,7 @@ import pytest
 from app.content import ContentError, load_catalog
 from app.db import SessionLocal
 from app.models import ModuleProgress
+from tests.conftest import real_catalog
 from tests.test_progress import complete
 from tests.test_xp import xp_curriculum  # noqa: F401  (fixture)
 
@@ -40,7 +41,7 @@ def test_a_life_support_module_carries_its_deck_and_unit_emblem(logged_in):
 def test_every_deck_has_its_own_colour():
     css = (STATIC / "css" / "style.css").read_text()
     colours = {}
-    for track in load_catalog().tracks:
+    for track in real_catalog().tracks:
         match = re.search(rf"\.deck--{track.slug} \{{ --deck: (#[0-9a-f]{{6}});", css)
         assert match, f"no colour for deck--{track.slug}"
         colours[track.slug] = match.group(1)
@@ -49,7 +50,7 @@ def test_every_deck_has_its_own_colour():
 
 def test_syllabus_sections_and_the_mission_card_carry_their_deck(logged_in):
     syllabus = logged_in.get("/syllabus").text
-    for track in load_catalog().tracks:
+    for track in real_catalog().tracks:
         assert f'<section class="card track deck--{track.slug}">' in syllabus
     assert '<svg class="unit-emblem" data-emblem="branch"' in syllabus  # Git
     assert '<section class="card mission deck--core">' in logged_in.get("/").text
@@ -111,7 +112,7 @@ def test_the_readout_shows_systems_online_and_the_streak(logged_in, user):
     with SessionLocal() as db:
         db.add(ModuleProgress(user_id=user.id, module_slug="the-filesystem", status="complete", score=100))
         db.commit()
-    total = len(load_catalog().modules)
+    total = len(real_catalog().modules)
     for path in PAGES:
         page = logged_in.get(path).text
         assert f"Systems online <strong>1/{total}</strong>" in page, path

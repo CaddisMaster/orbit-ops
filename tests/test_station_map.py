@@ -18,6 +18,7 @@ from app.main import app
 from app.models import ModuleProgress
 from app.station_map import layout, slots_for, wrap
 from art import ship
+from tests.conftest import real_catalog
 from tests.test_progress import complete
 from tests.test_xp import MODULE
 
@@ -76,7 +77,7 @@ def _state(page: str, unit: str) -> str:
 # --- the art and the layout (pure) --------------------------------------------------------
 @pytest.mark.criterion(78, "Every track fits its section")
 def test_every_track_fits_its_section():
-    catalog = load_catalog()
+    catalog = real_catalog()
     assert set(ship.SLOTS) == set(ship.LABELS) == {t.slug for t in catalog.tracks}
     where = slots_for(catalog)  # raises if a track has more units than compartments
     assert len(where) == len(catalog.units) and len(set(where.values())) == len(where)  # one compartment each
@@ -221,7 +222,7 @@ def test_the_dashboard_and_nav_link_to_the_map(logged_in, map_curriculum):
 
 def test_the_real_map_renders(logged_in):
     page = logged_in.get("/map").text
-    assert page.count('<rect class="room"') == len(load_catalog().units)
+    assert page.count('<rect class="room"') == len(real_catalog().units)
 
 
 def test_pulsing_respects_reduced_motion(client):
@@ -233,7 +234,7 @@ def test_pulsing_respects_reduced_motion(client):
 @pytest.mark.criterion(88, "The syllabus tells each unit's story")
 def test_the_syllabus_tells_each_units_story(logged_in):
     page = logged_in.get("/syllabus").text
-    catalog = load_catalog()
+    catalog = real_catalog()
     for unit in catalog.units.values():
         if unit.briefing_html:
             block = page[page.index(f'<div class="unit" id="unit-{unit.slug}">') :]
