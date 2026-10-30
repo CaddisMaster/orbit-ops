@@ -156,9 +156,17 @@ def test_the_web_service_is_locked_down():
     assert web["cap_drop"] == ["ALL"]
     assert "no-new-privileges:true" in web["security_opt"]
     assert web["pids_limit"] == 100
-    # Dev loosens only pids and /tmp's noexec; a disk write still fails locally first.
+    # Dev loosens only pids, /tmp's noexec and CHOWN for root one-offs (#354); a disk
+    # write still fails locally first.
     dev = _dev_web()
     assert "read_only" not in dev and "cap_drop" not in dev and "security_opt" not in dev
+
+
+@pytest.mark.criterion(354, "Dev grants CHOWN and nothing else")
+def test_dev_grants_only_chown_for_pycharm():
+    assert _dev_web()["cap_add"] == ["CHOWN"]
+    assert "cap_add" not in _services()["web"]
+    assert _services()["web"]["cap_drop"] == ["ALL"]
 
 
 @pytest.mark.criterion(266, "Postgres is pinned by tag and digest")
