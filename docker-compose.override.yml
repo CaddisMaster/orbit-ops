@@ -1,6 +1,13 @@
 # Local development overrides. Compose reads this automatically; it is NOT
 # present on the droplet.
 services:
+  db:
+    # Dev only, so PyCharm's Database tool can browse it from the VM (#349).
+    # Loopback, like every published port (Docker bypasses ufw). 5432 and 5434
+    # are Budget Buddy's and MLIT's dev databases. Production's db stays
+    # unpublished: this file is not on the droplet.
+    ports:
+      - "127.0.0.1:5435:5432"
   web:
     build:
       context: .
