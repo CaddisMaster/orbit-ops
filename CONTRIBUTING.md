@@ -6,9 +6,10 @@ reasons; `CLAUDE.md` is the short form.
 
 ## 1. Get it running
 
-See `README.md` § Run it locally. Everything runs in containers; a host `.venv` is only for the
-editor's language server. Templates and Python reload live (the override bind-mounts the source
-and runs `uvicorn --reload`). Changing `requirements*.txt` or the `Dockerfile` needs
+See `README.md` § Run it locally. Everything runs in containers, including the editor's
+interpreter: PyCharm's Docker Compose interpreter on `web`, with both compose files (#354).
+Templates and Python reload live (the override bind-mounts the source and runs
+`uvicorn --reload`). Changing `requirements*.txt` or the `Dockerfile` needs
 `docker compose up -d --build web`.
 
 Pre-commit hooks (secret detection, whitespace, YAML/TOML checks):
