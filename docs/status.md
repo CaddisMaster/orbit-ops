@@ -138,6 +138,7 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.13.1 | 2026-10-29 | Fidelity fixes and the first multi-arch image: the console's timers and `systemctl status` match systemd 255 (#336, #338), module 03 drops an unkept promise (#341), and the release image is built for amd64 and arm64, each scanned (#337, #321). A PATCH. No migrations |
 | 0.13.0 | 2026-10-28 | Unit 1.5 systemd & services complete (6 modules, *Daemons Tamed*), and the Life Support mystery's reveal in the journal (#310): the console's `systemctl`, unit files and timers (#303) and `journalctl` (#304). The nightly database dump (#324) with private dumps (#326), its script installed by each deploy. No migrations
 | 0.12.1 | 2026-10-25 | The laptop screen's text stops growing with the window: 13.5–15.5px at every size, 14.9px at 1864×984 (#293). A PATCH. No migrations |
 | 0.12.0 | 2026-10-25 | The admin panel (#280–#285): reset a learner's progress (all, or one module or unit), preview any module, create and manage accounts (password, log out everywhere, delete, JSON export), AI spend and System pages; destructive actions re-ask the password. Migration `0010` (`users.is_admin`) |
@@ -156,6 +157,33 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-30: v0.13.1 shipped, #321 proven, and a handoff to Budget Buddy
+
+- **Nothing was ready to start** (#322 and #323 wait on BB #530, and #321 needed a release),
+  so Sean called the release. `release-prep` said GO but questioned 0.14.0: VERSIONING.md gives a
+  MINOR only for new surface, and #336/#338 are fidelity fixes under Changed. **Sean picked
+  v0.13.1.** #344 cut the CHANGELOG and added the missing Fixed line for #341.
+- **v0.13.1 deployed** on Sean's approval: run `40999574486`, commit `902208d`, no
+  migrations, `backup ok … pre-deploy-20261030-035749.sql.gz (5291 bytes)`, `/healthz` reports
+  0.13.1, and Budget Buddy returned 200.
+- **#321 closed**, proven on this release. The tag's index lists `linux/amd64` and
+  `linux/arm64`, plus two `unknown/unknown` attestation manifests. Both scan legs were green
+  (about 1.5 min each, in parallel). `build-push` took **3m06s**, against about 40 s for
+  amd64 only. On `jupiter` the arm64 image migrated a throwaway `postgres:16` to `0010` and served
+  `/healthz` under the production lockdown flags, with `uname -m` `aarch64`.
+- **Handoff for the BB session**, in the vault next to the 2026-10-27 IaC handoff: Orbit Ops's
+  state, #337's recipe for BB #529, what BB #530 needs (`lxd init`, the cross-cutting duties),
+  the Bitwarden TODOs, and **a reminder to come back here once BB #530 merges**, with its SHA.
+- Gotchas:
+  - `release-prep`'s version is worth reading against VERSIONING.md. Console code is not a MINOR
+    by itself, only new surface is.
+  - The deploy log greps show `::error::` lines that are the script's own source being echoed,
+    not errors.
+- **Unreleased on `main`:** nothing.
+- **Next:** Sean is doing BB #530 in a Budget Buddy session. When it merges, start #322 with BB's
+  SHA. Unit 2.1 (Python for operations) isn't blocked: plan its milestone and issues any time.
+  Still on the droplet: apt updates and the 26.04 upgrade.
 
 ### 2026-10-29 (later): IaC status, and #320's Bitwarden recovery copies
 
@@ -237,54 +265,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   #337 (release workflow), #341 (content), #334 and #339 (tests, docs).
 - **Next:** #320 (scripts + RUNBOOK; Sean seeds), then cut a release when Sean says, which also
   proves #321. #322 waits on BB #530; #323 on #322.
-
-### 2026-10-28: Unit 1.5 finished (#309, #310), and v0.13.0 shipped
-
-- **`/cycle`, queue #309 → #310.** Both are content, so both were tagged stop: built to green
-  PRs, then merged when Sean said so.
-  - #330 (#309), module 05 *Timers*: reading a cron line (cron is new here, since Unit 1.5 needs
-    only Unit 1.1), a `.timer` plus a `Type=oneshot` `.service`, `OnCalendar=` next to cron,
-    `Persistent=true`, enabling `NAME.timer` in full, `list-timers`. The console task moves the
-    weekly filter report from `/etc/cron.d` to a timer.
-  - #331 (#310), module 06 *The journal*, **the mystery's reveal**. The 02:30–02:45 window on
-    2026-10-08 (the previous boot) shows `CRON[5120]` starting `scrubber-flush`, `reply: FLUSH`
-    and `Stopping scrubberd` two seconds later. The learner files the window and the cron file in
-    `~/evidence` and restarts `scrubberd`, and Mission opens an inquiry into the depot.
-    `docs/story.md`'s 1.5 row is written. Who sent FLUSH stays for Unit 4.5.
-- **Real systemd corrected the drafts** (checked in `sysref`, systemd 255.4 as PID 1):
-  - `*-*-* *:*/15:00` is refused (the real step form is `*:00/15`). The console accepts it, so
-    the lesson teaches no step forms.
-  - `ExecStart=` has no shell: `>/dev/null 2>&1` arrives as arguments. A minutely timer fires
-    up to a minute late (`AccuracySec=1min`). `User=nobody` logs a "not safe" warning.
-  - A user outside `adm` gets `-- No entries --` for a service once they have journal lines of
-    their own. The console models a user with none (`No journal files were opened…`).
-  - A cron job that exits at once (`logger`) isn't filed under `cron.service`: it has no
-    `_SYSTEMD_UNIT`. Module 06 reads a window across all units for that reason.
-- **Filed #329:** the console's timers versus systemd: `*/N` steps, no `Type=oneshot`, no
-  `TriggeredBy:`, `Triggers:` glyph, and no log lines in `status` for an inactive unit.
-- **v0.13.0 released and deployed** on Sean's go. #332 cut the CHANGELOG and added a missing
-  line for the Dependabot bumps. Run `40713662755`, commit `51c5f83`, no migrations.
-  `backup ok: … pre-deploy-20261028-152437.sql.gz (5290 bytes)`, and `/healthz` reports 0.13.0,
-  with Budget Buddy still `ok`. It was the first deploy to install `backup_db.sh` for the
-  nightly timer, replacing the hand-installed copy from before #326.
-- Gotchas:
-  - Building two module branches in parallel worked this time: after the first merged, each
-    shared file was rebuilt as `main`'s plus the branch's own section. Each diff against `main`
-    then matched the branch's additions line for line.
-  - A module's test that indexes `unit_modules(...)[n]` breaks on a branch built without the
-    module before it. Find the module by slug.
-  - The console's `sudo` remembers the password for 15 simulated minutes, so a solution replayed
-    after another `sudo` sends `meridian` as a command. Harmless in CI, which starts fresh.
-- **Left for Sean:**
-  - From the Mac: check that `/opt/orbit-ops/backup_db.sh` is `755 deploy`, that the new
-    pre-deploy dump is `-rw-------`, and that `orbit-ops-backup.timer` is still scheduled. Then
-    delete `docker-compose.yml.v0.11.0` and `backups/pre-db-change.sql.gz`. This release is healthy.
-  - Unit 1.4 module 10 has `scrubber-flush` still running at 09:00, while Unit 1.5's console
-    rebooted at 08:00. Left alone.
-  - Module 03's `o2-backup` promise ("we'll put it right") is never paid off: drop the line, or
-    fix it in a later unit.
-  - Module 05 is about 1,200 words against the 900 guide.
-  - `sysref` can go (`docker rm -f sysref`), unless #329 wants it for comparisons.
-  - Still carried: the BB #530 Mac-clone decision, #320's `bw` location, #260.
-- **Next:** #319 (cache the real curriculum in tests, auto), then #329 (console timers, auto).
-  Sean approved that queue. After them, #321.
