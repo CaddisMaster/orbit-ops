@@ -6,6 +6,15 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.13.1] — 2026-10-29
+
+The station console's systemd behaves more like the real one, and module 03 loses a promise
+nobody keeps. It is also the first release built for both `amd64` and `arm64`.
+
+**Server:** no migrations and no new env vars. The droplet still pulls `amd64`; the image now
+carries an `arm64` half too (#321), so it can be staged on the VM later. Each architecture is
+scanned in its own leg, and a fixable CRITICAL in either one blocks the deploy.
+
 ### Changed
 - The station console's timers behave the way systemd 255's do (#329). `OnCalendar=` takes
   systemd's `*:00/15` step form and refuses `*/15`, as the real one does, so a lesson can no
@@ -17,6 +26,10 @@ and why it matters, not what the diff says.
   the unit's lines from this boot, from its last start on. A unit that starts inactive now
   shows what it logged earlier in the boot, rather than nothing, and lines from the previous
   boot never appear. A service waiting to restart shows none.
+
+### Fixed
+- In Unit 1.5 module 03, Okafor no longer promises to put `o2-backup` right (#340). Nothing in
+  the unit ever came back to it, so it read as a loose end.
 
 ## [0.13.0] — 2026-10-28
 
