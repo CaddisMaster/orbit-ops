@@ -6,9 +6,16 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.13.2] — 2026-10-30
+
+A security patch: the image moves to Python 3.14.10. Nothing changes for the learner.
+
+**Server:** no migrations and no new env vars. The image's base moves from Python 3.14.8 to
+3.14.10; the droplet's `docker-compose.yml` changes by a comment only.
+
 ### Security
 - Python 3.14.10 (#351), which fixes a critical CVE (CVE-2026-115557) the image scan found in
-  3.14.8. Production runs 3.14.8 until the next release.
+  3.14.8. The scan blocked every PR until the base moved.
 
 ## [0.13.1] — 2026-10-29
 
