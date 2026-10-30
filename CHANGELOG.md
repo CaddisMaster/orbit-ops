@@ -6,6 +6,10 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Security
+- Python 3.14.10 (#351), which fixes a critical CVE (CVE-2026-115557) the image scan found in
+  3.14.8. Production runs 3.14.8 until the next release.
+
 ## [0.13.1] — 2026-10-29
 
 The station console's systemd behaves more like the real one, and module 03 loses a promise
