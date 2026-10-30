@@ -9,11 +9,11 @@
 # of its own, so only the five files it keeps reach the image. It lands in
 # /opt/pyodide, not app/static/, because in development the source tree is
 # bind-mounted over /app and would hide it.
-FROM python:3.14.8-slim@sha256:fbecd461fc72d21b2143c6eaba25143738079154a6d0ea3da3aec724f50eed4a AS pyodide
+FROM python:3.14.10-slim@sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999 AS pyodide
 COPY scripts/fetch_pyodide.py /tmp/fetch_pyodide.py
 RUN python /tmp/fetch_pyodide.py /pyodide
 
-FROM python:3.14.8-slim@sha256:fbecd461fc72d21b2143c6eaba25143738079154a6d0ea3da3aec724f50eed4a AS base
+FROM python:3.14.10-slim@sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999 AS base
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt .
