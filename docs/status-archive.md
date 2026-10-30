@@ -4,6 +4,60 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-29: two `/cycle` rounds, the open questions answered, droplet checks done
+
+- **`/cycle`, queue #319 → #329 (auto) → #321 (stop).** Merged:
+  - #334 (#319): the real curriculum is parsed once per test process. On one worker, 235 of 249 s
+    were 804 parses of `content/`, 298 of them the lifespan of each `TestClient`. Now
+    `tests.conftest.real_catalog()` (cached), and `app.main.load_catalog` is rebound to it in
+    tests only. CI's "Run tests" went **196 s → 26 s**, `./test.sh` about 45 s → 8 s. A test
+    keeps every other test off bare `load_catalog()`.
+  - #336 (#329): the console's timers match systemd 255. `OnCalendar=` takes `START/STEP`
+    (`*:00/15`) and refuses `*/N` and a step that can't repeat (`*:45/15`), in the schema and
+    the console both. `Type=oneshot` is `activating (start)` while it runs, `start` waits for it
+    on the station clock (`--no-block` doesn't), then `inactive (dead)` `status=0/SUCCESS`, or a
+    failed start with systemd's `Job for … failed`. `exits: 0` is a clean exit. `TriggeredBy: ●`
+    for an active timer, and `Triggers: ●` always.
+  - #337 (#321, `Part of`): release images for `linux/amd64,linux/arm64` (QEMU), a Grype scan
+    leg per platform with `GRYPE_PLATFORM` (checked locally that grype honours it, and that
+    scan-action passes its env through). Merged on Sean's word.
+- **Second round:** nothing was runnable unattended, so Sean picked #335's criteria. Filed #335
+  from #329's comment; criteria written from `sysref` and v255's `show_journal_by_unit`:
+  `status` shows the unit's lines **from this boot, from when it last left inactive or failed**,
+  not by invocation, and none while in auto-restart. #338 merged.
+- **Open questions answered with Sean** (asked with a recommendation each):
+  - #260: keep `gotcha-auditor`, delete `sweeper` and `test-first` (#339, a standing decision).
+  - #320: `bw` runs on the VM for local (npm `@bitwarden/cli`, as the VM is arm64), the Mac for
+    prod; Sean does the vault writes. Recorded on #320 and BB #530.
+  - BB #530 / #322: a throwaway pinned `git clone --depth 1` on the Mac for each check-mode run.
+  - Module 03's unpaid `o2-backup` promise dropped (#340, #341). Played with Playwright as
+    `verify-bot` after marking the 12 modules before it complete; deleted afterwards.
+  - Module 05's length stays. `sysref` is removed.
+- **Droplet, checked by Sean from the Mac:** `backup_db.sh` is `755 deploy:deploy`, every dump
+  `-rw-------`, nightly dumps ran 2026-10-28 and 10-29 at 07:30 UTC (5290–5291 bytes), the
+  timer is scheduled, the service `inactive`. `docker-compose.yml.v0.11.0` and
+  `backups/pre-db-change.sql.gz` are deleted. The v0.13.0 follow-up is closed.
+- Gotchas:
+  - ⚠️ **The dev container can't write the repo**, so `ruff --fix` fails with `E902`. Apply
+    `ruff check --diff` with `git apply -p0` instead.
+  - **A container restart keeps the host's boot ID**: `sysref` can't show "previous boot"
+    behaviour. That part of #335 came from systemd's source.
+  - Real `systemctl status` of an unloaded (garbage-collected) unit drops `since` and
+    `Duration:` but still shows the journal lines. The console keeps every unit loaded.
+  - The gotcha-auditor earned its keep: it caught #336's JS parser accepting steps the schema
+    refused, and a gap in #334's guard test.
+  - A PR that falls `BEHIND` after a neighbour merges: `gh pr update-branch`, wait for CI, merge.
+- **Left for Sean:**
+  - Next release: check `docker buildx imagetools inspect` lists both platforms, pull the tag on
+    the VM and see `/healthz`, both scan legs green, and note `build-push`'s new time (#321
+    stays open until then).
+  - #320's seeding (vault writes) once the scripts exist. Still: 8 apt updates and the 26.04
+    upgrade on the droplet.
+- **Unreleased on `main`:** #336, #338 (console code, so the next release is a MINOR: v0.14.0),
+  #337 (release workflow), #341 (content), #334 and #339 (tests, docs).
+- **Next:** #320 (scripts + RUNBOOK; Sean seeds), then cut a release when Sean says, which also
+  proves #321. #322 waits on BB #530; #323 on #322.
+
 ### 2026-10-28: Unit 1.5 finished (#309, #310), and v0.13.0 shipped
 
 - **`/cycle`, queue #309 → #310.** Both are content, so both were tagged stop: built to green

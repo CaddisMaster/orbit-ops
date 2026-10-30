@@ -138,6 +138,7 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.13.2 | 2026-10-30 | Security: the image moves to Python 3.14.10 for CVE-2026-115557 (CRITICAL), which the image scan found in 3.14.8 and which blocked every PR (#351). A PATCH. No migrations |
 | 0.13.1 | 2026-10-29 | Fidelity fixes and the first multi-arch image: the console's timers and `systemctl status` match systemd 255 (#336, #338), module 03 drops an unkept promise (#341), and the release image is built for amd64 and arm64, each scanned (#337, #321). A PATCH. No migrations |
 | 0.13.0 | 2026-10-28 | Unit 1.5 systemd & services complete (6 modules, *Daemons Tamed*), and the Life Support mystery's reveal in the journal (#310): the console's `systemctl`, unit files and timers (#303) and `journalctl` (#304). The nightly database dump (#324) with private dumps (#326), its script installed by each deploy. No migrations
 | 0.12.1 | 2026-10-25 | The laptop screen's text stops growing with the window: 13.5–15.5px at every size, 14.9px at 1864×984 (#293). A PATCH. No migrations |
@@ -157,6 +158,53 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-30 (later): PyCharm set up for all four repos, and v0.13.2 for a critical CVE
+
+- **Sean moved from VS Code to PyCharm 2026.2** (a JetBrains remote backend on the VM), one
+  window per repo. `.idea/` is ignored in all four: #348 here, BB #543, MLIT #120,
+  seandesmet.com #40. The Claude Code JetBrains plugin is installed and connects with `/ide`.
+- **Interpreters:** Docker Compose on `web`, listing both compose files (the override builds the
+  dev target, which has pytest). A hand-written interpreter entry broke project opening, because
+  2026.2 has no legacy remote-SDK format left. So the wizard made this repo's, and copies of its
+  entry serve BB and MLIT.
+- **#354 / #355:** to set up, PyCharm runs `chown -R 10001` on its helper volume as root in a
+  one-off `web` container, and `cap_drop: [ALL]` (#264) refused it. The dev override now adds
+  `CHOWN`. Only root gains it: `appuser`'s `CapEff` is 0 with or without. An extra PyCharm-only
+  compose file didn't work, because PyCharm passes `docker compose` its configured files plus
+  its own generated override, nothing else.
+- **#349 / #350:** the dev database is published on `127.0.0.1:5435` for PyCharm's Database tool
+  (BB's dev database is on 5432, MLIT's on 5434). Production's stays unpublished.
+- **The image scan went red on every PR:** CVE-2026-115557 (CRITICAL) in Python 3.14.8.
+  #351 / #352 moved the base to 3.14.10. **v0.13.2** was cut (#353) and deployed on Sean's
+  approval: run `41069462114`, commit `717d9f5`, no migrations,
+  `backup ok … pre-deploy-20261030-143449.sql.gz (5291 bytes)`, `/healthz` reports 0.13.2,
+  and Budget Buddy returned 200. The empty v0.13.0 milestone is closed.
+- **Cross-repo issues:**
+  - BB #544: production runs Python 3.14.7, which has both critical CVEs, and BB's CI doesn't
+    scan its image. **The most urgent item across the projects.**
+  - MLIT #121: Werkzeug 3.1.8, PYSEC-2026-4312.
+  - MLIT #122: pin the floating `python:3.14-slim` base.
+- Gotchas:
+  - PyCharm rewrites its settings on exit, so they can only be edited while it's closed, and
+    closing it ends a Claude session running in its terminal. A detached script that waits for
+    the backend to exit, then applies the edit, gets around both.
+  - The plugin's `getDiagnostics` times out under Gateway, even for an open file. Feedback was
+    sent; lint and tests still come from `./test.sh`.
+  - `./test.sh` recreates `db` from the checked-out override. Run it on a branch without #350,
+    and port 5435 closes until `docker compose up -d db` on `main`.
+  - `gh release create --target` needs the full SHA.
+  - Merging one PR puts the next behind `main`, so it needs `gh pr update-branch` and a green
+    run before it can merge.
+- **Unreleased on `main`:** nothing that reaches the image (#355 is dev-only).
+- **#322 is unblocked.** BB #539 merged at 00:43 today, before this session, and BB #530's comment
+  says #322 needn't wait for the one criterion left there (Sean's check-mode run). Pin
+  `5dad811e2ffd37ec9e055847a25470102f2992c8`, role at `infra/ansible/roles/droplet_host/`. The
+  variables, LXD's preseed, the `DOCKER-USER` rules and the duties both layers share are in that
+  comment, and the LXD and Docker details are also in the shared changes log.
+- **Next:** #322 here, from that comment. BB #544 in a Budget Buddy session. Unit 2.1 can be
+  planned any time. Sean still has to open MLIT in PyCharm once and enter the BB and MLIT
+  database passwords. Still on the droplet: apt updates and the 26.04 upgrade.
 
 ### 2026-10-30: v0.13.1 shipped, #321 proven, and a handoff to Budget Buddy
 
@@ -221,57 +269,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Unreleased on `main`:** as before (#336, #338, #337, #341, #334, #339), plus #343 (docs).
 - **Next:** a release on Sean's word (v0.14.0), which proves #321. #322 waits on BB #530; #323 on
   #322. Still on the droplet: the apt updates and the 26.04 upgrade.
-
-### 2026-10-29: two `/cycle` rounds, the open questions answered, droplet checks done
-
-- **`/cycle`, queue #319 → #329 (auto) → #321 (stop).** Merged:
-  - #334 (#319): the real curriculum is parsed once per test process. On one worker, 235 of 249 s
-    were 804 parses of `content/`, 298 of them the lifespan of each `TestClient`. Now
-    `tests.conftest.real_catalog()` (cached), and `app.main.load_catalog` is rebound to it in
-    tests only. CI's "Run tests" went **196 s → 26 s**, `./test.sh` about 45 s → 8 s. A test
-    keeps every other test off bare `load_catalog()`.
-  - #336 (#329): the console's timers match systemd 255. `OnCalendar=` takes `START/STEP`
-    (`*:00/15`) and refuses `*/N` and a step that can't repeat (`*:45/15`), in the schema and
-    the console both. `Type=oneshot` is `activating (start)` while it runs, `start` waits for it
-    on the station clock (`--no-block` doesn't), then `inactive (dead)` `status=0/SUCCESS`, or a
-    failed start with systemd's `Job for … failed`. `exits: 0` is a clean exit. `TriggeredBy: ●`
-    for an active timer, and `Triggers: ●` always.
-  - #337 (#321, `Part of`): release images for `linux/amd64,linux/arm64` (QEMU), a Grype scan
-    leg per platform with `GRYPE_PLATFORM` (checked locally that grype honours it, and that
-    scan-action passes its env through). Merged on Sean's word.
-- **Second round:** nothing was runnable unattended, so Sean picked #335's criteria. Filed #335
-  from #329's comment; criteria written from `sysref` and v255's `show_journal_by_unit`:
-  `status` shows the unit's lines **from this boot, from when it last left inactive or failed**,
-  not by invocation, and none while in auto-restart. #338 merged.
-- **Open questions answered with Sean** (asked with a recommendation each):
-  - #260: keep `gotcha-auditor`, delete `sweeper` and `test-first` (#339, a standing decision).
-  - #320: `bw` runs on the VM for local (npm `@bitwarden/cli`, as the VM is arm64), the Mac for
-    prod; Sean does the vault writes. Recorded on #320 and BB #530.
-  - BB #530 / #322: a throwaway pinned `git clone --depth 1` on the Mac for each check-mode run.
-  - Module 03's unpaid `o2-backup` promise dropped (#340, #341). Played with Playwright as
-    `verify-bot` after marking the 12 modules before it complete; deleted afterwards.
-  - Module 05's length stays. `sysref` is removed.
-- **Droplet, checked by Sean from the Mac:** `backup_db.sh` is `755 deploy:deploy`, every dump
-  `-rw-------`, nightly dumps ran 2026-10-28 and 10-29 at 07:30 UTC (5290–5291 bytes), the
-  timer is scheduled, the service `inactive`. `docker-compose.yml.v0.11.0` and
-  `backups/pre-db-change.sql.gz` are deleted. The v0.13.0 follow-up is closed.
-- Gotchas:
-  - ⚠️ **The dev container can't write the repo**, so `ruff --fix` fails with `E902`. Apply
-    `ruff check --diff` with `git apply -p0` instead.
-  - **A container restart keeps the host's boot ID**: `sysref` can't show "previous boot"
-    behaviour. That part of #335 came from systemd's source.
-  - Real `systemctl status` of an unloaded (garbage-collected) unit drops `since` and
-    `Duration:` but still shows the journal lines. The console keeps every unit loaded.
-  - The gotcha-auditor earned its keep: it caught #336's JS parser accepting steps the schema
-    refused, and a gap in #334's guard test.
-  - A PR that falls `BEHIND` after a neighbour merges: `gh pr update-branch`, wait for CI, merge.
-- **Left for Sean:**
-  - Next release: check `docker buildx imagetools inspect` lists both platforms, pull the tag on
-    the VM and see `/healthz`, both scan legs green, and note `build-push`'s new time (#321
-    stays open until then).
-  - #320's seeding (vault writes) once the scripts exist. Still: 8 apt updates and the 26.04
-    upgrade on the droplet.
-- **Unreleased on `main`:** #336, #338 (console code, so the next release is a MINOR: v0.14.0),
-  #337 (release workflow), #341 (content), #334 and #339 (tests, docs).
-- **Next:** #320 (scripts + RUNBOOK; Sean seeds), then cut a release when Sean says, which also
-  proves #321. #322 waits on BB #530; #323 on #322.
