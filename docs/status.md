@@ -197,8 +197,13 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - Merging one PR puts the next behind `main`, so it needs `gh pr update-branch` and a green
     run before it can merge.
 - **Unreleased on `main`:** nothing that reaches the image (#355 is dev-only).
-- **Next:** BB #544 in a Budget Buddy session. Here, #322 once BB #530 merges, and Unit 2.1 can
-  be planned any time. Sean still has to open MLIT in PyCharm once and enter the BB and MLIT
+- **#322 is unblocked.** BB #539 merged at 00:43 today, before this session, and BB #530's comment
+  says #322 needn't wait for the one criterion left there (Sean's check-mode run). Pin
+  `5dad811e2ffd37ec9e055847a25470102f2992c8`, role at `infra/ansible/roles/droplet_host/`. The
+  variables, LXD's preseed, the `DOCKER-USER` rules and the duties both layers share are in that
+  comment, and the LXD and Docker details are also in the shared changes log.
+- **Next:** #322 here, from that comment. BB #544 in a Budget Buddy session. Unit 2.1 can be
+  planned any time. Sean still has to open MLIT in PyCharm once and enter the BB and MLIT
   database passwords. Still on the droplet: apt updates and the 26.04 upgrade.
 
 ### 2026-10-30: v0.13.1 shipped, #321 proven, and a handoff to Budget Buddy
