@@ -41,7 +41,8 @@ sudo install -d -o deploy -g deploy -m 750 /opt/orbit-ops
 cd /opt/orbit-ops
 install -d -m 700 backups
 
-# 3. .env — copy .env.example from the repo, then fill in (§3). Mode 600.
+# 3. .env — copy .env.example from the repo, then fill in (§3). Mode 600. On a rebuild,
+#    restore it from Bitwarden instead (§3, "The recovery copy").
 umask 077 && $EDITOR .env
 
 # 4. Nginx site (as root) — see the block below, then:
@@ -104,6 +105,56 @@ curl -s http://127.0.0.1:5002/healthz      # {"status":"ok",...}
 ```
 
 Until those two keys are set the app connects as the owner, which works but is not least-privilege.
+
+### The recovery copy in Bitwarden (#320)
+
+Each `.env` has a copy in Bitwarden: one secure note per environment, `orbit-ops-env-local` and
+`orbit-ops-env-prod`, with **every** key as a custom field, the non-secret ones too. Compose
+reads `.env` twice (`${VAR}` in `db`, `env_file:` for `web`), so a rebuilt file has to be
+complete. `TAG` in the prod item is only a placeholder, because the deploy rewrites that line.
+
+- The helpers are `bw-seed.sh` (once, refuses to overwrite) and `bw-env.sh` (rebuilds a file,
+  checks the fetch before touching it, keeps one `.env.bak`, mode 600). Budget Buddy uses the
+  same two. They live in the private `personal-vault` repo under `infra/bitwarden/`, and each
+  clone symlinks them into its root, where `.gitignore` lists them.
+- **No `bw` on the droplet.** Its `.env` stays a plain file, and the prod item is the recovery
+  copy. Nothing reads it at deploy time.
+- **Order of edits:** change the droplet's `.env` first, then the prod item (Bitwarden → the
+  item → edit the field). If the item lags behind, a restore brings back an old value.
+- `bw` is `@bitwarden/cli` from npm, pinned exactly (2026.10.0 on the VM, which is arm64; the
+  native build is x64-only). It runs on the VM for local and on the Mac for prod. Unlock it once
+  per terminal with `export BW_SESSION=$(bw unlock --raw)`.
+
+Local, on the VM, from the repo root:
+
+```bash
+./bw-env.sh                                   # orbit-ops-env-local → .env (old one → .env.bak)
+```
+
+Prod, seeding it (once) from the Mac. The file is piped, so it never lands on the Mac's disk:
+
+```bash
+ssh <droplet> 'cat /opt/orbit-ops/.env' | ~/Developer/personal-vault/infra/bitwarden/bw-seed.sh - orbit-ops-env-prod
+```
+
+Prod, restoring after losing the droplet, from the Mac. Fetch the item into a private scratch
+directory, copy the file up, then delete the local copy:
+
+```bash
+D=$(mktemp -d) && ~/Developer/personal-vault/infra/bitwarden/bw-env.sh orbit-ops-env-prod "$D/.env"
+scp "$D/.env" <droplet>:/opt/orbit-ops/.env && ssh <droplet> 'chmod 600 /opt/orbit-ops/.env'
+rm -rf "$D"
+# then set TAG= to the release you're restoring, and redo the orbit_app password above if
+# the database is new
+```
+
+Check a round-trip without touching anything (`-Ev '^#|^$'`: `bw-env.sh` writes a header
+comment and a blank line):
+
+```bash
+D=$(mktemp -d) && ./bw-env.sh orbit-ops-env-local "$D/env" && \
+diff <(grep -Ev '^#|^$' .env | sort) <(grep -Ev '^#|^$' "$D/env" | sort) && echo MATCH; rm -rf "$D"
+```
 
 ## 4. GitHub configuration (once)
 

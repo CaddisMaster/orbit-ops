@@ -9,6 +9,8 @@ deploy.
 2. Add it to `.env.example` with a comment (`tests/test_repo_hardening.py` enforces this).
 3. Note it under the release's CHANGELOG entry as **"Server: add `X=` to `.env`"**.
 4. Before approving the deploy, add it to `/opt/orbit-ops/.env` on the droplet.
+5. Then add it to the `orbit-ops-env-prod` item in Bitwarden, so the recovery copy keeps up
+   (RUNBOOK §3). Locally, add it to `orbit-ops-env-local` and rerun `./bw-env.sh`.
 
 ## Adding an Alembic revision
 
