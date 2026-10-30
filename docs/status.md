@@ -129,6 +129,11 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   (as `/cycle` does). It earned that on 2026-10-29 by catching #329's JS calendar parser
   accepting steps the schema refused. BB's copies are unaffected.
 
+- **Every `.env` has a recovery copy in Bitwarden** (#320, 2026-10-29): `orbit-ops-env-local`
+  and `orbit-ops-env-prod`, every key a field. The droplet has no `bw` and its `.env` stays a
+  plain file; edit it first, then the item. The helpers are shared with Budget Buddy, kept once
+  in the private vault repo and symlinked in (RUNBOOK §3).
+
 ## Release ledger
 
 | Version | Date | Highlights |
@@ -151,6 +156,33 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-10-29 (later): IaC status, and #320's Bitwarden recovery copies
+
+- **Explained for Sean:** where the *Infrastructure as code* milestone stands, and why it's
+  worth doing. Nothing IaC-proper has started in either repo; the groundwork (plan, backups,
+  multi-arch image, secrets decisions) is done, and the path is #320 → BB #530 → #322 → #323.
+- **#343 (#320): every `.env` has a Bitwarden copy.** BB's `bw-env.sh`/`bw-seed.sh` turned out
+  not to exist anywhere (gitignored on a Mac that no longer had them), so they were rewritten
+  from the behaviour BB's Secrets note records and kept once in the private vault repo, which
+  each clone symlinks. Tested against a fake `bw` (a JSON file as the vault, argv logged), then
+  Sean seeded both items: local 13 keys round-tripped (`MATCH`), prod 13 keys piped from the
+  droplet over SSH, matching its 13. RUNBOOK §3 has seed, restore and the edit order.
+  `bw` on the VM is `@bitwarden/cli@2026.10.0` from npm.
+- Gotchas:
+  - ⚠️ **`bw status` can say `locked` for a login that has expired.** It reads local files only.
+    The Mac's July login failed `bw unlock` with `invalid_grant`, leaving `BW_SESSION` empty;
+    the script's unlocked check stopped it. Fix: `bw logout && bw login`.
+  - `bw login`'s closing hint prints the session key. One reached the transcript; `bw lock` and
+    a fresh unlock made it worthless.
+  - Every PR-body edit re-runs *Acceptance criteria*, and runs against an in-between body stay
+    red in the PR's list after a later one passes. Re-run them once the body is final. The
+    check reads only `Verified by hand: #N "<exact title>" — why` lines, not a checklist.
+- **BB notes** are on BB #530: the shared scripts, the VM symlinks BB still needs, the expired
+  Mac login.
+- **Unreleased on `main`:** as before (#336, #338, #337, #341, #334, #339), plus #343 (docs).
+- **Next:** a release on Sean's word (v0.14.0), which proves #321. #322 waits on BB #530; #323 on
+  #322. Still on the droplet: the apt updates and the 26.04 upgrade.
 
 ### 2026-10-29: two `/cycle` rounds, the open questions answered, droplet checks done
 
@@ -256,38 +288,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - Still carried: the BB #530 Mac-clone decision, #320's `bw` location, #260.
 - **Next:** #319 (cache the real curriculum in tests, auto), then #329 (console timers, auto).
   Sean approved that queue. After them, #321.
-
-### 2026-10-27 (later): secrets, CI/CD and infrastructure as code; nightly backups live
-
-- **Explained for Sean, no code:** how `.env`, GitHub secrets and gitignored files work across
-  the VM, the droplet and GitHub; how CI and `release.yml` deploy; and what a corporate setup
-  has that this one doesn't. He chose to pursue **infrastructure as code** only, at **no extra
-  money**: no throwaway droplets, LXD containers on the VM instead, Terraform read-only.
-- **Filed:** #320 (`.env` values into Bitwarden, as BB does) and milestone *Infrastructure as
-  code* with #321 (multi-arch image: the VM is arm64, releases are amd64-only), #322 (Ansible
-  app role, blocked by BB #530), #323 (LXD staging), #324, #326. A handoff note for BB's session
-  is in the vault (`Budget Buddy/reference/IaC handoff.md`); BB filed #529–#535 from it and
-  pushed back on six points, now folded into #322: roles never write compose or `.env`; each
-  app declares its own `authorized_keys` line; the Mac has no clone (open decision in BB #530).
-- **BB found that Orbit Ops's database had no real backup:** dumps only on deploy, never off the
-  droplet, and RUNBOOK §6 claimed otherwise. Sean chose option B.
-  - #325 (#324): `infra/systemd/orbit-ops-backup.{service,timer}`, nightly at 03:30 New York
-    time, `Persistent=true`, keeps 14 and prunes only after a good dump. `release.yml` now
-    installs `backup_db.sh` in `/opt/orbit-ops` (hash-checked) so the timer can't drift.
-    Checked under real systemd 255 and with a restore into a scratch database.
-  - **Installed on the droplet by Sean from the Mac:** first run `backup ok …
-    nightly-20261027-201154.sql.gz (5292 bytes)`, next run 2026-10-28 07:30 UTC.
-  - #327 (#326): `umask 077` in `backup_db.sh`. The pre-deploy dumps were `-rw-rw-r--`, though
-    `backups/` is `drwx------`, so nothing was reachable. Sean `chmod 600`'d the 16 dumps.
-- Gotchas:
-  - ⚠️ **On this VM, `lxc` was a stub that installed the LXD snap** when Claude ran `lxc list`
-    as a check. LXD 5.21 is installed and **not initialised**: `lxd init` before #322/#323.
-  - Firing a oneshot unit in a test loop hits systemd's start limit (5 in 10 s, `start-limit-hit`).
-    It isn't a bug in the unit; `systemctl reset-failed` and plant files instead.
-  - `ls | tail` hid `nightly-*` behind `pre-deploy-*` (name order) in RUNBOOK §6's step 4.
-    Fixed in the wrap: it lists `nightly-*` by name.
-- **Left for Sean:** the Mac-clone decision (BB #530); a reserved IP before the 26.04 cutover
-  (BB #533); no alert yet when a nightly dump fails; 8 apt updates pending on the droplet. The
-  carried items from the earlier session today stand.
-- **Next:** #320 (Bitwarden), #321 (multi-arch). #322 waits on BB #530. The curriculum's #309
-  and #310 are still open for v0.13.0; nothing released since v0.12.1.

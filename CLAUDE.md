@@ -99,8 +99,8 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 See `docs/status.md`. **v0.13.0** is in production (2026-10-28). Unreleased on `main`: the
 console's timers and `status` lines match systemd 255 (#336, #338), multi-arch release images
-(#337, proven on the next release), module 03's one-line fix (#341), and faster tests (#334).
-Next: #320 (Bitwarden scripts; Sean seeds the vault), then a release on Sean's word. #322 waits
+(#337, proven on the next release), module 03's one-line fix (#341), faster tests (#334), and
+each `.env`'s Bitwarden recovery copy (#343, seeded). Next: a release on Sean's word. #322 waits
 on BB #530, #323 on #322. Milestone *Infrastructure as code* (#320–#323) runs alongside Budget
 Buddy's (BB #529–#535).
 
