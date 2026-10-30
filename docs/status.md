@@ -180,6 +180,16 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
     by itself, only new surface is.
   - The deploy log greps show `::error::` lines that are the script's own source being echoed,
     not errors.
+- **After the wrap:**
+  - **Docker build cache.** On the VM it was pruned (15 GB freed, 33 GB free now) and capped at
+    10 GB by Docker's own garbage collection (`/etc/docker/daemon.json`, `builder.gc`). All dev
+    containers came back after the restart. Prompted by Sean weighing JetBrains' remote backend.
+  - **Cross-project routing, replacing handoff notes:**
+    - Another repo must act → a `cross-repo` issue there (the label now exists in all three
+      repos).
+    - A shared VM or droplet change → the dated log in `personal-vault` (where: `CLAUDE.local.md`).
+    - Urgent → also message the running session.
+    - The handoff note was folded into BB #530's comment.
 - **Unreleased on `main`:** nothing.
 - **Next:** Sean is doing BB #530 in a Budget Buddy session. When it merges, start #322 with BB's
   SHA. Unit 2.1 (Python for operations) isn't blocked: plan its milestone and issues any time.
