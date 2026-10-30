@@ -4,6 +4,41 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-27 (later): secrets, CI/CD and infrastructure as code; nightly backups live
+
+- **Explained for Sean, no code:** how `.env`, GitHub secrets and gitignored files work across
+  the VM, the droplet and GitHub; how CI and `release.yml` deploy; and what a corporate setup
+  has that this one doesn't. He chose to pursue **infrastructure as code** only, at **no extra
+  money**: no throwaway droplets, LXD containers on the VM instead, Terraform read-only.
+- **Filed:** #320 (`.env` values into Bitwarden, as BB does) and milestone *Infrastructure as
+  code* with #321 (multi-arch image: the VM is arm64, releases are amd64-only), #322 (Ansible
+  app role, blocked by BB #530), #323 (LXD staging), #324, #326. A handoff note for BB's session
+  is in the vault (`Budget Buddy/reference/IaC handoff.md`); BB filed #529–#535 from it and
+  pushed back on six points, now folded into #322: roles never write compose or `.env`; each
+  app declares its own `authorized_keys` line; the Mac has no clone (open decision in BB #530).
+- **BB found that Orbit Ops's database had no real backup:** dumps only on deploy, never off the
+  droplet, and RUNBOOK §6 claimed otherwise. Sean chose option B.
+  - #325 (#324): `infra/systemd/orbit-ops-backup.{service,timer}`, nightly at 03:30 New York
+    time, `Persistent=true`, keeps 14 and prunes only after a good dump. `release.yml` now
+    installs `backup_db.sh` in `/opt/orbit-ops` (hash-checked) so the timer can't drift.
+    Checked under real systemd 255 and with a restore into a scratch database.
+  - **Installed on the droplet by Sean from the Mac:** first run `backup ok …
+    nightly-20261027-201154.sql.gz (5292 bytes)`, next run 2026-10-28 07:30 UTC.
+  - #327 (#326): `umask 077` in `backup_db.sh`. The pre-deploy dumps were `-rw-rw-r--`, though
+    `backups/` is `drwx------`, so nothing was reachable. Sean `chmod 600`'d the 16 dumps.
+- Gotchas:
+  - ⚠️ **On this VM, `lxc` was a stub that installed the LXD snap** when Claude ran `lxc list`
+    as a check. LXD 5.21 is installed and **not initialised**: `lxd init` before #322/#323.
+  - Firing a oneshot unit in a test loop hits systemd's start limit (5 in 10 s, `start-limit-hit`).
+    It isn't a bug in the unit; `systemctl reset-failed` and plant files instead.
+  - `ls | tail` hid `nightly-*` behind `pre-deploy-*` (name order) in RUNBOOK §6's step 4.
+    Fixed in the wrap: it lists `nightly-*` by name.
+- **Left for Sean:** the Mac-clone decision (BB #530); a reserved IP before the 26.04 cutover
+  (BB #533); no alert yet when a nightly dump fails; 8 apt updates pending on the droplet. The
+  carried items from the earlier session today stand.
+- **Next:** #320 (Bitwarden), #321 (multi-arch). #322 waits on BB #530. The curriculum's #309
+  and #310 are still open for v0.13.0; nothing released since v0.12.1.
+
 ### 2026-10-27: Unit 1.5 modules 01–04 (#305–#308)
 
 - **#314 (#305), module 01 *What a service is*:** daemons, systemd as PID 1, `systemctl
