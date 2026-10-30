@@ -1,6 +1,7 @@
 # Orbit Ops shares the droplet with Budget Buddy. Ports in use on the host:
 #   budget-buddy web 127.0.0.1:5001, budget-buddy db 127.0.0.1:5432
-#   orbit-ops    web 127.0.0.1:5002, orbit-ops db: NOT PUBLISHED
+#   orbit-ops    web 127.0.0.1:5002, orbit-ops db: NOT PUBLISHED (dev: 127.0.0.1:5435,
+#   from docker-compose.override.yml)
 # Docker port publishing bypasses ufw, so every published port is bound to
 # 127.0.0.1 and host Nginx is the only public entry point.
 services:
