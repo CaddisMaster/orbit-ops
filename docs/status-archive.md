@@ -4,6 +4,57 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-28: Unit 1.5 finished (#309, #310), and v0.13.0 shipped
+
+- **`/cycle`, queue #309 → #310.** Both are content, so both were tagged stop: built to green
+  PRs, then merged when Sean said so.
+  - #330 (#309), module 05 *Timers*: reading a cron line (cron is new here, since Unit 1.5 needs
+    only Unit 1.1), a `.timer` plus a `Type=oneshot` `.service`, `OnCalendar=` next to cron,
+    `Persistent=true`, enabling `NAME.timer` in full, `list-timers`. The console task moves the
+    weekly filter report from `/etc/cron.d` to a timer.
+  - #331 (#310), module 06 *The journal*, **the mystery's reveal**. The 02:30–02:45 window on
+    2026-10-08 (the previous boot) shows `CRON[5120]` starting `scrubber-flush`, `reply: FLUSH`
+    and `Stopping scrubberd` two seconds later. The learner files the window and the cron file in
+    `~/evidence` and restarts `scrubberd`, and Mission opens an inquiry into the depot.
+    `docs/story.md`'s 1.5 row is written. Who sent FLUSH stays for Unit 4.5.
+- **Real systemd corrected the drafts** (checked in `sysref`, systemd 255.4 as PID 1):
+  - `*-*-* *:*/15:00` is refused (the real step form is `*:00/15`). The console accepts it, so
+    the lesson teaches no step forms.
+  - `ExecStart=` has no shell: `>/dev/null 2>&1` arrives as arguments. A minutely timer fires
+    up to a minute late (`AccuracySec=1min`). `User=nobody` logs a "not safe" warning.
+  - A user outside `adm` gets `-- No entries --` for a service once they have journal lines of
+    their own. The console models a user with none (`No journal files were opened…`).
+  - A cron job that exits at once (`logger`) isn't filed under `cron.service`: it has no
+    `_SYSTEMD_UNIT`. Module 06 reads a window across all units for that reason.
+- **Filed #329:** the console's timers versus systemd: `*/N` steps, no `Type=oneshot`, no
+  `TriggeredBy:`, `Triggers:` glyph, and no log lines in `status` for an inactive unit.
+- **v0.13.0 released and deployed** on Sean's go. #332 cut the CHANGELOG and added a missing
+  line for the Dependabot bumps. Run `40713662755`, commit `51c5f83`, no migrations.
+  `backup ok: … pre-deploy-20261028-152437.sql.gz (5290 bytes)`, and `/healthz` reports 0.13.0,
+  with Budget Buddy still `ok`. It was the first deploy to install `backup_db.sh` for the
+  nightly timer, replacing the hand-installed copy from before #326.
+- Gotchas:
+  - Building two module branches in parallel worked this time: after the first merged, each
+    shared file was rebuilt as `main`'s plus the branch's own section. Each diff against `main`
+    then matched the branch's additions line for line.
+  - A module's test that indexes `unit_modules(...)[n]` breaks on a branch built without the
+    module before it. Find the module by slug.
+  - The console's `sudo` remembers the password for 15 simulated minutes, so a solution replayed
+    after another `sudo` sends `meridian` as a command. Harmless in CI, which starts fresh.
+- **Left for Sean:**
+  - From the Mac: check that `/opt/orbit-ops/backup_db.sh` is `755 deploy`, that the new
+    pre-deploy dump is `-rw-------`, and that `orbit-ops-backup.timer` is still scheduled. Then
+    delete `docker-compose.yml.v0.11.0` and `backups/pre-db-change.sql.gz`. This release is healthy.
+  - Unit 1.4 module 10 has `scrubber-flush` still running at 09:00, while Unit 1.5's console
+    rebooted at 08:00. Left alone.
+  - Module 03's `o2-backup` promise ("we'll put it right") is never paid off: drop the line, or
+    fix it in a later unit.
+  - Module 05 is about 1,200 words against the 900 guide.
+  - `sysref` can go (`docker rm -f sysref`), unless #329 wants it for comparisons.
+  - Still carried: the BB #530 Mac-clone decision, #320's `bw` location, #260.
+- **Next:** #319 (cache the real curriculum in tests, auto), then #329 (console timers, auto).
+  Sean approved that queue. After them, #321.
+
 ### 2026-10-27 (later): secrets, CI/CD and infrastructure as code; nightly backups live
 
 - **Explained for Sean, no code:** how `.env`, GitHub secrets and gitignored files work across

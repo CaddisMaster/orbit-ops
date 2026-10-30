@@ -97,12 +97,10 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.13.0** is in production (2026-10-28). Unreleased on `main`: the
-console's timers and `status` lines match systemd 255 (#336, #338), multi-arch release images
-(#337, proven on the next release), module 03's one-line fix (#341), faster tests (#334), and
-each `.env`'s Bitwarden recovery copy (#343, seeded). Next: a release on Sean's word. #322 waits
-on BB #530, #323 on #322. Milestone *Infrastructure as code* (#320–#323) runs alongside Budget
-Buddy's (BB #529–#535).
+See `docs/status.md`. **v0.13.1** is in production (2026-10-29), the first multi-arch release
+(#321, closed). Nothing unreleased on `main`. Next: #322 once BB #530 merges (pin its SHA), then
+#323; Unit 2.1 (Python for operations) can be planned any time. Milestone *Infrastructure as
+code* (#322, #323 left) runs alongside Budget Buddy's (BB #529–#535).
 
 ## Maintainer notes (local only)
 
