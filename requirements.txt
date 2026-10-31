@@ -9,7 +9,7 @@
 
 # --- direct ---------------------------------------------------------------
 alembic==1.20.1
-anthropic==1.13.0
+anthropic==2.3.0
 argon2-cffi==25.1.0
 fastapi==0.161.1
 itsdangerous==2.2.0
