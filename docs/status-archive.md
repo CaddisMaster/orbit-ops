@@ -4,6 +4,33 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-29 (later): IaC status, and #320's Bitwarden recovery copies
+
+- **Explained for Sean:** where the *Infrastructure as code* milestone stands, and why it's
+  worth doing. Nothing IaC-proper has started in either repo; the groundwork (plan, backups,
+  multi-arch image, secrets decisions) is done, and the path is #320 → BB #530 → #322 → #323.
+- **#343 (#320): every `.env` has a Bitwarden copy.** BB's `bw-env.sh`/`bw-seed.sh` turned out
+  not to exist anywhere (gitignored on a Mac that no longer had them), so they were rewritten
+  from the behaviour BB's Secrets note records and kept once in the private vault repo, which
+  each clone symlinks. Tested against a fake `bw` (a JSON file as the vault, argv logged), then
+  Sean seeded both items: local 13 keys round-tripped (`MATCH`), prod 13 keys piped from the
+  droplet over SSH, matching its 13. RUNBOOK §3 has seed, restore and the edit order.
+  `bw` on the VM is `@bitwarden/cli@2026.10.0` from npm.
+- Gotchas:
+  - ⚠️ **`bw status` can say `locked` for a login that has expired.** It reads local files only.
+    The Mac's July login failed `bw unlock` with `invalid_grant`, leaving `BW_SESSION` empty;
+    the script's unlocked check stopped it. Fix: `bw logout && bw login`.
+  - `bw login`'s closing hint prints the session key. One reached the transcript; `bw lock` and
+    a fresh unlock made it worthless.
+  - Every PR-body edit re-runs *Acceptance criteria*, and runs against an in-between body stay
+    red in the PR's list after a later one passes. Re-run them once the body is final. The
+    check reads only `Verified by hand: #N "<exact title>" — why` lines, not a checklist.
+- **BB notes** are on BB #530: the shared scripts, the VM symlinks BB still needs, the expired
+  Mac login.
+- **Unreleased on `main`:** as before (#336, #338, #337, #341, #334, #339), plus #343 (docs).
+- **Next:** a release on Sean's word (v0.14.0), which proves #321. #322 waits on BB #530; #323 on
+  #322. Still on the droplet: the apt updates and the 26.04 upgrade.
+
 ### 2026-10-29: two `/cycle` rounds, the open questions answered, droplet checks done
 
 - **`/cycle`, queue #319 → #329 (auto) → #321 (stop).** Merged:

@@ -159,6 +159,48 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-10-31: #357 and #322, Orbit Ops's layer of the droplet as code
+
+- **#358 (#357):** RUNBOOK and `release-prep` say droplet steps run from the VM or the Mac, after
+  the 2026-10-30 reversal. The status line on the production check stays as it is: that's Sean's
+  decision, not a claim about reachability.
+- **#359 (part of #322): `infra/ansible/roles/orbit_ops_app`.** It covers `/opt/orbit-ops` and
+  `backups/`, the `.env` check (never written), the deploy key (non-exclusive), the `learn`
+  site and the backup units from `infra/systemd/`. Sean's calls:
+  - The site file is **production's post-Certbot file byte for byte** (sha256 `8c758e47…`).
+    The LXD test uses a self-signed certificate at the lineage's paths.
+  - The site file and the deploy-key line were read from the droplet over SSH from the VM,
+    read-only. Production's backup units match `infra/systemd/` exactly.
+  - The production check stays **check mode, from the Mac**, in a throwaway pinned clone.
+- **BB's host role is pinned at `4632f78`** (BB #549), not `5dad811`. A real run at `5dad811`
+  would have swapped production's `docker.io` for `docker-ce`. `ansible-galaxy` can't install a
+  role from a subdirectory, so `infra/fetch_host_role.sh` fetches the SHA into a gitignored
+  `vendor/`. `app.yml` never runs the host role.
+- **`infra/test.sh`** (about 2 min) runs BB's host role, then:
+  - three refusals: no `.env`, `.env` mode 644, no certificate;
+  - a full run, then a second run and a check-mode run, both `changed=0`;
+  - HTTPS through Nginx to a backend on 5002, and the 80→443 redirect.
+- **The `gotcha-auditor` found three gaps, all fixed in #359:**
+  - ansible-core's dependencies are pinned too, installed `--no-deps`, then `pip check`;
+  - Dependabot watches `/infra`;
+  - the criteria are claimed (`Part of #322`).
+- **Filed:** BB #553 (BB's ansible-core pin has the same gap), BB #554 and orbit-ops #360. Local
+  prod builds copy the dangling `bw-*.sh` symlinks into `/app`; released images are
+  unaffected.
+- Gotchas:
+  - **The VM rebooted (12:08)** and lost the `DOCKER-USER` rules for `lxdbr0`. They were re-added
+    as documented.
+  - One `lxc launch` failed after 5 minutes. A launch by hand took 3 s, and the re-run passed.
+  - A handler with `changed_when: false` never notifies the next one. The `nginx -t` and the
+    reload share a `listen` topic instead.
+  - A `gh pr create --body` heredoc with a quoted `'EOF'` keeps `\"` literally.
+- **Unreleased on `main`:** nothing that reaches the image (`infra/` is now in `.dockerignore`).
+- **Next:**
+  - Sean's check-mode run from the Mac (`infra/README.md`, "Checking production"), then close #322.
+  - #323 (staging in LXD) can reuse `infra/test.sh`.
+  - #360 is small.
+  - Unit 2.1 can be planned any time.
+
 ### 2026-10-30 (later): PyCharm set up for all four repos, and v0.13.2 for a critical CVE
 
 - **Sean moved from VS Code to PyCharm 2026.2** (a JetBrains remote backend on the VM), one
@@ -242,30 +284,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Next:** Sean is doing BB #530 in a Budget Buddy session. When it merges, start #322 with BB's
   SHA. Unit 2.1 (Python for operations) isn't blocked: plan its milestone and issues any time.
   Still on the droplet: apt updates and the 26.04 upgrade.
-
-### 2026-10-29 (later): IaC status, and #320's Bitwarden recovery copies
-
-- **Explained for Sean:** where the *Infrastructure as code* milestone stands, and why it's
-  worth doing. Nothing IaC-proper has started in either repo; the groundwork (plan, backups,
-  multi-arch image, secrets decisions) is done, and the path is #320 → BB #530 → #322 → #323.
-- **#343 (#320): every `.env` has a Bitwarden copy.** BB's `bw-env.sh`/`bw-seed.sh` turned out
-  not to exist anywhere (gitignored on a Mac that no longer had them), so they were rewritten
-  from the behaviour BB's Secrets note records and kept once in the private vault repo, which
-  each clone symlinks. Tested against a fake `bw` (a JSON file as the vault, argv logged), then
-  Sean seeded both items: local 13 keys round-tripped (`MATCH`), prod 13 keys piped from the
-  droplet over SSH, matching its 13. RUNBOOK §3 has seed, restore and the edit order.
-  `bw` on the VM is `@bitwarden/cli@2026.10.0` from npm.
-- Gotchas:
-  - ⚠️ **`bw status` can say `locked` for a login that has expired.** It reads local files only.
-    The Mac's July login failed `bw unlock` with `invalid_grant`, leaving `BW_SESSION` empty;
-    the script's unlocked check stopped it. Fix: `bw logout && bw login`.
-  - `bw login`'s closing hint prints the session key. One reached the transcript; `bw lock` and
-    a fresh unlock made it worthless.
-  - Every PR-body edit re-runs *Acceptance criteria*, and runs against an in-between body stay
-    red in the PR's list after a later one passes. Re-run them once the body is final. The
-    check reads only `Verified by hand: #N "<exact title>" — why` lines, not a checklist.
-- **BB notes** are on BB #530: the shared scripts, the VM symlinks BB still needs, the expired
-  Mac login.
-- **Unreleased on `main`:** as before (#336, #338, #337, #341, #334, #339), plus #343 (docs).
-- **Next:** a release on Sean's word (v0.14.0), which proves #321. #322 waits on BB #530; #323 on
-  #322. Still on the droplet: the apt updates and the 26.04 upgrade.
