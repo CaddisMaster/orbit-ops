@@ -99,10 +99,9 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 See `docs/status.md`. **v0.13.2** is in production (2026-10-30), a security patch: Python
 3.14.10 for CVE-2026-115557 (#351). Nothing that reaches the image is unreleased on `main`.
-Sean edits in PyCharm (#348, #354). Next: #322, unblocked: BB's host role is on its `main` at
-`5dad811` (BB #530's comment has the pin and interface), then #323; Unit 2.1 (Python for
-operations) can be planned any time. BB #544 (the same CVEs in BB's
-production) is that repo's to fix.
+Sean edits in PyCharm (#348, #354). #322's app role is on `main` (`infra/`, #359, BB's host
+role pinned at `4632f78`); #322 closes after Sean's check-mode run from the Mac. Next: #323
+(LXD staging), #360; Unit 2.1 (Python for operations) can be planned any time.
 
 ## Maintainer notes (local only)
 
