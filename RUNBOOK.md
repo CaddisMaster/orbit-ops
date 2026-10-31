@@ -122,7 +122,7 @@ complete. `TAG` in the prod item is only a placeholder, because the deploy rewri
 - **Order of edits:** change the droplet's `.env` first, then the prod item (Bitwarden → the
   item → edit the field). If the item lags behind, a restore brings back an old value.
 - `bw` is `@bitwarden/cli` from npm, pinned exactly (2026.10.0 on the VM, which is arm64; the
-  native build is x64-only). It runs on the VM for local and on the Mac for prod. Unlock it once
+  native build is x64-only). It runs on the VM or the Mac, for local and prod alike. Unlock it once
   per terminal with `export BW_SESSION=$(bw unlock --raw)`.
 
 Local, on the VM, from the repo root:
@@ -131,13 +131,13 @@ Local, on the VM, from the repo root:
 ./bw-env.sh                                   # orbit-ops-env-local → .env (old one → .env.bak)
 ```
 
-Prod, seeding it (once) from the Mac. The file is piped, so it never lands on the Mac's disk:
+Prod, seeding it (once) from the VM or the Mac. The file is piped, so it never lands on local disk:
 
 ```bash
 ssh <droplet> 'cat /opt/orbit-ops/.env' | ~/Developer/personal-vault/infra/bitwarden/bw-seed.sh - orbit-ops-env-prod
 ```
 
-Prod, restoring after losing the droplet, from the Mac. Fetch the item into a private scratch
+Prod, restoring after losing the droplet, from the VM or the Mac. Fetch the item into a private scratch
 directory, copy the file up, then delete the local copy:
 
 ```bash
@@ -185,8 +185,8 @@ and the public `/healthz` both report the new version.
 service it recreates the database container. `postgres` is pinned by tag and digest (#266), so
 a pull no longer changes it behind your back, but the edit itself still does.
 `scripts/install_compose.sh` refuses a release whose compose file would recreate `db`, so a `db`
-change is applied by hand, **before** the release that carries it, at a quiet time. From a Mac
-terminal (the VM can't reach the droplet):
+change is applied by hand, **before** the release that carries it, at a quiet time. As root on the
+droplet, from the VM (while Gateway is connected) or a Mac terminal:
 
 ```bash
 cd /opt/orbit-ops && set -a && . ./.env && set +a
@@ -206,7 +206,7 @@ docker compose exec -T db psql -U "$DB_USER" "$DB_NAME" -tAc "$COUNTS"
 # alone proves nothing: a failed pg_dump still leaves one. (20 lines: a `\unrestrict` line
 # follows the marker.)
 # 3. main's docker-compose.yml, fetched at a commit and checked. The repo is public and the
-#    Mac has no clone. SHA and SUM are main's commit and `sha256sum docker-compose.yml` there.
+#    deploy dir has no git. SHA and SUM are main's commit and `sha256sum docker-compose.yml` there.
 curl -fsSL "https://raw.githubusercontent.com/CaddisMaster/orbit-ops/$SHA/docker-compose.yml" -o docker-compose.yml.new
 echo "$SUM  docker-compose.yml.new" | sha256sum -c
 cp -p docker-compose.yml docker-compose.yml.prev
@@ -255,10 +255,10 @@ What exists, all in `/opt/orbit-ops/backups`:
 
 ### Installing the nightly backup (once)
 
-From a Mac terminal, as root on the droplet. Until #322's Ansible role owns these files, this
-is how they get there. `SHA` is a `main` commit that has #324, and each `*_SUM` is that file's
-`sha256sum` there. The release after #324 ships the script itself, so step 1 only matters
-before then (it's harmless after).
+As root on the droplet, from the VM (while Gateway is connected) or a Mac terminal. Until #322's
+Ansible role owns these files, this is how they get there. `SHA` is a `main` commit that has
+#324, and each `*_SUM` is that file's `sha256sum` there. The release after #324 ships the script
+itself, so step 1 only matters before then (it's harmless after).
 
 1. The backup script, fetched at the commit and checked:
 
