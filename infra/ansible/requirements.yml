@@ -1,0 +1,8 @@
+# Collections the roles use, pinned exactly (#322), the same versions as Budget
+# Buddy's host role at its pin. infra/test.sh installs them into
+# infra/ansible/collections/, which is gitignored.
+collections:
+  - name: community.general   # the lxd connection
+    version: "13.5.0"
+  - name: ansible.posix       # authorized_key
+    version: "2.2.2"

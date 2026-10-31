@@ -1,0 +1,14 @@
+# Both listen on one topic and run in this order: nginx -t first, so a broken
+# file fails the run by name before any reload, and the shared box's other
+# sites keep serving the config already loaded. Not named "Reload nginx":
+# Budget Buddy's host role has a handler by that name.
+- name: Test the nginx config for learn
+  ansible.builtin.command: nginx -t
+  changed_when: false
+  listen: learn site changed
+
+- name: Reload nginx for learn
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  listen: learn site changed

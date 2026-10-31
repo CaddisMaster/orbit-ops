@@ -48,3 +48,10 @@ __pycache__/
 # Finder actually creates is ".DS_Store".
 .DS_Store
 
+
+# Ansible (#322). The real inventory holds the droplet's address, and this repo
+# is public. Collections and Budget Buddy's host role are rebuilt from their
+# pins by infra/test.sh; infra/.venv/ is covered by `.venv/` above.
+infra/ansible/inventory.yml
+infra/ansible/collections/
+infra/ansible/vendor/

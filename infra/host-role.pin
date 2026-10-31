@@ -1,0 +1,6 @@
+# Budget Buddy's host role (BB #530), which this repo's app role runs on top of.
+# A commit SHA, never a branch: the role is on BB's main, and its path and
+# droplet_host_* variables are the interface. Bump it in its own PR, after
+# reading BB's diff. 4632f78 is BB #549: Docker installed the way production has it.
+repo=https://github.com/CaddisMaster/budget-buddy.git
+sha=4632f7866c64196d8af62cf19e6e58144a11b897

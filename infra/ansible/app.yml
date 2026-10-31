@@ -1,0 +1,8 @@
+# Orbit Ops's layer of the shared droplet (#322). The host layer under it is
+# Budget Buddy's (infra/host-role.pin): this playbook never runs that role, so
+# nothing here can change what Budget Buddy's site or the host depends on.
+- name: Orbit Ops on the droplet
+  hosts: droplet
+  become: true
+  roles:
+    - orbit_ops_app

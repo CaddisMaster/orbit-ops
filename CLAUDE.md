@@ -57,7 +57,7 @@ alembic/versions/    migrations (0001 users, 0002 orbit_app role, 0003 progress 
 content/             the curriculum: syllabus.yml + <track>/<unit>/NN-slug.md
 art/                 the pixel-art desk as code (python -m art.build → app/static/img/)
 scripts/             create_user.py, install_compose.sh + backup_db.sh (deploy), check_criteria.py (CI), fetch_pyodide.py (image)
-infra/systemd/       orbit-ops-backup.{service,timer}: the droplet's nightly dump (#324), installed per RUNBOOK §6
+infra/               the droplet as code (#322): ansible/ (the app role, on BB's host role pinned in host-role.pin), test.sh (LXD), systemd/ (#324's units)
 ```
 
 ## Non-negotiables

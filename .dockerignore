@@ -51,3 +51,8 @@ test.sh
 
 # The image scan's ignore list (#265): CI reads it, the image doesn't need it.
 .grype.yaml
+
+# The droplet as code (#322): the Ansible control node's venv, its collections and
+# Budget Buddy's checkout live under infra/ on the VM, and none of it belongs in
+# the image. The systemd units are installed on the host, never in a container.
+infra/
