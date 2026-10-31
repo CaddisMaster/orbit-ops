@@ -17,6 +17,19 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
 
+  # The Ansible control node (#322), pinned the same way. The collections in
+  # infra/ansible/requirements.yml and the host role's SHA in infra/host-role.pin
+  # have no ecosystem here: they move by hand, with Budget Buddy's.
+  - package-ecosystem: pip
+    directory: "/infra"
+    schedule:
+      interval: weekly
+      day: monday
+    labels: ["dependencies"]
+    groups:
+      infra-minor-and-patch:
+        update-types: ["minor", "patch"]
+
   # Workflow actions age out and get deprecated — this is what catches it.
   - package-ecosystem: github-actions
     directory: "/"

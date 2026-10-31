@@ -1,0 +1,7 @@
+# Copy to inventory.yml (gitignored) and fill in. This repository is public:
+# the droplet's address lives only in the copy.
+droplet:
+  hosts:
+    production:
+      ansible_host: 203.0.113.10   # a documentation address, not the droplet's
+      ansible_user: root

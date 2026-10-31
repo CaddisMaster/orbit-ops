@@ -1,0 +1,44 @@
+# The site file is production's, byte for byte, as Certbot left it (RUNBOOK §2):
+# 443 with the learn certificate, port 80 redirecting. A template that differed
+# would show as drift on every check and undo Certbot's edit on a real run.
+#
+# The certificate is Certbot's, never this role's. On a rebuild it is restored
+# or re-issued first (RUNBOOK §2), so a missing file stops the run here, before
+# Nginx is handed a site it can't load.
+- name: Look at the certificate files the site names
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: false
+  loop:
+    - /etc/letsencrypt/live/{{ orbit_ops_domain }}/fullchain.pem
+    - /etc/letsencrypt/live/{{ orbit_ops_domain }}/privkey.pem
+    - /etc/letsencrypt/options-ssl-nginx.conf
+    - /etc/letsencrypt/ssl-dhparams.pem
+  register: orbit_ops_tls_files
+
+- name: The certificate files exist
+  ansible.builtin.assert:
+    that: item.stat.exists
+    fail_msg: >-
+      {{ item.item }} is missing. This role never requests a certificate: get
+      one for {{ orbit_ops_domain }} with Certbot (RUNBOOK §2), then run again.
+    quiet: true
+  loop: "{{ orbit_ops_tls_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: The learn site
+  ansible.builtin.copy:
+    src: "{{ orbit_ops_domain }}"
+    dest: /etc/nginx/sites-available/{{ orbit_ops_domain }}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: learn site changed
+
+- name: The learn site is enabled
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/{{ orbit_ops_domain }}
+    dest: /etc/nginx/sites-enabled/{{ orbit_ops_domain }}
+    state: link
+  notify: learn site changed

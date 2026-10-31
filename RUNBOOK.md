@@ -30,7 +30,9 @@ swapon --show     # if empty, add a 2 GB swapfile — see §7
 
 ## 2. First-time setup (once)
 
-Run as the `deploy` user unless noted.
+Run as the `deploy` user unless noted. Steps 2 and 4, the deploy key and the nightly backup
+are described as code in `infra/` (#322), checked against production in check mode; see
+`infra/README.md`. The certificate and `.env` stay by hand: the role refuses to run without them.
 
 ```bash
 # 1. DNS: an A record for `learn` → the droplet's IP (DigitalOcean → Networking → Domains).
@@ -255,8 +257,9 @@ What exists, all in `/opt/orbit-ops/backups`:
 
 ### Installing the nightly backup (once)
 
-As root on the droplet, from the VM (while Gateway is connected) or a Mac terminal. Until #322's
-Ansible role owns these files, this is how they get there. `SHA` is a `main` commit that has
+The Ansible role (`infra/`, #322) describes these units now; this is the by-hand way, kept for
+reference until a real run of the role is decided. As root on the droplet, from the VM (while
+Gateway is connected) or a Mac terminal. `SHA` is a `main` commit that has
 #324, and each `*_SUM` is that file's `sha256sum` there. The release after #324 ships the script
 itself, so step 1 only matters before then (it's harmless after).
 

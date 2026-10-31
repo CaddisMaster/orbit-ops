@@ -1,0 +1,27 @@
+# The nightly dump (#324), from infra/systemd/, the one copy of the units.
+# Production's are byte-identical to it (checked 2026-10-31). The unit runs
+# /opt/orbit-ops/backup_db.sh, which each release installs, so on a rebuild the
+# timer's first nights fail until the first deploy: that shows in
+# `systemctl --failed`, and nothing is lost that existed.
+- name: The backup units
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../systemd/{{ item }}"
+    dest: /etc/systemd/system/{{ item }}
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - orbit-ops-backup.service
+    - orbit-ops-backup.timer
+  register: orbit_ops_backup_units
+
+- name: Reload systemd after a unit changed
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: orbit_ops_backup_units is changed
+
+- name: The backup timer runs and starts at boot
+  ansible.builtin.systemd_service:
+    name: orbit-ops-backup.timer
+    state: started
+    enabled: true

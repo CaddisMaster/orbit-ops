@@ -1,0 +1,61 @@
+# RUNBOOK §2 and §6, described. What this role never does, because the box is
+# shared and release.yml owns the app (agreed with BB #530):
+#   - write .env or docker-compose.yml. .env is restored from Bitwarden (#320)
+#     and only checked here; compose and backup_db.sh arrive with each release.
+#   - request a certificate, or touch another app's Nginx site.
+
+- name: The host layer is there
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ orbit_ops_user }}"
+
+- name: The deploy directory
+  ansible.builtin.file:
+    path: "{{ orbit_ops_dir }}"
+    state: directory
+    owner: "{{ orbit_ops_user }}"
+    group: "{{ orbit_ops_user }}"
+    mode: "0750"
+
+# Every dump holds every learner row (#326).
+- name: The backups directory
+  ansible.builtin.file:
+    path: "{{ orbit_ops_dir }}/backups"
+    state: directory
+    owner: "{{ orbit_ops_user }}"
+    group: "{{ orbit_ops_user }}"
+    mode: "0700"
+
+# stat reads the inode, never the contents, so no secret passes through here.
+- name: Look at .env
+  ansible.builtin.stat:
+    path: "{{ orbit_ops_dir }}/.env"
+    get_checksum: false
+  register: orbit_ops_env
+
+- name: .env exists, mode 600, owned by the deploy user
+  ansible.builtin.assert:
+    that:
+      - orbit_ops_env.stat.exists
+      - orbit_ops_env.stat.isreg
+      - orbit_ops_env.stat.mode == '0600'
+      - orbit_ops_env.stat.pw_name == orbit_ops_user
+      - orbit_ops_env.stat.gr_name == orbit_ops_user
+    fail_msg: >-
+      {{ orbit_ops_dir }}/.env must exist as a regular file, mode 600,
+      {{ orbit_ops_user }}:{{ orbit_ops_user }}. This role never writes it:
+      restore it from Bitwarden (RUNBOOK §3, "The recovery copy"), then run again.
+    quiet: true
+
+- name: Orbit Ops's deploy key
+  ansible.posix.authorized_key:
+    user: "{{ orbit_ops_user }}"
+    key: "{{ orbit_ops_deploy_key }}"
+    key_options: "{{ orbit_ops_deploy_key_options }}"
+    exclusive: false
+
+- name: Nginx site
+  ansible.builtin.import_tasks: nginx.yml
+
+- name: Nightly backup
+  ansible.builtin.import_tasks: backup.yml

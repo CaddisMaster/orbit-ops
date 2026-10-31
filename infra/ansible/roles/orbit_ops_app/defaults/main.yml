@@ -1,0 +1,16 @@
+# Orbit Ops's layer of the shared droplet (#322), on top of Budget Buddy's
+# host role (infra/host-role.pin). Every value here is production's, read from
+# the droplet on 2026-10-31; a test overrides only the deploy key.
+
+orbit_ops_dir: /opt/orbit-ops
+orbit_ops_user: deploy
+orbit_ops_domain: learn.seandesmet.com
+
+# The restricted line release.yml deploys through (RUNBOOK §4). Only the public
+# half is here. It must match the droplet's line exactly, options included, or
+# check mode reports a change. Managed non-exclusively: every other line in
+# the file (BB's keys, backup-export) is left as it is.
+orbit_ops_deploy_key: >-
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP9WHAWYs11AvdH10+ZteNEBiQX41ELka9R1Bd5HEQPx
+  github-actions orbit-ops deploy
+orbit_ops_deploy_key_options: no-agent-forwarding,no-port-forwarding,no-X11-forwarding
