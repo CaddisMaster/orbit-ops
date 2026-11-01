@@ -86,9 +86,7 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   (`compose run web`) and the release smoke test. Root owns `/app` (#263). Anything that must
   write at runtime writes to `/tmp` (a tmpfs, gone on restart) or gets a named volume. The dev
   override keeps the lockdown but makes `/tmp` executable (the backup-script tests run a stub
-  `docker` from `tmp_path`) and raises `pids_limit` for pytest-xdist. It also adds `CHOWN`
-  (#354): PyCharm's Compose interpreter chowned its helper volume in a root one-off `web`
-  container, and it stays until the move back to VS Code (#365) has stuck. Only root gains it; `appuser`'s effective capabilities stay empty.
+  `docker` from `tmp_path`) and raises `pids_limit` for pytest-xdist. It adds no capabilities.
 - **The image scan can fail a PR that changed nothing in the image** (#265). Grype's database
   updates daily, so a newly published CRITICAL with a fix fails every PR's "Image builds" until
   the fix ships. Fix it in its own PR (usually a base-image bump: both `FROM` lines, new digest);

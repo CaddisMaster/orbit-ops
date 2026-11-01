@@ -23,11 +23,6 @@ services:
     pids_limit: 1000
     tmpfs: !override
       - /tmp:exec
-    # And one from PyCharm's interpreter (#354), which chowned its helper volume
-    # in a root one-off `web` container; it stays until the move back to VS Code
-    # (#365) has stuck. Only root gains it: appuser's
-    # effective capabilities stay empty, so the app's disk writes still fail.
-    cap_add: [CHOWN]
     volumes:
       - .:/app
       - /app/.venv
