@@ -159,6 +159,45 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-11-01: back to VS Code, CHOWN gone, #360, and #323's staging
+
+- **Sean moved back to VS Code for all projects** (#365 / #366), two days after PyCharm. PyCharm is
+  removed from the Mac and the VM. The Mac session found no separate Gateway install, so
+  "Gateway" in older notes was PyCharm's own remote feature.
+- **Droplet steps are Mac-only again, by Sean's decision.** The VM route came from Gateway's
+  forwarded agent. The Budget Buddy session reports that Sean removed `mac-to-jupiter-vm` from
+  root's `authorized_keys` on the droplet. That key stays on the VM, and is what the name on the
+  VM's only `authorized_keys` line says it is. Checked here: `SSH_AUTH_SOCK` unset, and `ssh` to
+  the droplet says `Permission denied (publickey)`.
+- **#368 (#367): dev `web` adds no capabilities.** `CHOWN` was only for PyCharm's interpreter, and
+  the hardening test now holds dev to none. A root one-off's `chown` is refused.
+- **#369 (#360):** the `bw-*.sh` symlinks are out of the build context. Released images were never
+  affected.
+- **#370 (#323): `infra/stage.sh <version>` rehearses a release in LXD.** It builds `orbit-stage`
+  with production's playbooks and deploys a tag with that tag's own scripts, in `release.yml`'s
+  order. It fails if any table's row count changes, and `tests/test_infra.py` fails if its
+  commands drift from `release.yml`. Run it while the `production` approval waits (RUNBOOK §5).
+  - Checked: 0.13.1 from nothing, a restored dev dump (51 rows), then 0.13.2, with the same counts
+    and `/healthz` over HTTPS through Nginx. The app connected as `orbit_app`, with `secure`
+    cookies. Deleting a row mid-run made it fail, naming the table.
+  - **Not yet exercised:** a real production dump, an owner not named `orbit`, and a migration that
+    does something: arm64 images start at 0.13.1, and neither staged release has one.
+- **VS Code on the VM:** Python and Pylance, plus an editor-only `.venv` on the system 3.12 in this
+  repo, BB and MLIT. It can flag 3.14-only syntax. Nothing runs from it.
+- **Budget Buddy #556 and seandesmet.com #42** are closed. #526 no longer needs `CHOWN`.
+- Gotchas:
+  - **The VM rebooted (16:32)** and lost the `DOCKER-USER` rules again. Re-added, and they'll go
+    again next time.
+  - **One `lxc launch` failed again**, the second in two days, and a re-run passed. I cut the error
+    off with `tail -3`, so the cause is still unknown. Next time, keep the whole output.
+  - Merging one PR leaves the next `BEHIND`: `gh pr update-branch`, then wait for its checks.
+- **Unreleased on `main`:** nothing that reaches the image.
+- **Next:**
+  - Sean's check-mode run from the Mac (`infra/README.md`, "Checking production"), then close #322.
+  - Dependabot: #363 looks routine; #364 (`anthropic` 2.x) and #361 (Python 3.15) need their own look.
+  - Rehearse the next release with a real dump.
+  - Unit 2.1 can be planned any time.
+
 ### 2026-10-31: #357 and #322, Orbit Ops's layer of the droplet as code
 
 - **#358 (#357):** RUNBOOK and `release-prep` say droplet steps run from the VM or the Mac, after
@@ -247,40 +286,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Next:** #322 here, from that comment. BB #544 in a Budget Buddy session. Unit 2.1 can be
   planned any time. Sean still has to open MLIT in PyCharm once and enter the BB and MLIT
   database passwords. Still on the droplet: apt updates and the 26.04 upgrade.
-
-### 2026-10-30: v0.13.1 shipped, #321 proven, and a handoff to Budget Buddy
-
-- **Nothing was ready to start** (#322 and #323 wait on BB #530, and #321 needed a release),
-  so Sean called the release. `release-prep` said GO but questioned 0.14.0: VERSIONING.md gives a
-  MINOR only for new surface, and #336/#338 are fidelity fixes under Changed. **Sean picked
-  v0.13.1.** #344 cut the CHANGELOG and added the missing Fixed line for #341.
-- **v0.13.1 deployed** on Sean's approval: run `40999574486`, commit `902208d`, no
-  migrations, `backup ok … pre-deploy-20261030-035749.sql.gz (5291 bytes)`, `/healthz` reports
-  0.13.1, and Budget Buddy returned 200.
-- **#321 closed**, proven on this release. The tag's index lists `linux/amd64` and
-  `linux/arm64`, plus two `unknown/unknown` attestation manifests. Both scan legs were green
-  (about 1.5 min each, in parallel). `build-push` took **3m06s**, against about 40 s for
-  amd64 only. On `jupiter` the arm64 image migrated a throwaway `postgres:16` to `0010` and served
-  `/healthz` under the production lockdown flags, with `uname -m` `aarch64`.
-- **Handoff for the BB session**, in the vault next to the 2026-10-27 IaC handoff: Orbit Ops's
-  state, #337's recipe for BB #529, what BB #530 needs (`lxd init`, the cross-cutting duties),
-  the Bitwarden TODOs, and **a reminder to come back here once BB #530 merges**, with its SHA.
-- Gotchas:
-  - `release-prep`'s version is worth reading against VERSIONING.md. Console code is not a MINOR
-    by itself, only new surface is.
-  - The deploy log greps show `::error::` lines that are the script's own source being echoed,
-    not errors.
-- **After the wrap:**
-  - **Docker build cache.** On the VM it was pruned (15 GB freed, 33 GB free now) and capped at
-    10 GB by Docker's own garbage collection (`/etc/docker/daemon.json`, `builder.gc`). All dev
-    containers came back after the restart. Prompted by Sean weighing JetBrains' remote backend.
-  - **Cross-project routing, replacing handoff notes:**
-    - Another repo must act → a `cross-repo` issue there (the label now exists in all three
-      repos).
-    - A shared VM or droplet change → the dated log in `personal-vault` (where: `CLAUDE.local.md`).
-    - Urgent → also message the running session.
-    - The handoff note was folded into BB #530's comment.
-- **Unreleased on `main`:** nothing.
-- **Next:** Sean is doing BB #530 in a Budget Buddy session. When it merges, start #322 with BB's
-  SHA. Unit 2.1 (Python for operations) isn't blocked: plan its milestone and issues any time.
-  Still on the droplet: apt updates and the 26.04 upgrade.
