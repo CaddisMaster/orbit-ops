@@ -4,6 +4,43 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-10-30: v0.13.1 shipped, #321 proven, and a handoff to Budget Buddy
+
+- **Nothing was ready to start** (#322 and #323 wait on BB #530, and #321 needed a release),
+  so Sean called the release. `release-prep` said GO but questioned 0.14.0: VERSIONING.md gives a
+  MINOR only for new surface, and #336/#338 are fidelity fixes under Changed. **Sean picked
+  v0.13.1.** #344 cut the CHANGELOG and added the missing Fixed line for #341.
+- **v0.13.1 deployed** on Sean's approval: run `40999574486`, commit `902208d`, no
+  migrations, `backup ok … pre-deploy-20261030-035749.sql.gz (5291 bytes)`, `/healthz` reports
+  0.13.1, and Budget Buddy returned 200.
+- **#321 closed**, proven on this release. The tag's index lists `linux/amd64` and
+  `linux/arm64`, plus two `unknown/unknown` attestation manifests. Both scan legs were green
+  (about 1.5 min each, in parallel). `build-push` took **3m06s**, against about 40 s for
+  amd64 only. On `jupiter` the arm64 image migrated a throwaway `postgres:16` to `0010` and served
+  `/healthz` under the production lockdown flags, with `uname -m` `aarch64`.
+- **Handoff for the BB session**, in the vault next to the 2026-10-27 IaC handoff: Orbit Ops's
+  state, #337's recipe for BB #529, what BB #530 needs (`lxd init`, the cross-cutting duties),
+  the Bitwarden TODOs, and **a reminder to come back here once BB #530 merges**, with its SHA.
+- Gotchas:
+  - `release-prep`'s version is worth reading against VERSIONING.md. Console code is not a MINOR
+    by itself, only new surface is.
+  - The deploy log greps show `::error::` lines that are the script's own source being echoed,
+    not errors.
+- **After the wrap:**
+  - **Docker build cache.** On the VM it was pruned (15 GB freed, 33 GB free now) and capped at
+    10 GB by Docker's own garbage collection (`/etc/docker/daemon.json`, `builder.gc`). All dev
+    containers came back after the restart. Prompted by Sean weighing JetBrains' remote backend.
+  - **Cross-project routing, replacing handoff notes:**
+    - Another repo must act → a `cross-repo` issue there (the label now exists in all three
+      repos).
+    - A shared VM or droplet change → the dated log in `personal-vault` (where: `CLAUDE.local.md`).
+    - Urgent → also message the running session.
+    - The handoff note was folded into BB #530's comment.
+- **Unreleased on `main`:** nothing.
+- **Next:** Sean is doing BB #530 in a Budget Buddy session. When it merges, start #322 with BB's
+  SHA. Unit 2.1 (Python for operations) isn't blocked: plan its milestone and issues any time.
+  Still on the droplet: apt updates and the 26.04 upgrade.
+
 ### 2026-10-29 (later): IaC status, and #320's Bitwarden recovery copies
 
 - **Explained for Sean:** where the *Infrastructure as code* milestone stands, and why it's
