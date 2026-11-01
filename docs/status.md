@@ -166,8 +166,8 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   "Gateway" in older notes was PyCharm's own remote feature.
 - **Droplet steps are Mac-only again, by Sean's decision.** The VM route came from Gateway's
   forwarded agent. The Budget Buddy session reports that Sean removed `mac-to-jupiter-vm` from
-  root's `authorized_keys` on the droplet. That key stays on the VM, and is what the name on the
-  VM's only `authorized_keys` line says it is. Checked here: `SSH_AUTH_SOCK` unset, and `ssh` to
+  root's `authorized_keys` on the droplet. It's still the only line in the VM's `authorized_keys`,
+  so it's probably how the Mac logs in. Checked here: `SSH_AUTH_SOCK` unset, and `ssh` to
   the droplet says `Permission denied (publickey)`.
 - **#368 (#367): dev `web` adds no capabilities.** `CHOWN` was only for PyCharm's interpreter, and
   the hardening test now holds dev to none. A root one-off's `chown` is refused.
