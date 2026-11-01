@@ -124,7 +124,7 @@ complete. `TAG` in the prod item is only a placeholder, because the deploy rewri
 - **Order of edits:** change the droplet's `.env` first, then the prod item (Bitwarden → the
   item → edit the field). If the item lags behind, a restore brings back an old value.
 - `bw` is `@bitwarden/cli` from npm, pinned exactly (2026.10.0 on the VM, which is arm64; the
-  native build is x64-only). It runs on the VM or the Mac, for local and prod alike. Unlock it once
+  native build is x64-only). It runs on the VM for local and on the Mac for prod. Unlock it once
   per terminal with `export BW_SESSION=$(bw unlock --raw)`.
 
 Local, on the VM, from the repo root:
@@ -133,13 +133,13 @@ Local, on the VM, from the repo root:
 ./bw-env.sh                                   # orbit-ops-env-local → .env (old one → .env.bak)
 ```
 
-Prod, seeding it (once) from the VM or the Mac. The file is piped, so it never lands on local disk:
+Prod, seeding it (once) from the Mac. The file is piped, so it never lands on the Mac's disk:
 
 ```bash
 ssh <droplet> 'cat /opt/orbit-ops/.env' | ~/Developer/personal-vault/infra/bitwarden/bw-seed.sh - orbit-ops-env-prod
 ```
 
-Prod, restoring after losing the droplet, from the VM or the Mac. Fetch the item into a private scratch
+Prod, restoring after losing the droplet, from the Mac. Fetch the item into a private scratch
 directory, copy the file up, then delete the local copy:
 
 ```bash
@@ -188,7 +188,7 @@ service it recreates the database container. `postgres` is pinned by tag and dig
 a pull no longer changes it behind your back, but the edit itself still does.
 `scripts/install_compose.sh` refuses a release whose compose file would recreate `db`, so a `db`
 change is applied by hand, **before** the release that carries it, at a quiet time. As root on the
-droplet, from the VM (while Gateway is connected) or a Mac terminal:
+droplet, from a Mac terminal:
 
 ```bash
 cd /opt/orbit-ops && set -a && . ./.env && set +a
@@ -258,8 +258,8 @@ What exists, all in `/opt/orbit-ops/backups`:
 ### Installing the nightly backup (once)
 
 The Ansible role (`infra/`, #322) describes these units now; this is the by-hand way, kept for
-reference until a real run of the role is decided. As root on the droplet, from the VM (while
-Gateway is connected) or a Mac terminal. `SHA` is a `main` commit that has
+reference until a real run of the role is decided. As root on the droplet, from a Mac terminal.
+`SHA` is a `main` commit that has
 #324, and each `*_SUM` is that file's `sha256sum` there. The release after #324 ships the script
 itself, so step 1 only matters before then (it's harmless after).
 

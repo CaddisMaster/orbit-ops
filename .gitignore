@@ -40,8 +40,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# JetBrains (PyCharm). Per-machine project state: absolute paths, the chosen
+# VS Code and JetBrains (PyCharm). Per-machine project state: absolute paths, the chosen
 # interpreter, window layout. Nothing in it is shared, so all of it is ignored.
+.vscode/
 .idea/
 
 # macOS. Note the capital S — git patterns are case-sensitive and the file

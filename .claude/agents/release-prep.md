@@ -26,8 +26,7 @@ git diff --stat <last>..HEAD
 **1. New environment variables — the deploy failure with no signal.**
 
 `git diff <last>..HEAD -- .env.example app/config.py`. Every new setting must be added to
-`/opt/orbit-ops/.env` on the droplet **before** approving the deploy (from the VM while Gateway
-is connected, or from the Mac). A setting with a default ships silently using the default; say
+`/opt/orbit-ops/.env` on the droplet **before** approving the deploy (from a Mac terminal). A setting with a default ships silently using the default; say
 which default applies.
 
 **2. Alembic revisions and their deploy phase.**

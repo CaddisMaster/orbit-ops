@@ -2,7 +2,7 @@
 # present on the droplet.
 services:
   db:
-    # Dev only, so PyCharm's Database tool can browse it from the VM (#349).
+    # Dev only, so a database client can browse it from the VM (#349).
     # Loopback, like every published port (Docker bypasses ufw). 5432 and 5434
     # are Budget Buddy's and MLIT's dev databases. Production's db stays
     # unpublished: this file is not on the droplet.
@@ -23,8 +23,9 @@ services:
     pids_limit: 1000
     tmpfs: !override
       - /tmp:exec
-    # And one for PyCharm's interpreter (#354), which chowns its helper volume
-    # in a root one-off `web` container. Only root gains it: appuser's
+    # And one from PyCharm's interpreter (#354), which chowned its helper volume
+    # in a root one-off `web` container; it stays until the move back to VS Code
+    # (#365) has stuck. Only root gains it: appuser's
     # effective capabilities stay empty, so the app's disk writes still fail.
     cap_add: [CHOWN]
     volumes:
