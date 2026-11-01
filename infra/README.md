@@ -8,6 +8,7 @@ in-place upgrade) and checked against production.
 |---|---|---|
 | `ansible/roles/orbit_ops_app/` | `/opt/orbit-ops` and `backups/`, the `.env` check, Orbit Ops's deploy key, the `learn` Nginx site, the nightly backup units | #322 |
 | `systemd/` | `orbit-ops-backup.{service,timer}`, the one copy the role installs | #324 |
+| `stage.sh`, `lib.sh` | Staging: a release rehearsed in LXD the way `release.yml` deploys it | #323 |
 | `host-role.pin` | Budget Buddy's host role (`droplet_host`, BB #530), pinned by commit SHA | #322 |
 
 **Layers.** Budget Buddy owns the host: the `deploy` user, sshd, ufw, Docker, Nginx and Certbot
@@ -62,6 +63,36 @@ network. Re-add them:
 sudo iptables -I DOCKER-USER -i lxdbr0 -j ACCEPT
 sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 ```
+
+## Staging in LXD (#323)
+
+```bash
+infra/stage.sh <version>        # build orbit-stage if it's missing, then deploy
+infra/stage.sh restore <dump>   # replace staging's database with a .sql.gz dump
+infra/stage.sh status           # the running version and the row counts
+infra/stage.sh down             # delete the container and everything in it
+```
+
+`orbit-stage` is built by the same playbooks as production, then each version is deployed the
+way `release.yml` does it, with that tag's `docker-compose.yml`, `install_compose.sh` and
+`backup_db.sh`: pin `TAG=`, back up, migrate from the new image, swap, check `/healthz` over
+HTTPS through Nginx. `tests/test_infra.py` fails if the steps drift from `release.yml`. It adds
+one step: setting `orbit_app`'s password, which production did by hand once (RUNBOOK §3).
+Deploying fails if any table's row count changes.
+
+Its `.env` has production's settings (`COOKIE_SECURE=1`, the `orbit_app` role,
+`APP_TIMEZONE`), and every secret is generated in the container. It has no
+`ANTHROPIC_API_KEY`, so nothing can spend. The script never contacts the droplet.
+
+What staging can't show:
+
+- **amd64.** The droplet runs amd64 and this VM arm64, so an amd64-only fault won't appear. The
+  CI smoke test covers amd64. Images before 0.13.1 have no arm64 half (#321), so can't be staged.
+- **Real TLS and DigitalOcean's network.** The certificate is self-signed, and only the container
+  itself is a client: nothing outside it reaches staging.
+- **Memory pressure.** The VM isn't sharing 2 GB with Budget Buddy, so `free -m` means nothing here.
+
+The `DOCKER-USER` rules above are needed here too. The steps for a release are RUNBOOK §5.
 
 ## Checking production
 

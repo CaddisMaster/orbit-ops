@@ -232,6 +232,37 @@ is never touched, and the step 2 dump is there if it's needed (§6). First run: 
 load in that window gets the error page, and the next one works. The release that follows
 installs the same file, and its guard then sees no `db` change.
 
+### Rehearsing a release first (#323)
+
+Optional, and it gates nothing: GitHub can't reach the VM. Publishing a release builds and pushes
+the image, then `release.yml` waits for the `production` approval. Rehearse in that window, on
+the VM (`infra/README.md`, "Staging in LXD"). `<current>` is production's version.
+
+```bash
+infra/stage.sh <current>
+```
+
+For the real rows, copy down the newest dump. From a Mac terminal:
+
+```bash
+ssh <droplet> 'ls -t /opt/orbit-ops/backups/nightly-*.sql.gz | head -1'
+scp -p <droplet>:<that path> /tmp/orbit-rehearsal.sql.gz
+scp -p /tmp/orbit-rehearsal.sql.gz jupiter:orbit-rehearsal.sql.gz && rm /tmp/orbit-rehearsal.sql.gz
+```
+
+Back on the VM:
+
+```bash
+infra/stage.sh restore ~/orbit-rehearsal.sql.gz
+infra/stage.sh <new>
+infra/stage.sh down
+rm ~/orbit-rehearsal.sql.gz
+```
+
+`PASS` means the migrations applied, every table kept its row count and `/healthz` reports the new
+version over HTTPS. Go on to approve the deploy. A dump holds every learner row, so delete both
+copies as above.
+
 ## 6. Backups and restore
 
 What exists, all in `/opt/orbit-ops/backups`:

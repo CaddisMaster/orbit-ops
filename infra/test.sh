@@ -11,34 +11,14 @@
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
-ansible_dir=$here/ansible
-venv=$here/.venv
+# shellcheck source=infra/lib.sh
+. "$here/lib.sh"
 name="orbit-app-$(date +%s)"
 
-die() { echo "infra/test.sh: $*" >&2; exit 1; }
-step() { printf '\n== %s\n' "$*"; }
+check_lxd
 
-delete_container() {
-  [[ $1 == orbit-* ]] || die "refusing to delete '$1': not an orbit- container"
-  lxc delete --force "$1" >/dev/null 2>&1 || true
-}
-
-command -v lxc >/dev/null || die "lxc not found; LXD is not installed"
-lxc storage show default >/dev/null 2>&1 || die "LXD is not initialised; see infra/README.md"
-
-# --- the control node: pinned ansible-core, collections and host role --------
 step "control node"
-if [[ ! -x $venv/bin/ansible-playbook ]] || ! cmp -s "$here/requirements-infra.txt" "$venv/.requirements"; then
-  python3 -m venv "$venv"
-  "$venv/bin/pip" install -q --no-deps -r "$here/requirements-infra.txt"
-  "$venv/bin/pip" check || die "requirements-infra.txt is missing a dependency; pin it there"
-  cp "$here/requirements-infra.txt" "$venv/.requirements"
-fi
-export PATH="$venv/bin:$PATH"
-"$here/fetch_host_role.sh"
-cd "$ansible_dir"
-ansible-galaxy collection install -r requirements.yml -p ./collections >/dev/null
-ansible --version | head -1
+control_node
 
 # --- nothing private is committable ------------------------------------------
 step "the real inventory is gitignored"
@@ -50,18 +30,7 @@ echo "ok: infra/ansible/inventory.yml is ignored"
 step "launch $name"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"; [[ ${KEEP:-} == 1 ]] || delete_container "$name"' EXIT
-timeout 300 lxc launch -q ubuntu:24.04 "$name" -c security.nesting=true \
-  || die "lxc launch failed or took over 5 minutes (try: lxc image list; lxc launch by hand)"
-lxc exec "$name" -- cloud-init status --wait >/dev/null || true
-
-# Docker on the VM sets the FORWARD policy to DROP, which silently blackholes
-# LXD's bridge (shared changes log, 2026-10-30). Fail here, naming the fix.
-if ! lxc exec "$name" -- timeout 15 curl -fsS -o /dev/null https://download.docker.com/; then
-  die "the container has no internet. Docker's FORWARD DROP is blocking lxdbr0; see infra/README.md"
-fi
-
-# Nothing here may reach Let's Encrypt; the certificate below is self-signed.
-lxc exec "$name" -- sh -c 'echo "127.0.0.1 acme-v02.api.letsencrypt.org" >> /etc/hosts'
+launch_container "$name"
 
 ct() { lxc exec "$name" -- "$@"; }
 
@@ -107,15 +76,7 @@ grep -q 'live/learn.seandesmet.com/fullchain.pem is missing' "$tmp/no-cert.log" 
   || { cat "$tmp/no-cert.log"; die "the failure doesn't name the certificate"; }
 echo "ok: refused, named the certificate"
 
-# Stand-ins for what Certbot leaves on production: a self-signed lineage, and
-# Certbot's own TLS options and DH parameters, copied from the installed package.
-ct sh -c '
-  set -e
-  d=/etc/letsencrypt/live/learn.seandesmet.com && mkdir -p "$d"
-  openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj /CN=learn.seandesmet.com \
-    -keyout "$d/privkey.pem" -out "$d/fullchain.pem" 2>/dev/null
-  cp "$(find /usr/lib/python3/dist-packages -name options-ssl-nginx.conf | head -1)" /etc/letsencrypt/
-  cp "$(find /usr/lib/python3/dist-packages -name ssl-dhparams.pem | head -1)" /etc/letsencrypt/'
+stand_in_certificate "$name"
 
 # --- first full run, then nothing to do ---------------------------------------
 step "first run"
