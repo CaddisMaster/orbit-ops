@@ -49,6 +49,11 @@ docs/
 docker-compose*.yml
 test.sh
 
+# Bitwarden's helpers (#320): symlinks into personal-vault on the VM, dangling in
+# a container. `.env.*` doesn't catch them (#360).
+bw-env.sh
+bw-seed.sh
+
 # The image scan's ignore list (#265): CI reads it, the image doesn't need it.
 .grype.yaml
 

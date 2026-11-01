@@ -168,6 +168,12 @@ def test_dev_adds_no_capabilities_to_web():
     assert _services()["web"]["cap_drop"] == ["ALL"]
 
 
+@pytest.mark.criterion(360, "A local build ships no Bitwarden helper")
+def test_a_local_build_ships_no_bitwarden_helper():
+    ignored = (ROOT / ".dockerignore").read_text().splitlines()
+    assert {"bw-env.sh", "bw-seed.sh"} <= set(ignored)
+
+
 @pytest.mark.criterion(266, "Postgres is pinned by tag and digest")
 def test_postgres_is_pinned_and_ci_tests_against_the_same_one():
     image = _services()["db"]["image"]
