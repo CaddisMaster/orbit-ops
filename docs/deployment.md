@@ -28,7 +28,8 @@ revisions and the exact deploy sequence.
 
 1. `CHANGELOG.md`: rename `[Unreleased]` to `[X.Y.Z] — YYYY-MM-DD`, start a fresh `[Unreleased]`.
 2. Merge that PR, then publish a GitHub Release `vX.Y.Z` from `main` with the entry as notes.
-3. Approve the `production` deployment when the smoke and scan jobs are green. A failed scan
+3. Optionally rehearse it on the VM while the deployment waits (RUNBOOK §5, #323). Approve the
+   `production` deployment when the smoke and scan jobs are green. A failed scan
    is a CRITICAL vulnerability with a fix available (#265): ship the fix, usually a base-image
    bump, as a patch release; accept it in `.grype.yaml` with its reason only if it can't ship.
    The image is built for `linux/amd64` and `linux/arm64` (#321), the arm64 half under QEMU, and

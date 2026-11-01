@@ -105,3 +105,65 @@ def test_the_site_proxies_learn_to_5002_with_a_certificate():
     assert "return 301 https://$host$request_uri;" in site
     # No security headers here: the app sets them (RUNBOOK §2).
     assert "add_header" not in site
+
+
+# --- #323: staging ------------------------------------------------------------
+def _stage_code():
+    """stage.sh without its comments, so a mention in prose can't satisfy a rule."""
+    return "\n".join(line for line in (INFRA / "stage.sh").read_text().splitlines() if not line.lstrip().startswith("#"))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "umask 022 && cat > ",
+        "sh -s -- '${EXPECTED}' '${VERSION}' ",
+        "sha256sum -c --quiet",
+        "grep -v '^TAG=' .env > .env.tmp",
+        "docker compose up -d --wait db",
+        "bash -s -- pre-deploy",
+        "docker compose pull web",
+        "docker compose run --rm --no-deps -T web alembic upgrade head",
+        "docker compose up -d --remove-orphans",
+        "printenv APP_VERSION",
+    ],
+)
+def test_staging_deploys_the_way_release_yml_does(command):
+    """A step changed in one and not the other means staging no longer rehearses a deploy."""
+    release = (ROOT / ".github/workflows/release.yml").read_text()
+    assert command in release, f"release.yml no longer does {command!r}"
+    assert command in _stage_code(), f"stage.sh doesn't do {command!r}"
+
+
+def test_staging_runs_the_releases_own_scripts_in_the_same_order():
+    code = _stage_code()
+    order = ["show docker-compose.yml", "show scripts/install_compose.sh", "show scripts/backup_db.sh",
+             "--wait db", "bash -s -- pre-deploy", "alembic upgrade head", "--remove-orphans"]
+    positions = [code.index(step) for step in order]
+    assert positions == sorted(positions)
+
+
+def test_staging_env_has_every_setting_and_no_ai_key():
+    code = _stage_code()
+    keys = [line.split("=")[0] for line in _lines(ROOT / ".env.example")]
+    for key in keys:
+        if key != "TAG":  # the deploy writes it, as on production
+            assert f'"{key}"' in code, f"stage.sh's .env lacks {key}"
+    assert '"ANTHROPIC_API_KEY": ""' in code
+
+
+@pytest.mark.criterion(323, "Staging never holds production secrets")
+def test_staging_generates_its_secrets_and_never_reaches_the_droplet():
+    code = _stage_code()
+    for key in ("DB_PASSWORD", "DB_APP_PASSWORD"):
+        assert f'"{key}": s(32)' in code
+    assert '"SECRET_KEY": s(48)' in code
+    for reach in (r"\bssh\b", r"\bscp\b", r"\brsync\b", r"\bbw\b", r"bw-env", r"DROPLET", r"\b\d+\.\d+\.\d+\.\d+\b"):
+        found = [m for m in re.findall(reach, code) if m != "127.0.0.1"]
+        assert not found, f"stage.sh matches {reach}: {found}"
+
+
+def test_staging_only_ever_acts_on_an_orbit_container():
+    assert re.search(r"^name=orbit-stage$", _stage_code(), re.M)
+    assert "not an orbit- container" in (INFRA / "lib.sh").read_text()
+
