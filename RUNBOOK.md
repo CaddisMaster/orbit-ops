@@ -35,7 +35,7 @@ are described as code in `infra/` (#322), checked against production in check mo
 `infra/README.md`. The certificate and `.env` stay by hand: the role refuses to run without them.
 
 ```bash
-# 1. DNS: an A record for `learn` → the droplet's IP (DigitalOcean → Networking → Domains).
+# 1. DNS: an A record for `learn` → the droplet's IP, by hand at Squarespace (its nameservers).
 dig +short learn.seandesmet.com            # must print the droplet IP before step 4
 
 # 2. Deploy directory
@@ -272,10 +272,17 @@ What exists, all in `/opt/orbit-ops/backups`:
 | `pre-deploy-<timestamp>.sql.gz` | every deploy, before migrating | newest 14 | `release.yml` |
 | `nightly-<timestamp>.sql.gz` | 03:30 New York time, and at boot after a missed night | newest 14 | `orbit-ops-backup.timer` (#324) |
 
-- ⚠️ **No dump leaves the droplet yet.** Budget Buddy's off-box export doesn't include this
-  directory until BB #535 lands. Until then, losing the droplet loses every dump. `.env` and
-  the compose file aren't in any backup either: `.env` is recovered from Bitwarden (#320), and
-  the compose file is in git at the release's tag.
+- **The off-droplet copy is the VM's pull, and it runs only while the VM is on** (BB #535, since
+  2026-11-02). The VM's `droplet-backup.service` fetches the newest finished dump through Budget
+  Buddy's `backup-export` into `~/Developer/personal-projects/backups/droplet/orbit-ops/` and keeps
+  14 there. Each run brings only the newest dump, so losing the droplet loses everything since the
+  last pull. ⚠️ The first pull passed `gzip -t` and ends with `pg_dump`'s completion line, but **no
+  pulled dump has been restored yet.**
+- ⚠️ **The dump's name is what the pull selects on.** `backup-export` takes the newest `*.sql.gz`
+  in `/opt/orbit-ops/backups`. A finished dump must keep that name and one being written must not
+  have it (`.partial` today). Changing either would stop the pull or send a broken dump.
+- `.env` and the compose file aren't in any Orbit Ops backup: `.env` is recovered from Bitwarden
+  (#320), and the compose file is in git at the release's tag.
 - Both kinds go through `scripts/backup_db.sh` (#116): a dump counts only if `pg_dump` exited 0
   **and** the dump ends with `PostgreSQL database dump complete`. Otherwise no file is kept: the
   deploy stops before migrating, or the nightly unit fails. It writes `<file>.partial` first, so

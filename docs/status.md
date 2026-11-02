@@ -115,14 +115,16 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   unchanged. The lesson column keeps its line length in characters.
 
 - **The droplet as code, at no extra cost** (2026-10-27, milestone *Infrastructure as code*).
-  Budget Buddy owns the host layer (BB #530's Ansible role) and the Terraform for the droplet and
-  DNS, `learn`'s record included (BB #533). Orbit Ops owns only its app role (#322), pinning BB's
+  Budget Buddy owns the host layer (BB #530's Ansible role) and the Terraform for the droplet only
+  (BB #533). DNS isn't in Terraform: all four records, `learn`'s included, stay by hand at
+  Squarespace. Orbit Ops owns only its app role (#322), pinning BB's
   host role by SHA. Roles never write `.env` or `docker-compose.yml` (`release.yml` owns those),
   and never remove an Nginx site they didn't create. Tested in LXD containers on the VM; production
   only in check mode, from the Mac, until Sean decides otherwise.
 - **Orbit Ops dumps its own database nightly; BB ships it off the droplet** (option B, 2026-10-27).
   `orbit-ops-backup.timer` (#324) runs the deploy's own `backup_db.sh`, which each release
-  installs in `/opt/orbit-ops`. The off-box copy is BB #535. Every dump is `600` (#326).
+  installs in `/opt/orbit-ops`. Every dump there is `600` (#326). The off-box copy is the VM's
+  pull of the newest dump (BB #535, RUNBOOK §6), which runs only while the VM is on.
 - **Agents earn their place** (#260, 2026-10-29). `sweeper` and `test-first` were deleted from
   `.claude/agents/`: ported from Budget Buddy at bootstrap, never used here, and each was a file
   to keep in step with BB's. `gotcha-auditor` stays and runs on every branch diff before its PR
@@ -180,6 +182,9 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   look once a fixed image exists.
 - **Sean moved to a Budget Buddy session to finish the IaC work** (BB #535, BB #533). This session
   stays open for its status update.
+- **Both closed later that day, and #377 records what changed here.** Dumps now reach the VM
+  (RUNBOOK §6), though no pulled dump has been restored. BB #533 ended up holding the droplet only,
+  so `learn`'s record stays by hand at Squarespace; the RUNBOOK had sent it to DigitalOcean.
 - Gotchas:
   - **Mac steps run in zsh:** `read -rp` fails there with `read: -p: no coprocess`.
   - A PR whose checks are still running reads `BLOCKED`. Wait rather than reaching for `--admin`.
