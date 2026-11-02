@@ -36,7 +36,7 @@ control_node() {
 
 launch_container() {
   local name=$1
-  timeout 300 lxc launch -q ubuntu:24.04 "$name" -c security.nesting=true \
+  timeout 300 lxc launch -q ubuntu:24.04 "$name" -c security.nesting=true </dev/null \
     || die "lxc launch failed or took over 5 minutes (try: lxc image list; lxc launch by hand)"
   lxc exec "$name" -- cloud-init status --wait >/dev/null || true
 
