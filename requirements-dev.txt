@@ -3,7 +3,7 @@
 #
 # httpx is FastAPI's TestClient transport.
 httpx==0.28.1
-pytest==9.1.1
+pytest==9.2.0
 # Parallel runs. Safe because tests create uniquely named rows per test
 # (tests/conftest.py `make_user`) rather than sharing fixtures across workers.
 pytest-xdist==3.8.0
@@ -14,4 +14,4 @@ pytest-xdist==3.8.0
 watchfiles==1.3.0
 # ⚠️ THE ONLY RUFF PIN. CI's ruff-action reads it via `version-file:`.
 # Keep it a bare `ruff==X.Y.Z` line.
-ruff==0.17.2
+ruff==0.17.3
