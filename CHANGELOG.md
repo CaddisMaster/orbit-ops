@@ -6,6 +6,12 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- The `anthropic` SDK moves from 1.13 to 2.3 (#364), so hints and lab reviews use API version
+  `2026-10-21`. No code changed, and nothing should look different. No test calls the real API,
+  so #375 tries both on production after the release.
+- Eight minor and patch dependency updates (#372), including FastAPI, Starlette and Pydantic.
+
 ## [0.13.2] — 2026-10-30
 
 A security patch: the image moves to Python 3.14.10. Nothing changes for the learner.
