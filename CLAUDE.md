@@ -102,9 +102,10 @@ See `docs/status.md`. **v0.13.2** is in production (2026-10-30), a security patc
 bumps (#372) and `anthropic` 2.3 (#364), which moves requests to API version `2026-10-21`. Sean
 edits in VS Code, and droplet steps run from a Mac terminal only (#365). #322 is closed: the check
 from the Mac reported `changed=0`, and the *Infrastructure as code* milestone is done, BB's #535 and
-#533 included, so dumps now reach the VM (RUNBOOK §6). `infra/stage.sh` rehearses a release in LXD (#323). Next: the release when
-Sean calls it, then #375 (a live hint and lab review); Unit 2.1 (Python for operations) can be
-planned any time.
+#533 included, so dumps now reach the VM (RUNBOOK §6), though none has been restored. `infra/stage.sh`
+rehearses a release in LXD (#323). Next: the release when Sean calls it, rehearsed on a pulled dump
+(#379), then #375 (a live hint and lab review); Unit 2.1 (Python for operations) can be planned any
+time.
 
 ## Maintainer notes (local only)
 
