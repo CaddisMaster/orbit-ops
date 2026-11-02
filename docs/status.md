@@ -161,6 +161,26 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-11-02 (later): dumps leave the droplet, the docs catch up (#377, #380)
+
+- **BB #535 and BB #533 closed the same day.** The VM now pulls the newest dump (RUNBOOK §6), and
+  `learn`'s record is at Squarespace, by hand. #378 (#377) brings the RUNBOOK, this file and
+  `CLAUDE.md` in line. No change reaches the image.
+- **#381 (#380): `lxc launch` gets `</dev/null`.** From a Claude session stdin is an open socket,
+  and `lxc launch` reads config from it. One `infra/test.sh` with the fix: `PASS` in 1m58s. The
+  hang is BB's measurement, not reproduced here, and `infra/stage.sh` wasn't run.
+- **Filed:** #379 (restore a pulled dump, which holds real rows, so it waits for Sean's go; do it in
+  the next release's rehearsal) and personal-vault #2 (pulled files are `664` in `775`/`755`
+  directories, against `600`/`700` on the droplet; Sean is the VM's only login user, so low risk).
+- Gotcha: after a squash-merge, a PR that needs updating can read its **old** run as passing while
+  it's `BLOCKED`, so `gh pr checks --watch` returns early. Wait for `mergeStateStatus` to say `CLEAN`.
+- **Unreleased on `main`, reaching the image:** still only #372 and #364.
+- **Next:**
+  - The release, when Sean calls it, rehearsed with `infra/stage.sh` on a pulled dump, which also
+    does #379. Then #375.
+  - Unit 2.1 can be planned any time.
+  - #361 when its scan clears.
+
 ### 2026-11-02: #322 closed from the Mac, the IaC milestone done, `anthropic` 2.x
 
 - **#322 is closed.** Sean's check-mode run from the Mac, at `4960694`:
@@ -231,46 +251,4 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - Sean's check-mode run from the Mac (`infra/README.md`, "Checking production"), then close #322.
   - Dependabot: #363 looks routine; #364 (`anthropic` 2.x) and #361 (Python 3.15) need their own look.
   - Rehearse the next release with a real dump.
-  - Unit 2.1 can be planned any time.
-
-### 2026-10-31: #357 and #322, Orbit Ops's layer of the droplet as code
-
-- **#358 (#357):** RUNBOOK and `release-prep` say droplet steps run from the VM or the Mac, after
-  the 2026-10-30 reversal. The status line on the production check stays as it is: that's Sean's
-  decision, not a claim about reachability.
-- **#359 (part of #322): `infra/ansible/roles/orbit_ops_app`.** It covers `/opt/orbit-ops` and
-  `backups/`, the `.env` check (never written), the deploy key (non-exclusive), the `learn`
-  site and the backup units from `infra/systemd/`. Sean's calls:
-  - The site file is **production's post-Certbot file byte for byte** (sha256 `8c758e47…`).
-    The LXD test uses a self-signed certificate at the lineage's paths.
-  - The site file and the deploy-key line were read from the droplet over SSH from the VM,
-    read-only. Production's backup units match `infra/systemd/` exactly.
-  - The production check stays **check mode, from the Mac**, in a throwaway pinned clone.
-- **BB's host role is pinned at `4632f78`** (BB #549), not `5dad811`. A real run at `5dad811`
-  would have swapped production's `docker.io` for `docker-ce`. `ansible-galaxy` can't install a
-  role from a subdirectory, so `infra/fetch_host_role.sh` fetches the SHA into a gitignored
-  `vendor/`. `app.yml` never runs the host role.
-- **`infra/test.sh`** (about 2 min) runs BB's host role, then:
-  - three refusals: no `.env`, `.env` mode 644, no certificate;
-  - a full run, then a second run and a check-mode run, both `changed=0`;
-  - HTTPS through Nginx to a backend on 5002, and the 80→443 redirect.
-- **The `gotcha-auditor` found three gaps, all fixed in #359:**
-  - ansible-core's dependencies are pinned too, installed `--no-deps`, then `pip check`;
-  - Dependabot watches `/infra`;
-  - the criteria are claimed (`Part of #322`).
-- **Filed:** BB #553 (BB's ansible-core pin has the same gap), BB #554 and orbit-ops #360. Local
-  prod builds copy the dangling `bw-*.sh` symlinks into `/app`; released images are
-  unaffected.
-- Gotchas:
-  - **The VM rebooted (12:08)** and lost the `DOCKER-USER` rules for `lxdbr0`. They were re-added
-    as documented.
-  - One `lxc launch` failed after 5 minutes. A launch by hand took 3 s, and the re-run passed.
-  - A handler with `changed_when: false` never notifies the next one. The `nginx -t` and the
-    reload share a `listen` topic instead.
-  - A `gh pr create --body` heredoc with a quoted `'EOF'` keeps `\"` literally.
-- **Unreleased on `main`:** nothing that reaches the image (`infra/` is now in `.dockerignore`).
-- **Next:**
-  - Sean's check-mode run from the Mac (`infra/README.md`, "Checking production"), then close #322.
-  - #323 (staging in LXD) can reuse `infra/test.sh`.
-  - #360 is small.
   - Unit 2.1 can be planned any time.
