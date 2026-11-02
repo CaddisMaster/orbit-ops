@@ -98,11 +98,13 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.13.2** is in production (2026-10-30), a security patch: Python
-3.14.10 for CVE-2026-115557 (#351). Nothing that reaches the image is unreleased on `main`.
-Sean edits in VS Code again, and droplet steps run from a Mac terminal only (#365). #322's app
-role is on `main` (`infra/`, #359, BB's host role pinned at `4632f78`); #322 closes after Sean's
-check-mode run from the Mac. `infra/stage.sh` rehearses a release in LXD (#323). Next: that check,
-the Dependabot PRs; Unit 2.1 (Python for operations) can be planned any time.
+3.14.10 for CVE-2026-115557 (#351). Unreleased on `main` and reaching the image: eight dependency
+bumps (#372) and `anthropic` 2.3 (#364), which moves requests to API version `2026-10-21`. Sean
+edits in VS Code, and droplet steps run from a Mac terminal only (#365). #322 is closed: the check
+from the Mac reported `changed=0`, and the *Infrastructure as code* milestone is done here (BB's
+#535 and #533 remain). `infra/stage.sh` rehearses a release in LXD (#323). Next: the release when
+Sean calls it, then #375 (a live hint and lab review); Unit 2.1 (Python for operations) can be
+planned any time.
 
 ## Maintainer notes (local only)
 

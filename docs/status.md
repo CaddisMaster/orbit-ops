@@ -159,6 +159,36 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-11-02: #322 closed from the Mac, the IaC milestone done, `anthropic` 2.x
+
+- **#322 is closed.** Sean's check-mode run from the Mac, at `4960694`:
+  `ok=13 changed=0 failed=0 skipped=1`. No differences, so nothing to fix in the role or record in
+  the RUNBOOK. The skipped task is the systemd reload, which runs only after a unit changes. The
+  *Infrastructure as code* milestone is closed; its off-box half is BB #535, still open.
+- **The documented check failed on the Mac first.** `ansible-core` 2.21.5 needs Python 3.12 or
+  newer and the Mac's default `python3` is older. #374 (#373) puts `brew install python@3.12` and
+  `--no-deps` plus `pip check` in `infra/README.md`. Filed BB #567 for BB's identical block.
+- **#372:** eight minor and patch bumps.
+- **#364: `anthropic` 1.13 to 2.3, so requests now send API version `2026-10-21`.** No code changed:
+  we send no sampling parameters, documents in assistant turns or citations in user turns, don't
+  call the Admin API, and pass one credential. The key now goes as `Authorization: Bearer`, and
+  nothing of ours reads `X-Api-Key`. The SDK's licence moves from MIT to Apache 2.0.
+  - **Not exercised:** no test calls the real API and the VM has no key, so #375 is Sean's hint and
+    lab review on production after the next release. `spend.run` turns an API error into "AI
+    unavailable".
+- **#361 (Python 3.15.0) stays open:** the image scan fails on a CRITICAL. A new minor gets its own
+  look once a fixed image exists.
+- **Sean moved to a Budget Buddy session to finish the IaC work** (BB #535, BB #533). This session
+  stays open for its status update.
+- Gotchas:
+  - **Mac steps run in zsh:** `read -rp` fails there with `read: -p: no coprocess`.
+  - A PR whose checks are still running reads `BLOCKED`. Wait rather than reaching for `--admin`.
+- **Unreleased on `main`, reaching the image:** #372 and #364. A PATCH by the look of it.
+- **Next:**
+  - The release, when Sean calls it, rehearsed with `infra/stage.sh`, ideally on a real dump. Then #375.
+  - Unit 2.1 can be planned any time.
+  - #361 when its scan clears.
+
 ### 2026-11-01: back to VS Code, CHOWN gone, #360, and #323's staging
 
 - **Sean moved back to VS Code for all projects** (#365 / #366), two days after PyCharm. PyCharm is
@@ -239,50 +269,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - #323 (staging in LXD) can reuse `infra/test.sh`.
   - #360 is small.
   - Unit 2.1 can be planned any time.
-
-### 2026-10-30 (later): PyCharm set up for all four repos, and v0.13.2 for a critical CVE
-
-- **Sean moved from VS Code to PyCharm 2026.2** (a JetBrains remote backend on the VM), one
-  window per repo. `.idea/` is ignored in all four: #348 here, BB #543, MLIT #120,
-  seandesmet.com #40. The Claude Code JetBrains plugin is installed and connects with `/ide`.
-- **Interpreters:** Docker Compose on `web`, listing both compose files (the override builds the
-  dev target, which has pytest). A hand-written interpreter entry broke project opening, because
-  2026.2 has no legacy remote-SDK format left. So the wizard made this repo's, and copies of its
-  entry serve BB and MLIT.
-- **#354 / #355:** to set up, PyCharm runs `chown -R 10001` on its helper volume as root in a
-  one-off `web` container, and `cap_drop: [ALL]` (#264) refused it. The dev override now adds
-  `CHOWN`. Only root gains it: `appuser`'s `CapEff` is 0 with or without. An extra PyCharm-only
-  compose file didn't work, because PyCharm passes `docker compose` its configured files plus
-  its own generated override, nothing else.
-- **#349 / #350:** the dev database is published on `127.0.0.1:5435` for PyCharm's Database tool
-  (BB's dev database is on 5432, MLIT's on 5434). Production's stays unpublished.
-- **The image scan went red on every PR:** CVE-2026-115557 (CRITICAL) in Python 3.14.8.
-  #351 / #352 moved the base to 3.14.10. **v0.13.2** was cut (#353) and deployed on Sean's
-  approval: run `41069462114`, commit `717d9f5`, no migrations,
-  `backup ok … pre-deploy-20261030-143449.sql.gz (5291 bytes)`, `/healthz` reports 0.13.2,
-  and Budget Buddy returned 200. The empty v0.13.0 milestone is closed.
-- **Cross-repo issues:**
-  - BB #544: production runs Python 3.14.7, which has both critical CVEs, and BB's CI doesn't
-    scan its image. **The most urgent item across the projects.**
-  - MLIT #121: Werkzeug 3.1.8, PYSEC-2026-4312.
-  - MLIT #122: pin the floating `python:3.14-slim` base.
-- Gotchas:
-  - PyCharm rewrites its settings on exit, so they can only be edited while it's closed, and
-    closing it ends a Claude session running in its terminal. A detached script that waits for
-    the backend to exit, then applies the edit, gets around both.
-  - The plugin's `getDiagnostics` times out under Gateway, even for an open file. Feedback was
-    sent; lint and tests still come from `./test.sh`.
-  - `./test.sh` recreates `db` from the checked-out override. Run it on a branch without #350,
-    and port 5435 closes until `docker compose up -d db` on `main`.
-  - `gh release create --target` needs the full SHA.
-  - Merging one PR puts the next behind `main`, so it needs `gh pr update-branch` and a green
-    run before it can merge.
-- **Unreleased on `main`:** nothing that reaches the image (#355 is dev-only).
-- **#322 is unblocked.** BB #539 merged at 00:43 today, before this session, and BB #530's comment
-  says #322 needn't wait for the one criterion left there (Sean's check-mode run). Pin
-  `5dad811e2ffd37ec9e055847a25470102f2992c8`, role at `infra/ansible/roles/droplet_host/`. The
-  variables, LXD's preseed, the `DOCKER-USER` rules and the duties both layers share are in that
-  comment, and the LXD and Docker details are also in the shared changes log.
-- **Next:** #322 here, from that comment. BB #544 in a Budget Buddy session. Unit 2.1 can be
-  planned any time. Sean still has to open MLIT in PyCharm once and enter the BB and MLIT
-  database passwords. Still on the droplet: apt updates and the 26.04 upgrade.
