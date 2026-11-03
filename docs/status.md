@@ -115,10 +115,10 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   unchanged. The lesson column keeps its line length in characters.
 
 - **The droplet as code, at no extra cost** (2026-10-27, milestone *Infrastructure as code*).
-  Budget Buddy owns the host layer (BB #530's Ansible role) and the Terraform for the droplet only
-  (BB #533). DNS isn't in Terraform: all four records, `learn`'s included, stay by hand at
-  Squarespace. Orbit Ops owns only its app role (#322), pinning BB's
-  host role by SHA. Roles never write `.env` or `docker-compose.yml` (`release.yml` owns those),
+  `droplet-infra` owns the host layer, `backup-export` and the Terraform for the droplet only
+  (split out of Budget Buddy, BB #576). DNS isn't in Terraform: all four records, `learn`'s
+  included, stay by hand at Squarespace. Orbit Ops owns only its app role (#322), pinning
+  `droplet-infra` by SHA (#383). Roles never write `.env` or `docker-compose.yml` (`release.yml` owns those),
   and never remove an Nginx site they didn't create. Tested in LXD containers on the VM; production
   only in check mode, from the Mac, until Sean decides otherwise.
 - **Orbit Ops dumps its own database nightly; BB ships it off the droplet** (option B, 2026-10-27).

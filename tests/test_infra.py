@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 INFRA = ROOT / "infra"
 ROLE = INFRA / "ansible/roles/orbit_ops_app"
 
-# The pins, in the form Budget Buddy's tests/test_infra_pins.py accepts.
+# The pins, in the form droplet-infra's tests/test_infra_pins.py accepts.
 _EXACT = re.compile(r"^[A-Za-z0-9_.-]+==[0-9][0-9A-Za-z.]*$")
 _ANY_ANSIBLE_PIN = re.compile(r"^\s*ansible(?:-core)?\s*(?:==|~=|>=|<=|!=|<|>)", re.M)
 
@@ -43,7 +43,7 @@ def test_ansible_core_is_pinned_in_one_file_only():
     for path in ROOT.rglob("*"):
         if not path.is_file() or path.suffix not in {".txt", ".toml", ".cfg", ".yml", ".yaml", ".in"}:
             continue
-        # vendor/ is Budget Buddy's checkout, with its own (identical) pin.
+        # vendor/ is droplet-infra's checkout, with its own (identical) pin.
         if {".git", ".venv", "venv", "collections", "vendor", "node_modules"} & set(path.parts):
             continue
         if _ANY_ANSIBLE_PIN.search(path.read_text(errors="ignore")):
@@ -60,7 +60,7 @@ def test_every_collection_is_pinned_exactly():
 
 def test_the_host_role_is_pinned_by_full_sha():
     pin = dict(line.split("=", 1) for line in _lines(INFRA / "host-role.pin"))
-    assert pin["repo"] == "https://github.com/CaddisMaster/budget-buddy.git"
+    assert pin["repo"] == "https://github.com/CaddisMaster/droplet-infra.git"
     assert re.fullmatch(r"[0-9a-f]{40}", pin["sha"])
 
 

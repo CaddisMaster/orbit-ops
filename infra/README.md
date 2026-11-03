@@ -9,15 +9,16 @@ in-place upgrade) and checked against production.
 | `ansible/roles/orbit_ops_app/` | `/opt/orbit-ops` and `backups/`, the `.env` check, Orbit Ops's deploy key, the `learn` Nginx site, the nightly backup units | #322 |
 | `systemd/` | `orbit-ops-backup.{service,timer}`, the one copy the role installs | #324 |
 | `stage.sh`, `lib.sh` | Staging: a release rehearsed in LXD the way `release.yml` deploys it | #323 |
-| `host-role.pin` | Budget Buddy's host role (`droplet_host`, BB #530), pinned by commit SHA | #322 |
+| `host-role.pin` | `droplet-infra`'s host role (`droplet_host`), pinned by commit SHA | #322, #383 |
 
-**Layers.** Budget Buddy owns the host: the `deploy` user, sshd, ufw, Docker, Nginx and Certbot
-installed, UTC. This repo's playbook (`ansible/app.yml`) runs only `orbit_ops_app` on top, so it
-can never change what Budget Buddy depends on. The host role is fetched at its pin for the LXD
-test only (`fetch_host_role.sh`, into the gitignored `ansible/vendor/`), because
-`ansible-galaxy` installs roles only from a repository's root. To bump the pin, read BB's diff
-since the old SHA (the `droplet_host_*` variables are the interface), change `host-role.pin` in
-its own PR, and run `infra/test.sh`.
+**Layers.** No app owns the host. [`droplet-infra`](https://github.com/CaddisMaster/droplet-infra)
+holds it: the `deploy` user, sshd, ufw, Docker, Nginx and Certbot installed, UTC, plus
+`backup-export` and the VM's pull key. This repo's playbook (`ansible/app.yml`) runs only
+`orbit_ops_app` on top, so it can never change what another tenant depends on. `droplet-infra`
+is fetched at its pin for LXD only (`fetch_host_role.sh`, into the gitignored `ansible/vendor/`),
+because `ansible-galaxy` installs roles only from a repository's root. To bump the pin, read
+`droplet-infra`'s diff since the old SHA (the `droplet_host_*` variables are the interface),
+change `host-role.pin` in its own PR, and run `infra/test.sh`.
 
 What the role **never** does:
 
@@ -35,7 +36,7 @@ What the role **never** does:
 ## Testing in LXD (on the `jupiter` VM)
 
 ```bash
-infra/test.sh           # host role → refusals → run → run again → check mode → verify → delete
+infra/test.sh           # host layer → refusals → run → run again → check mode → verify → delete
 KEEP=1 infra/test.sh    # leave the container up to poke at
 ```
 
@@ -43,7 +44,8 @@ About two minutes. It builds the control node from the pins (`requirements-infra
 `ansible/requirements.yml`, `host-role.pin`, all checked by `tests/test_infra.py`) into
 `infra/.venv`, and creates and deletes **only** containers named `orbit-*`. In order:
 
-1. Budget Buddy's host role, then a `deploy` key line neither role declares.
+1. `droplet-infra`'s `host.yml` (`droplet_host` and `droplet_export`), then a `deploy` key line
+   no role declares.
 2. With no `.env`, then with `.env` mode 644, the run fails naming the file and leaves it as
    it was. With no certificate, it fails naming `fullchain.pem`.
 3. A self-signed certificate at the `learn` lineage's paths, plus Certbot's own TLS options and
@@ -54,7 +56,7 @@ About two minutes. It builds the control node from the pins (`requirements-infra
    the planted line untouched, the timer enabled and active, the units identical to
    `systemd/`, no ACME account.
 
-LXD itself is Budget Buddy's setup (its `infra/README.md` has the preseed). ⚠️ Docker's
+LXD on the VM was set up from Budget Buddy (its `infra/README.md` has the preseed). ⚠️ Docker's
 iptables `FORWARD DROP` blocks `lxdbr0`, and the two `DOCKER-USER` rules that fix it **don't
 survive a reboot of the VM**. `test.sh` stops with a pointer here when the container has no
 network. Re-add them:

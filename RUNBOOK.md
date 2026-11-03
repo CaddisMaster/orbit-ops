@@ -1,8 +1,9 @@
 # Operations Runbook
 
-How Orbit Ops runs on the DigitalOcean droplet it **shares with Budget Buddy**. Budget Buddy's
-`RUNBOOK.md` is the authority on the host itself (firewall, Nginx layout, TLS lineages, the
-`deploy` user). This file covers only what Orbit Ops adds, and how not to disturb its neighbour.
+How Orbit Ops runs on the DigitalOcean droplet it **shares with Budget Buddy**. The host itself
+is code in [`droplet-infra`](https://github.com/CaddisMaster/droplet-infra), and Budget Buddy's
+`RUNBOOK.md` still describes running it (firewall, Nginx layout, TLS lineages, the `deploy` user).
+This file covers only what Orbit Ops adds, and how not to disturb its neighbour.
 
 > ⚠️ Host names, the droplet IP and the deploy user's details are not in this public repo. They
 > live in the gitignored `CLAUDE.local.md` / the vault.
@@ -273,9 +274,9 @@ What exists, all in `/opt/orbit-ops/backups`:
 | `nightly-<timestamp>.sql.gz` | 03:30 New York time, and at boot after a missed night | newest 14 | `orbit-ops-backup.timer` (#324) |
 
 - **The off-droplet copy is the VM's pull, and it runs only while the VM is on** (BB #535, since
-  2026-11-02). The VM's `droplet-backup.service` fetches the newest finished dump through Budget
-  Buddy's `backup-export` into `~/Developer/personal-projects/backups/droplet/orbit-ops/` and keeps
-  14 there. Each run brings only the newest dump, so losing the droplet loses everything since the
+  2026-11-02). The VM's `droplet-backup.service` fetches the newest finished dump through
+  `droplet-infra`'s `backup-export` into `~/Developer/personal-projects/backups/droplet/orbit-ops/`
+  and keeps 14 there. Each run brings only the newest dump, so losing the droplet loses everything since the
   last pull. ⚠️ The first pull passed `gzip -t` and ends with `pg_dump`'s completion line, but **no
   pulled dump has been restored yet.**
 - ⚠️ **The dump's name is what the pull selects on.** `backup-export` takes the newest `*.sql.gz`

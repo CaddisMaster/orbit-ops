@@ -19,7 +19,7 @@ updates:
 
   # The Ansible control node (#322), pinned the same way. The collections in
   # infra/ansible/requirements.yml and the host role's SHA in infra/host-role.pin
-  # have no ecosystem here: they move by hand, with Budget Buddy's.
+  # have no ecosystem here: they move by hand, with droplet-infra's.
   - package-ecosystem: pip
     directory: "/infra"
     schedule:
