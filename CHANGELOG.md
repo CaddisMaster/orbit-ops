@@ -6,6 +6,14 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.13.3] — 2026-11-03
+
+Dependency updates, including the `anthropic` SDK's move to 2.x, and a safer deploy. Nothing should
+look different to the learner.
+
+**Server:** no migrations and no new env vars, and `docker-compose.yml` is unchanged. This is the
+first deploy with #384's steps, so the log should show no `orbit-ops-db-1 Recreate` line.
+
 ### Changed
 - The `anthropic` SDK moves from 1.13 to 2.3 (#364), so hints and lab reviews use API version
   `2026-10-21`. No code changed, and nothing should look different. No test calls the real API,
