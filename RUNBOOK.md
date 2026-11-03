@@ -103,7 +103,7 @@ cd /opt/orbit-ops && set -a && . ./.env && set +a
 PW="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c "ALTER ROLE orbit_app PASSWORD '$PW'"
 # put DB_APP_USER=orbit_app and DB_APP_PASSWORD=$PW in .env, then:
-docker compose up -d web
+docker compose up -d --no-deps web
 curl -s http://127.0.0.1:5002/healthz      # {"status":"ok",...}
 ```
 
@@ -185,9 +185,17 @@ and the public `/healthz` both report the new version.
 `docs/gotchas.md`). To undo a schema change, restore the pre-deploy dump (§6).
 
 **Never** run a bare `docker compose up -d` on the box mindlessly: after any edit to the `db`
-service it recreates the database container. `postgres` is pinned by tag and digest (#266), so
-a pull no longer changes it behind your back, but the edit itself still does.
-`scripts/install_compose.sh` refuses a release whose compose file would recreate `db`, so a `db`
+service it recreates the database container, and so can a Compose upgrade with no edit at all
+(BB #580: `up -d` also compares the image label, networks and volumes). `up -d web` can too, because
+`web` depends on `db`, so name `--no-deps web`. To see what a bare `up -d` would do, run `docker
+compose --dry-run up -d`. `postgres` is pinned by tag and digest (#266), so a pull no longer
+changes it behind your back.
+
+**A deploy's `up` never reaches an existing `db`** (#384): the swap is `--no-deps web`, and only a
+box with no `db` container creates one. A stopped `db` fails the deploy at the backup, so start it
+by hand with `docker compose start db`.
+
+`scripts/install_compose.sh` refuses a release whose compose file changes the `db` service, so a `db`
 change is applied by hand, **before** the release that carries it, at a quiet time. As root on the
 droplet, from a Mac terminal:
 
@@ -349,7 +357,7 @@ cd /opt/orbit-ops && set -a && . ./.env && set +a
 docker compose stop web
 docker compose exec -T db psql -U "$DB_USER" -d postgres -c "DROP DATABASE \"$DB_NAME\" WITH (FORCE)" -c "CREATE DATABASE \"$DB_NAME\""
 gunzip -c backups/<file>.sql.gz | docker compose exec -T db psql -q -U "$DB_USER" -d "$DB_NAME"
-docker compose up -d web
+docker compose up -d --no-deps web
 ```
 
 ## 7. Health and troubleshooting

@@ -132,7 +132,8 @@ deploy() {
     grep -v '^TAG=' .env > .env.tmp
     printf 'TAG=%s\n' '${VERSION}' >> .env.tmp
     mv .env.tmp .env
-    docker compose up -d --wait db"
+    DB_ID=\"\$(docker compose ps -aq db)\"
+    [ -n \"\$DB_ID\" ] || docker compose up -d --wait db"
 
   step "back up the database"
   show scripts/backup_db.sh | as_deploy "bash -s -- pre-deploy"
@@ -146,7 +147,7 @@ deploy() {
     set -a; . ./.env; set +a
     docker compose exec -T db psql -q -U \"\$DB_USER\" -d \"\$DB_NAME\" \
       -c \"ALTER ROLE \$DB_APP_USER PASSWORD '\$DB_APP_PASSWORD'\" </dev/null
-    docker compose up -d --remove-orphans
+    docker compose up -d --no-deps --remove-orphans web
     RUNNING=\"\$(docker compose exec -T web printenv APP_VERSION | tr -d '\r')\"
     if [ \"\$RUNNING\" != '${VERSION}' ]; then
       echo \"Deployed ${VERSION} but the running container reports '\$RUNNING'\"
@@ -211,7 +212,7 @@ for role in $(gzip -dc "$f" | sed -nE 's/^ALTER .* OWNER TO "?([A-Za-z0-9_]+)"?;
   sql -d postgres -c "DO \$\$ BEGIN CREATE ROLE \"$role\"; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$" </dev/null
 done
 gzip -dc "$f" | sql -d "$DB_NAME" >/dev/null
-docker compose up -d web </dev/null
+docker compose up -d --no-deps web </dev/null
 SH
   step "the rows"
   counts

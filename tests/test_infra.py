@@ -6,7 +6,9 @@ one-line diff could break: exact pins, a host role pinned by SHA, an inventory
 that can't be committed, and a role that never writes what release.yml owns.
 """
 
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -120,11 +122,12 @@ def _stage_code():
         "sh -s -- '${EXPECTED}' '${VERSION}' ",
         "sha256sum -c --quiet",
         "grep -v '^TAG=' .env > .env.tmp",
-        "docker compose up -d --wait db",
+        'DB_ID=\\"\\$(docker compose ps -aq db)\\"',
+        '[ -n \\"\\$DB_ID\\" ] || docker compose up -d --wait db',
         "bash -s -- pre-deploy",
         "docker compose pull web",
         "docker compose run --rm --no-deps -T web alembic upgrade head",
-        "docker compose up -d --remove-orphans",
+        "docker compose up -d --no-deps --remove-orphans web",
         "printenv APP_VERSION",
     ],
 )
@@ -167,3 +170,88 @@ def test_staging_only_ever_acts_on_an_orbit_container():
     assert re.search(r"^name=orbit-stage$", _stage_code(), re.M)
     assert "not an orbit- container" in (INFRA / "lib.sh").read_text()
 
+
+# --- #384: a release never reaches db -------------------------------------------
+def _deploy_commands(path):
+    """Every `docker compose up` a deploy script runs, comments left out."""
+    text = (ROOT / path).read_text()
+    lines = [line.strip() for line in text.splitlines() if not line.lstrip().startswith("#")]
+    return [line for line in lines if "docker compose up" in line]
+
+
+def _release_deploy_text():
+    steps = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())["jobs"]["deploy"]["steps"]
+    return "\n".join(step.get("run", "") for step in steps)
+
+
+def _db_start_script():
+    """release.yml's two lines that start db, as the droplet's shell receives them."""
+    lines = [line.strip() for line in _release_deploy_text().splitlines()]
+    start = next(i for i, line in enumerate(lines) if line.startswith('DB_ID='))
+    script = "\n".join(lines[start : start + 2]).removesuffix('"')
+    return script.replace('\\"', '"').replace("\\$", "$")
+
+
+def _run_db_start(tmp_path, ps_output, ps_exit=0):
+    calls = tmp_path / "calls"
+    stub = tmp_path / "docker"
+    stub.write_text(
+        '#!/bin/sh\n'
+        f'echo "$*" >> "{calls}"\n'
+        'case "$*" in\n'
+        f'  "compose ps -aq db") printf "%s" "{ps_output}"; exit {ps_exit} ;;\n'
+        'esac\n'
+    )
+    stub.chmod(0o755)
+    env = {**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"}
+    result = subprocess.run(["sh", "-ec", _db_start_script()], env=env, capture_output=True, text=True)
+    return result, calls.read_text().splitlines()
+
+
+@pytest.mark.criterion(384, "A release cannot recreate an unchanged db")
+def test_an_existing_db_is_left_alone(tmp_path):
+    result, calls = _run_db_start(tmp_path, "abc123")
+    assert result.returncode == 0, result.stderr
+    assert calls == ["compose ps -aq db"]
+
+
+def test_a_failed_look_at_db_stops_rather_than_starting_it(tmp_path):
+    result, calls = _run_db_start(tmp_path, "", ps_exit=1)
+    assert result.returncode != 0
+    assert calls == ["compose ps -aq db"]
+
+
+@pytest.mark.criterion(384, "A first deploy still creates the database")
+def test_a_box_with_no_db_creates_it_before_the_backup(tmp_path):
+    result, calls = _run_db_start(tmp_path, "")
+    assert result.returncode == 0, result.stderr
+    assert calls == ["compose ps -aq db", "compose up -d --wait db"]
+    text = _release_deploy_text()
+    assert text.index("--wait db") < text.index("bash -s -- pre-deploy")
+
+
+@pytest.mark.criterion(384, "A release cannot recreate an unchanged db")
+@pytest.mark.parametrize("path", [".github/workflows/release.yml", ".github/workflows/rollback.yml", "infra/stage.sh"])
+def test_no_compose_up_in_a_deploy_can_reach_db(path):
+    """web's depends_on pulls db into a plain `up web`, so --no-deps is what keeps it out."""
+    commands = _deploy_commands(path)
+    assert commands
+    for command in commands:
+        if "--wait db" in command:
+            assert '[ -n \\"\\$DB_ID\\" ] ||' in command, command
+        else:
+            assert re.search(r"docker compose up -d --no-deps( --remove-orphans)? web\b", command), command
+
+
+def test_the_swap_names_every_service_but_db():
+    """A new service has to join the swap's `up`, or a release would never start it."""
+    services = yaml.safe_load((ROOT / "docker-compose.yml").read_text())["services"]
+    assert set(services) == {"db", "web"}
+
+
+@pytest.mark.criterion(384, "The guard's comment matches Compose")
+def test_the_guard_says_what_the_hash_cannot_promise():
+    guard = (ROOT / "scripts/install_compose.sh").read_text()
+    assert "exactly what `up -d` compares" not in guard
+    assert "image label" in guard
+    assert "changes the db service" in guard

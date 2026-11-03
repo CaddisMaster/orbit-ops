@@ -17,17 +17,19 @@
 # tied it to the image, and at 0.12.0 the two drifted apart (BB #432).
 #
 # ⚠️ THE db GUARD. Copying the file automatically removes the human who used to
-# stand between "the repo edited the db service" and "the deploy's `up -d`
-# recreated the database container" (RUNBOOK §5, "changing the db service at
+# notice "the repo edited the db service" (RUNBOOK §5, "changing the db service at
 # all"). So before installing, compare the config hash compose WOULD compute for
-# `db` under the new file with the hash label on the running db container. That
-# label is exactly what `up -d` compares to decide on a recreate, so a mismatch
-# here is a recreate there, whatever the cause, including a compose upgrade that
-# changed the hashing.
+# `db` under the new file with the hash label on the running db container.
+#
+# This answers one question: did db's definition change? It does NOT predict
+# whether a bare `up -d` recreates db. Compose also compares the image label,
+# networks and volumes, so an upgrade of Compose alone can recreate an unchanged
+# db with this hash matching (BB #580). What keeps a deploy from doing that is
+# never naming db in its `up` (#384). Neither deploy would apply a db change, so
+# without this check one would wait unseen for the next bare `up -d`.
 #   release  — refuse, leaving the old file in place: a db change is a scheduled
 #              operation with a verified dump in hand, never a release side effect.
-#   rollback — warn and install anyway: an incident is no time to be strict, and
-#              rollback.yml never touches db (`up -d --no-deps`, db excluded).
+#   rollback — warn and install anyway: an incident is no time to be strict.
 set -eu
 
 EXPECTED="$1"
@@ -69,7 +71,7 @@ if [ -n "$DB_ID" ]; then
   if [ "$WANT" != "$HAVE" ]; then
     if [ "$MODE" = release ]; then
       rm -f "$STAGED"
-      echo "::error::${VERSION}'s docker-compose.yml changes the db service, so this deploy's up -d would recreate the database container. Apply it as a scheduled operation first (RUNBOOK §5, changing the db service), then re-run. Nothing was installed or swapped."
+      echo "::error::${VERSION}'s docker-compose.yml changes the db service. This deploy wouldn't apply that, and the next bare up -d would recreate the database container. Apply it as a scheduled operation first (RUNBOOK §5, changing the db service), then re-run. Nothing was installed or swapped."
       exit 1
     fi
     echo "::warning::${VERSION}'s docker-compose.yml defines db differently from the running container. The rollback leaves db alone, but the next bare 'docker compose up -d' will recreate it (RUNBOOK §5)."
