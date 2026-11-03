@@ -136,10 +136,16 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   plain file; edit it first, then the item. The helpers are shared with Budget Buddy, kept once
   in the private vault repo and symlinked in (RUNBOOK §3).
 
+- **A deploy never names an existing `db`** (#384, 2026-11-03). `up -d` compares more than the
+  config hash, so a Compose upgrade alone can recreate it (BB #580). `install_compose.sh`'s guard now
+  says only whether `db`'s definition changed. Compose upgrades stay automatic: deploys don't depend
+  on them, and a bare `up -d` by hand is the RUNBOOK's warning.
+
 ## Release ledger
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.13.3 | 2026-11-03 | Dependency updates, including `anthropic` 2.3 on API version `2026-10-21` (#364, #372), and a deploy that never names an existing `db` (#384). The first release rehearsed on real rows (#379). A PATCH. No migrations |
 | 0.13.2 | 2026-10-30 | Security: the image moves to Python 3.14.10 for CVE-2026-115557 (CRITICAL), which the image scan found in 3.14.8 and which blocked every PR (#351). A PATCH. No migrations |
 | 0.13.1 | 2026-10-29 | Fidelity fixes and the first multi-arch image: the console's timers and `systemctl status` match systemd 255 (#336, #338), module 03 drops an unkept promise (#341), and the release image is built for amd64 and arm64, each scanned (#337, #321). A PATCH. No migrations |
 | 0.13.0 | 2026-10-28 | Unit 1.5 systemd & services complete (6 modules, *Daemons Tamed*), and the Life Support mystery's reveal in the journal (#310): the console's `systemctl`, unit files and timers (#303) and `journalctl` (#304). The nightly database dump (#324) with private dumps (#326), its script installed by each deploy. No migrations
@@ -160,6 +166,38 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-11-03: `droplet-infra`, a release that leaves `db` alone, v0.13.3 on a real dump
+
+- **#383 (#385): the host layer comes from `droplet-infra`,** pinned at `d9805e7`. `droplet_host` is
+  byte-identical to the old pin, and `host.yml` now also runs `droplet_export`. One `infra/test.sh`
+  passed, and check mode from the Mac at `5b1610c` said `ok=13 changed=0 failed=0 skipped=1`. BB's #577
+  can delete its copies. A Claude session on the Mac ran that check from a handoff file, at Sean's
+  request, and he pasted the output back. It's a route for read-only Mac steps, not a standing one.
+- **#384 (#386): no deploy names an existing `db`.** From BB #580, where a Compose upgrade alone
+  recreated BB's `db`. The swap is `--no-deps web`, and `--wait db` runs only with no `db` container.
+  Checked on real Compose 5.4.0 with a changed definition standing in for the upgrade.
+- **v0.13.3 shipped** (#387, run `41654987267`, commit `61ade0f`), approved by Sean: `backup ok …
+  (5290 bytes)`, no migrations, and the log's only recreate is `web`. `learn` reports `0.13.3` and
+  BB's `/healthz` is OK. `free -m` on the droplet wasn't checked.
+- **#379: a pulled dump restores.** `stage.sh` built 0.13.2, restored `orbit-ops_2026-11-03.sql.gz`
+  and deployed 0.13.3 on it: `PASS`, every table's count kept, `db` not recreated. That was also the
+  first run of #384's steps and the new pin in staging. The container is deleted. Production's owner
+  is `orbit`, which settles #323's question about other owners. Still arm64, with no migration that
+  does something.
+- **Sean's call, left to my judgement: Compose upgrades stay automatic** for Orbit Ops. BB's question
+  is still his, since the plugin is shared.
+- Gotchas:
+  - **I exported `COMPOSE_PROJECT_NAME` for a scratch project, and `./test.sh` in the same command
+    inherited it,** so it tried to start the dev stack under that name and failed on port 5435. The
+    dev stack wasn't touched, and the strays are gone. Scope it to one command.
+  - **`gh pr checks --watch` right after `gh pr create` exits 1** before the checks register. Look
+    before reading it as a failure.
+- **Unreleased on `main`:** nothing that reaches the image.
+- **Next:**
+  - #375: Sean's live hint and lab review, the first real call on `anthropic` 2.x.
+  - Unit 2.1 can be planned any time.
+  - #361 when its scan clears.
 
 ### 2026-11-02 (later): dumps leave the droplet, the docs catch up (#377, #380)
 
@@ -213,42 +251,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - The release, when Sean calls it, rehearsed with `infra/stage.sh`, ideally on a real dump. Then #375.
   - Unit 2.1 can be planned any time.
   - #361 when its scan clears.
-
-### 2026-11-01: back to VS Code, CHOWN gone, #360, and #323's staging
-
-- **Sean moved back to VS Code for all projects** (#365 / #366), two days after PyCharm. PyCharm is
-  removed from the Mac and the VM. The Mac session found no separate Gateway install, so
-  "Gateway" in older notes was PyCharm's own remote feature.
-- **Droplet steps are Mac-only again, by Sean's decision.** The VM route came from Gateway's
-  forwarded agent. The Budget Buddy session reports that Sean removed `mac-to-jupiter-vm` from
-  root's `authorized_keys` on the droplet. It's still the only line in the VM's `authorized_keys`,
-  so it's probably how the Mac logs in. Checked here: `SSH_AUTH_SOCK` unset, and `ssh` to
-  the droplet says `Permission denied (publickey)`.
-- **#368 (#367): dev `web` adds no capabilities.** `CHOWN` was only for PyCharm's interpreter, and
-  the hardening test now holds dev to none. A root one-off's `chown` is refused.
-- **#369 (#360):** the `bw-*.sh` symlinks are out of the build context. Released images were never
-  affected.
-- **#370 (#323): `infra/stage.sh <version>` rehearses a release in LXD.** It builds `orbit-stage`
-  with production's playbooks and deploys a tag with that tag's own scripts, in `release.yml`'s
-  order. It fails if any table's row count changes, and `tests/test_infra.py` fails if its
-  commands drift from `release.yml`. Run it while the `production` approval waits (RUNBOOK §5).
-  - Checked: 0.13.1 from nothing, a restored dev dump (51 rows), then 0.13.2, with the same counts
-    and `/healthz` over HTTPS through Nginx. The app connected as `orbit_app`, with `secure`
-    cookies. Deleting a row mid-run made it fail, naming the table.
-  - **Not yet exercised:** a real production dump, an owner not named `orbit`, and a migration that
-    does something: arm64 images start at 0.13.1, and neither staged release has one.
-- **VS Code on the VM:** Python and Pylance, plus an editor-only `.venv` on the system 3.12 in this
-  repo, BB and MLIT. It can flag 3.14-only syntax. Nothing runs from it.
-- **Budget Buddy #556 and seandesmet.com #42** are closed. #526 no longer needs `CHOWN`.
-- Gotchas:
-  - **The VM rebooted (16:32)** and lost the `DOCKER-USER` rules again. Re-added, and they'll go
-    again next time.
-  - **One `lxc launch` failed again**, the second in two days, and a re-run passed. I cut the error
-    off with `tail -3`, so the cause is still unknown. Next time, keep the whole output.
-  - Merging one PR leaves the next `BEHIND`: `gh pr update-branch`, then wait for its checks.
-- **Unreleased on `main`:** nothing that reaches the image.
-- **Next:**
-  - Sean's check-mode run from the Mac (`infra/README.md`, "Checking production"), then close #322.
-  - Dependabot: #363 looks routine; #364 (`anthropic` 2.x) and #361 (Python 3.15) need their own look.
-  - Rehearse the next release with a real dump.
-  - Unit 2.1 can be planned any time.
