@@ -66,9 +66,9 @@ droplet:
     $name:
       ansible_connection: community.general.lxd
 EOF
-  step "Budget Buddy's host role"
-  ansible-playbook -i "$tmp/inventory.yml" vendor/budget-buddy/infra/ansible/host.yml >"$tmp/host.log" \
-    || { cat "$tmp/host.log"; die "the host role failed"; }
+  step "droplet-infra's host layer"
+  ansible-playbook -i "$tmp/inventory.yml" vendor/droplet-infra/infra/ansible/host.yml >"$tmp/host.log" \
+    || { cat "$tmp/host.log"; die "the host layer failed"; }
   tail -3 "$tmp/host.log"
 
   step "staging's .env and certificate"

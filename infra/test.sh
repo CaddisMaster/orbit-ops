@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Test the app role (#322) in a throwaway LXD system container on the VM:
-#   launch -> Budget Buddy's host role -> refusals without a proper .env and
+#   launch -> droplet-infra's host layer -> refusals without a proper .env and
 #   certificate -> run -> run again (changed=0) -> verify -> check mode -> delete
 #
 #   infra/test.sh            # keeps nothing
@@ -43,13 +43,13 @@ EOF
 play() { ansible-playbook -i "$tmp/inventory.yml" "$@"; }
 recap_ok() { grep -qE "^$name +: ok=[0-9]+ +changed=0 +unreachable=0 +failed=0" "$1"; }
 
-# --- the host layer: Budget Buddy's role, at the pin --------------------------
-step "Budget Buddy's host role"
-play vendor/budget-buddy/infra/ansible/host.yml >"$tmp/host.log" || { cat "$tmp/host.log"; die "the host role failed"; }
+# --- the host layer: droplet-infra's host.yml, at the pin ----------------------
+step "droplet-infra's host layer"
+play vendor/droplet-infra/infra/ansible/host.yml >"$tmp/host.log" || { cat "$tmp/host.log"; die "the host layer failed"; }
 tail -3 "$tmp/host.log"
 
-# A line neither role declares, as BB's backup-export key is on production.
-unmanaged='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOrbitTestUnmanagedKeyxxxxxxxxxxxxxxxxxxxxxxxx backup-export'
+# A line no role here declares, as another tenant's deploy key is on production.
+unmanaged='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOrbitTestUnmanagedKeyxxxxxxxxxxxxxxxxxxxxxxxx another-tenant'
 ct sh -c "echo '$unmanaged' >> /home/deploy/.ssh/authorized_keys"
 
 # --- refusals: .env, then the certificate ------------------------------------
