@@ -100,7 +100,7 @@ def test_the_backup_runs_under_bash_before_migrations_and_the_swap():
     # A run: step is `bash -e`, so a failed backup ends the job here.
     assert '"cd ${APP_DIR} && bash -s -- pre-deploy" < scripts/backup_db.sh' in steps[backup]["run"]
     assert backup < _step_index(steps, "alembic upgrade head")
-    assert backup < _step_index(steps, "docker compose up -d --remove-orphans")
+    assert backup < _step_index(steps, "docker compose up -d --no-deps --remove-orphans web")
     assert "pg_dump" not in "".join(step.get("run", "") for step in steps[backup + 1 :])
 
 

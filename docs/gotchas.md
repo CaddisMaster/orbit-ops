@@ -122,6 +122,11 @@ as `install_compose.sh` and `backup_db.sh` are (#116):
   hides this (ours did, until a run against real Postgres).
 - **`sh` is dash, and Ubuntu 24.04's dash refuses `set -o pipefail`.** A script that pipes
   something whose failure matters is `#!/bin/bash` and runs as `bash -s`.
+- **Nothing in a deploy names `db` once it exists** (#384). `install_compose.sh`'s hash says only
+  whether `db`'s definition changed. `up -d` also compares the image label, networks and volumes, so
+  a Compose upgrade alone can recreate an unchanged `db` (BB #580). `web`'s `depends_on` pulls `db`
+  into a plain `up web`, so it's always `--no-deps web`. A new service must join the swap's `up`, and
+  `tests/test_infra.py` fails until it does.
 - **Check a dump by its completion line**, not by `gzip -t`. A current `pg_dump` writes a
   `\unrestrict` line after `-- PostgreSQL database dump complete`, so look further back than
   the last 3 lines.

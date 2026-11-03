@@ -220,10 +220,12 @@ jobs:
                grep -v '^TAG=' .env > .env.tmp
                printf 'TAG=%s\n' '${VERSION}' >> .env.tmp
                mv .env.tmp .env
-               # A no-op when db is already up (install_compose.sh has refused any
-               # compose change that would recreate it); on the very first deploy
-               # it creates the database so there is something to back up.
-               docker compose up -d --wait db"
+               # Only a first deploy creates db, so there is something to back up.
+               # An existing db is never named in an up (#384): up -d compares more
+               # than install_compose.sh's hash, and a Compose upgrade alone can
+               # recreate it (BB #580). A stopped db fails at the backup, next.
+               DB_ID=\"\$(docker compose ps -aq db)\"
+               [ -n \"\$DB_ID\" ] || docker compose up -d --wait db"
       # Backup first, verified, before anything changes. bash, not sh: the script
       # needs pipefail, which Ubuntu 24.04's dash refuses (#116).
       - name: Back up the database
@@ -239,7 +241,8 @@ jobs:
                docker compose pull web
                docker compose run --rm --no-deps -T web alembic upgrade head
                # 'pull web' and not a bare pull: never touch the db image on a release.
-               docker compose up -d --remove-orphans
+               # --no-deps: web depends on db, so a plain up web can recreate it (#384).
+               docker compose up -d --no-deps --remove-orphans web
                RUNNING=\"\$(docker compose exec -T web printenv APP_VERSION | tr -d '\r')\"
                if [ \"\$RUNNING\" != '${VERSION}' ]; then
                  echo \"::error::Deployed ${VERSION} but the running container reports '\$RUNNING'\"

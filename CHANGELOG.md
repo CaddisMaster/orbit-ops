@@ -11,6 +11,9 @@ and why it matters, not what the diff says.
   `2026-10-21`. No code changed, and nothing should look different. No test calls the real API,
   so #375 tries both on production after the release.
 - Eight minor and patch dependency updates (#372), including FastAPI, Starlette and Pydantic.
+- A release no longer names an existing `db` in its `docker compose up` (#384). A Compose upgrade
+  alone can recreate an unchanged container, as it did to Budget Buddy's database. Only a box with
+  no `db` container creates one, and a stopped `db` now fails the deploy at the backup.
 
 ## [0.13.2] — 2026-10-30
 
