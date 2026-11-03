@@ -4,6 +4,45 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-11-01: back to VS Code, CHOWN gone, #360, and #323's staging
+
+- **Sean moved back to VS Code for all projects** (#365 / #366), two days after PyCharm. PyCharm is
+  removed from the Mac and the VM. The Mac session found no separate Gateway install, so
+  "Gateway" in older notes was PyCharm's own remote feature.
+- **Droplet steps are Mac-only again, by Sean's decision.** The VM route came from Gateway's
+  forwarded agent. The Budget Buddy session reports that Sean removed `mac-to-jupiter-vm` from
+  root's `authorized_keys` on the droplet. It's still the only line in the VM's `authorized_keys`,
+  so it's probably how the Mac logs in. Checked here: `SSH_AUTH_SOCK` unset, and `ssh` to
+  the droplet says `Permission denied (publickey)`.
+- **#368 (#367): dev `web` adds no capabilities.** `CHOWN` was only for PyCharm's interpreter, and
+  the hardening test now holds dev to none. A root one-off's `chown` is refused.
+- **#369 (#360):** the `bw-*.sh` symlinks are out of the build context. Released images were never
+  affected.
+- **#370 (#323): `infra/stage.sh <version>` rehearses a release in LXD.** It builds `orbit-stage`
+  with production's playbooks and deploys a tag with that tag's own scripts, in `release.yml`'s
+  order. It fails if any table's row count changes, and `tests/test_infra.py` fails if its
+  commands drift from `release.yml`. Run it while the `production` approval waits (RUNBOOK §5).
+  - Checked: 0.13.1 from nothing, a restored dev dump (51 rows), then 0.13.2, with the same counts
+    and `/healthz` over HTTPS through Nginx. The app connected as `orbit_app`, with `secure`
+    cookies. Deleting a row mid-run made it fail, naming the table.
+  - **Not yet exercised:** a real production dump, an owner not named `orbit`, and a migration that
+    does something: arm64 images start at 0.13.1, and neither staged release has one.
+- **VS Code on the VM:** Python and Pylance, plus an editor-only `.venv` on the system 3.12 in this
+  repo, BB and MLIT. It can flag 3.14-only syntax. Nothing runs from it.
+- **Budget Buddy #556 and seandesmet.com #42** are closed. #526 no longer needs `CHOWN`.
+- Gotchas:
+  - **The VM rebooted (16:32)** and lost the `DOCKER-USER` rules again. Re-added, and they'll go
+    again next time.
+  - **One `lxc launch` failed again**, the second in two days, and a re-run passed. I cut the error
+    off with `tail -3`, so the cause is still unknown. Next time, keep the whole output.
+  - Merging one PR leaves the next `BEHIND`: `gh pr update-branch`, then wait for its checks.
+- **Unreleased on `main`:** nothing that reaches the image.
+- **Next:**
+  - Sean's check-mode run from the Mac (`infra/README.md`, "Checking production"), then close #322.
+  - Dependabot: #363 looks routine; #364 (`anthropic` 2.x) and #361 (Python 3.15) need their own look.
+  - Rehearse the next release with a real dump.
+  - Unit 2.1 can be planned any time.
+
 ### 2026-10-31: #357 and #322, Orbit Ops's layer of the droplet as code
 
 - **#358 (#357):** RUNBOOK and `release-prep` say droplet steps run from the VM or the Mac, after

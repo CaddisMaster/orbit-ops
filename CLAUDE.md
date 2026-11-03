@@ -97,15 +97,13 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.13.2** is in production (2026-10-30), a security patch: Python
-3.14.10 for CVE-2026-115557 (#351). Unreleased on `main` and reaching the image: eight dependency
-bumps (#372) and `anthropic` 2.3 (#364), which moves requests to API version `2026-10-21`. Sean
-edits in VS Code, and droplet steps run from a Mac terminal only (#365). #322 is closed: the check
-from the Mac reported `changed=0`, and the *Infrastructure as code* milestone is done, BB's #535 and
-#533 included, so dumps now reach the VM (RUNBOOK §6), though none has been restored. `infra/stage.sh`
-rehearses a release in LXD (#323). Next: the release when Sean calls it, rehearsed on a pulled dump
-(#379), then #375 (a live hint and lab review); Unit 2.1 (Python for operations) can be planned any
-time.
+See `docs/status.md`. **v0.13.3** is in production (2026-11-03): dependency updates with
+`anthropic` 2.3, on API version `2026-10-21` (#364, #372), and a deploy that never names an existing
+`db` (#384). Nothing that reaches the image is unreleased. The release was rehearsed on a real pulled
+dump, which is the first restore of one (#379). The host layer now comes from `droplet-infra`
+(#383). Sean edits in VS Code, and droplet steps run from a Mac terminal only (#365). Next: #375 (a
+live hint and lab review, the first real call on the new SDK); Unit 2.1 (Python for operations) can
+be planned any time.
 
 ## Maintainer notes (local only)
 

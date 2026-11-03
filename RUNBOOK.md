@@ -251,21 +251,16 @@ the VM (`infra/README.md`, "Staging in LXD"). `<current>` is production's versio
 infra/stage.sh <current>
 ```
 
-For the real rows, copy down the newest dump. From a Mac terminal:
+For the real rows, use the newest dump the VM has pulled (§6), named by date. A pull runs only
+while the VM is on, so check that date first. It can be older than the droplet's newest dump, and if
+it's too old, copy one down from a Mac terminal. A dump holds every learner row, so staging is deleted
+afterwards. The pulled copy stays, because it's the off-droplet backup.
 
 ```bash
-ssh <droplet> 'ls -t /opt/orbit-ops/backups/nightly-*.sql.gz | head -1'
-scp -p <droplet>:<that path> /tmp/orbit-rehearsal.sql.gz
-scp -p /tmp/orbit-rehearsal.sql.gz jupiter:orbit-rehearsal.sql.gz && rm /tmp/orbit-rehearsal.sql.gz
-```
-
-Back on the VM:
-
-```bash
-infra/stage.sh restore ~/orbit-rehearsal.sql.gz
+ls -l ~/Developer/personal-projects/backups/droplet/orbit-ops/
+infra/stage.sh restore ~/Developer/personal-projects/backups/droplet/orbit-ops/orbit-ops_<date>.sql.gz
 infra/stage.sh <new>
 infra/stage.sh down
-rm ~/orbit-rehearsal.sql.gz
 ```
 
 `PASS` means the migrations applied, every table kept its row count and `/healthz` reports the new
@@ -285,8 +280,9 @@ What exists, all in `/opt/orbit-ops/backups`:
   2026-11-02). The VM's `droplet-backup.service` fetches the newest finished dump through
   `droplet-infra`'s `backup-export` into `~/Developer/personal-projects/backups/droplet/orbit-ops/`
   and keeps 14 there. Each run brings only the newest dump, so losing the droplet loses everything since the
-  last pull. ⚠️ The first pull passed `gzip -t` and ends with `pg_dump`'s completion line, but **no
-  pulled dump has been restored yet.**
+  last pull. **A pulled dump has been restored:** `orbit-ops_2026-11-03.sql.gz`, into staging, with
+  v0.13.3 deployed on top and every table's count kept (#379). That's the only one tried, in LXD on
+  arm64, and it isn't a recovery on a new droplet.
 - ⚠️ **The dump's name is what the pull selects on.** `backup-export` takes the newest `*.sql.gz`
   in `/opt/orbit-ops/backups`. A finished dump must keep that name and one being written must not
   have it (`.partial` today). Changing either would stop the pull or send a broken dump.
