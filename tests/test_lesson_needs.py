@@ -1,5 +1,5 @@
-"""#101: everything a console task needs is plainly on the page, and the
-lessons describe the console truthfully.
+"""#101: everything a console task, lab or challenge (#397) needs is plainly on
+the page, and the lessons describe the console truthfully.
 
 A lesson "says" something when it's in its prose or a table: not only in a
 code block's comment, and not only in Try it, which is for a real machine.
@@ -9,9 +9,11 @@ per module with the words the lesson uses for each."""
 
 import html
 import re
+from types import SimpleNamespace
 
 import pytest
 
+from app.content.render import render_inline
 from tests.conftest import real_catalog
 
 
@@ -31,8 +33,10 @@ def _says(module) -> str:
     return " ".join(_text(s, code_blocks=False) for s in _sections(module))
 
 
-# For each module with a console task: what the task needs, and the words its lesson
-# uses to say it (in its prose or a table, before the task).
+# For each module with a console task, a lab or a challenge: what the task needs, and the words
+# its lesson uses to say it (in its prose or a table, before the task). One entry covers all of a
+# module's tasks. text-tools is the one module with a challenge beside a console task: its entry is
+# for the console task, because that challenge is a bonus whose own text says what it uses (#241).
 NEEDS = {
     "the-filesystem": {
         "logs live under /var/log": "/var/log Logs",
@@ -533,24 +537,67 @@ NEEDS = {
 
 
 def _modules_with_tasks():
-    """Every module with a console task or a lab."""
-    return [m for m in real_catalog().ordered_modules() if m.terminal or m.lab]
+    """Every module with a console task, a lab or a challenge."""
+    return [m for m in real_catalog().ordered_modules() if _has_task(m)]
+
+
+def _has_task(module) -> bool:
+    return bool(module.terminal or module.lab or module.challenge)
+
+
+def _without_an_entry(modules, needs) -> list[str]:
+    return [m.slug for m in modules if _has_task(m) and m.slug not in needs]
+
+
+def _unsaid(module, needs) -> list[str]:
+    """What the task needs that the lesson doesn't say in its prose or a table."""
+    says = _says(module)
+    wanted = {need: _text(str(render_inline(words)), code_blocks=True) for need, words in needs.items()}
+    return [f"{module.slug}: the lesson doesn't plainly say that {need} (looked for {plain!r})" for need, plain in wanted.items() if plain not in says]
 
 
 @pytest.mark.criterion(101, "Every console task's needs are written down")
-def test_every_console_task_has_its_needs_written_down():
-    assert {m.slug for m in _modules_with_tasks()} == NEEDS.keys()
+def test_every_task_has_its_needs_written_down():
+    assert _without_an_entry(real_catalog().ordered_modules(), NEEDS) == []
+    assert NEEDS.keys() <= {m.slug for m in _modules_with_tasks()}, "an entry for a module with no task"
 
 
 @pytest.mark.criterion(101, "Nothing a task needs is only in a code comment or Try it")
 @pytest.mark.parametrize("module", _modules_with_tasks(), ids=lambda m: m.slug)
 def test_the_lesson_says_what_its_task_needs(module):
-    says = _says(module)
-    from app.content.render import render_inline
+    assert _unsaid(module, NEEDS[module.slug]) == []
 
-    for need, words in NEEDS[module.slug].items():
-        plain = _text(str(render_inline(words)), code_blocks=True)
-        assert plain in says, f"{module.slug}: the lesson doesn't plainly say that {need} (looked for {plain!r})"
+
+def _a_challenge_module(body_html="", slug="lists-and-loops"):
+    return SimpleNamespace(slug=slug, body_html=body_html, terminal=None, lab=None, challenge=object())
+
+
+@pytest.mark.criterion(397, "A challenge without a NEEDS entry fails")
+def test_a_challenge_without_an_entry_is_named():
+    module = _a_challenge_module()
+    assert _without_an_entry([module], {}) == ["lists-and-loops"]
+    assert _without_an_entry([module], {"lists-and-loops": {}}) == []
+    # The real rule reads the same way: every real challenge module has an entry.
+    challenges = [m for m in real_catalog().ordered_modules() if m.challenge]
+    assert challenges and _without_an_entry(challenges, NEEDS) == []
+
+
+TRY_IT = '<h2 id="sec-try-it">Try it</h2><p>sorted returns a new list</p>'
+
+
+@pytest.mark.criterion(397, "What a challenge needs is in the lesson's prose")
+@pytest.mark.parametrize(
+    ("body", "said"),
+    [
+        ("<h2>Lists</h2><p>sorted returns a new list</p>", True),
+        ("<h2>Lists</h2><table><tr><td>sorted returns a new list</td></tr></table>", True),
+        ("<h2>Lists</h2><pre><code># sorted returns a new list</code></pre>", False),
+        ("<h2>Lists</h2><p>Nothing about it.</p>" + TRY_IT, False),
+    ],
+)
+def test_a_challenges_need_must_be_in_the_prose_or_a_table(body, said):
+    problems = _unsaid(_a_challenge_module(body), {"sorted copies": "sorted returns a new list"})
+    assert not problems if said else "lists-and-loops" in problems[0] and "sorted copies" in problems[0]
 
 
 # What the station console doesn't have, as a lesson would mention it. A section that
