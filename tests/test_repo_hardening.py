@@ -30,6 +30,25 @@ def test_dockerfile_ships_the_prod_stage_and_pins_the_base_by_digest():
     assert "\nUSER appuser\n" in dockerfile
 
 
+@pytest.mark.criterion(392, "The server and Pyodide can't drift apart")
+def test_the_server_runs_the_python_that_pyodide_runs():
+    # CI checks a challenge's solution on the server's Python, and learners run it on Pyodide's.
+    dockerfile = (ROOT / "Dockerfile").read_text()
+    server = set(re.findall(r"^FROM python:(\d+)\.(\d+)\.", dockerfile, flags=re.MULTILINE))
+    assert len(server) == 1, f"the Dockerfile's FROM lines name more than one Python: {server}"
+    major, minor = server.pop()
+    pyodide = re.search(r'^VERSION = "(\d+)\.', (ROOT / "scripts" / "fetch_pyodide.py").read_text(), flags=re.MULTILINE)
+    assert pyodide.group(1) == f"{major}{minor}", "move Pyodide and the server's Python together"
+
+
+@pytest.mark.criterion(392, "Dependabot proposes no Python minor bump")
+def test_dependabot_skips_python_minor_bumps_and_keeps_patches():
+    updates = yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text())["updates"]
+    docker = next(update for update in updates if update["package-ecosystem"] == "docker")
+    ignored = next(rule for rule in docker["ignore"] if rule["dependency-name"] == "python")
+    assert ignored["update-types"] == ["version-update:semver-minor"]
+
+
 def test_compose_publishes_only_to_localhost_and_never_the_database():
     compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
     assert "ports" not in compose["services"]["db"]

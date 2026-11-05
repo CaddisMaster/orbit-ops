@@ -46,3 +46,7 @@ updates:
     schedule:
       interval: monthly
     labels: ["dependencies"]
+    # The server's Python has to match Pyodide's (#392). Patches still come. Lifted by #391.
+    ignore:
+      - dependency-name: python
+        update-types: ["version-update:semver-minor"]

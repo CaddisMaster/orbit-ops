@@ -141,6 +141,11 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   says only whether `db`'s definition changed. Compose upgrades stay automatic: deploys don't depend
   on them, and a bare `up -d` by hand is the RUNBOOK's warning.
 
+- **The server runs the Python that Pyodide runs** (#361, #392, 2026-11-05). CI checks challenge
+  solutions on the server's Python and learners run them on Pyodide's, so the two move together, and
+  a test holds them to it. Dependabot skips Python minor bumps and still proposes patches. #391 moves
+  to 3.15 once Pyodide has a stable build; on 2026-11-05 it had only `315.0.0a2`.
+
 ## Release ledger
 
 | Version | Date | Highlights |
