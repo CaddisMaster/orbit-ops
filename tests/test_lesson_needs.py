@@ -547,6 +547,27 @@ NEEDS = {
         "the editor shows only what's printed": "**A script or the editor shows only what you `print`**",
         "a traceback's bottom line says what went wrong": "**Read its bottom line first**",
     },
+    "lists-dicts-and-loops": {
+        "len counts a list": "**`len()` counts what's in it.**",
+        "sorted makes a new list to keep": "**`sorted(codes)` makes a new list in order**",
+        ".append adds to a list": "**`.append()` adds an item to the end.**",
+        "for runs a block per item": "**`for` runs a block once for each item**",
+        "indentation is the block": "**The line ends in `:` and the block is the indented lines under it**",
+        "brackets read and set a key": "**Square brackets read a key, and assigning to one sets it**",
+        ".get gives a default": "**`.get()` asks instead**",
+        "looping over or sorting a dict gives keys": "**a loop over the keys**",
+        "sum adds up a dict's values": "**`sum()` can add up**",
+        "adding up by key": "**Assigning it back** stores the new count",
+        "add an amount instead of 1": "To add up an amount instead of counting, add that amount instead of 1.",
+        "text sorts alphabetically": "**Numbers sort by value, and text sorts alphabetically.**",
+        "a list is filled in a loop": "**A list is often started empty and filled in a loop:**",
+        "a key can be a variable": "**The key in the brackets can be a variable.**",
+        "a dict keeps the order keys were added": "**A dict keeps its keys in the order they were added**",
+        "sorted gives a dict's keys": "**the keys, as a new list in order**",
+        "a loop takes each record in turn": "**Loop over the list to take each record in turn, and read its values by key:**",
+        "records may lack a key": "**Records don't all have the same keys, so `.get()` is the safe way to read one that might be missing.**",
+        "a record gives both the key and the amount": "**With records, the key comes from one field and the amount from another.**",
+    },
 }
 
 
