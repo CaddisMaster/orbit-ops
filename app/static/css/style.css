@@ -446,6 +446,9 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); }
 
 /* --- Code challenges (#54) -------------------------------------------------------- */
 .challenge { margin-top: 1.25rem; }
+.challenge-file { margin: 0.35rem 0; }
+.challenge-file summary { cursor: pointer; }
+.challenge-file pre { margin: 0.35rem 0 0; max-height: 14rem; overflow: auto; }
 .challenge-label { display: block; margin: 0.75rem 0 0.35rem; font-size: 0.85rem; }
 .challenge-keys { font-size: 0.78rem; }
 .code-editor {

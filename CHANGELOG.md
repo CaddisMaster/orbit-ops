@@ -6,8 +6,17 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+
+- Python challenges can have their own files, shown on the page and written fresh for every run, so
+  a lesson can have the learner open a real file (#396).
+
 ### Changed
 
+- A challenge now behaves like a script (#396). `if __name__ == "__main__":` runs, where it silently
+  did nothing. `sys.exit` shows its exit code instead of a traceback and failing every check.
+  Tracebacks show the learner's own lines without Pyodide's internals. Output with no trailing
+  newline stays in its own run, and files and the working directory no longer carry into the next.
 - *Python for operations* now also requires Networking, since its API modules build on HTTP and JSON
   (#395). The unit has no modules yet, so nothing else changes for the learner.
 

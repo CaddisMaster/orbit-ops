@@ -9,6 +9,12 @@
   <h2 id="challenge-heading">Script it</h2>
   {% if challenge_from %}{% with who = challenge_from, html = none, lead = "asks:" %}{% include "partials/_crew_line.html" %}{% endwith %}{% endif %}
   <div class="task prose">{{ module.challenge_task_html | safe }}</div>
+  {% for path, contents in challenge_spec.files.items() %}
+  <details class="challenge-file">
+    <summary><code>{{ path }}</code></summary>
+    <pre>{{ contents }}</pre>
+  </details>
+  {% endfor %}
   <p class="challenge-nojs muted">Python challenges run in your browser and need JavaScript. The lesson and the quiz work without it.</p>
   <div class="challenge-ui" hidden>
     <label class="challenge-label muted" for="challenge-code">Your Python <span class="challenge-keys">· Tab indents · Esc then Tab leaves the editor · Ctrl/⌘+Enter runs</span></label>

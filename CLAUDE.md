@@ -49,7 +49,7 @@ app/hints.py         hints: the prompt without the answer key, and the leak guar
 app/game/            xp.py, streaks.py, badges.py, srs.py (pure rules + their ledgers)
 app/station_map.py   the /map layout (pure); app/console.py: header readout + comms log (app/comms.py)
 app/terminal.py      terminal exercises: grade the posted filesystem; static/js/shell.js + shell/ is the simulated shell
-app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide
+app/challenge.py     Python challenges: record the browser's verdict; static/js/python.js runs Pyodide, static/py/challenge_runner.py is the run itself
 app/lab.py           labs: work on your own machine, graded from the pasted output (nothing runs server-side)
 app/routers/         auth.py (login/logout), main.py (dashboard, /badges, /healthz), learn.py (syllabus, /map, modules, quiz), review.py (/review), admin.py (/admin)
 app/admin.py         the admin panel's queries: every learner, wiping one's progress (#281), creating an account (#282), managing one (#283), per-module reset (#284), AI spend + system facts (#285)

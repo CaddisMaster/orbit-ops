@@ -9,8 +9,16 @@ reads the page source can see it.
 
 run_in_cpython() is the same procedure in real CPython. CI uses it to hold
 every challenge's reference solution to its checks, and its starter to
-failing one (tests/test_challenge.py).
+failing one (tests/test_challenge.py). The procedure itself is one file,
+static/py/challenge_runner.py, which the browser fetches and this imports (#396).
 """
+
+import importlib.util
+import json
+import os
+import sys
+import tempfile
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -21,6 +29,7 @@ from app.models import ExerciseAttempt
 
 MAX_CODE = 20_000  # characters of learner code stored per attempt
 XP = 30  # for a module's challenge, the first time it passes (docs/roadmap.md §4)
+RUNNER = Path(__file__).parent / "static" / "py" / "challenge_runner.py"
 
 
 class Report(BaseModel):
@@ -35,6 +44,7 @@ def client_spec(module: Module) -> dict:
     challenge = module.challenge
     return {
         "inputs": module.challenge_inputs,
+        "files": challenge.files,
         "starter": challenge.starter,
         "checks": [c.check for c in challenge.checks],
         "says": [c.says for c in challenge.checks],
@@ -45,22 +55,30 @@ def passed(module: Module, results: list[bool]) -> bool:
     return len(results) == len(module.challenge.checks) and all(results)
 
 
-def run_in_cpython(module: Module, code: str) -> list[bool]:
-    """Run `code` then each check in one fresh namespace, as the browser does.
-    An exception in `code` fails every check. For CI, on code from the repo."""
-    namespace = dict(module.challenge_inputs)
-    try:
-        exec(compile(code, "<challenge>", "exec"), namespace)  # noqa: S102 (reference code from content/, in tests)
-    except Exception:
-        return [False] * len(module.challenge.checks)
-    results = []
-    for check in module.challenge.checks:
+def _runner():
+    spec = importlib.util.spec_from_file_location("challenge_runner", RUNNER)
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    return runner
+
+
+def run_once(code: str, *, inputs: dict | None = None, files: dict | None = None, checks: list[str] | None = None) -> dict:
+    """The browser's procedure, in CPython: {error, exit_code, checks}. For CI, on code from the repo.
+    It changes the process's working directory, argv and standard streams, and puts them back."""
+    argv, cwd, streams = sys.argv, os.getcwd(), (sys.stdout, sys.stderr)
+    with tempfile.TemporaryDirectory() as parent:
+        request = {"workdir": f"{parent}/challenge", "code": code, "inputs": inputs or {}, "files": files or {}, "checks": checks or []}
         try:
-            exec(compile(check.check, "<check>", "exec"), namespace)  # noqa: S102
-            results.append(True)
-        except Exception:
-            results.append(False)
-    return results
+            return json.loads(_runner().run(json.dumps(request)))
+        finally:
+            sys.argv, (sys.stdout, sys.stderr) = argv, streams
+            os.chdir(cwd)
+
+
+def run_in_cpython(module: Module, code: str) -> list[bool]:
+    """Run `code` then each check, as the browser does. An exception in `code` fails every check."""
+    challenge = module.challenge
+    return run_once(code, inputs=module.challenge_inputs, files=challenge.files, checks=[c.check for c in challenge.checks])["checks"]
 
 
 # ---------------------------------------------------------------------------
