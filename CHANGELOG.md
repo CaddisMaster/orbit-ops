@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+
+- *Python for operations* now also requires Networking, since its API modules build on HTTP and JSON
+  (#395). The unit has no modules yet, so nothing else changes for the learner.
+
 ## [0.13.3] — 2026-11-03
 
 Dependency updates, including the `anthropic` SDK's move to 2.x, and a safer deploy. Nothing should

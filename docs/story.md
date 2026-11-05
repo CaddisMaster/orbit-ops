@@ -58,3 +58,30 @@ Who sent `FLUSH`, and how a poisoned update got through the depot, is left open.
 - The update came aboard: **2026-09-30**.
 - Addresses: the drone is `10.4.2.17`. Outside addresses use the documentation range
   `203.0.113.0/24` (RFC 5737), never a real one.
+
+# Cargo & Fabrication: the manifest discrepancies
+
+The thread for Unit 2.1 (#395), planned on 2026-11-05 and not yet written. The Life Support rule
+holds: the learner finds each clue with the unit's own tools, and the crew only react.
+
+## What happened (kept open past this unit)
+
+The depot shipment of **2026-09-30**, the day the poisoned update came aboard, also delivered **a
+crate its manifest doesn't list**. The bay logged it, nobody asked why, and it has sat in the hold
+since. Okafor keeps it sealed: "If it's what I think it is, it's evidence."
+
+Unit 2.1 shows that the depot's records and what arrived disagree, and only for that shipment. It
+doesn't say what's in the crate, who sent `FLUSH`, or how the update got through. Those stay open
+for **Unit 4.5 (DevSecOps: supply chain)**.
+
+## The clues
+
+| Unit | Module | The clue | What finds it | Status |
+|---|---|---|---|---|
+| 2.1 Python | 05 Files and paths | The 2026-09-30 receiving file has a crate no other record mentions | `pathlib`'s `glob`, reading each file in a loop | planned (#402) |
+| 2.1 Python | 07 JSON and CSV | Comparing the depot's manifest (JSON) with what the bay received (CSV), only the 2026-09-30 shipment disagrees | `json`, `csv.DictReader`, comparing sets by key | planned (#404) |
+| 2.1 Python | 12 Capstone | The reconciled record ties the mismatch to the `depot-sync` feed, and it goes to Mission Control's inquiry | The learner's own CLI: `argparse`, `requests` with retries, `logging` | planned (#409) |
+
+The modules between them stay ordinary fabrication-bay jobs, with a line or two of comms at most.
+Use only the dates and names in the Life Support section above, and put any new outside address in
+`203.0.113.0/24`.

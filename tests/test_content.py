@@ -1337,3 +1337,8 @@ def test_every_import_of_the_schema_resolves():
     assert imported  # the scan found the imports
     assert sorted(n for n in imported if not hasattr(schema, n)) == []
     assert sorted(n for n in schema.__all__ if not hasattr(schema, n)) == []
+
+
+@pytest.mark.criterion(395, "Python for operations waits for Networking")
+def test_python_for_operations_waits_for_networking():
+    assert set(real_catalog().units["python-ops"].prerequisites) == {"bash-scripting", "networking"}
