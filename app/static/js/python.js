@@ -2,10 +2,12 @@
 // the first run: then a worker (pyodide-worker.js) loads Pyodide, which takes
 // a few seconds once and is cached by the browser after that.
 //
-//   OrbitPython.run(code, { inputs, checks }) → Promise<{ stdout, stderr, error, checks, timedOut }>
+//   OrbitPython.run(code, { inputs, files, checks }) → Promise<{ stdout, stderr, error, exitCode, checks, timedOut }>
 //
-// inputs: variables to preset ({name: string}); checks: Python statements run
-// after the code, each reported as passed or not (#54). Both optional.
+// inputs: variables to preset ({name: string}); files: the working directory's
+// files ({path: string}, #396); checks: Python statements run after the code,
+// each reported as passed or not (#54). All optional. exitCode: null unless the
+// code called sys.exit.
 //
 // A run that takes longer than RUN_TIMEOUT_MS is stopped by terminating the
 // worker (an infinite loop can't be interrupted any other way); the next run
@@ -60,7 +62,7 @@
         var timer = setTimeout(function () {
           w.removeEventListener("message", onResult);
           stop();
-          resolve({ stdout: "", stderr: "", error: null, checks: [], timedOut: true });
+          resolve({ stdout: "", stderr: "", error: null, exitCode: null, checks: [], timedOut: true });
         }, RUN_TIMEOUT_MS);
         function onResult(event) {
           if (event.data.type !== "result" || event.data.id !== id) return;
@@ -68,11 +70,11 @@
           w.removeEventListener("message", onResult);
           resolve({
             stdout: event.data.stdout, stderr: event.data.stderr, error: event.data.error,
-            checks: event.data.checks, timedOut: false,
+            exitCode: event.data.exit_code, checks: event.data.checks, timedOut: false,
           });
         }
         w.addEventListener("message", onResult);
-        w.postMessage({ id: id, code: code, inputs: opts.inputs || {}, checks: opts.checks || [] });
+        w.postMessage({ id: id, code: code, inputs: opts.inputs || {}, files: opts.files || {}, checks: opts.checks || [] });
       });
     }).finally(function () { busy = false; });
   }

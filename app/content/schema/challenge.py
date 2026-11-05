@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from pydantic import ConfigDict, Field
+from pydantic import AfterValidator, ConfigDict, Field
 
 from .base import Slug, Text, _Strict
 from .terminal.files import AbsPath
@@ -12,6 +12,16 @@ from .terminal.files import AbsPath
 # server. The learner's code runs, then each check in the same namespace.
 # ---------------------------------------------------------------------------
 PyName = Annotated[str, Field(pattern=r"^[a-z_][a-z0-9_]*$", max_length=32)]
+
+
+def _no_dot_steps(path: str) -> str:
+    if {".", ".."} & set(path.split("/")):
+        raise ValueError(f"{path}: a `.` or `..` step would leave the working directory or hide a file's name")
+    return path
+
+
+# A path inside the run's working directory: relative, ordinary characters.
+RelPath = Annotated[str, Field(pattern=r"^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$", max_length=128), AfterValidator(_no_dot_steps)]
 
 
 class ChallengeCheck(_Strict):
@@ -27,6 +37,8 @@ class Challenge(_Strict):
     # Variables set before the learner's code runs, each holding the contents
     # of a file from this module's console, e.g. {log: /var/log/docking/access.log}.
     inputs: dict[PyName, AbsPath] = {}
+    # Files in the working directory, written fresh for every run (#396): {path: contents}.
+    files: Annotated[dict[RelPath, str], Field(max_length=20)] = {}
     starter: Text  # what the editor starts with; CI requires it to fail a check
     checks: Annotated[list[ChallengeCheck], Field(min_length=1, max_length=10)]
     # A reference answer that CI runs in CPython against the checks. Never sent

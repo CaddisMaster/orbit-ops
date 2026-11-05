@@ -87,7 +87,7 @@ def test_the_runner_starts_the_worker_only_on_the_first_run():
     assert re.findall(r"\bstart\(\)", runner) == ["start()", "start()"]  # its definition, and `ready || start()`
     worker = (JS / "pyodide-worker.js").read_text()
     # Pyodide is imported from the versioned path python.js passes along (#92), and nowhere else
-    assert 'await import(indexURL + "pyodide.mjs")' in worker and "indexURL," in worker
+    assert 'await import(indexURL + "pyodide.mjs")' in worker and "loadPyodide({ indexURL })" in worker
     assert 'workerUrl.searchParams.set("pyodide", script.dataset.pyodide);' in runner
 
 

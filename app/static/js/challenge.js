@@ -31,7 +31,8 @@
     }
 
     function show(result) {
-      var text = [result.stdout, result.stderr, result.error].filter(Boolean).join("\n");
+      var exited = result.exitCode === null ? "" : "Exited with code " + result.exitCode + ".";
+      var text = [result.stdout, result.stderr, result.error, exited].filter(Boolean).join("\n");
       if (result.timedOut) text = "Stopped: it was still running after " + window.OrbitPython.RUN_TIMEOUT_MS / 1000 + " seconds. Is there a loop that never ends?";
       output.textContent = text || "(no output)";
       output.classList.toggle("is-error", Boolean(result.error || result.timedOut));
@@ -42,7 +43,7 @@
       busy(true);
       checkList.hidden = true;
       status.textContent = loaded ? "Running…" : "Starting Python (the first run takes a few seconds)…";
-      return window.OrbitPython.run(editor.value, { inputs: spec.inputs, checks: withChecks ? spec.checks : [] })
+      return window.OrbitPython.run(editor.value, { inputs: spec.inputs, files: spec.files, checks: withChecks ? spec.checks : [] })
         .then(function (result) {
           loaded = true;
           show(result);

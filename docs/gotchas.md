@@ -44,6 +44,10 @@ Each entry is something that already went wrong once (here or in Budget Buddy). 
   revalidates on its own. A new Pyodide version means changing `VERSION` (and the hashes) in
   `scripts/fetch_pyodide.py` only. `app/static_files.py` imports it (#256).
 
+- **`challenge_runner.py` is versioned by the worker's URL** (#396), since the worker fetches it with
+  its own `?v=`. A release moves both. In development `v` is the worker's mtime, so after editing only
+  the runner, `touch app/static/js/pyodide-worker.js` or the browser keeps its cached copy.
+
 - **Size the app in `rem`, not `px`** (#105). The root font size is an 80th of the desk's
   width, so anything in rem grows with the art and anything in px stays put on a big screen.
   px is fine for borders, radii and outlines. An `<img>` or `<svg>` with `width`/`height`

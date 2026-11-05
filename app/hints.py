@@ -81,7 +81,8 @@ def context(module: Module, item: str, attempt: str) -> str:
         parts.append(f"<task>\nIn a terminal: {module.terminal.task}\n</task>")
     elif item == "challenge":
         says = "\n".join(f"- {c.says}" for c in module.challenge.checks)
-        parts.append(f"<task>\nIn Python: {module.challenge.task}\nThe code is checked for:\n{says}\nIt started from:\n{module.challenge.starter}\n</task>")
+        files = "".join(f"\nIts working directory holds {path}." for path in module.challenge.files)
+        parts.append(f"<task>\nIn Python: {module.challenge.task}{files}\nThe code is checked for:\n{says}\nIt started from:\n{module.challenge.starter}\n</task>")
     elif item == "lab":
         boxes = "\n".join(f"- {b.prompt} (checked for: {', '.join(c.says for c in b.checks)})" for b in module.lab.boxes)
         parts.append(f"<task>\nOn their own machine: {module.lab.task}\nThen they paste:\n{boxes}\n</task>")

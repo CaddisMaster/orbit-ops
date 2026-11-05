@@ -126,6 +126,10 @@ challenge:
     `log` holds the docking log. Finish `failed_logins(log)` …
   inputs: {log: /var/log/docking/access.log}   # optional: variables preset from THIS
                                                # module's console files, so the data is the same
+  files:                 # optional (#396): the working directory's files, shown on the page
+    manifest.csv: |      # relative paths only, written fresh for every run, up to 20
+      crate,mass
+      C-101,40
   starter: |-            # what the editor opens with; it must FAIL a check
     def failed_logins(log):
         ...
@@ -136,6 +140,15 @@ challenge:
     …
 ```
 
+- **A run behaves like a script** (#396). `__name__` is `"__main__"`, `sys.argv` is `["script.py"]`, and
+  a traceback shows `script.py` with its source lines. The browser and CI run the same file,
+  `app/static/py/challenge_runner.py`.
+- **`sys.exit` isn't a failure:** the page shows `Exited with code N.` and the checks still run, and a
+  check can read `__exit_code__` (`None` if the code ran off its end). An uncaught exception fails
+  every check.
+- **What a challenge can't do:** `subprocess` raises `OSError`, the network is unreachable, `requests`
+  isn't installed, and `input()` raises `EOFError`. Those need a lab. Checks can't read what was
+  printed, so have the code return a value or set a variable.
 - **Write a check for the shortcut, not just the answer.** A naive solution should fail at least
   one check, and its `says` should teach why (the text-tools challenge catches `'401' in line`).
 - **Give it someone who wants it done.** A challenge is a job a crew member would rather have

@@ -2,55 +2,64 @@
 // /pyodide/<version>/ (self-hosted, app/main.py; python.js passes the path as
 // ?pyodide=, #92) and runs code sent by python.js.
 // It's a worker so a long-running program can't freeze the page, and so the
-// page can stop one by terminating it. Every run gets fresh globals, preset
-// with `inputs` (#54). After the code, each of `checks` runs in the same
-// globals; a check passes if it raises nothing (they're usually asserts).
+// page can stop one by terminating it. Each run is ../py/challenge_runner.py's
+// run(), the same procedure CI uses (#396): fresh globals preset with `inputs`,
+// a fresh working directory holding `files`, then each of `checks`.
 //
-//   page → worker: { id, code, inputs: {name: string}, checks: [string] }
+//   page → worker: { id, code, inputs: {name: string}, files: {path: string}, checks: [string] }
 //   worker → page: { type: "ready", version }
 //                  { type: "load-error", message }
-//                  { type: "result", id, stdout, stderr, error, checks: [bool] }
-//                  error: the traceback, or null; checks: all false if the code raised
-let stdout = [];
-let stderr = [];
+//                  { type: "result", id, stdout, stderr, error, exit_code, checks: [bool] }
+//                  error: the traceback, or null; exit_code: set if the code called sys.exit
+const WORKDIR = "/home/pyodide/challenge";
+let stdout = "";
+let stderr = "";
+
+// Raw writes, not Pyodide's line batching: that holds text with no newline back until a later run.
+function sink(append) {
+  const decoder = new TextDecoder();
+  return {
+    write(bytes) {
+      append(decoder.decode(bytes, { stream: true }));
+      return bytes.length;
+    },
+  };
+}
+
+function withoutLastNewline(text) {
+  return text.endsWith("\n") ? text.slice(0, -1) : text;
+}
 
 try {
   const indexURL = new URL(self.location.href).searchParams.get("pyodide") || "";
   if (!/^\/pyodide\/[\d.]+\/$/.test(indexURL)) throw new Error("No Pyodide path given.");
   const { loadPyodide } = await import(indexURL + "pyodide.mjs");
-  const pyodide = await loadPyodide({
-    indexURL,
-    stdout: (line) => stdout.push(line),
-    stderr: (line) => stderr.push(line),
-  });
+  const pyodide = await loadPyodide({ indexURL });
+  pyodide.setStdout(sink((text) => { stdout += text; }));
+  pyodide.setStderr(sink((text) => { stderr += text; }));
+  // Nobody's there to type: input() gets end of file, as in a script run with nothing piped in.
+  pyodide.setStdin({ stdin: () => null });
 
-  self.onmessage = async (event) => {
-    const { id, code, inputs = {}, checks = [] } = event.data;
-    const globals = pyodide.globals.get("dict")();
-    for (const [name, value] of Object.entries(inputs)) globals.set(name, value);
-    let error = null;
-    const passed = [];
+  // Versioned like this worker (#92).
+  const response = await fetch(new URL("../py/challenge_runner.py" + self.location.search, self.location.href));
+  if (!response.ok) throw new Error("Couldn't load the challenge runner.");
+  const runner = pyodide.globals.get("dict")();
+  pyodide.runPython(await response.text(), { globals: runner });
+  const run = runner.get("run");
+
+  self.onmessage = (event) => {
+    const { id, code, inputs = {}, files = {}, checks = [] } = event.data;
+    let reply;
     try {
-      await pyodide.runPythonAsync(code, { globals });
-      for (const check of checks) {
-        try {
-          await pyodide.runPythonAsync(check, { globals });
-          passed.push(true);
-        } catch {
-          passed.push(false);
-        }
-      }
+      reply = JSON.parse(run(JSON.stringify({ workdir: WORKDIR, code, inputs, files, checks })));
     } catch (e) {
-      error = String(e && e.message ? e.message : e);
-      checks.forEach(() => passed.push(false));
-    } finally {
-      globals.destroy();
+      reply = { error: String(e && e.message ? e.message : e), exit_code: null, checks: checks.map(() => false) };
     }
     self.postMessage({
-      type: "result", id, stdout: stdout.join("\n"), stderr: stderr.join("\n"), error, checks: passed,
+      type: "result", id, stdout: withoutLastNewline(stdout), stderr: withoutLastNewline(stderr), ...reply,
     });
-    stdout = [];
-    stderr = [];
+    stdout = "";
+    stderr = "";
   };
   self.postMessage({ type: "ready", version: pyodide.version });
 } catch (e) {
