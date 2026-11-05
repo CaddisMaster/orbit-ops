@@ -97,13 +97,12 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.13.3** is in production (2026-11-03): dependency updates with
-`anthropic` 2.3, on API version `2026-10-21` (#364, #372), and a deploy that never names an existing
-`db` (#384). Nothing that reaches the image is unreleased. The release was rehearsed on a real pulled
-dump, which is the first restore of one (#379). The host layer now comes from `droplet-infra`
-(#383). Sean edits in VS Code, and droplet steps run from a Mac terminal only (#365). Next: #375 (a
-live hint and lab review, the first real call on the new SDK); Unit 2.1 (Python for operations) can
-be planned any time.
+See `docs/status.md`. **v0.13.3** is in production (2026-11-03). Unit 2.1 (*Python for operations*) is under
+way as milestone v0.14.0: challenges run through one runner shared with CI (#396), and modules 01–03 are
+merged. **Hold the release until the unit is finished**, recommended but not yet Sean's explicit decision: a
+short unit counts as complete, so its badge would be earned early and kept. The server stays on Python 3.14
+until Pyodide has a stable 3.15 (#391). Sean edits in VS Code, and droplet steps run from a Mac terminal only
+(#365). Next: #401 (module 04); #375 (a live hint and lab review, the first real call on the new SDK).
 
 ## Maintainer notes (local only)
 
