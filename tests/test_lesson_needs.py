@@ -568,6 +568,27 @@ NEEDS = {
         "records may lack a key": "**Records don't all have the same keys, so `.get()` is the safe way to read one that might be missing.**",
         "a record gives both the key and the amount": "**With records, the key comes from one field and the amount from another.**",
     },
+    "conditions-functions-and-imports": {
+        "if runs a block": "**`if` runs a block when its condition is true**",
+        "the first true condition wins": "**The conditions are tried from the top, and only the first true one runs**",
+        "== compares": "**Two `=` to compare**",
+        "> is strict": "**greater than**, and strictly so",
+        "truthiness can't tell 0 from nothing": "**But it can't tell `0` from nothing**",
+        "None is nothing at all": "**`None` is Python's value for nothing at all**",
+        "is None asks about that alone": "**To ask about that alone, write `is None`**",
+        "test for None before comparing": "Comparing `None` with a number stops with a `TypeError`, so test for it first.",
+        "def defines a function": "**`def` defines a function**",
+        "a parameter holds what's passed in": "a variable that holds whatever the caller passes in",
+        "return hands back and ends": "**`return` hands a value back to the caller and ends the function**",
+        "print isn't return": "**`print` only shows a value to a person; the caller can't use it.**",
+        "a function can use another's answer": "**A function can call another function and use what it returned**",
+        "a value can be the condition": "**a value can be the condition by itself**",
+        ".get with no default gives None": "`.get()` gives it back when a key is missing",
+        "put the narrower test first": "so put the narrower test first",
+        "... is a placeholder": "`...` as a placeholder",
+        "import and the dot": "**`import` brings one in, and a dot reaches what's inside it.**",
+        "math.ceil rounds up": "**`math.ceil()` rounds up to the next whole number**",
+    },
 }
 
 
