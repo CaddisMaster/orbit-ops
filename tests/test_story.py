@@ -22,7 +22,9 @@ def _clues() -> list[dict[str, str]]:
 def test_story_md_names_the_cause_and_every_clue():
     assert "## What happened" in STORY and "/etc/cron.d/scrubber-maint" in STORY
     clues = _clues()
-    assert [c["unit"].split()[0] for c in clues] == ["1.1", "1.1", "1.2", "1.3", "1.4", "1.5"]
+    life_support = [c["unit"].split()[0] for c in clues if c["unit"].startswith("1.")]
+    assert life_support == ["1.1", "1.1", "1.2", "1.3", "1.4", "1.5"]
+    assert [c["unit"].split()[0] for c in clues if c["unit"].startswith("2.")] == ["2.1", "2.1", "2.1"]
     for clue in clues:
         assert clue["module"] and clue["clue"], clue
         assert "`" in clue["finds"], f"{clue['unit']}: name the command that finds it"
