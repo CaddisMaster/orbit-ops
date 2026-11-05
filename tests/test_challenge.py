@@ -290,3 +290,10 @@ def test_the_runner_uses_only_the_standard_library():
         for name in ([a.name for a in node.names] if isinstance(node, ast.Import) else [node.module])
     }
     assert imported <= sys.stdlib_module_names, imported - sys.stdlib_module_names
+
+
+def test_a_checks_says_is_plain_text():
+    # challenge.js sets it with textContent, so Markdown would show as its raw marks (#398).
+    for module in real_catalog().modules.values():
+        for check in module.challenge.checks if module.challenge else ():
+            assert "`" not in check.says and "**" not in check.says, f"{module.slug}: {check.says}"

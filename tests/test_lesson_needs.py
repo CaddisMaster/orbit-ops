@@ -533,6 +533,20 @@ NEEDS = {
         "rebase is run from the branch": "run on your branch, replays your commits",
         "main.. and the %s/%b format": "`git log main..` lists the commits on your branch that `main` doesn't have",
     },
+    "from-bash-to-python": {
+        "text must be converted before arithmetic": "**convert it before doing arithmetic**",
+        "int() makes a whole number from text": "the whole number `12`",
+        "float() makes a decimal number from text": "the number `2.5`",
+        "* multiplies numbers": "`+ - * /`",
+        "an f before the quote fills in braces": "**`f` right before the opening quote**",
+        "a value's spacing is kept": "Python keeps a value exactly as it is",
+        "a variable is read by its name alone": "**You read a variable by its name alone**",
+        "a converter takes a variable and = keeps its result": "**A converter takes a variable as readily as a quoted value, and `=` keeps its result**",
+        "an int and a float give a float": "**An `int` and a `float` together give a `float`**",
+        "brackets hand a value to print": "**The brackets hand it the value to work on.**",
+        "the editor shows only what's printed": "**A script or the editor shows only what you `print`**",
+        "a traceback's bottom line says what went wrong": "**Read its bottom line first**",
+    },
 }
 
 

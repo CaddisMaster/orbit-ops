@@ -155,6 +155,7 @@ challenge:
   scripted than done by hand, so name them with `from:` and write the task in that spirit. The
   text-tools one, "check MERIDIAN's arithmetic", is the model.
 - **`says` is the hint.** It's all a learner sees of a failed check, so say what's being checked.
+  It's shown as plain text, so no backticks or other Markdown (#398).
 - **Numbers the crew quotes must be true.** If a check or the task repeats a comms figure, a test
   should hold them together (`tests/test_challenge.py` does it for text-tools).
 - The checks reach the page (the browser runs them), so a determined learner can read them.
