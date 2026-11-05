@@ -8,6 +8,8 @@ and why it matters, not what the diff says.
 
 ### Added
 
+- Unit 2.1 *Python for operations* begins, the first unit of the Cargo & Fabrication deck, with module
+  01 *From Bash to Python* (#398).
 - Python challenges can have their own files, shown on the page and written fresh for every run, so
   a lesson can have the learner open a real file (#396).
 
