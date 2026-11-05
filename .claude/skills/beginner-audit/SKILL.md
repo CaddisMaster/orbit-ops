@@ -150,8 +150,8 @@ N. **Smaller:** <minor findings, one line each.>
 
 - **<Section or part>:** <the change that fixes the findings above, concrete enough to write
   from: the sentence to add, the real command to use, the example to show.>
-- **`NEEDS`:** <new ideas the console task or lab relies on, for `tests/test_lesson_needs.py`>
-  (only if the module has a console task or a lab).
+- **`NEEDS`:** <new ideas the console task, lab or challenge relies on, for `tests/test_lesson_needs.py`>
+  (only if the module has one of those).
 
 ## Acceptance criteria
 ```gherkin
