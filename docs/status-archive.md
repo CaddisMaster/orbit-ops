@@ -4,6 +4,39 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-11-02: #322 closed from the Mac, the IaC milestone done, `anthropic` 2.x
+
+- **#322 is closed.** Sean's check-mode run from the Mac, at `4960694`:
+  `ok=13 changed=0 failed=0 skipped=1`. No differences, so nothing to fix in the role or record in
+  the RUNBOOK. The skipped task is the systemd reload, which runs only after a unit changes. The
+  *Infrastructure as code* milestone is closed; its off-box half is BB #535, still open.
+- **The documented check failed on the Mac first.** `ansible-core` 2.21.5 needs Python 3.12 or
+  newer and the Mac's default `python3` is older. #374 (#373) puts `brew install python@3.12` and
+  `--no-deps` plus `pip check` in `infra/README.md`. Filed BB #567 for BB's identical block.
+- **#372:** eight minor and patch bumps.
+- **#364: `anthropic` 1.13 to 2.3, so requests now send API version `2026-10-21`.** No code changed:
+  we send no sampling parameters, documents in assistant turns or citations in user turns, don't
+  call the Admin API, and pass one credential. The key now goes as `Authorization: Bearer`, and
+  nothing of ours reads `X-Api-Key`. The SDK's licence moves from MIT to Apache 2.0.
+  - **Not exercised:** no test calls the real API and the VM has no key, so #375 is Sean's hint and
+    lab review on production after the next release. `spend.run` turns an API error into "AI
+    unavailable".
+- **#361 (Python 3.15.0) stays open:** the image scan fails on a CRITICAL. A new minor gets its own
+  look once a fixed image exists.
+- **Sean moved to a Budget Buddy session to finish the IaC work** (BB #535, BB #533). This session
+  stays open for its status update.
+- **Both closed later that day, and #377 records what changed here.** Dumps now reach the VM
+  (RUNBOOK §6), though no pulled dump has been restored. BB #533 ended up holding the droplet only,
+  so `learn`'s record stays by hand at Squarespace; the RUNBOOK had sent it to DigitalOcean.
+- Gotchas:
+  - **Mac steps run in zsh:** `read -rp` fails there with `read: -p: no coprocess`.
+  - A PR whose checks are still running reads `BLOCKED`. Wait rather than reaching for `--admin`.
+- **Unreleased on `main`, reaching the image:** #372 and #364. A PATCH by the look of it.
+- **Next:**
+  - The release, when Sean calls it, rehearsed with `infra/stage.sh`, ideally on a real dump. Then #375.
+  - Unit 2.1 can be planned any time.
+  - #361 when its scan clears.
+
 ### 2026-11-01: back to VS Code, CHOWN gone, #360, and #323's staging
 
 - **Sean moved back to VS Code for all projects** (#365 / #366), two days after PyCharm. PyCharm is

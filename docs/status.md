@@ -146,6 +146,11 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   a test holds them to it. Dependabot skips Python minor bumps and still proposes patches. #391 moves
   to 3.15 once Pyodide has a stable build; on 2026-11-05 it had only `315.0.0a2`.
 
+- **A challenge runs through one file** (#396, 2026-11-05). `app/static/py/challenge_runner.py` is what the
+  browser's worker fetches and what CI imports, so CI tests what the learner runs. A run behaves like a
+  script: `__name__`, `sys.argv` and tracebacks as a real one's, exits reported with their code, and files
+  and the working directory fresh each time. It stays standard library only.
+
 ## Release ledger
 
 | Version | Date | Highlights |
@@ -171,6 +176,48 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-11-05: Unit 2.1 planned and begun, a real challenge runner, Python stays on 3.14
+
+- **#389 (#390): pytest 9.2.0 stays.** It ignores `--dist loadgroup` with xdist 3.8.0 (BB #588). Nothing
+  here groups, so there's a note and `tests/test_xdist_grouping.py`, which fails if a test groups while
+  grouping is broken. Run three ways: clean, with a grouped test, and on 9.1.1 in a throwaway venv.
+- **#361 closed, Sean's call: the server stays on Python 3.14** (standing decisions, #392 in #393). #391
+  moves to 3.15 once Pyodide has a stable build.
+- **Unit 2.1 is planned as milestone v0.14.0** (#395–#409, 12 modules: 01–07 browser challenges, 08–12
+  labs). Sean's calls: Networking becomes a prerequisite, no Python assumed, the *manifest discrepancies*
+  thread (`docs/story.md`), and the capstone's lab review at about 5 cents at most.
+- **#396 (#411): one runner for the browser and CI.** Testing in real Chromium found what Node had hidden:
+  `if __name__ == "__main__":` silently did nothing, `sys.exit` failed every check, and output, files and
+  the working directory leaked into the next run. `app/static/py/challenge_runner.py` is now what both
+  run. Challenges can have their own `files:`.
+- **#397 (#412):** `NEEDS` covers challenges.
+- **Modules 01–03 written** (#413, #414, #415). Sean played none of them through this session's tools: he
+  said "merge it" on each, and I can't tell from here how much he played. `/beginner-audit` changed each
+  one a lot, because a first draft kept missing the step the challenge turns on: `count = int(count_text)`
+  in 01, quoted and variable keys in 02, 0 being the reverse of Bash in 03.
+- **Hold the release until Unit 2.1 is finished: my recommendation, not yet Sean's explicit decision.** With
+  few modules written the unit counts as complete, so `FABRICATOR SCRIPTED` is earned after module 01 and
+  badges stay. A release now would award it for good. He merged after reading that, and didn't say either
+  way.
+- **Not exercised:** no module has been run on a Mac, and #375 still hasn't happened. Pyodide runs CPython
+  3.14.2 and the image 3.14.10: #392 holds only the minor version equal.
+- Gotchas:
+  - **Node isn't a browser for Pyodide.** `sys.exit` killed the Node process and `input()` hung, and neither
+    happens in a worker. Test the worker in Chromium.
+  - **A lesson's `<<'EOF'` closed my shell heredoc**, and the rest of the lesson ran as commands on the VM.
+    Nothing was harmed, as I checked afterwards. Write a lesson with the Write tool, never through a heredoc.
+  - **A faked `ModuleProgress` needs `completed_at`** as well as `status='complete'`, or the comms history
+    raises a `TypeError` and every page is a 500. Real completions always set it.
+  - Pydantic's regex engine has no look-ahead (`SchemaError` at import).
+  - GitHub's 504 while downloading Grype failed one "Image builds". I read it first, then reran the job.
+- **Unreleased on `main`, reaching the image:** #396, the Networking prerequisite (#395), and modules 01–03.
+- **Next:**
+  - #401, Unit 2.1 module 04. #403 (module 06) should also teach the main guard.
+  - Sean's open questions: hold the release as recommended? Reorder modules 01 and 02's quiz options,
+    whose right answer is always first, before anything ships?
+  - #375: Sean's live hint and lab review. The capstone relies on the same review.
+  - #391 when Pyodide has a stable 3.15.
 
 ### 2026-11-03: `droplet-infra`, a release that leaves `db` alone, v0.13.3 on a real dump
 
@@ -221,38 +268,5 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Next:**
   - The release, when Sean calls it, rehearsed with `infra/stage.sh` on a pulled dump, which also
     does #379. Then #375.
-  - Unit 2.1 can be planned any time.
-  - #361 when its scan clears.
-
-### 2026-11-02: #322 closed from the Mac, the IaC milestone done, `anthropic` 2.x
-
-- **#322 is closed.** Sean's check-mode run from the Mac, at `4960694`:
-  `ok=13 changed=0 failed=0 skipped=1`. No differences, so nothing to fix in the role or record in
-  the RUNBOOK. The skipped task is the systemd reload, which runs only after a unit changes. The
-  *Infrastructure as code* milestone is closed; its off-box half is BB #535, still open.
-- **The documented check failed on the Mac first.** `ansible-core` 2.21.5 needs Python 3.12 or
-  newer and the Mac's default `python3` is older. #374 (#373) puts `brew install python@3.12` and
-  `--no-deps` plus `pip check` in `infra/README.md`. Filed BB #567 for BB's identical block.
-- **#372:** eight minor and patch bumps.
-- **#364: `anthropic` 1.13 to 2.3, so requests now send API version `2026-10-21`.** No code changed:
-  we send no sampling parameters, documents in assistant turns or citations in user turns, don't
-  call the Admin API, and pass one credential. The key now goes as `Authorization: Bearer`, and
-  nothing of ours reads `X-Api-Key`. The SDK's licence moves from MIT to Apache 2.0.
-  - **Not exercised:** no test calls the real API and the VM has no key, so #375 is Sean's hint and
-    lab review on production after the next release. `spend.run` turns an API error into "AI
-    unavailable".
-- **#361 (Python 3.15.0) stays open:** the image scan fails on a CRITICAL. A new minor gets its own
-  look once a fixed image exists.
-- **Sean moved to a Budget Buddy session to finish the IaC work** (BB #535, BB #533). This session
-  stays open for its status update.
-- **Both closed later that day, and #377 records what changed here.** Dumps now reach the VM
-  (RUNBOOK §6), though no pulled dump has been restored. BB #533 ended up holding the droplet only,
-  so `learn`'s record stays by hand at Squarespace; the RUNBOOK had sent it to DigitalOcean.
-- Gotchas:
-  - **Mac steps run in zsh:** `read -rp` fails there with `read: -p: no coprocess`.
-  - A PR whose checks are still running reads `BLOCKED`. Wait rather than reaching for `--admin`.
-- **Unreleased on `main`, reaching the image:** #372 and #364. A PATCH by the look of it.
-- **Next:**
-  - The release, when Sean calls it, rehearsed with `infra/stage.sh`, ideally on a real dump. Then #375.
   - Unit 2.1 can be planned any time.
   - #361 when its scan clears.
