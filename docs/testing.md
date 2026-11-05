@@ -43,6 +43,12 @@ time, so tests always see the current schema.
   sidebar) makes it demand every one of #N's scenarios. A PR doing part of the work, like the
   migration PR that goes first under CONTRIBUTING §2, says `Part of #N` instead. Getting this
   wrong costs one failed run, plus a GitHub email, per body edit (#13 got two).
+- **`@pytest.mark.xdist_group` doesn't work on pytest 9.2.0 with xdist 3.8.0** (#389). The pair
+  ignores `--dist loadgroup` with no error, so grouped tests share workers and fail with a different
+  set each run, which reads as a flake (BB #588). Nothing here groups. If a test needs to, first
+  move to a pair that works, or hold pytest at 9.1.1 with a Dependabot ignore, as Budget Buddy does.
+  `tests/test_xdist_grouping.py` runs a real two-worker session and fails if a test groups while
+  grouping is broken. It stops objecting once a release fixes it.
 - **Repository rules are tests too** (`tests/test_repo_hardening.py`): exact pins, digest-pinned
   base image, prod as the final stage, localhost-only ports, required `TAG`, SHA-pinned actions,
   `.env.example` completeness.
