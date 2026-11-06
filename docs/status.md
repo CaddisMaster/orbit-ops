@@ -206,32 +206,23 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   doesn't list C-323, and a test holds 07's CSV to 05's files crate for crate), 08 *Running
   commands*, the unit's first lab, and 09 *A proper CLI*. Each went through the content-reviewer and
   `/beginner-audit`, its Try it in `ubuntu:24.04`, and a play in Chromium as `verify-bot`.
-- **#394 became #419:** Dependabot closed #394 on a rebase and opened six updates, including
-  `anthropic` 2.4 and `ansible-core` 2.22. Sean approved all six. No LXD run has proved 2.22 yet.
-- **Open for Sean:** **#429**, a Mac's zsh passes a Try it's `# comment` to the command (268 lines in 42
-  modules; 09 is fixed). Recommended: a `setopt interactive_comments` note in every Try it, and no `#`
-  on command lines from now on. **Git isn't a prerequisite of `python-ops`**, though 08's lab needs it:
-  the lab says how to get it, and changing what unlocks the unit is his call.
-- **Not caught by any check, and said so in the PRs:** an unsorted `glob` passes module 05 in the
-  browser (the page's spec goes through `tojson`, which sorts keys, so Pyodide writes the files in
-  name order), and a hard-coded `sys.exit(1)` passes module 06.
-- Gotchas:
-  - **Interactive zsh doesn't treat `#` as a comment** (#429). Lab setups already avoid it; Try its
-    didn't.
-  - **A YAML `|` block drops trailing blank lines.** Module 05's file with a blank last line needed `|+`.
-  - **A set's order follows the hash seed,** so a check that two dates come out sorted passes an
-    unsorted loop half the time. Module 07's check uses eight dates, and its shortcut test allows the
-    two-date check either way.
-  - **The classifier refuses a force push and an unapproved merge.** Bring a branch up to date by
-    merging `main` in. "Keep both" on the parallel branches dropped a `},` in `NEEDS` three times, and
-    scrambled `test_python_ops.py` once, so rebuild those from `main` plus the branch's own section.
-  - **argparse's help differs by version:** 3.9, a Mac's own, says `optional arguments:`. When stdout
-    isn't a terminal, a stderr summary prints first, so capture lab examples through `script`.
-- **Unreleased on `main`:** everything since v0.13.3, including #424's app change and modules 01–09.
+- **#394 became #419** (six updates, `anthropic` 2.4 and `ansible-core` 2.22 among them), approved by
+  Sean. No LXD run has proved `ansible-core` 2.22 yet.
+- **Open for Sean:** #429 (a Mac's zsh passes a Try it's `# comment` to the command: 268 lines in 42
+  modules; recommended, a `setopt interactive_comments` note), and whether `python-ops` should require
+  Git, which 08's lab needs (the lab says how to get it meanwhile).
+- **Not caught by any check (said in the PRs):** an unsorted `glob` in module 05 (`tojson` sorts the
+  files, so Pyodide writes them in name order), and a hard-coded `sys.exit(1)` in module 06.
+- Gotchas: interactive zsh passes `#` to the command (#429). A YAML `|` block drops trailing blank lines
+  (`|+` keeps them). A set's order follows the hash seed, so sort-order checks need many values. The
+  classifier refuses a force push and an unapproved merge: merge `main` into a branch instead, and
+  rebuild `NEEDS` and `test_python_ops.py` from `main` plus the branch's section, since "keep both"
+  broke them four times. argparse 3.9, a Mac's own, says `optional arguments:`, and off a terminal a
+  stderr line can print first, so capture lab examples through `script`.
+- **Unreleased on `main`:** #424's app change and modules 01–09, on top of 11-05's.
 - **Next:**
   - #407, module 10 (*venv, pip and pinned dependencies*), then #408 and #409. #409 lifts the hold.
-  - Sean's calls: #429's fix, and whether `python-ops` should require Git.
-  - #375: Sean's live hint and lab review. The first real call on `anthropic` 2.4 waits for v0.14.0.
+  - Sean's calls (#429, Git as a prerequisite), and #375: the first real `anthropic` 2.4 call waits for v0.14.0.
 
 ### 2026-11-05: Unit 2.1 planned and begun, a real challenge runner, Python stays on 3.14
 
