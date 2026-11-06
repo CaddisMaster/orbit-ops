@@ -16,11 +16,11 @@ quiz:
           print(total)
     lang: python
     options:
-      - "`2`, then `5`: the indented `print` is part of the loop, so it runs each time round"
       - "`5` only: `print` always waits for the loop to finish"
+      - "`2`, then `5`: the indented `print` is part of the loop, so it runs each time round"
       - "`2`, then `3`: `total` starts again from 0 each time"
       - "Nothing: `print` can't go inside a loop"
-    answer: 0
+    answer: 1
     explain: >-
       Indentation decides what's in the loop. `print` is indented, so it runs on every pass, after
       `total` has grown. Move it back level with `for` and it would run once, afterwards, printing
@@ -33,11 +33,11 @@ quiz:
       KeyError: 'door'
     lang: text
     options:
-      - "`seen.get(\"door\", 0) + 1`: `get` gives 0 when the key isn't there yet"
       - "Writing `seen = []`, because a dict can't hold numbers"
-      - "Putting the two lines in a `for` loop"
       - "Writing `seen[door]`, without the quotes"
-    answer: 0
+      - "Putting the two lines in a `for` loop"
+      - "`seen.get(\"door\", 0) + 1`: `get` gives 0 when the key isn't there yet"
+    answer: 3
     explain: >-
       Reading a key that isn't there raises a `KeyError`, and on the first pass `"door"` isn't there.
       `get` asks instead of insisting. Without the quotes, `door` would be a variable that was never
@@ -50,11 +50,11 @@ quiz:
       print(decks)
     lang: python
     options:
-      - "`['C', 'A']`: `sorted` makes a new list, and nothing kept it"
       - "`['A', 'C']`: `sorted` puts the list in order"
       - "`A C`: `print` lays a list out as words"
+      - "`['C', 'A']`: `sorted` makes a new list, and nothing kept it"
       - "Nothing: the result of `sorted` has to be printed directly"
-    answer: 0
+    answer: 2
     explain: >-
       `sorted` hands back a new list and leaves the old one alone. Keep the result to use it:
       `decks = sorted(decks)`. The same idea as module 01's converters, where `=` keeps a result.

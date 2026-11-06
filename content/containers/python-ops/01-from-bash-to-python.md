@@ -15,11 +15,11 @@ quiz:
       print(count * 2)
     lang: python
     options:
-      - "`33`: `count` is text, and `*` on text repeats it"
       - "`6`: Python works out that `count` holds a number"
-      - "`count * 2`: the name is printed as it's written"
       - "Nothing: it stops with a `TypeError`"
-    answer: 0
+      - "`33`: `count` is text, and `*` on text repeats it"
+      - "`count * 2`: the name is printed as it's written"
+    answer: 2
     explain: >-
       The quotes make `"3"` a string, so `*` repeats it. Python never guesses that text is a number:
       `int(count) * 2` would give `6`. Adding text and a number is what raises a `TypeError`, as
@@ -32,11 +32,11 @@ quiz:
       TypeError: can only concatenate str (not "int") to str
     lang: text
     options:
-      - "`mass_text` is a string, so it can't be added to a number. `float(mass_text) + 1` works"
       - "`42.5` is too big for a variable. Use a shorter value"
+      - "`mass_text` is a string, so it can't be added to a number. `float(mass_text) + 1` works"
       - "The variable needs a `$`: `$mass_text + 1`"
       - "`print` can only take one value at a time. Use two `print` lines"
-    answer: 0
+    answer: 1
     explain: >-
       `str` in the message means string and `int` means a whole number. Python refuses to mix them
       and says so, where Bash treats everything as text. `float()` makes a number from the text. A
@@ -44,11 +44,11 @@ quiz:
   - type: choice
     q: "Which job has outgrown Bash and is the better fit for Python?"
     options:
-      - "Read a JSON reply, retry when the service fails, and total the masses inside it"
       - "Run three commands in order"
-      - "Move yesterday's logs into an archive directory"
       - "Pipe `grep` into `wc -l` once to count the errors in a log"
-    answer: 0
+      - "Move yesterday's logs into an archive directory"
+      - "Read a JSON reply, retry when the service fails, and total the masses inside it"
+    answer: 3
     explain: >-
       Nested data, arithmetic and handling failures are where Bash gets hard to read and easy to get
       wrong. The other three are mostly commands joined together, which is what Bash is for.

@@ -261,6 +261,45 @@ def test_real_modules_follow_the_authoring_guidelines(module):
     assert '<h2 id="sec-try-it">Try it</h2>' in module.body_html, "every module ends with something to run"
 
 
+# --- #417: the right answer isn't always in the same place -----------------------------
+# Live modules whose choice answers all sit in one position. Their stored answers are option
+# positions, so reordering them needs a data migration (#418), which empties this list.
+KNOWN_SAME_POSITION = {
+    # Unit 1.1: always the second option
+    "navigating", "text-tools", "environment-and-path", "packages",
+    # Unit 1.2
+    "reading-and-editing", "finding-things-and-disk-space", "your-first-script", "variables-and-quoting",
+    "conditionals", "loops", "arguments-and-input", "functions", "robust-scripts", "scheduling-with-cron",
+    # Unit 1.3
+    "your-first-repository", "staging-and-diffs", "reading-history", "branches-and-merging",
+    "merge-conflicts", "remotes", "undoing-things", "working-together",
+    # Networking
+    "addresses-and-ports", "names-and-dns", "is-it-reachable", "http-by-hand", "apis-and-json",
+    "tls-and-certificates", "ssh-keys", "copying-and-tunnels", "firewalls", "following-a-connection",
+    # Unit 1.5
+    "services", "start-stop-enable", "unit-files", "writing-a-service", "timers", "the-journal",
+}
+
+
+def _answers_all_in_one_place(module) -> bool:
+    answers = [q.answer for q in module.quiz if q.type == "choice"]
+    return len(answers) >= 3 and len(set(answers)) == 1
+
+
+@pytest.mark.criterion(417, "A new module can't put every right answer in one position")
+def test_a_modules_right_answers_arent_all_in_one_position():
+    same = {m.slug for m in real_catalog().ordered_modules() if _answers_all_in_one_place(m)}
+    assert same - KNOWN_SAME_POSITION == set(), "vary where the right option sits: a learner spots the pattern"
+    assert KNOWN_SAME_POSITION - same == set(), "fixed: take these off KNOWN_SAME_POSITION"
+
+
+@pytest.mark.criterion(417, "Unit 2.1 modules 01 and 02 don't give the answer away by position")
+def test_unit_2_1_modules_01_and_02_vary_the_right_answer():
+    catalog = real_catalog()
+    for slug in ("from-bash-to-python", "lists-dicts-and-loops"):
+        assert not _answers_all_in_one_place(catalog.modules[slug]), slug
+
+
 # --- #80: nothing the console asks for goes untaught ------------------------------------
 def _taught_text(module) -> str:
     import html
