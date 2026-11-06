@@ -96,6 +96,16 @@ def attempts(db: Session, user_id: int, slug: str) -> list[ExerciseAttempt]:
     )
 
 
+def passed_slugs(db: Session, user_id: int) -> set[str]:
+    """Modules whose challenge this learner has passed (by the browser's verdict, #54)."""
+    rows = db.scalars(
+        select(ExerciseAttempt.module_slug)
+        .where(ExerciseAttempt.user_id == user_id, ExerciseAttempt.kind == "challenge", ExerciseAttempt.correct)
+        .distinct()
+    )
+    return set(rows)
+
+
 def editor_state(db: Session, user_id: int, module: Module) -> tuple[str, bool]:
     """(the code to show, passed before?): the last code submitted, else the starter."""
     history = attempts(db, user_id, module.slug)

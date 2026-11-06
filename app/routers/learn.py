@@ -162,19 +162,22 @@ def terminal_report(
 def challenge_report(
     slug: str,
     report: challenge.Report,
+    request: Request,
     user: User = Depends(require_user),
     catalog: Catalog = Depends(get_catalog),
     db: Session = Depends(get_db),
 ):
     """The page reporting a Submit: the code, and which checks passed in the
     browser. Recorded as the browser's verdict; the server never runs learner
-    code (app/challenge.py). The first pass earns challenge.XP, once."""
+    code (app/challenge.py). The first pass earns challenge.XP, once, and
+    brings the crew's challenge_done lines (#422), as the console's does."""
     module = _module_or_404(catalog, slug)
     if module.challenge is None:
         raise HTTPException(status_code=404)
     if not progress.module_available(catalog, slug, progress.completed_slugs(db, user.id)):
         return JSONResponse({"error": "locked"}, status_code=403)
     correct = challenge.passed(module, report.results)
+    first_pass = correct and slug not in challenge.passed_slugs(db, user.id)
     db.add(
         ExerciseAttempt(
             user_id=user.id, module_slug=slug, kind="challenge", item=0,
@@ -183,7 +186,16 @@ def challenge_report(
     )
     xp_gained = xp.award(db, user.id, xp.Award(challenge.XP, "challenge", slug)) if correct else 0
     db.commit()
-    return JSONResponse({"correct": correct, "xp_gained": xp_gained})
+    body = {"correct": correct, "xp_gained": xp_gained}
+    if first_pass and module.comms and module.comms.challenge_done:
+        body["comms"] = templates.get_template("partials/_comms_lines.html").render(
+            lines=comms.beat(catalog, module, "challenge_done", new=True), request=request
+        )
+    if first_pass and module.comms and (event := module.comms.window.get("challenge_done")):
+        body["window"] = templates.get_template("partials/_window_event.html").render(
+            event=event, oob=False, request=request
+        )
+    return JSONResponse(body)
 
 
 @router.post("/modules/{slug}/lab", response_class=HTMLResponse)
