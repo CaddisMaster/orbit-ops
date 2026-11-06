@@ -78,7 +78,7 @@ for **Unit 4.5 (DevSecOps: supply chain)**.
 
 | Unit | Module | The clue | What finds it | Status |
 |---|---|---|---|---|
-| 2.1 Python | 05 Files and paths | The 2026-09-30 receiving file has a crate no other record mentions | `pathlib`'s `glob`, reading each file in a loop, `not in` against `stores.txt`: crate **C-323** (deck C, 61.0 kg). The crew's reaction waits for a `challenge_done` beat (#422) | written (#402) |
+| 2.1 Python | 05 Files and paths | The 2026-09-30 receiving file has a crate no other record mentions | `pathlib`'s `glob`, reading each file in a loop, `not in` against `stores.txt`: crate **C-323** (deck C, 61.0 kg). The crew react in `challenge_done` (#422) | written (#402) |
 | 2.1 Python | 07 JSON and CSV | Comparing the depot's manifest (JSON) with what the bay received (CSV), only the 2026-09-30 shipment disagrees | `json`, `csv.DictReader`, comparing sets by key | planned (#404) |
 | 2.1 Python | 12 Capstone | The reconciled record ties the mismatch to the `depot-sync` feed, and it goes to Mission Control's inquiry | The learner's own CLI: `argparse`, `requests` with retries, `logging` | planned (#409) |
 

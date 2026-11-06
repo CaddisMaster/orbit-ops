@@ -80,6 +80,14 @@
         })
           .then(function (r) { return r.json(); })
           .then(function (body) {
+            var commsLog = document.getElementById("comms-log");
+            if (body.comms && commsLog) {
+              // The crew's reply to a first pass (#422): server-rendered markup from our own template.
+              commsLog.insertAdjacentHTML("beforeend", body.comms);
+              document.dispatchEvent(new CustomEvent("comms:arrived"));
+            }
+            var outside = document.getElementById("window-event");
+            if (body.window && outside) outside.outerHTML = body.window; // a window event, once
             if (body.correct) {
               status.innerHTML = "";
               var passed = document.createElement("span");

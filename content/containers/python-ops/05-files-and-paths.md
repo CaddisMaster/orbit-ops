@@ -224,6 +224,11 @@ comms:
     - {from: meridian, text: "RECEIVING FILES · SHIPMENTS: 4 · 2026-09-16 TO 2026-10-07 · CHECKED AGAINST STORES: NEVER"}
     - {from: okafor, text: "One file per shipment, and a stores ledger that's supposed to account for every crate in them."}
     - {from: okafor, text: "Read the lot. How many crates each one brought, and whether stores has every one of them."}
+  challenge_done:
+    - {from: meridian, text: "CRATE C-323 · SHIPMENT 2026-09-30 · DECK C · 61.0 KG · STORES RECORD: NONE"}
+    - {from: okafor, text: "Sixty-one kilos. Received, signed for, and nobody ever shelved it."}
+    - {from: okafor, text: "The thirtieth. The same day the depot's update came aboard."}
+    - {from: okafor, text: "It's in the hold, and it stays sealed. If it's what I think it is, it's evidence."}
   complete:
     - {from: okafor, text: "Four files, one ledger, and a script that reads them so nobody has to."}
     - {from: okafor, text: "If receiving and stores ever disagree, I want to know. Run that check before anyone signs for another shipment."}

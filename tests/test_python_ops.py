@@ -159,10 +159,92 @@ def test_module_03s_starter_fails_every_check_about_the_functions():
     assert not any(challenge.run_in_cpython(module, module.challenge.starter))
 
 
+@pytest.mark.criterion(401, "Module 04 of Unit 2.1 is complete content")
+def test_module_04_is_complete():
+    _is_complete_content(_module("parsing-text"), beats=("open", "complete"))
+
+
+LOG = _module("parsing-text").challenge.starter.split("\n\n\ndef parse")[0] + "\n"
+HAND = """
+def parse(line):
+    if line.startswith("HS-2"):
+        fields = line.split("|")
+        return {"id": fields[1].strip(), "deck": fields[3].strip(), "mass": float(fields[2])}
+"""
+BELT = """
+    if line.startswith("BELT"):
+        fields = line.split()
+        return {"id": fields[1], "deck": fields[3], "mass": float(fields[2])}
+"""
+GATE = """
+    if line.startswith("GATE"):
+        crate = re.search(r"(C-\\d+)", line)
+        deck = re.search(r"deck ([A-Z])", line)
+        mass = re.search(r"([\\d.]+) kg", line)
+        if crate is None or deck is None or mass is None:
+            return None
+        return {"id": crate.group(1), "deck": deck.group(1), "mass": float(mass.group(1))}
+    return None
+"""
+RECORDS = """
+records = []
+for line in lines:
+    record = parse(line)
+    if record is not None:
+        records.append(record)
+"""
+BY_POSITION = """
+    if line.startswith("GATE"):
+        fields = line.split()
+        return {"id": fields[2], "deck": fields[5], "mass": float(fields[7])}
+    return None
+"""
+
+
+@pytest.mark.criterion(401, "Module 04's challenge can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("attempt", "failing"),
+    [
+        pytest.param(HAND + BELT + GATE + RECORDS, [], id="the right answer, as a check on this test"),
+        pytest.param(HAND + BELT.replace("line.split()", 'line.split(" ")') + GATE, [3, 8], id="split at single spaces"),
+        pytest.param(HAND.replace("fields[1].strip()", "fields[1]").replace("fields[3].strip()", "fields[3]") + BELT + GATE + RECORDS, [0, 1], id="hand-scanner fields not stripped"),
+        pytest.param(
+            (HAND + BELT + GATE).replace('line.startswith("BELT")', '"BELT" in line'),
+            [4, 8],
+            id="in rather than startswith, catching the comment",
+        ),
+        pytest.param(HAND + BELT + BY_POSITION, [6, 7, 8], id="the gate's sentence read by position"),
+        pytest.param(HAND + BELT + GATE.replace("        if crate is None or deck is None or mass is None:\n            return None\n", ""), [7, 8], id="no None check before .group"),
+        pytest.param(HAND + BELT + GATE.replace("([\\d.]+) kg", "(\\d+) kg") + RECORDS, [5, 6], id="a mass pattern with no dot"),
+        pytest.param(HAND.replace("float(fields[2])", "fields[2]") + BELT + GATE + RECORDS, [0, 1], id="the mass kept as text"),
+        pytest.param(HAND + BELT + GATE + "records = []\n", [8], id="records never filled"),
+    ],
+)
+def test_module_04s_wrong_attempts_fail(attempt, failing):
+    module = _module("parsing-text")
+    results = challenge.run_in_cpython(module, LOG + attempt)
+    assert [i for i, passed in enumerate(results) if not passed] == failing
+
+
+def test_module_04s_starter_fails():
+    module = _module("parsing-text")
+    assert not all(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+def test_module_04s_comms_figures_are_the_logs():
+    """MERIDIAN says 10 lines, 6 records, 4 skipped: true of the challenge's `lines`."""
+    module = _module("parsing-text")
+    namespace = {}
+    exec(module.challenge.solution.replace("print(records)", ""), namespace)
+    said = " ".join(message.text for beat in (module.comms.open, module.comms.complete) for message in beat)
+    lines, records = namespace["lines"], namespace["records"]
+    assert f"LINES: {len(lines)}" in said
+    assert f"RECORDS: {len(records)}" in said
+    assert f"LINES SKIPPED: {len(lines) - len(records)}" in said
 @pytest.mark.criterion(402, "Module 05 of Unit 2.1 is complete content")
 def test_module_05_is_complete():
     module = _module("files-and-paths")
-    _is_complete_content(module, beats=("open", "complete"))
+    _is_complete_content(module, beats=("open", "challenge_done", "complete"))
     assert module.challenge.files, "the challenge reads files of its own"
 
 
@@ -208,9 +290,9 @@ def test_module_05s_starter_fails():
 
 
 def test_module_05s_comms_are_true_of_its_files():
-    """MERIDIAN's readout is the challenge's files, and the clue is in them for the learner to find:
-    C-323 is in the 2026-09-30 shipment and in no other record. The crew don't name it, since the
-    complete beat plays whether or not the challenge was done."""
+    """MERIDIAN's readouts are the challenge's files, and the clue is in them for the learner to find:
+    C-323 is in the 2026-09-30 shipment and in no other record. The crew name it only in
+    challenge_done (#422): complete plays whether or not the challenge was done."""
     module = _module("files-and-paths")
     files = module.challenge.files
     said = " ".join(message.text for beat in (module.comms.open, module.comms.complete) for message in beat)
@@ -218,5 +300,7 @@ def test_module_05s_comms_are_true_of_its_files():
     assert f"SHIPMENTS: {len(shipments)} · {shipments[0]} TO {shipments[-1]}" in said
     assert "C-323 C 61.0\n" in files["receiving/2026-09-30.txt"]
     assert "C-323" not in said
+    found = " ".join(message.text for message in module.comms.challenge_done)
+    assert "CRATE C-323 · SHIPMENT 2026-09-30 · DECK C · 61.0 KG" in found and "Sixty-one kilos" in found
     assert "C-323" not in files["stores.txt"]
     assert sum("C-323" in contents for contents in files.values()) == 1, "no other record mentions it"
