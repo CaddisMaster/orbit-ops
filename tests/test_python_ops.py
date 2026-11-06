@@ -486,3 +486,43 @@ def test_module_08s_comms_count_what_the_lab_does():
     handled = script.count("except ") + script.count("log.returncode")
     said = " ".join(m.text for m in module.comms.lab_done)
     assert f"COMMANDS RUN: {runs} · FAILURES HANDLED: {handled}" in said and runs == 5 and handled == 3
+
+
+@pytest.mark.criterion(406, "Module 09 of Unit 2.1 is complete content")
+def test_module_09_is_complete():
+    module = _module("a-proper-cli")
+    _is_complete_content(module, beats=("open", "lab_done", "complete"))
+    assert module.lab and not module.challenge
+
+
+@pytest.mark.criterion(406, "Module 09's lab checks hold on any machine")
+def test_module_09s_lab_checks_hold_on_any_machine():
+    """The example is a real run on Python 3.12. Python 3.9, a Mac's own, heads the options
+    "optional arguments:", a Mac's wc pads its count, and the summary can come before the data when
+    stdout isn't a terminal: all of those still pass. The shortcuts don't."""
+    from app import lab
+
+    module = _module("a-proper-cli")
+    examples = [box.example for box in module.lab.boxes]
+    assert lab.grade(module.lab, examples).passed
+
+    older = [examples[0].replace("options:", "optional arguments:"), examples[1], examples[2].replace("\n3\n", "\n       3\n"), examples[3]]
+    assert lab.grade(module.lab, older).passed
+    buffered = examples[1].replace("3 crates, 87.75 kg\n", "")
+    assert lab.grade(module.lab, [examples[0], "3 crates, 87.75 kg\n" + buffered, *examples[2:]]).passed
+
+    def fails(box, text):
+        pasted = list(examples)
+        pasted[box] = text
+        return not lab.grade(module.lab, pasted).passed
+
+    assert fails(2, "4\n")  # the summary printed to stdout, so it went down the pipe
+    assert fails(1, examples[1] + "2026-10-07 C-332 8.5\n")  # --min-mass not applied
+    assert fails(3, examples[3].replace("bay_report: can't read missing.csv\nexit 1", "Traceback (most recent call last):\nFileNotFoundError: missing.csv\nexit 1"))
+    assert fails(3, examples[3].replace("invalid float value: 'heavy'", "could not convert string to float: 'heavy'"))  # no type=float
+
+
+def test_module_09s_comms_are_the_labs_figures():
+    module = _module("a-proper-cli")
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "CRATES: 3 · 87.75 KG" in said and "3 crates, 87.75 kg" in module.lab.boxes[1].example
