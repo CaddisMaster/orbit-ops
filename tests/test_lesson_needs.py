@@ -686,6 +686,28 @@ NEEDS = {
         "a setting by name": "**`indent=2` hands the call an extra setting by name**",
         ".get with an empty set": "**When a key might be missing from one of two dicts, `.get(key, set())` gives an empty set instead**",
     },
+    "running-commands": {
+        "subprocess.run runs a command": "**`subprocess.run()` runs one command and waits for it to finish.**",
+        "the command is a list": "**The command is a list: the program first, then each argument as its own string**",
+        "no shell in between": "**There's no shell in between**",
+        "returncode is the exit status": "**`.returncode` is the command's exit status**",
+        "capture_output keeps output": "**`capture_output=True` keeps what it prints instead, in `.stdout` and `.stderr`**",
+        "text makes strings": "**`text=True` makes them strings**",
+        "strip the output": "**`.strip()` it**",
+        "errors are on stderr": "Programs print their complaints on **stderr**",
+        "splitlines gives the lines": "**`.splitlines()` gives a string's lines as a list**",
+        "cwd runs it in a folder": "**`cwd`, short for current working directory (Unit 1.1, *Navigating*), runs the command in the folder you name**",
+        "a failure doesn't stop the script": "**A command that fails doesn't stop your script.**",
+        "check=True raises CalledProcessError": "**`check=True` makes a non-zero exit status raise `subprocess.CalledProcessError`**",
+        "a missing program raises FileNotFoundError": "**A program that isn't there raises `FileNotFoundError` before anything runs**",
+        "a list keeps a value whole": "**With a list there's no shell to read the `;`, so the whole value is one argument**",
+        "never shell=True with outside input": "**Keep to lists, and never use `shell=True` with a value you didn't write yourself.**",
+        "sys.executable is this Python": "**`sys.executable` is the path of the Python running your script**",
+        "the error carries returncode": "**The error carries the same facts: `error.returncode`**",
+        "without capture_output stdout is None": "**Without `capture_output=True`, `.stdout` is `None`**",
+        "-c runs a string as code": "**`-c` tells Python to run the string after it as code**",
+        "arguments after the code are in sys.argv": "**Anything after the code is handed to it in `sys.argv`**",
+    },
 }
 
 
