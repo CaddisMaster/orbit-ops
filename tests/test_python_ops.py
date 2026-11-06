@@ -157,3 +157,85 @@ def test_module_03s_wrong_attempts_fail(attempt, failing):
 def test_module_03s_starter_fails_every_check_about_the_functions():
     module = _module("conditions-functions-and-imports")
     assert not any(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+@pytest.mark.criterion(404, "Module 07 of Unit 2.1 is complete content")
+def test_module_07_is_complete():
+    module = _module("json-and-csv")
+    _is_complete_content(module, beats=("open", "challenge_done", "complete"))
+    assert set(module.challenge.files) == {"manifest.json", "received.csv"}
+
+
+LEDGERS = _module("json-and-csv").challenge.solution
+AS_LISTS = [
+    ("crates = set()", "crates = []"),
+    ("crates.add(", "crates.append("),
+    ("by_date[date] = set()", "by_date[date] = []"),
+    ("by_date[date].add(", "by_date[date].append("),
+    ("manifest.get(date, set())", "manifest.get(date, [])"),
+    ("received.get(date, set())", "received.get(date, [])"),
+    ("sorted(listed - arrived)", "[c for c in listed if c not in arrived]"),
+    ("sorted(arrived - listed)", "[c for c in arrived if c not in listed]"),
+]
+
+
+@pytest.mark.criterion(404, "Module 07's challenge can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("swaps", "failing"),
+    [
+        pytest.param([], [], id="the right answer, as a check on this test"),
+        pytest.param(AS_LISTS, [0, 1, 2], id="lists compared, so a run in another order looks different"),
+        pytest.param([("sorted(set(manifest) | set(received))", "sorted(manifest)")], [5], id="only the manifest's dates, missing a run only the bay has"),
+        pytest.param(
+            [('"missing": sorted(listed - arrived), "extra": sorted(arrived - listed)', '"missing": sorted(listed ^ arrived), "extra": []')],
+            [2, 3, 5],
+            id="one difference both ways, losing which side each crate is on",
+        ),
+        pytest.param([("sorted(listed - arrived)", "listed - arrived"), ("sorted(arrived - listed)", "arrived - listed")], list(range(8)), id="sets written to JSON"),
+        # Check 5 holds two dates, so a set's order fails it too about half the time (the hash seed).
+        pytest.param([("sorted(set(manifest) | set(received))", "set(manifest) | set(received)")], [6], id="dates in a set's order, not date order"),
+        pytest.param([('with open("mismatches.json", "w") as f:\n    json.dump(mismatches, f, indent=2)\n', "")], [7], id="mismatches.json never written"),
+    ],
+)
+def test_module_07s_wrong_attempts_fail(swaps, failing):
+    attempt = LEDGERS
+    for old, new in swaps:
+        assert attempt.count(old) == 1, old
+        attempt = attempt.replace(old, new)
+    results = challenge.run_in_cpython(_module("json-and-csv"), attempt)
+    failed = [i for i, passed in enumerate(results) if not passed]
+    if "for date in set(manifest) | set(received):" in attempt:
+        failed = [i for i in failed if i != 5]  # two dates: by luck either way
+    assert failed == failing
+
+
+def test_module_07s_starter_fails():
+    module = _module("json-and-csv")
+    assert not any(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+def test_module_07s_clue_agrees_with_module_05():
+    """Clue 2 is clue 1's crate seen from the depot's side: the same four runs, the same crates and
+    masses as module 05's receiving files, and only run 33 disagreeing, by C-323."""
+    import csv
+    import io
+    import json
+
+    files = _module("json-and-csv").challenge.files
+    manifest = json.loads(files["manifest.json"])
+    received = list(csv.DictReader(io.StringIO(files["received.csv"])))
+    shipped = {(s["date"], c["id"], c["mass"]) for s in manifest["shipments"] for c in s["crates"]}
+    arrived = {(r["date"], r["crate"], float(r["mass"])) for r in received}
+    assert arrived - shipped == {("2026-09-30", "C-323", 61.0)} and shipped <= arrived
+    decks = {(r["date"], r["crate"], r["deck"], float(r["mass"])) for r in received}
+
+    receiving = {p: t for p, t in _module("files-and-paths").challenge.files.items() if p.startswith("receiving/2026")} if "files-and-paths" in real_catalog().modules else {}
+    for path, text in receiving.items():  # module 05, once it's merged
+        date = path.removeprefix("receiving/").removesuffix(".txt")
+        lines = [line.split() for line in text.splitlines() if line.strip() and not line.startswith("#")]
+        assert {(date, crate, deck, float(mass)) for crate, deck, mass in lines} == {d for d in decks if d[0] == date}, path
+
+    said = " ".join(m.text for m in _module("json-and-csv").comms.challenge_done)
+    run = next(s["run"] for s in manifest["shipments"] if s["date"] == "2026-09-30")
+    assert f"MISMATCHES: 1 · RUN {run} · 2026-09-30 · EXTRA: C-323" in said
+    assert f"RUNS: {len(manifest['shipments'])}" in " ".join(m.text for m in _module("json-and-csv").comms.open)
