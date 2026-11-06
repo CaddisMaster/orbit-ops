@@ -151,6 +151,15 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   script: `__name__`, `sys.argv` and tracebacks as a real one's, exits reported with their code, and files
   and the working directory fresh each time. It stays standard library only.
 
+- **A unit's release waits until the unit is finished** (Sean, 2026-11-06). A unit counts as complete
+  when every module that exists is done, so a release with some modules written would award its badge
+  early, for good. v0.14.0 waits for #409.
+- **A clue a task finds goes in that task's beat, never in `complete`** (#422). `complete` plays when the
+  quiz completes the module, and a challenge or a lab doesn't gate that. `challenge_done` follows the
+  browser's verdict, as the challenge's XP does (#54).
+- **A module's right answers don't all share a position** (#417). `test_content.py` enforces it, with
+  the live modules that still do listed until #418 remaps their stored answers.
+
 ## Release ledger
 
 | Version | Date | Highlights |
@@ -176,6 +185,53 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-11-06: Unit 2.1 modules 04–09, a challenge beat, quiz answers that move
+
+- **Sean's decisions:** hold v0.14.0 until Unit 2.1 is finished (now a standing decision), reorder
+  modules 01 and 02's quiz options, and "merge them and then keep going". He merged modules 04–07 on
+  that word without playing them first, and 08–09 on "merge #427 and #428".
+- **#417 (#420): the right answer isn't always first.** In 38 of 47 modules every choice answer sat in
+  one position (34 always the first, Unit 1.1's four always the second). Modules 01 and 02 are
+  reordered, and a test fails any new module that does it, with the 38 live ones listed as known.
+  **#418** remaps their stored answers (`exercise_attempts.submitted` holds option positions) before
+  they can move.
+- **#422 (#424): `challenge_done`,** a comms beat for a challenge's first pass. The content-reviewer
+  caught module 05's clue in `complete`, which plays whether or not the bonus challenge was done, so a
+  learner who skipped it was simply told. A clue a task finds goes in that task's beat (standing
+  decisions).
+- **Modules 04–09 written and merged** (#421, #423, #425–#428). 04 *Parsing text*, 05 *Files and
+  paths* (clue 1: crate C-323 in the 2026-09-30 shipment, in no stores record), 06 *Errors and exit
+  codes* (the main guard, from #400), 07 *JSON and CSV* (clue 2: the depot's manifest for run 33
+  doesn't list C-323, and a test holds 07's CSV to 05's files crate for crate), 08 *Running
+  commands*, the unit's first lab, and 09 *A proper CLI*. Each went through the content-reviewer and
+  `/beginner-audit`, its Try it in `ubuntu:24.04`, and a play in Chromium as `verify-bot`.
+- **#394 became #419:** Dependabot closed #394 on a rebase and opened six updates, including
+  `anthropic` 2.4 and `ansible-core` 2.22. Sean approved all six. No LXD run has proved 2.22 yet.
+- **Open for Sean:** **#429**, a Mac's zsh passes a Try it's `# comment` to the command (268 lines in 42
+  modules; 09 is fixed). Recommended: a `setopt interactive_comments` note in every Try it, and no `#`
+  on command lines from now on. **Git isn't a prerequisite of `python-ops`**, though 08's lab needs it:
+  the lab says how to get it, and changing what unlocks the unit is his call.
+- **Not caught by any check, and said so in the PRs:** an unsorted `glob` passes module 05 in the
+  browser (the page's spec goes through `tojson`, which sorts keys, so Pyodide writes the files in
+  name order), and a hard-coded `sys.exit(1)` passes module 06.
+- Gotchas:
+  - **Interactive zsh doesn't treat `#` as a comment** (#429). Lab setups already avoid it; Try its
+    didn't.
+  - **A YAML `|` block drops trailing blank lines.** Module 05's file with a blank last line needed `|+`.
+  - **A set's order follows the hash seed,** so a check that two dates come out sorted passes an
+    unsorted loop half the time. Module 07's check uses eight dates, and its shortcut test allows the
+    two-date check either way.
+  - **The classifier refuses a force push and an unapproved merge.** Bring a branch up to date by
+    merging `main` in. "Keep both" on the parallel branches dropped a `},` in `NEEDS` three times, and
+    scrambled `test_python_ops.py` once, so rebuild those from `main` plus the branch's own section.
+  - **argparse's help differs by version:** 3.9, a Mac's own, says `optional arguments:`. When stdout
+    isn't a terminal, a stderr summary prints first, so capture lab examples through `script`.
+- **Unreleased on `main`:** everything since v0.13.3, including #424's app change and modules 01–09.
+- **Next:**
+  - #407, module 10 (*venv, pip and pinned dependencies*), then #408 and #409. #409 lifts the hold.
+  - Sean's calls: #429's fix, and whether `python-ops` should require Git.
+  - #375: Sean's live hint and lab review. The first real call on `anthropic` 2.4 waits for v0.14.0.
 
 ### 2026-11-05: Unit 2.1 planned and begun, a real challenge runner, Python stays on 3.14
 
@@ -248,25 +304,5 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Unreleased on `main`:** nothing that reaches the image.
 - **Next:**
   - #375: Sean's live hint and lab review, the first real call on `anthropic` 2.x.
-  - Unit 2.1 can be planned any time.
-  - #361 when its scan clears.
-
-### 2026-11-02 (later): dumps leave the droplet, the docs catch up (#377, #380)
-
-- **BB #535 and BB #533 closed the same day.** The VM now pulls the newest dump (RUNBOOK §6), and
-  `learn`'s record is at Squarespace, by hand. #378 (#377) brings the RUNBOOK, this file and
-  `CLAUDE.md` in line. No change reaches the image.
-- **#381 (#380): `lxc launch` gets `</dev/null`.** From a Claude session stdin is an open socket,
-  and `lxc launch` reads config from it. One `infra/test.sh` with the fix: `PASS` in 1m58s. The
-  hang is BB's measurement, not reproduced here, and `infra/stage.sh` wasn't run.
-- **Filed:** #379 (restore a pulled dump, which holds real rows, so it waits for Sean's go; do it in
-  the next release's rehearsal) and personal-vault #2 (pulled files are `664` in `775`/`755`
-  directories, against `600`/`700` on the droplet; Sean is the VM's only login user, so low risk).
-- Gotcha: after a squash-merge, a PR that needs updating can read its **old** run as passing while
-  it's `BLOCKED`, so `gh pr checks --watch` returns early. Wait for `mergeStateStatus` to say `CLEAN`.
-- **Unreleased on `main`, reaching the image:** still only #372 and #364.
-- **Next:**
-  - The release, when Sean calls it, rehearsed with `infra/stage.sh` on a pulled dump, which also
-    does #379. Then #375.
   - Unit 2.1 can be planned any time.
   - #361 when its scan clears.

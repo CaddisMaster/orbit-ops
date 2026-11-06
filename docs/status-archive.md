@@ -4,6 +4,26 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-11-02 (later): dumps leave the droplet, the docs catch up (#377, #380)
+
+- **BB #535 and BB #533 closed the same day.** The VM now pulls the newest dump (RUNBOOK §6), and
+  `learn`'s record is at Squarespace, by hand. #378 (#377) brings the RUNBOOK, this file and
+  `CLAUDE.md` in line. No change reaches the image.
+- **#381 (#380): `lxc launch` gets `</dev/null`.** From a Claude session stdin is an open socket,
+  and `lxc launch` reads config from it. One `infra/test.sh` with the fix: `PASS` in 1m58s. The
+  hang is BB's measurement, not reproduced here, and `infra/stage.sh` wasn't run.
+- **Filed:** #379 (restore a pulled dump, which holds real rows, so it waits for Sean's go; do it in
+  the next release's rehearsal) and personal-vault #2 (pulled files are `664` in `775`/`755`
+  directories, against `600`/`700` on the droplet; Sean is the VM's only login user, so low risk).
+- Gotcha: after a squash-merge, a PR that needs updating can read its **old** run as passing while
+  it's `BLOCKED`, so `gh pr checks --watch` returns early. Wait for `mergeStateStatus` to say `CLEAN`.
+- **Unreleased on `main`, reaching the image:** still only #372 and #364.
+- **Next:**
+  - The release, when Sean calls it, rehearsed with `infra/stage.sh` on a pulled dump, which also
+    does #379. Then #375.
+  - Unit 2.1 can be planned any time.
+  - #361 when its scan clears.
+
 ### 2026-11-02: #322 closed from the Mac, the IaC milestone done, `anthropic` 2.x
 
 - **#322 is closed.** Sean's check-mode run from the Mac, at `4960694`:
