@@ -617,6 +617,28 @@ NEEDS = {
         "or joins several None tests": "one `if` can ask about them all with `or`",
         "is not None keeps what was found": "**`is not None` asks the opposite.**",
     },
+    "files-and-paths": {
+        "open gives a file object": "**`open()` opens a file and gives back a file object**",
+        "with closes the file": "**`with` matters because it closes the file when the block ends, even if an error stops the code inside it.**",
+        "a for loop reads line by line": "**A `for` loop over a file object gives you one line at a time**",
+        "each line keeps its newline": "**Each line still ends with its newline, `\\n`**",
+        "strip before testing": "**Strip each line before you test it**",
+        "continue skips a line": "**As in Bash, `continue` skips the rest of this pass and goes on to the next item**",
+        "w creates or empties": "**empties it if it's already there**",
+        "write adds no newline": "**`.write()` writes exactly the text you give it, and no newline of its own**",
+        "open once, before the loop": "**Open the file once, before the loop.**",
+        "from pathlib import Path": "**`from pathlib import Path` brings in just the name `Path`**",
+        "Path and /": "**`Path(\"logs\")` makes a path, and `/` joins one to the next**",
+        "open takes a Path": "**`open()` takes a `Path` as readily as a string.**",
+        "stem is the name without its ending": "**the name without its ending**",
+        "glob matches names": "**every path in `folder` whose name matches**",
+        "glob's order isn't fixed, so sort": "**`glob` gives the paths in no particular order, so wrap it in `sorted()`**",
+        "not in is the reverse": "**`not in` asks the reverse of `in`**",
+        "no mode means read": "**With no mode after the path, `open()` reads the file**",
+        "split()[0] is the first field": "**`line.split()[0]` reads the first field straight from the list that `.split()` gives back**",
+        "stem takes no brackets": "**`name`, `stem` and `suffix` take no brackets: they're facts the path already holds**",
+        "collect one file's names, check another against them": "Collect one file's names into a list first, and `not in` checks another file against it.",
+    },
 }
 
 
