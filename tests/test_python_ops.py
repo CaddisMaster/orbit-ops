@@ -157,3 +157,71 @@ def test_module_03s_wrong_attempts_fail(attempt, failing):
 def test_module_03s_starter_fails_every_check_about_the_functions():
     module = _module("conditions-functions-and-imports")
     assert not any(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+@pytest.mark.criterion(403, "Module 06 of Unit 2.1 is complete content")
+def test_module_06_is_complete():
+    _is_complete_content(_module("errors-and-exit-codes"), beats=("open", "challenge_done", "complete"))
+
+
+REPORT = _module("errors-and-exit-codes").challenge.solution
+WHOLE_LOOP_TRIED = """    try:
+        for record in records:
+            mass = parse_mass(record)
+            total = total + mass
+    except ValueError:
+        bad = bad + 1"""
+EACH_RECORD_TRIED = """    for record in records:
+        try:
+            mass = parse_mass(record)
+        except ValueError:
+            bad = bad + 1
+            continue
+        total = total + mass"""
+
+
+@pytest.mark.criterion(403, "Module 06's challenge can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("old", "new", "failing"),
+    [
+        pytest.param("", "", [], id="the right answer, as a check on this test"),
+        pytest.param("except ValueError:", "except:", [4], id="a bare except, hiding a real error"),
+        pytest.param("except ValueError:", "except Exception:", [4], id="except Exception, hiding a real error"),
+        pytest.param('raise ValueError(f"expected 3 fields: {record}")', "return 0", [1, 3], id="a made-up 0 for a short record"),
+        pytest.param(EACH_RECORD_TRIED, WHOLE_LOOP_TRIED, [3], id="the try around the whole loop, so the first bad record ends it"),
+        pytest.param("        return 1\n", "        return 0\n", [5, 6], id="main always gives back 0"),
+        pytest.param('if __name__ == "__main__":\n    sys.exit(main(records))', "main(records)", [6], id="main run, but its status never used"),
+        pytest.param("        return 1\n    return 0", "        sys.exit(1)\n    sys.exit(0)", [5], id="main exits itself instead of giving back its status"),
+    ],
+)
+def test_module_06s_wrong_attempts_fail(old, new, failing):
+    assert REPORT.count(old) == 1 or not old, "the replace has to change the solution"
+    attempt = REPORT.replace(old, new) if old else REPORT
+    results = challenge.run_in_cpython(_module("errors-and-exit-codes"), attempt)
+    assert [i for i, passed in enumerate(results) if not passed] == failing
+
+
+def test_module_06s_starter_fails():
+    module = _module("errors-and-exit-codes")
+    assert not any(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+def test_module_06s_comms_are_true_of_its_records():
+    """MERIDIAN's readouts are the challenge's records: the old script died at the first bad one."""
+    module = _module("errors-and-exit-codes")
+    namespace = {"__name__": "module_06"}  # not "__main__", so the guard doesn't exit
+    exec(module.challenge.solution, namespace)
+    records, result = namespace["records"], namespace["summarise"](namespace["records"])
+
+    def bad(record):
+        try:
+            namespace["parse_mass"](record)
+        except ValueError:
+            return True
+        return False
+
+    first_bad = next(i for i, record in enumerate(records) if bad(record)) + 1
+    said = lambda beat: " ".join(m.text for m in getattr(module.comms, beat))  # noqa: E731
+    assert f"FAILED AT RECORD {first_bad} OF {len(records)}" in said("open")
+    assert f"TOTAL: {result['total']} KG · BAD RECORDS: {result['bad']} · EXIT STATUS: 1" in said("challenge_done")
+    assert "Three bad records" in said("challenge_done") and result["bad"] == 3
