@@ -13,6 +13,8 @@ and why it matters, not what the diff says.
   imports* (#400) and 04 *Parsing text* (#401).
 - Python challenges can have their own files, shown on the page and written fresh for every run, so
   a lesson can have the learner open a real file (#396).
+- A challenge's first pass can bring the crew's reply on the comms log, with a window event, as a
+  console task's and a lab's already do (#422). Module content picks it up with `challenge_done`.
 
 ### Changed
 

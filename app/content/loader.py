@@ -35,7 +35,7 @@ from app.content.schema import (
 )
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
-BEATS: tuple[str, ...] = get_args(Beat)  # open, console_done, lab_done, complete
+BEATS: tuple[str, ...] = get_args(Beat)  # open, console_done, challenge_done, lab_done, complete
 _MODULE_FILENAME = re.compile(r"^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
 
 
@@ -348,6 +348,8 @@ def load_catalog(root: Path = CONTENT_DIR) -> Catalog:
                     problems.append(f"{module.source}: comms.{beat}.{i}.from: '{message.from_}' is not in the cast")
         if (module.comms.console_done or "console_done" in module.comms.window) and not module.terminal:
             problems.append(f"{module.source}: comms.console_done: the module has no terminal exercise")
+        if (module.comms.challenge_done or "challenge_done" in module.comms.window) and not module.challenge:
+            problems.append(f"{module.source}: comms.challenge_done: the module has no challenge")
         if (module.comms.lab_done or "lab_done" in module.comms.window) and not module.lab:
             problems.append(f"{module.source}: comms.lab_done: the module has no lab")
 
