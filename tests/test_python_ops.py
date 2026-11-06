@@ -450,3 +450,39 @@ def test_module_07s_clue_agrees_with_module_05():
     run = next(s["run"] for s in manifest["shipments"] if s["date"] == "2026-09-30")
     assert f"MISMATCHES: 1 · RUN {run} · 2026-09-30 · EXTRA: C-323" in said
     assert f"RUNS: {len(manifest['shipments'])}" in " ".join(m.text for m in _module("json-and-csv").comms.open)
+
+
+@pytest.mark.criterion(405, "Module 08 of Unit 2.1 is complete content")
+def test_module_08_is_complete():
+    module = _module("running-commands")
+    _is_complete_content(module, beats=("open", "lab_done", "complete"))
+    assert module.lab and not module.challenge
+
+
+@pytest.mark.criterion(405, "Module 08's lab checks hold on any machine")
+def test_module_08s_lab_catches_the_shortcuts():
+    """The pasted output and script are checked for the ways this goes wrong: a shell running the crate
+    name, output never captured, and a git log run outside the empty repository. git's message itself
+    isn't matched word for word, since a git in another language translates it."""
+    from app import lab
+
+    module = _module("running-commands")
+    output, script = (box.example for box in module.lab.boxes)
+    assert lab.grade(module.lab, [output, script]).passed
+
+    shelled = output.replace("echo: C-323; echo INJECTED", "echo: C-323\nINJECTED")
+    assert not lab.grade(module.lab, [shelled, script.replace("capture_output=True, text=True)\n    print(\"echo:", "shell=True)\n    print(\"echo:")]).passed
+    outside = output.replace("log: fatal: your current branch 'main' does not have any commits yet", "log: fatal: not a git repository (or any of the parent directories): .git")
+    assert not lab.grade(module.lab, [outside, script.replace('cwd="empty-repo", ', "")]).passed  # box 2 wants cwd
+    assert lab.grade(module.lab, [output.replace("fatal: your current branch", "fatal: Ihr aktueller Branch"), script]).passed  # git in German
+    uncaptured = output.replace("version: git version 2.43.0", "git version 2.43.0\nversion:")
+    assert not lab.grade(module.lab, [uncaptured, script]).passed
+
+
+def test_module_08s_comms_count_what_the_lab_does():
+    module = _module("running-commands")
+    script = module.lab.boxes[1].example
+    runs = script.count("subprocess.run(")
+    handled = script.count("except ") + script.count("log.returncode")
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert f"COMMANDS RUN: {runs} · FAILURES HANDLED: {handled}" in said and runs == 5 and handled == 3
