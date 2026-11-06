@@ -459,6 +459,7 @@ def test_module_08_is_complete():
     assert module.lab and not module.challenge
 
 
+@pytest.mark.criterion(405, "Module 08's lab checks hold on any machine")
 def test_module_08s_lab_catches_the_shortcuts():
     """The pasted output and script are checked for the ways this goes wrong: a shell running the crate
     name, output never captured, and a git log run outside the empty repository. git's message itself
