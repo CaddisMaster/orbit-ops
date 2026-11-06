@@ -773,6 +773,9 @@ module's PR, in this order:
 - **Give each module a scenario question** from Unit 1.2 on: a script or output in `code:`, then
   "what happens?" or "why does this fail?". `q` is inline Markdown, so a fenced block there
   collapses into one line: put it in `code:`.
+- **Move the right option around.** If every right answer is first, a learner stops reading the
+  question (#417). `test_content.py` fails a module whose choice answers all share a position; the
+  live modules that still do are listed there until #418 remaps their stored answers.
 - **Quiz the idea, not the trivia.** Every `explain` should teach something, including why the
   wrong options are wrong when that's useful.
 - **Fact-check every draft like code.** A drafted module is a starting point, not a source.
