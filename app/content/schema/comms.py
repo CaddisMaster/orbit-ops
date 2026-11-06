@@ -29,17 +29,18 @@ class CastSpec(_Strict):
     delay: Annotated[str, Field(pattern=r"^\d+(\.\d+)? s$")] | None = None  # light-delay, e.g. "1.3 s"
 
 
-Beat = Literal["open", "console_done", "lab_done", "complete"]
+Beat = Literal["open", "console_done", "challenge_done", "lab_done", "complete"]
 
 
 class Comms(_Strict):
     """What a module's messages are and when they arrive: `open` when the
     module is first opened (the briefing), `console_done` when its console task
-    passes, `lab_done` when its lab passes (#121), `complete` when it's
-    completed (the debrief)."""
+    passes, `challenge_done` when its challenge passes (#422), `lab_done` when
+    its lab passes (#121), `complete` when it's completed (the debrief)."""
 
     open: list[Message] = []
     console_done: list[Message] = []
+    challenge_done: list[Message] = []
     lab_done: list[Message] = []
     complete: list[Message] = []
     window: dict[Beat, WindowEvent] = {}  # a window event that plays at a beat

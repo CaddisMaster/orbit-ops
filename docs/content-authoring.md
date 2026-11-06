@@ -160,6 +160,7 @@ challenge:
   should hold them together (`tests/test_challenge.py` does it for text-tools).
 - The checks reach the page (the browser runs them), so a determined learner can read them.
   That's the trade for never running learner code on the server.
+- `comms.challenge_done` (below) is the crew's reply to the first pass (#422).
 
 ### A lab (optional)
 
@@ -641,10 +642,10 @@ Known groups keep their usual GIDs (`sudo` 27, `docker` 998); your primary group
 
 ### Comms: the crew's messages (optional)
 
-A module can send messages to the comms log on the desk's laptop, at four beats: `open`
+A module can send messages to the comms log on the desk's laptop, at five beats: `open`
 (the briefing, on the first visit; it replaces the italic `story` on the page), `console_done`
-(the first time its console task passes), `lab_done` (the first time its lab passes) and
-`complete` (the debrief). A beat can also play a
+(the first time its console task passes), `challenge_done` (the first time its challenge passes,
+#422), `lab_done` (the first time its lab passes) and `complete` (the debrief). A beat can also play a
 window event outside the desk's window.
 
 ```yaml
@@ -661,9 +662,14 @@ comms:
 
 - `from` is a slug from `cast:` in `syllabus.yml` (Okafor, MERIDIAN, Mission Control), or
   validation fails naming the file and the character. `text` is inline Markdown.
-- `console_done` needs a `terminal:` exercise in the same module, and `lab_done` a `lab:`.
+- `console_done` needs a `terminal:` exercise in the same module, `challenge_done` a `challenge:`,
+  and `lab_done` a `lab:`.
+- **A clue a task finds goes in that task's beat, never in `complete`.** `complete` plays when the
+  quiz completes the module, and a challenge or a lab doesn't gate that, so a learner who skipped
+  the task would simply be told (#422). Like the challenge's XP, `challenge_done` follows the
+  browser's verdict (#54).
 - A window event plays once, when its beat happens: `open` on the first visit, `console_done`
-  with the console's first pass, `lab_done` with the lab's, `complete` with the completing answer. Unit 1.1 uses
+  with the console's first pass, `challenge_done` with the challenge's, `lab_done` with the lab's, `complete` with the completing answer. Unit 1.1 uses
   `relay-pass` (02 open), `shuttle-dock` (04 complete), `debris-drift` (06 open) and `aurora`
   (10 complete, the end of the unit).
 - **If MERIDIAN quotes a number** (CPU, attempts, a time), it must be true of the exercise:
