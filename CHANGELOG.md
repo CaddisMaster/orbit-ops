@@ -9,8 +9,8 @@ and why it matters, not what the diff says.
 ### Added
 
 - Unit 2.1 *Python for operations* begins, the first unit of the Cargo & Fabrication deck, with modules
-  01 *From Bash to Python* (#398), 02 *Lists, dicts and loops* (#399) and 03 *Conditions, functions and
-  imports* (#400).
+  01 *From Bash to Python* (#398), 02 *Lists, dicts and loops* (#399), 03 *Conditions, functions and
+  imports* (#400) and 05 *Files and paths* (#402).
 - Python challenges can have their own files, shown on the page and written fresh for every run, so
   a lesson can have the learner open a real file (#396).
 

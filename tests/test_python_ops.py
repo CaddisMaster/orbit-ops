@@ -157,3 +157,66 @@ def test_module_03s_wrong_attempts_fail(attempt, failing):
 def test_module_03s_starter_fails_every_check_about_the_functions():
     module = _module("conditions-functions-and-imports")
     assert not any(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+@pytest.mark.criterion(402, "Module 05 of Unit 2.1 is complete content")
+def test_module_05_is_complete():
+    module = _module("files-and-paths")
+    _is_complete_content(module, beats=("open", "complete"))
+    assert module.challenge.files, "the challenge reads files of its own"
+
+
+SHELVES = _module("files-and-paths").challenge.solution
+NOT_CLOSED = """summary = open("summary.txt", "w")
+for date in sorted(counts):
+    summary.write(f"{date}: {counts[date]} crates\\n")
+"""
+OPENED_EACH_PASS = """for date in sorted(counts):
+    with open("summary.txt", "w") as summary:
+        summary.write(f"{date}: {counts[date]} crates\\n")
+"""
+WRITE = """with open("summary.txt", "w") as summary:
+    for date in sorted(counts):
+        summary.write(f"{date}: {counts[date]} crates\\n")
+"""
+
+
+@pytest.mark.criterion(402, "Module 05's challenge can be solved with what the lesson teaches")
+@pytest.mark.parametrize(
+    ("attempt", "failing"),
+    [
+        pytest.param(SHELVES, [], id="the right answer, as a check on this test"),
+        pytest.param(SHELVES.replace('folder.glob("*.txt")', 'folder.glob("*")'), [0, 1, 2, 4], id="every file in the folder, the README too"),
+        pytest.param(SHELVES.replace("counts[path.stem]", "counts[path.name]"), [0, 4], id="keyed by the name, .txt and all"),
+        pytest.param(SHELVES.replace("            line = line.strip()\n", ""), [0, 1, 2, 3, 4, 5], id="lines not stripped, so a blank one is a newline"),
+        pytest.param(SHELVES.replace(' or line.startswith("#")', ""), [0, 4], id="header lines counted as crates"),
+        pytest.param(SHELVES.replace(WRITE, OPENED_EACH_PASS), [4], id='opened with "w" on every pass'),
+        pytest.param(SHELVES.replace('crates\\n")', 'crates")'), [4, 5], id="no newline after each line"),
+        pytest.param(SHELVES.replace(WRITE, 'with open("summary.txt", "w") as summary:\n    summary.write("\\n".join(f"{d}: {counts[d]} crates" for d in sorted(counts)))\n'), [5], id="no newline after the last line"),
+        pytest.param(SHELVES.replace(WRITE, NOT_CLOSED), [4, 5], id="opened without with and never closed, so nothing is saved"),
+    ],
+)
+def test_module_05s_wrong_attempts_fail(attempt, failing):
+    assert attempt != SHELVES or not failing, "the replace didn't change the solution"
+    results = challenge.run_in_cpython(_module("files-and-paths"), attempt)
+    assert [i for i, passed in enumerate(results) if not passed] == failing
+
+
+def test_module_05s_starter_fails():
+    module = _module("files-and-paths")
+    assert not all(challenge.run_in_cpython(module, module.challenge.starter))
+
+
+def test_module_05s_comms_are_true_of_its_files():
+    """MERIDIAN's readout is the challenge's files, and the clue is in them for the learner to find:
+    C-323 is in the 2026-09-30 shipment and in no other record. The crew don't name it, since the
+    complete beat plays whether or not the challenge was done."""
+    module = _module("files-and-paths")
+    files = module.challenge.files
+    said = " ".join(message.text for beat in (module.comms.open, module.comms.complete) for message in beat)
+    shipments = sorted(path.split("/")[1].removesuffix(".txt") for path in files if path.endswith(".txt") and path.startswith("receiving/"))
+    assert f"SHIPMENTS: {len(shipments)} · {shipments[0]} TO {shipments[-1]}" in said
+    assert "C-323 C 61.0\n" in files["receiving/2026-09-30.txt"]
+    assert "C-323" not in said
+    assert "C-323" not in files["stores.txt"]
+    assert sum("C-323" in contents for contents in files.values()) == 1, "no other record mentions it"
