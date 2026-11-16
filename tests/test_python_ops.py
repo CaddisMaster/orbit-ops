@@ -1,6 +1,8 @@
 """Unit 2.1, Python for operations: what each module has to hold, beyond the rules every module
 meets. Whether a solution passes is test_challenge.py's; here, wrong attempts must fail."""
 
+import json
+
 import pytest
 
 from app import challenge
@@ -661,3 +663,91 @@ def test_module_11s_real_station_claim_is_the_apps_own_client():
     body = _module("talking-to-an-api").body_html
     assert "timeout=30.0" in source and "timeout=30.0" in body
     assert "fail in seconds, not the SDK's 10 minutes" in source
+
+
+@pytest.mark.criterion(409, "Module 12 of Unit 2.1 is complete content")
+def test_module_12_is_complete():
+    module = _module("retries-and-logging")
+    _is_complete_content(module, beats=("open", "lab_done", "complete"))
+    assert module.lab and not module.challenge
+    assert module.lab.ai_review and module.lab.rubric
+
+
+@pytest.mark.criterion(409, "Module 12's lab checks hold on any machine")
+def test_module_12s_lab_checks_hold_on_any_machine():
+    """The examples are a real run in ubuntu:24.04 against the setup's scanner, through a terminal. The
+    stderr and stdout lines can come in another order off a terminal, and a refused connection that's
+    slow to refuse reads as Timeout: both still pass. The shortcuts don't."""
+    from app import lab
+
+    module = _module("retries-and-logging")
+    examples = [box.example for box in module.lab.boxes]
+    assert lab.grade(module.lab, examples).passed
+
+    def passes(box, text):
+        pasted = list(examples)
+        pasted[box] = text
+        return lab.grade(module.lab, pasted).passed
+
+    lines = examples[0].splitlines()
+    assert passes(0, "\n".join(lines[1:2] + lines[:1] + lines[2:]) + "\n")  # the record before its log line
+    assert passes(1, examples[1].replace("ConnectionError", "Timeout"))
+
+    retried_404 = examples[0].replace("ERROR C-999: 404, not retrying", "WARNING C-999: try 1 of 3 failed: 404, retrying in 0.5 s\nERROR C-999: 404, not retrying")
+    assert not passes(0, retried_404)
+    no_backoff = examples[0].replace("retrying in 1.0 s", "retrying in 0.5 s")
+    assert not passes(0, no_backoff)
+    printed = examples[0].replace("INFO C-322: scanned on try 1\n", "C-322: scanned on try 1\n")
+    assert not passes(0, printed)  # print, not logging
+    assert not passes(1, examples[1].replace("exit 3", "exit 1"))  # giving up looks like a 404
+    loud = examples[1].replace('{"crate": "C-321"', 'INFO C-321: scanned on try 1\n{"crate": "C-321"')
+    assert not passes(1, loud)  # --quiet ignored
+    assert not passes(2, examples[2].replace(", timeout=2", ""))
+    assert not passes(2, examples[2].replace("timeout=2", "timeout=2.5"))
+
+
+def _scanned():
+    import re
+
+    setup = _module("retries-and-logging").lab.setup
+    return {m.group(1): json.loads(m.group(2)) for m in re.finditer(r'^\s+"(C-\d+)": (\{.*\}),$', setup, re.M)}
+
+
+def test_module_12s_scanner_holds_run_33_as_module_07_received_it():
+    """The scanner's records are module 07's run 33, crate for crate, and only the crate the depot's
+    manifest leaves out (clue 2) was consigned by depot-sync (clue 3)."""
+    import csv
+    import io
+
+    module_07 = _module("json-and-csv").challenge.files
+    received = [r for r in csv.DictReader(io.StringIO(module_07["received.csv"])) if r["date"] == "2026-09-30"]
+    run_33 = next(s for s in json.loads(module_07["manifest.json"])["shipments"] if s["date"] == "2026-09-30")
+    listed = {crate["id"] for crate in run_33["crates"]}
+
+    scanned = _scanned()
+    assert set(scanned) == {r["crate"] for r in received}
+    for row in received:
+        record = scanned[row["crate"]]
+        assert (record["run"], record["received"], record["deck"], record["mass"]) == (run_33["run"], row["date"], row["deck"], float(row["mass"]))
+        assert (record["consigned_by"] == "depot-sync") == (row["crate"] not in listed)
+
+
+def test_module_12s_comms_are_the_scans():
+    module = _module("retries-and-logging")
+    scanned = _scanned()
+    found = " ".join(m.text for m in module.comms.lab_done)
+    for crate in ("C-321", "C-322", "C-323", "C-324"):
+        assert f"{crate}: {scanned[crate]['consigned_by'].upper() if scanned[crate]['consigned_by'] != 'depot-sync' else 'depot-sync'}" in found
+        assert f'"crate": "{crate}"' in module.lab.boxes[0].example + module.lab.boxes[1].example
+    assert "C-323 ON MANIFEST 33: NO" in found
+    assert "depot-sync" not in " ".join(m.text for m in module.comms.complete)  # a clue a task finds stays in its beat (#422)
+
+
+def test_module_12s_real_station_claims_are_the_apps():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    ai, main = (root / "app" / "ai.py").read_text(), (root / "app" / "main.py").read_text()
+    body = _module("retries-and-logging").body_html
+    assert "max_retries=1" in ai and "max_retries=1" in body
+    assert "log.exception(" in main and "log.exception(…)" in body

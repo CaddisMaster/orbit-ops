@@ -61,7 +61,7 @@ Who sent `FLUSH`, and how a poisoned update got through the depot, is left open.
 
 # Cargo & Fabrication: the manifest discrepancies
 
-The thread for Unit 2.1 (#395), planned on 2026-11-05 and not yet written. The Life Support rule
+The thread for Unit 2.1 (#395), planned on 2026-11-05 and written in modules 05, 07 and 12. The Life Support rule
 holds: the learner finds each clue with the unit's own tools, and the crew only react.
 
 ## What happened (kept open past this unit)
@@ -80,7 +80,7 @@ for **Unit 4.5 (DevSecOps: supply chain)**.
 |---|---|---|---|---|
 | 2.1 Python | 05 Files and paths | The 2026-09-30 receiving file has a crate no other record mentions | `pathlib`'s `glob`, reading each file in a loop, `not in` against `stores.txt`: crate **C-323** (deck C, 61.0 kg). The crew react in `challenge_done` (#422) | written (#402) |
 | 2.1 Python | 07 JSON and CSV | Comparing the depot's manifest (JSON) with what the bay received (CSV), only the 2026-09-30 shipment disagrees | `json`, `csv.DictReader`, comparing sets by key: run 33's manifest lists C-321, C-322 and C-324, and the bay received C-323 as well. The crew react in `challenge_done` | written (#404) |
-| 2.1 Python | 12 Capstone | The reconciled record ties the mismatch to the `depot-sync` feed, and it goes to Mission Control's inquiry | The learner's own CLI: `argparse`, `requests` with retries, `logging` | planned (#409) |
+| 2.1 Python | 12 Capstone: retries and logging | The hold scanner's record for C-323 says it was **consigned by `depot-sync`**, while run 33's other crates say `depot stores`: the crate came in on the depot's feed, not off its shelves. The records go to Mission Control's inquiry, and C-323 stays sealed | The learner's own CLI, `scan_crate.py`: `argparse`, `requests` with retries and backoff, `logging`. The crew react in `lab_done` (#422) | written (#409) |
 
 The modules between them stay ordinary fabrication-bay jobs, with a line or two of comms at most.
 Use only the dates and names in the Life Support section above, and put any new outside address in
