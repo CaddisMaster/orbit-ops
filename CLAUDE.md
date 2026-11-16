@@ -97,13 +97,12 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.13.3** is in production (2026-11-03). Unit 2.1 (*Python for operations*) is
-milestone v0.14.0, with modules 01–10 merged (01–07 browser challenges, labs from 08). **The release
-waits until the unit is finished** (Sean's decision, 2026-11-06), since a short unit's badge would be
-earned early and kept. Challenges have a `challenge_done` beat (#422). Sean edits in VS Code, and droplet
-steps run from a Mac terminal only (#365). Module 10's lab pins `requests==2.34.2` and needs Python
-3.10. Next: #408 (module 11), then #409; Sean's calls on #429 (zsh and `#` in Try its) and on making
-Git a prerequisite; #375.
+See `docs/status.md`. **v0.14.0** is in production (2026-11-16): Unit 2.1 (*Python for operations*) is
+complete in 12 modules (01–07 browser challenges, 08–12 labs, the capstone with Claude's review), with
+the manifest thread's three clues. A unit's release waits until the unit is finished (Sean's decision,
+2026-11-06). The unit's labs pin `requests==2.34.2` and need Python 3.10. Sean edits in VS Code, and
+droplet steps run from a Mac terminal only (#365). Next: #375 (a live hint and lab review on
+production), #418, Sean's calls on #429 and on making Git a prerequisite, then planning the next unit.
 
 ## Maintainer notes (local only)
 

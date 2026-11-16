@@ -164,6 +164,7 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 | Version | Date | Highlights |
 |---|---|---|
+| 0.14.0 | 2026-11-16 | Unit 2.1 *Python for operations* complete (12 modules: 01–07 browser challenges, 08–12 labs, *Fabricator Scripted*) with the manifest thread's three clues; challenges run like scripts, with files and real exits (#396); a `challenge_done` beat (#422); `anthropic` 2.8 and other updates (#419, #434). No migrations |
 | 0.13.3 | 2026-11-03 | Dependency updates, including `anthropic` 2.3 on API version `2026-10-21` (#364, #372), and a deploy that never names an existing `db` (#384). The first release rehearsed on real rows (#379). A PATCH. No migrations |
 | 0.13.2 | 2026-10-30 | Security: the image moves to Python 3.14.10 for CVE-2026-115557 (CRITICAL), which the image scan found in 3.14.8 and which blocked every PR (#351). A PATCH. No migrations |
 | 0.13.1 | 2026-10-29 | Fidelity fixes and the first multi-arch image: the console's timers and `systemctl status` match systemd 255 (#336, #338), module 03 drops an unkept promise (#341), and the release image is built for amd64 and arm64, each scanned (#337, #321). A PATCH. No migrations |
@@ -185,6 +186,41 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-11-16: Unit 2.1 finished, v0.14.0 in production
+
+- **Sean's decisions:** Dependabot's #431 and #434 merged ("merge them"), #408 then #409 on "merge it and
+  start #409", module 11's depot patched (#437), and "merge it and cut v0.14.0". He approved `production`.
+- **Dependabot:** #431 (`docker/login-action` 4.8) and #434 (14 updates, `anthropic` 2.8 among them). The
+  classifier refused the first merge until Sean said so. With `main` required up to date, #434 was
+  brought level with `gh pr update-branch`, not `@dependabot rebase`, which can close a group PR. The dev
+  container was rebuilt and the suite run on the new packages.
+- **#408 (#435): module 11, *Talking to an API*.** A lab against `depot.py`, a stdlib server the setup
+  writes on `127.0.0.1:8765`: run 34's manifest, a 404, and `latest` after 10 s past a 2 s timeout, then
+  the depot stopped. Found in `requests` 2.34.2: Python's own `ConnectionError` doesn't catch
+  `requests.exceptions.ConnectionError`. `/beginner-audit` caught two traps that failed the lab while
+  following the lesson: a `return` in `main()`'s loop skipped `latest`, and catching `ReadTimeout`, the
+  traceback's name, failed the script check.
+- **#409 (#436): module 12, *Capstone: retries and logging*,** with `ai_review` and a rubric. A stdlib
+  `scanner.py` on `127.0.0.1:8766` answers C-323 busy, slow, read, cycling, so a correct rerun sees the
+  same pattern. **Clue 3** is in `lab_done`: C-323 was consigned by `depot-sync`, run 33's others by
+  `depot stores` (`docs/story.md`). The reviews caught "never retry a 4xx" against the SDK's 429, C-324
+  never scanned, `basicConfig` placed before `--quiet` could be read, and the rubric repeating the checks.
+- **#437 (#438):** module 11's depot catches Windows' `ConnectionAbortedError`, as 12's scanner does.
+- **v0.14.0 released and deployed** (#439, run `43889147932`, commit `adf0a35`). `release-prep` said GO
+  and found the CHANGELOG missing modules 11–12, #396's hint change and the dependency bumps. The log:
+  `backup ok … pre-deploy-20261116-145203.sql.gz (5293 bytes)`, no migration, only `web` recreated,
+  `Deployed and healthy`. Budget Buddy's `/healthz` 200. `free -m` not checked.
+- **Not exercised:** nothing on a Mac or Windows. No live Claude review: the dev stack has no key.
+- Gotchas: a lab box holds 10 checks at most, and a module 10–20 minutes (`test_content.py`). The story
+  test wants a clue row's module named by its full title. In a Try it, `$!` isn't taught by Unit 1.1, which
+  has `&` and `kill %1`. A background job ignores SIGINT, so `pkill -INT` of a server started with `&` in
+  a script does nothing: start it with `docker exec -d` to test Ctrl-C. Three `style-src` CSP console
+  errors appeared once in Chromium after module 11's first lab pass and never again in four runs.
+- **Next:**
+  - #375: Sean's live hint and lab review on production, now on `anthropic` 2.8 (the capstone's lab).
+  - #418 (remap the 38 live modules' stored quiz answers), Sean's calls on #429 and on Git as a
+    prerequisite (Windows learners are sent to Git Bash in 08–12), and planning the next unit.
 
 ### 2026-11-15: Unit 2.1 module 10, the first session on Fable 5.2
 
@@ -253,45 +289,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **Next:**
   - #407, module 10 (*venv, pip and pinned dependencies*), then #408 and #409. #409 lifts the hold.
   - Sean's calls (#429, Git as a prerequisite), and #375: the first real `anthropic` 2.4 call waits for v0.14.0.
-
-### 2026-11-05: Unit 2.1 planned and begun, a real challenge runner, Python stays on 3.14
-
-- **#389 (#390): pytest 9.2.0 stays.** It ignores `--dist loadgroup` with xdist 3.8.0 (BB #588). Nothing
-  here groups, so there's a note and `tests/test_xdist_grouping.py`, which fails if a test groups while
-  grouping is broken. Run three ways: clean, with a grouped test, and on 9.1.1 in a throwaway venv.
-- **#361 closed, Sean's call: the server stays on Python 3.14** (standing decisions, #392 in #393). #391
-  moves to 3.15 once Pyodide has a stable build.
-- **Unit 2.1 is planned as milestone v0.14.0** (#395–#409, 12 modules: 01–07 browser challenges, 08–12
-  labs). Sean's calls: Networking becomes a prerequisite, no Python assumed, the *manifest discrepancies*
-  thread (`docs/story.md`), and the capstone's lab review at about 5 cents at most.
-- **#396 (#411): one runner for the browser and CI.** Testing in real Chromium found what Node had hidden:
-  `if __name__ == "__main__":` silently did nothing, `sys.exit` failed every check, and output, files and
-  the working directory leaked into the next run. `app/static/py/challenge_runner.py` is now what both
-  run. Challenges can have their own `files:`.
-- **#397 (#412):** `NEEDS` covers challenges.
-- **Modules 01–03 written** (#413, #414, #415). Sean played none of them through this session's tools: he
-  said "merge it" on each, and I can't tell from here how much he played. `/beginner-audit` changed each
-  one a lot, because a first draft kept missing the step the challenge turns on: `count = int(count_text)`
-  in 01, quoted and variable keys in 02, 0 being the reverse of Bash in 03.
-- **Hold the release until Unit 2.1 is finished: my recommendation, not yet Sean's explicit decision.** With
-  few modules written the unit counts as complete, so `FABRICATOR SCRIPTED` is earned after module 01 and
-  badges stay. A release now would award it for good. He merged after reading that, and didn't say either
-  way.
-- **Not exercised:** no module has been run on a Mac, and #375 still hasn't happened. Pyodide runs CPython
-  3.14.2 and the image 3.14.10: #392 holds only the minor version equal.
-- Gotchas:
-  - **Node isn't a browser for Pyodide.** `sys.exit` killed the Node process and `input()` hung, and neither
-    happens in a worker. Test the worker in Chromium.
-  - **A lesson's `<<'EOF'` closed my shell heredoc**, and the rest of the lesson ran as commands on the VM.
-    Nothing was harmed, as I checked afterwards. Write a lesson with the Write tool, never through a heredoc.
-  - **A faked `ModuleProgress` needs `completed_at`** as well as `status='complete'`, or the comms history
-    raises a `TypeError` and every page is a 500. Real completions always set it.
-  - Pydantic's regex engine has no look-ahead (`SchemaError` at import).
-  - GitHub's 504 while downloading Grype failed one "Image builds". I read it first, then reran the job.
-- **Unreleased on `main`, reaching the image:** #396, the Networking prerequisite (#395), and modules 01–03.
-- **Next:**
-  - #401, Unit 2.1 module 04. #403 (module 06) should also teach the main guard.
-  - Sean's open questions: hold the release as recommended? Reorder modules 01 and 02's quiz options,
-    whose right answer is always first, before anything ships?
-  - #375: Sean's live hint and lab review. The capstone relies on the same review.
-  - #391 when Pyodide has a stable 3.15.
