@@ -6,13 +6,26 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-11-16
+
+Unit 2.1 *Python for operations*, the first unit of the Cargo & Fabrication deck, complete in 12
+modules, with its badge, *Fabricator Scripted*, and the manifest discrepancies thread's three clues.
+Python challenges now run like real scripts, and the dependencies are updated, `anthropic` to 2.8.
+
+**Server:** no migrations and no new env vars, and `docker-compose.yml` is unchanged, so the log
+should show only `web` recreated. After the deploy, #375 tries a hint and a lab review on
+production, now on `anthropic` 2.8.
+
 ### Added
 
-- Unit 2.1 *Python for operations* begins, the first unit of the Cargo & Fabrication deck, with modules
+- Unit 2.1 *Python for operations*, the first unit of the Cargo & Fabrication deck, in 12 modules:
   01 *From Bash to Python* (#398), 02 *Lists, dicts and loops* (#399), 03 *Conditions, functions and
   imports* (#400), 04 *Parsing text* (#401), 05 *Files and paths* (#402), 06 *Errors and exit
-  codes* (#403), 07 *JSON and CSV* (#404), 08 *Running commands* (#405), the unit's first lab,
-  09 *A proper CLI* (#406) and 10 *venv, pip and pinned dependencies* (#407).
+  codes* (#403) and 07 *JSON and CSV* (#404), with challenges in the browser, then labs on your own
+  machine: 08 *Running commands* (#405), 09 *A proper CLI* (#406), 10 *venv, pip and pinned
+  dependencies* (#407), 11 *Talking to an API* (#408) and 12 *Capstone: retries and logging* (#409),
+  whose lab Claude can review. Completing it earns *Fabricator Scripted*. The manifest discrepancies
+  thread runs through 05, 07 and 12: a crate in run 33 that the depot's manifest doesn't list.
 - Python challenges can have their own files, shown on the page and written fresh for every run, so
   a lesson can have the learner open a real file (#396).
 - A challenge's first pass can bring the crew's reply on the comms log, with a window event, as a
@@ -25,7 +38,12 @@ and why it matters, not what the diff says.
   Tracebacks show the learner's own lines without Pyodide's internals. Output with no trailing
   newline stays in its own run, and files and the working directory no longer carry into the next.
 - *Python for operations* now also requires Networking, since its API modules build on HTTP and JSON
-  (#395). The unit has no modules yet, so nothing else changes for the learner.
+  (#395).
+- A hint for a challenge now knows the names of the files the challenge gives (#396).
+- Dependency updates (#419, #434): `anthropic` 2.3 to 2.8, FastAPI 0.162.5, SQLAlchemy 2.1.8,
+  psycopg 3.3.9, pydantic 2.14.3, markdown-it-py 4.3 and mdit-py-plugins 0.7, among others, and
+  `ansible-core` 2.22 for the droplet's roles. `docker/login-action` 4.8 in the release workflow
+  (#431).
 
 ## [0.13.3] — 2026-11-03
 
