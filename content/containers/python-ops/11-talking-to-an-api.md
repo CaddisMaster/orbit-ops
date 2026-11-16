@@ -156,7 +156,7 @@ lab:
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 self.log_message("%s", "nobody was waiting for that reply")
 
 
