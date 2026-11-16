@@ -751,3 +751,12 @@ def test_module_12s_real_station_claims_are_the_apps():
     body = _module("retries-and-logging").body_html
     assert "max_retries=1" in ai and "max_retries=1" in body
     assert "log.exception(" in main and "log.exception(…)" in body
+
+
+@pytest.mark.criterion(437, "The unit's lab servers handle a client that hung up, on any system")
+def test_the_lab_servers_handle_a_client_that_hung_up():
+    """A client that stopped waiting (the timeouts in 11 and 12) closes its end. Writing the late reply
+    raises BrokenPipeError or ConnectionResetError on Linux and a Mac, and ConnectionAbortedError on
+    Windows, so each server catches all three rather than printing a traceback in its own terminal."""
+    for slug in ("talking-to-an-api", "retries-and-logging"):
+        assert "except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):" in _module(slug).lab.setup, slug
