@@ -587,3 +587,77 @@ def test_module_10s_real_station_claim_is_the_repos_own_file():
     body = _module("venv-and-pip").body_html
     for pin, block in (("Jinja2==3.1.6", lines[:transitive]), ("MarkupSafe==3.0.4", lines[transitive:])):
         assert pin in block and pin in body
+
+
+@pytest.mark.criterion(408, "Module 11 of Unit 2.1 is complete content")
+def test_module_11_is_complete():
+    module = _module("talking-to-an-api")
+    _is_complete_content(module, beats=("open", "lab_done", "complete"))
+    assert module.lab and not module.challenge
+
+
+@pytest.mark.criterion(408, "Module 11's lab checks hold on any machine")
+def test_module_11s_lab_checks_hold_on_any_machine():
+    """The examples are a real run in ubuntu:24.04 against the setup's depot. The only machine-dependent
+    text is the script's own spelling, so the checks accept requests' short names (`requests.Timeout`)
+    and a stopped depot that's slow to refuse (a connect that times out reads as Timeout). The
+    shortcuts don't pass: no timeout, Python's own ConnectionError, and no raise_for_status."""
+    from app import lab
+
+    module = _module("talking-to-an-api")
+    examples = [box.example for box in module.lab.boxes]
+    assert lab.grade(module.lab, examples).passed
+
+    def passes(box, text):
+        pasted = list(examples)
+        pasted[box] = text
+        return lab.grade(module.lab, pasted).passed
+
+    short = examples[2].replace("requests.exceptions.", "requests.")
+    assert passes(2, short)
+    assert passes(1, examples[1].replace("34: ConnectionError", "34: Timeout"))
+
+    waited = examples[0].replace("latest: Timeout", "latest: status 200\nlatest: crates ['C-331', 'C-332', 'C-333']")
+    assert not passes(0, waited)  # no timeout: it waited out the depot's 10 seconds
+    assert not passes(2, examples[2].replace(", timeout=2", ""))
+    builtin = "Traceback (most recent call last):\nrequests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=8765)\n"
+    assert not passes(1, builtin)  # caught Python's own ConnectionError, which misses requests'
+    assert not passes(2, examples[2].replace("except requests.exceptions.ConnectionError", "except ConnectionError"))
+    unchecked = examples[0].replace("99: HTTPError 404 Client Error: Not Found for url: http://127.0.0.1:8765/manifests/99", "Traceback (most recent call last):\nKeyError: 'crates'")
+    assert not passes(0, unchecked)  # went straight to .json() on the 404's body
+    assert not passes(1, examples[0])  # the depot was never stopped
+    assert not passes(0, examples[0].replace("latest: Timeout\n", ""))  # a return in main's loop skipped latest
+    assert not passes(2, examples[2].replace("exceptions.Timeout", "exceptions.ReadTimeout"))  # the traceback's name, not the family
+
+
+def test_module_11s_depot_serves_module_07s_run_34():
+    """The setup's depot answers with run 34 exactly as module 07's manifest lists it, and the lab's
+    crates are its crates."""
+    import json
+    import re
+
+    setup = _module("talking-to-an-api").lab.setup
+    served = json.loads(re.search(r"^RUN_34 = (\{.*\})$", setup, re.M).group(1))
+    manifest = json.loads(_module("json-and-csv").challenge.files["manifest.json"])
+    assert served == next(s for s in manifest["shipments"] if s["run"] == 34)
+    ids = [crate["id"] for crate in served["crates"]]
+    assert f"34: crates {ids!r}" in _module("talking-to-an-api").lab.boxes[0].example
+    assert "time.sleep(10)" in setup and "timeout=2" in _module("talking-to-an-api").lab.boxes[2].example  # it waits past the timeout
+
+
+def test_module_11s_comms_are_the_labs_figures():
+    module = _module("talking-to-an-api")
+    said = " ".join(m.text for m in module.comms.lab_done)
+    served = module.lab.boxes[0].example
+    assert "MANIFEST 34 · CRATES: 3" in said and served.count("C-3") == 3
+    assert "RUN 99: 404" in said and "99: status 404" in served
+    assert "GAVE UP AFTER 2 S" in said and "latest: Timeout" in served
+
+
+def test_module_11s_real_station_claim_is_the_apps_own_client():
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parent.parent / "app" / "ai.py").read_text()
+    body = _module("talking-to-an-api").body_html
+    assert "timeout=30.0" in source and "timeout=30.0" in body
+    assert "fail in seconds, not the SDK's 10 minutes" in source
