@@ -526,3 +526,64 @@ def test_module_09s_comms_are_the_labs_figures():
     module = _module("a-proper-cli")
     said = " ".join(m.text for m in module.comms.lab_done)
     assert "CRATES: 3 · 87.75 KG" in said and "3 crates, 87.75 kg" in module.lab.boxes[1].example
+
+
+@pytest.mark.criterion(407, "Module 10 of Unit 2.1 is complete content")
+def test_module_10_is_complete():
+    module = _module("venv-and-pip")
+    _is_complete_content(module, beats=("open", "lab_done", "complete"))
+    assert module.lab and not module.challenge
+
+
+@pytest.mark.criterion(407, "Module 10's lab checks hold on any machine")
+def test_module_10s_lab_checks_hold_on_any_machine():
+    """The examples are a real run in ubuntu:24.04 on arm64. The versions pip chose for what requests
+    brought, the wheels' names, a fresh download in place of a cached one, a Mac's path and a system
+    Python that has a requests of its own (apt's python3-requests printed exactly those three lines in
+    the same container) all still pass. The shortcuts don't."""
+    from app import lab
+
+    module = _module("venv-and-pip")
+    examples = [box.example for box in module.lab.boxes]
+    assert lab.grade(module.lab, examples).passed
+
+    def passes(box, text):
+        pasted = list(examples)
+        pasted[box] = text
+        return lab.grade(module.lab, pasted).passed
+
+    later = examples[1].replace("urllib3==2.8.0", "urllib3==2.9.1").replace("certifi==2026.10.23", "certifi==2027.1.4")
+    assert passes(1, later.replace("charset-normalizer", "charset_normalizer"))
+    downloaded = examples[2].replace("Using cached", "Downloading").replace("manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64", "macosx_10_13_universal2")
+    assert passes(2, downloaded)
+    system_has_requests = "in a venv: False\nrequests: 2.31.0\nfrom the venv: False\n" + examples[3].split("'requests'\n")[1]
+    assert passes(3, system_has_requests)
+    assert passes(3, examples[3].replace("/home/cadet/", "/Users/cadet/"))
+
+    assert not passes(0, examples[0].replace("2.34.2", "2.35.0"))  # a bare name: the newest
+    assert not passes(0, "in a venv: False\nrequests: 2.34.2\nfrom the venv: False\n")  # not activated
+    assert not passes(1, "requests==2.34.2\n")  # typed by hand: nothing it brought is pinned
+    assert not passes(1, examples[1].replace("requests==2.34.2", "requests>=2.34.2"))
+    satisfied = "Requirement already satisfied: requests==2.34.2 in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 4)) (2.34.2)\n"
+    assert not passes(2, satisfied)  # the venv was never deleted
+    assert not passes(2, examples[2].replace(" (from -r requirements.txt (line 4))", ""))  # installed by name
+    assert not passes(3, examples[0])  # only the activated run: nothing ran outside the venv
+    assert not passes(3, examples[3].split("in a venv: True")[0])  # the venv's Python never ran by its path
+
+
+def test_module_10s_comms_count_the_labs_packages():
+    module = _module("venv-and-pip")
+    pinned = [line for line in module.lab.boxes[1].example.splitlines() if "==" in line]
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert f"ASKED FOR: 1 · INSTALLED: {len(pinned)} · PINNED: {len(pinned)}" in said and len(pinned) == 5
+    assert module.lab.boxes[2].example.rstrip().splitlines()[-1].count("-") >= len(pinned)  # five installed again
+
+
+def test_module_10s_real_station_claim_is_the_repos_own_file():
+    from pathlib import Path
+
+    lines = (Path(__file__).resolve().parent.parent / "requirements.txt").read_text().splitlines()
+    transitive = next(i for i, line in enumerate(lines) if line.startswith("# --- transitive"))
+    body = _module("venv-and-pip").body_html
+    for pin, block in (("Jinja2==3.1.6", lines[:transitive]), ("MarkupSafe==3.0.4", lines[transitive:])):
+        assert pin in block and pin in body

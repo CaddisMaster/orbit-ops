@@ -4,6 +4,38 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-11-03: `droplet-infra`, a release that leaves `db` alone, v0.13.3 on a real dump
+
+- **#383 (#385): the host layer comes from `droplet-infra`,** pinned at `d9805e7`. `droplet_host` is
+  byte-identical to the old pin, and `host.yml` now also runs `droplet_export`. One `infra/test.sh`
+  passed, and check mode from the Mac at `5b1610c` said `ok=13 changed=0 failed=0 skipped=1`. BB's #577
+  can delete its copies. A Claude session on the Mac ran that check from a handoff file, at Sean's
+  request, and he pasted the output back. It's a route for read-only Mac steps, not a standing one.
+- **#384 (#386): no deploy names an existing `db`.** From BB #580, where a Compose upgrade alone
+  recreated BB's `db`. The swap is `--no-deps web`, and `--wait db` runs only with no `db` container.
+  Checked on real Compose 5.4.0 with a changed definition standing in for the upgrade.
+- **v0.13.3 shipped** (#387, run `41654987267`, commit `61ade0f`), approved by Sean: `backup ok …
+  (5290 bytes)`, no migrations, and the log's only recreate is `web`. `learn` reports `0.13.3` and
+  BB's `/healthz` is OK. `free -m` on the droplet wasn't checked.
+- **#379: a pulled dump restores.** `stage.sh` built 0.13.2, restored `orbit-ops_2026-11-03.sql.gz`
+  and deployed 0.13.3 on it: `PASS`, every table's count kept, `db` not recreated. That was also the
+  first run of #384's steps and the new pin in staging. The container is deleted. Production's owner
+  is `orbit`, which settles #323's question about other owners. Still arm64, with no migration that
+  does something.
+- **Sean's call, left to my judgement: Compose upgrades stay automatic** for Orbit Ops. BB's question
+  is still his, since the plugin is shared.
+- Gotchas:
+  - **I exported `COMPOSE_PROJECT_NAME` for a scratch project, and `./test.sh` in the same command
+    inherited it,** so it tried to start the dev stack under that name and failed on port 5435. The
+    dev stack wasn't touched, and the strays are gone. Scope it to one command.
+  - **`gh pr checks --watch` right after `gh pr create` exits 1** before the checks register. Look
+    before reading it as a failure.
+- **Unreleased on `main`:** nothing that reaches the image.
+- **Next:**
+  - #375: Sean's live hint and lab review, the first real call on `anthropic` 2.x.
+  - Unit 2.1 can be planned any time.
+  - #361 when its scan clears.
+
 ### 2026-11-02 (later): dumps leave the droplet, the docs catch up (#377, #380)
 
 - **BB #535 and BB #533 closed the same day.** The VM now pulls the newest dump (RUNBOOK §6), and
