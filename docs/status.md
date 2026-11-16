@@ -186,6 +186,36 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ## Sessions
 
+### 2026-11-15: Unit 2.1 module 10, the first session on Fable 5.2
+
+- **Sean's decisions:** spend Fable 5.2 on the curriculum, in the order #407, #408, #409, then #418 if
+  time allows (from a handoff file written in a Budget Buddy session, read once and deleted), and
+  "merge and wrap there" after module 10.
+- **#407 (#433): module 10, *venv, pip and pinned dependencies*,** the unit's third lab. A venv,
+  `requests` at an exact version, `pip freeze` into `requirements.txt`, the venv deleted and rebuilt
+  from the file, and `where.py` run by the machine's own Python and by the venv's Python by its path.
+  Try it and the lab were run in `ubuntu:24.04`, and it was played in Chromium as `verify-bot`.
+- **The lab needs Python 3.10 or newer.** It pins `requests` 2.34.2, the newest on PyPI that day with no
+  advisory. 2.32.5, the newest that runs on a Mac's own 3.9, has one (GHSA-gc5v-m9x4-r6x2), so step 1
+  has the learner install a current Python. A comment at the top of the module says to move the pin
+  when 2.34.2 gains an advisory. #408 and #409 use `requests` too and should keep the same pin.
+- **What the reviews caught:** the content-reviewer, a wrong claim about older systems (on
+  `ubuntu:22.04` a plain `pip install` goes to the user's own folder, and only `sudo` reaches the
+  system) and `>=` never explained. `/beginner-audit`, that apt's `python3-requests` sits under its
+  Python's `sys.prefix`, `/usr`, so "the path starts with `sys.prefix`" said `True` outside any venv:
+  `where.py`'s third line now asks for both facts. The gotcha-auditor, a lesson at 1,084 words of
+  prose against 640–700 in modules 08 and 09: trimmed to 889.
+- **Not exercised:** nothing was run on a Mac or on Windows (step 1's Mac advice, `.venv/Scripts`).
+- Gotchas: a Try it criterion is claimed by a `Verified by hand: #N "title" — why` line in the PR
+  body. A test holds the lesson's `Jinja2==3.1.6` and `MarkupSafe==3.0.4` to `requirements.txt`, so a
+  Dependabot bump of either fails until the lesson moves too.
+- **Unreleased on `main`:** module 10, on top of 11-06's.
+- **Next:**
+  - #408, module 11 (*Talking to an API*), then #409, which lifts the release hold. Read modules 01–10
+    first, and keep `requests==2.34.2`.
+  - #418 after the unit. Sean's calls (#429, Git as a prerequisite), #375 after v0.14.0, and the two
+    Dependabot PRs (#431, #432).
+
 ### 2026-11-06: Unit 2.1 modules 04–09, a challenge beat, quiz answers that move
 
 - **Sean's decisions:** hold v0.14.0 until Unit 2.1 is finished (now a standing decision), reorder
@@ -265,35 +295,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
     whose right answer is always first, before anything ships?
   - #375: Sean's live hint and lab review. The capstone relies on the same review.
   - #391 when Pyodide has a stable 3.15.
-
-### 2026-11-03: `droplet-infra`, a release that leaves `db` alone, v0.13.3 on a real dump
-
-- **#383 (#385): the host layer comes from `droplet-infra`,** pinned at `d9805e7`. `droplet_host` is
-  byte-identical to the old pin, and `host.yml` now also runs `droplet_export`. One `infra/test.sh`
-  passed, and check mode from the Mac at `5b1610c` said `ok=13 changed=0 failed=0 skipped=1`. BB's #577
-  can delete its copies. A Claude session on the Mac ran that check from a handoff file, at Sean's
-  request, and he pasted the output back. It's a route for read-only Mac steps, not a standing one.
-- **#384 (#386): no deploy names an existing `db`.** From BB #580, where a Compose upgrade alone
-  recreated BB's `db`. The swap is `--no-deps web`, and `--wait db` runs only with no `db` container.
-  Checked on real Compose 5.4.0 with a changed definition standing in for the upgrade.
-- **v0.13.3 shipped** (#387, run `41654987267`, commit `61ade0f`), approved by Sean: `backup ok …
-  (5290 bytes)`, no migrations, and the log's only recreate is `web`. `learn` reports `0.13.3` and
-  BB's `/healthz` is OK. `free -m` on the droplet wasn't checked.
-- **#379: a pulled dump restores.** `stage.sh` built 0.13.2, restored `orbit-ops_2026-11-03.sql.gz`
-  and deployed 0.13.3 on it: `PASS`, every table's count kept, `db` not recreated. That was also the
-  first run of #384's steps and the new pin in staging. The container is deleted. Production's owner
-  is `orbit`, which settles #323's question about other owners. Still arm64, with no migration that
-  does something.
-- **Sean's call, left to my judgement: Compose upgrades stay automatic** for Orbit Ops. BB's question
-  is still his, since the plugin is shared.
-- Gotchas:
-  - **I exported `COMPOSE_PROJECT_NAME` for a scratch project, and `./test.sh` in the same command
-    inherited it,** so it tried to start the dev stack under that name and failed on port 5435. The
-    dev stack wasn't touched, and the strays are gone. Scope it to one command.
-  - **`gh pr checks --watch` right after `gh pr create` exits 1** before the checks register. Look
-    before reading it as a failure.
-- **Unreleased on `main`:** nothing that reaches the image.
-- **Next:**
-  - #375: Sean's live hint and lab review, the first real call on `anthropic` 2.x.
-  - Unit 2.1 can be planned any time.
-  - #361 when its scan clears.
