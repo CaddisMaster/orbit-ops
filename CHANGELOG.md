@@ -25,6 +25,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 06: *Volumes and bind mounts* (#452). Named volumes that outlive their containers,
   bind mounts and `:ro`, the `-v` trap with no `./`, whose uid a container writes as and `--user`, and
   what `docker volume prune` and `prune -a` take.
+- Unit 2.2 module 07: *Your first Dockerfile* (#453). `FROM`, `WORKDIR`, `COPY`, `RUN` and `CMD`,
+  `docker build -t`, build time against run time, exec form, and arguments replacing `CMD`, by
+  packaging Unit 2.1's `bay_report.py` with its Python and its data.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
