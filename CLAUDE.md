@@ -98,12 +98,12 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 ## Current status
 
 See `docs/status.md`. **v0.14.0** is in production (2026-11-16). Unreleased on `main`: migration `0011` with
-the 38 modules' reordered quiz options (#418), the Mac zsh note (#429), Git before Python (#441), and Unit
-2.2 (*Docker fundamentals*) modules 01–05, labs on the learner's own Docker with the first Cargo clue. A
-unit's release waits until the unit is finished (Sean's decision, 2026-11-06), so all of it waits for
-v0.15.0, after `0011` is rehearsed on a production dump. Sean edits in VS Code, and droplet steps run
-from a Mac terminal only (#365). Next: #452–#456 (Docker modules 06–10, the capstone with clue 2), #459,
-and #375 (a live hint and lab review on production).
+the 38 modules' reordered quiz options (#418), the Mac zsh note (#429), Git before Python (#441), and all
+of Unit 2.2 (*Docker fundamentals*, modules 01–10, labs on the learner's own Docker, clues 1 and 2,
+a capstone with Claude's review). The unit is finished, so v0.15.0 waits only on rehearsing `0011` on a
+production dump, then Sean's go. Sean edits in VS Code, and droplet steps run from a Mac terminal only
+(#365). Next: #459, the `0011` rehearsal and v0.15.0, #375 (a live hint and lab review on production),
+then #468 (Track 2 emblems) and #469 (scenery per unit, dim at the start).
 
 ## Maintainer notes (local only)
 

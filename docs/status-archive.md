@@ -4,6 +4,36 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-11-15: Unit 2.1 module 10, the first session on Fable 5.2
+
+- **Sean's decisions:** spend Fable 5.2 on the curriculum, in the order #407, #408, #409, then #418 if
+  time allows (from a handoff file written in a Budget Buddy session, read once and deleted), and
+  "merge and wrap there" after module 10.
+- **#407 (#433): module 10, *venv, pip and pinned dependencies*,** the unit's third lab. A venv,
+  `requests` at an exact version, `pip freeze` into `requirements.txt`, the venv deleted and rebuilt
+  from the file, and `where.py` run by the machine's own Python and by the venv's Python by its path.
+  Try it and the lab were run in `ubuntu:24.04`, and it was played in Chromium as `verify-bot`.
+- **The lab needs Python 3.10 or newer.** It pins `requests` 2.34.2, the newest on PyPI that day with no
+  advisory. 2.32.5, the newest that runs on a Mac's own 3.9, has one (GHSA-gc5v-m9x4-r6x2), so step 1
+  has the learner install a current Python. A comment at the top of the module says to move the pin
+  when 2.34.2 gains an advisory. #408 and #409 use `requests` too and should keep the same pin.
+- **What the reviews caught:** the content-reviewer, a wrong claim about older systems (on
+  `ubuntu:22.04` a plain `pip install` goes to the user's own folder, and only `sudo` reaches the
+  system) and `>=` never explained. `/beginner-audit`, that apt's `python3-requests` sits under its
+  Python's `sys.prefix`, `/usr`, so "the path starts with `sys.prefix`" said `True` outside any venv:
+  `where.py`'s third line now asks for both facts. The gotcha-auditor, a lesson at 1,084 words of
+  prose against 640–700 in modules 08 and 09: trimmed to 889.
+- **Not exercised:** nothing was run on a Mac or on Windows (step 1's Mac advice, `.venv/Scripts`).
+- Gotchas: a Try it criterion is claimed by a `Verified by hand: #N "title" — why` line in the PR
+  body. A test holds the lesson's `Jinja2==3.1.6` and `MarkupSafe==3.0.4` to `requirements.txt`, so a
+  Dependabot bump of either fails until the lesson moves too.
+- **Unreleased on `main`:** module 10, on top of 11-06's.
+- **Next:**
+  - #408, module 11 (*Talking to an API*), then #409, which lifts the release hold. Read modules 01–10
+    first, and keep `requests==2.34.2`.
+  - #418 after the unit. Sean's calls (#429, Git as a prerequisite), #375 after v0.14.0, and the two
+    Dependabot PRs (#431, #432).
+
 ### 2026-11-06: Unit 2.1 modules 04–09, a challenge beat, quiz answers that move
 
 - **Sean's decisions:** hold v0.14.0 until Unit 2.1 is finished (now a standing decision), reorder
