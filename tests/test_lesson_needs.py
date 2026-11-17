@@ -915,6 +915,25 @@ NEEDS = {
         "survives stop/start, gone with rm": "**It survives `docker stop` and `docker start`, and it's removed with the container.**",
         "a new container starts clean": "**A new container from the same image starts clean**",
     },
+    "ports-and-networks": {
+        "-p publishes HOST:CONTAINER": "**`-p HOST:CONTAINER` on `docker run` publishes a container's port on your machine**",
+        "left is your machine, right the container": "**The left side is your machine, the right side is the container.**",
+        "no address means every address": "**With no address in front, `-p` listens on every address your machine has, `0.0.0.0` (and `[::]` for IPv6): anyone who can reach your machine can reach the container.**",
+        "Docker goes around ufw": "**Docker's forwarding also goes around `ufw`'s rules**",
+        "127.0.0.1 in front: this machine only": "**Put an address in front to listen on that one only: `-p 127.0.0.1:8088:80` publishes to your machine itself**",
+        "docker port lists them": "**`docker port NAME` lists where a container's ports are published**",
+        "a created network does names": "**A network you create lets containers on it find each other by name.**",
+        "network create and --network": "**`docker network create NAME` makes one, printing its ID, and `--network NAME` on `docker run` puts a container on it.**",
+        "its own port, not the published one": "**From another container, use the container's name and its own port, the right side of `-p`, never the published one.**",
+        "no port in http:// means 80": "**A URL with no port means port 80 for `http://`**",
+        "a taken port leaves the container": "**If the port on your machine is taken, `docker run` fails with `port is already allocated`, and leaves the container behind, created but not started.**",
+        "docker rm clears it": "**`docker rm NAME` clears it first.**",
+        "a docker port line, read": "**Each line is the container's port, then `->` and the address and port on your machine.**",
+        "the default network doesn't do names": "**Docker's default network, `bridge` in `docker network ls`, is where a container goes without `--network`, and it doesn't do names**",
+        "network ls and rm": "**`docker network ls` lists the networks, and `docker network rm NAME` removes one**",
+        "a private network, an address each": "**Docker gives containers a private network on your machine, and each container its own IP address on it.**",
+        "curl and wget fetch a page": "**`curl -s URL` (Unit 1.4) on your machine, or `wget -qO- URL` inside Alpine**",
+    },
 }
 
 

@@ -19,6 +19,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 04: *Inside a running container* (#450). `docker exec` and `exec -it`, settings
   with `-e` and `--env-file`, reading them back with `docker inspect`, `top` and `stats`, and what a
   change made inside a container survives.
+- Unit 2.2 module 05: *Ports and networks* (#451). Publishing with `-p`, why `127.0.0.1:` in front
+  matters (Docker's forwarding goes around `ufw`), `docker port`, and containers reaching each other
+  by name on a network you create.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10

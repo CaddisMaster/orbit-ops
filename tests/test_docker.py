@@ -218,3 +218,29 @@ def test_module_04s_setup_is_the_settings_the_checks_expect():
     assert "#" not in module.lab.setup
     said = " ".join(m.text for m in module.comms.lab_done)
     assert "SETTINGS PASSED IN: 4" in said and module.lab.task.count("-e ") == 2
+
+
+# --- 05 Ports and networks (#451) --------------------------------------------------------------
+@pytest.mark.criterion(451, "Module 05 of Unit 2.2 is complete content")
+def test_module_05_is_complete():
+    _is_complete_lab(_module("ports-and-networks"))
+
+
+@pytest.mark.criterion(451, "Module 05's lab checks hold on any machine")
+def test_module_05s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab on Docker Engine 29.7.2. Another free port and CRLF
+    pass; publishing on every address, a missing --network and a reachable default network don't."""
+    module = _module("ports-and-networks")
+    port, page, by_name, default = (box.example for box in module.lab.boxes)
+    assert _passes(module, [port, page, by_name, default])
+    assert _passes(module, ["80/tcp -> 127.0.0.1:18088\r\n", page.replace("\n", "\r\n"), by_name, default])
+
+    def fails(box, text):
+        pasted = [port, page, by_name, default]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, "80/tcp -> 0.0.0.0:8088\n80/tcp -> [::]:8088\n")  # -p 8088:80, every address
+    assert fails(0, "80/tcp -> 127.0.0.1:8088\n80/tcp -> 0.0.0.0:8089\n")  # a second, open binding
+    assert fails(2, "wget: bad address 'scanner'\n")  # the asking container wasn't on bay-net
+    assert fails(3, "<title>Welcome to nginx!</title>\n")  # step 5 run with --network bay-net
