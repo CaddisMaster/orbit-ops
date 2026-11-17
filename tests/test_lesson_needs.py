@@ -870,6 +870,28 @@ NEEDS = {
         "index .Config.Labels prints one": "**`--format '{{index .Config.Labels \"LABEL\"}}'` prints one**",
         "a label is a claim": "**Docker never checks a label, so a label is a claim, not a proof**",
     },
+    "a-containers-life": {
+        "-d runs it in the background": "**`-d` runs the container in the background and hands your terminal back, printing the container's full ID**",
+        "ps lists running, -a adds stopped": "**`docker ps -a` adds the stopped ones.**",
+        "a name filter matches part of a name": "**`--filter name=job-` matches every container whose name contains `job-`**",
+        "sh -c makes the shell process 1": "**so in `docker run IMAGE sh -c '…'` the shell is the container's process 1.**",
+        "process 1 ignores SIGTERM without a handler": "**A program running as process 1 ignores SIGTERM unless it sets up its own handler for it**",
+        "a failure is a non-zero status": "**A failure is any exit status but 0. `on-failure` alone restarts with no limit; `:N` sets one.**",
+        "restarts share one log": "**Each restart's output goes into the same `docker logs`, after the last run's**",
+        "docker inspect reads a container": "**`docker inspect NAME` prints everything Docker knows about a container**",
+        "State.Status in one word": "**`{{.RestartCount}}` is how many times it was restarted, and `{{.State.Status}}` is its state in one word: `running`, `exited` or `restarting`**",
+        "STATUS says where it is": "**A container's STATUS says where it is in its life:**",
+        "Exited (N) is the exit status": "**The number in `Exited (N)` is the exit status of the container's command**",
+        "docker run passes on the status": "**`docker run` itself exits with that status**",
+        "logs outlive the run": "**`docker logs NAME` prints everything the container printed, running or stopped, until the container is removed.**",
+        "--tail N lines": "only the last 3 lines",
+        "stop: SIGTERM, 10 seconds, SIGKILL": "**`docker stop NAME` asks the program to stop with SIGTERM, waits up to 10 seconds, then sends SIGKILL**",
+        "137 is 128 + 9": "**a program killed by SIGKILL exits with 137, which is 128 + 9, SIGKILL's number**",
+        "start reruns the same container": "**`docker start NAME` runs the same stopped container again**",
+        "rm refuses running; rm -f forces": "**`docker rm` refuses a running container. `docker rm -f` stops it and removes it in one go**",
+        "--restart sets the policy": "**`--restart POLICY` on `docker run` tells Docker what to do when the container's program ends:**",
+        "on-failure:N gives up after N": "when it exits with a failure, at most 3 times, then gives up",
+    },
 }
 
 

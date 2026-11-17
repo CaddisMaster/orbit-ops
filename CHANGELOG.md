@@ -13,6 +13,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 02: *Images, tags and digests* (#448). Registries, tags that move, digests that
   don't, `docker tag`, `image inspect` and labels, and the first Docker clue: the fabricator's
   `stable` tag moved to a new image on 2026-09-30.
+- Unit 2.2 module 03: *A container's life* (#449). Running in the background, status and exit codes,
+  `docker logs`, how `docker stop` asks then kills (137), `start`, `rm -f`, `docker inspect` and
+  restart policies.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
