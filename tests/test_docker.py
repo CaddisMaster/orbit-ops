@@ -2,6 +2,9 @@
 meets. Every module is a lab (#446): Docker can't run in the browser, so the learner pastes what
 their own Docker printed, and these tests hold the checks to what any engine prints."""
 
+import base64
+import re
+
 import pytest
 
 from app import lab
@@ -441,3 +444,79 @@ def test_module_09s_setup_breaks_the_cutter_and_comms_say_how():
     assert "RUN chmod 644 /app/cut.sh" in module.lab.setup
     said = " ".join(m.text for m in module.comms.lab_done)
     assert "126" in said and "127" in said and "137, OOMKilled" in said
+
+
+# --- 10 Capstone: ship the scanner (#456) ---------------------------------------------------------
+def _fabricator_builds(module):
+    """The setup's base64 Dockerfiles and the tag each one builds."""
+    return re.findall(r"echo '([A-Za-z0-9+/=]+)' \| base64 --decode \| docker build -q -t (meridian/fabricator:[\w.-]+) -", module.lab.setup)
+
+
+@pytest.mark.criterion(456, "Module 10 of Unit 2.2 is complete content")
+def test_module_10_is_complete():
+    module = _module("capstone-ship-the-scanner")
+    _is_complete_lab(module)
+    assert module.lab.ai_review and module.lab.rubric
+    assert real_catalog().unit_modules("docker")[-1] is module
+
+
+@pytest.mark.criterion(467, "Finishing Unit 2.2 plays a window event")
+def test_finishing_the_docker_unit_plays_a_window_event():
+    last = real_catalog().unit_modules("docker")[-1]
+    assert last.comms.window.get("complete")
+
+
+@pytest.mark.criterion(456, "Module 10's lab checks hold on any machine")
+def test_module_10s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab from its own setup on Docker Engine 29.7.2. Records
+    and logs in either order, a digest-pinned FROM, COPY . . after the install, the legacy builder's
+    history text, amd64's Alpine and CRLF pass. CMD in place of ENTRYPOINT, pip before the
+    requirements COPY, a scanner the tool couldn't reach, a stale scanner, the records missing from
+    the volume, and a truncated history don't."""
+    module = _module("capstone-ship-the-scanner")
+    dockerfile, scans, records, clue = (box.example for box in module.lab.boxes)
+    assert _passes(module, [dockerfile, scans, records, clue])
+    reordered = "\n".join(sorted(scans.splitlines(), key=lambda line: line.startswith("{"))) + "\n"
+    pinned = dockerfile.replace("python:3.14.10-slim", "python:3.14.10-slim@sha256:" + "a" * 64)
+    legacy = clue.replace("RUN /bin/sh -c head", "/bin/sh -c head").replace("alpine-minirootfs-3.24.4-aarch64", "alpine-minirootfs-3.24.4-x86_64")
+    assert _passes(module, [pinned.replace("COPY scan_crate.py .", "COPY . ."), reordered.replace("\n", "\r\n"), records, legacy])
+
+    def fails(box, text):
+        pasted = [dockerfile, scans, records, clue]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, dockerfile.replace("ENTRYPOINT", "CMD"))
+    assert fails(0, "FROM python:3.14.10-slim\nWORKDIR /app\nCOPY . .\nRUN pip install --no-cache-dir -r requirements.txt\nENTRYPOINT [\"python\", \"scan_crate.py\"]\n")
+    assert fails(1, "WARNING C-321: try 1 of 3 failed: ConnectionError, retrying in 0.5 s\n")
+    assert fails(1, scans.replace("WARNING C-323: try 1 of 3 failed: 503, retrying in 0.5 s\n", ""))  # the scanner wasn't restarted
+    assert fails(2, "cat: can't open '/records/run33.jsonl': No such file or directory\n")
+    assert fails(3, clue.replace("/usr/local/bin/sync-agent && chmod 755 /usr/local/bin/sync-agent # buildkit", "/…"))
+
+
+def test_module_10s_clue_images_are_module_02s():
+    """The capstone rebuilds exactly the images module 02 built, so clue 2 is the same whichever
+    module made them; and the authors labels are the story's (docs/story.md)."""
+    builds = _fabricator_builds(_module("capstone-ship-the-scanner"))
+    assert builds == _fabricator_builds(_module("images-tags-and-digests"))
+    files = {tag: base64.b64decode(data).decode() for data, tag in builds}
+    assert 'org.opencontainers.image.authors="fabrication bay"' in files["meridian/fabricator:2026-09-28"]
+    assert 'org.opencontainers.image.authors="depot-sync"' in files["meridian/fabricator:stable"]
+    assert "/usr/local/bin/sync-agent" in files["meridian/fabricator:stable"]
+    assert "sync-agent" not in files["meridian/fabricator:2026-09-28"]
+    said = " ".join(m.text for m in _module("capstone-ship-the-scanner").comms.lab_done)
+    assert "AUTHORS: depot-sync" in said and "sync-agent" in said
+
+
+def test_module_10s_setup_is_unit_2_1s_tool_with_its_settings():
+    """The bay's scan_crate.py is Unit 2.1's capstone, plus SCANNER_URL and RECORDS; its pins are
+    Unit 2.1 module 10's; and its scanner listens on every address, as a container's must."""
+    setup = _module("capstone-ship-the-scanner").lab.setup
+    unit_2_1 = _module("retries-and-logging").lab.boxes[-1].example
+    assert 'os.environ.get("SCANNER_URL", "http://127.0.0.1:8766")' in setup
+    assert 'os.environ.get("RECORDS")' in setup
+    for line in ("TRIES = 3", 'logging.basicConfig(level=level, format="%(levelname)s %(message)s")', "time.sleep(delay)"):
+        assert line in unit_2_1 and line in setup
+    for pin in ("certifi==2026.10.23", "charset-normalizer==3.5.2", "idna==3.20", "requests==2.34.2", "urllib3==2.8.0"):
+        assert pin in setup and pin in "\n".join(box.example for box in _module("venv-and-pip").lab.boxes)
+    assert '("0.0.0.0", 8766)' in setup and '("127.0.0.1", 8766)' not in setup

@@ -34,6 +34,11 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 09: *When a container won't start* (#455). Exit codes 125, 126, 127 and 137,
   `docker kill`, an empty log, `inspect`'s `.State`, an out-of-memory kill with `--memory`, and
   `--entrypoint sh` to look inside an image that won't run.
+- Unit 2.2 module 10: *Capstone: ship the scanner* (#456), which completes the unit. Unit 2.1's
+  scanner tool shipped as an image with an `ENTRYPOINT`, settings from the environment, records on a
+  volume and the hold's scanner reached by name; Claude reviews the Dockerfile. Clue 2 of the
+  manifest thread: `stable`'s authors label and an extra layer. Finishing the unit plays a window
+  event (#467).
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
