@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Added
+- Unit 2.2, *Docker fundamentals*, module 01: *What a container is* (#447). Installing Docker on a
+  Mac, Windows or Linux, images and containers, a container as a process on the machine's kernel, and
+  a lab run on the learner's own Docker.
+
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
   containerise (#446). Python for operations brings Linux, Bash scripting, Networking and Git with it.
