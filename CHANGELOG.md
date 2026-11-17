@@ -28,6 +28,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 07: *Your first Dockerfile* (#453). `FROM`, `WORKDIR`, `COPY`, `RUN` and `CMD`,
   `docker build -t`, build time against run time, exec form, and arguments replacing `CMD`, by
   packaging Unit 2.1's `bay_report.py` with its Python and its data.
+- Unit 2.2 module 08: *Layers and the build cache* (#454). Layers and `docker history`, what the
+  cache reuses and what breaks it, copying `requirements.txt` and installing before the code,
+  reading BuildKit's and the older builder's output, and `.dockerignore`, with `*` against `**`.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10

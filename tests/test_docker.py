@@ -330,3 +330,76 @@ def test_module_07s_figures_are_what_the_setup_gives():
     assert f"{len(deck_c)} crates, {sum(deck_c)} kg" == "3 crates, 87.75 kg"
     said = " ".join(m.text for m in module.comms.lab_done)
     assert "14 CRATES, 306.0 KG" in said and "3 CRATES, 87.75 KG" in said
+
+
+# --- 08 Layers and the build cache (#454) -------------------------------------------------------
+LEGACY_SLOW = """Step 3/5 : COPY . .
+ ---> 1c2d3e4f5a6b
+Step 4/5 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 0a1b2c3d4e5f
+Successfully installed certifi-2026.10.23 charset-normalizer-3.5.2 idna-3.20 requests-2.34.2 urllib3-2.8.0
+Successfully built 5bb80d391996
+Successfully tagged bay-cache:latest
+"""
+LEGACY_FAST = """Step 3/6 : COPY requirements.txt .
+ ---> Using cache
+ ---> d2f7ec825eed
+Step 4/6 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Using cache
+ ---> d47b9dd93cc0
+Step 5/6 : COPY . .
+ ---> 843812632acf
+Successfully built 5bb80d391996
+Successfully tagged bay-cache:latest
+"""
+TERMINAL_FAST = """[+] Building 0.4s (10/10) FINISHED                                docker:desktop-linux
+ => [internal] load build definition from Dockerfile                              0.0s
+ => CACHED [2/5] WORKDIR /app                                                     0.0s
+ => CACHED [3/5] COPY requirements.txt .                                          0.0s
+ => CACHED [4/5] RUN pip install --no-cache-dir -r requirements.txt               0.0s
+ => [5/5] COPY . .                                                                0.0s
+ => => naming to docker.io/library/bay-cache:latest                               0.0s
+"""
+TERMINAL_SLOW = TERMINAL_FAST.replace(" => CACHED [4/5] RUN pip", " => [4/5] RUN pip")
+
+
+@pytest.mark.criterion(454, "Module 08 of Unit 2.2 is complete content")
+def test_module_08_is_complete():
+    _is_complete_lab(_module("layers-and-the-build-cache"))
+
+
+@pytest.mark.criterion(454, "Module 08's lab checks hold on any machine")
+def test_module_08s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab with BuildKit's plain output on Docker Engine 29.7.2.
+    BuildKit in a terminal and the older builder (shaped from real runs of each) pass too, as do
+    CRLF and amd64 wheels. A slow rebuild in box 2, a fast one in box 1, *.md alone, and the
+    unreordered history don't."""
+    module = _module("layers-and-the-build-cache")
+    slow, fast, files, history = (box.example for box in module.lab.boxes)
+    assert _passes(module, [slow, fast, files, history])
+    assert _passes(module, [LEGACY_SLOW, LEGACY_FAST, files, history])
+    assert _passes(module, [TERMINAL_SLOW, TERMINAL_FAST, files.replace("\n", "\r\n"), history.replace("\n", "\r\n")])
+    assert _passes(module, [slow.replace("aarch64", "x86_64"), fast, files, history])
+
+    def fails(box, text):
+        pasted = [slow, fast, files, history]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, fast)  # the slow build was already fast: reordered too early
+    assert fails(1, slow)  # not reordered: pip ran again
+    assert fails(1, TERMINAL_SLOW)
+    assert fails(2, files + "./docs/calibration.md\n")  # *.md, not **/*.md
+    assert fails(2, files + "./bay.env\n")
+    assert fails(3, "CMD [\"python\" \"app.py\"]\nRUN /bin/sh -c pip install --no-cache-dir -r…\nCOPY . . # buildkit\nWORKDIR /app\n")
+
+
+def test_module_08s_setup_is_what_the_lab_and_comms_say():
+    """The setup's slow Dockerfile copies everything before installing; the comms count its
+    five pinned packages and its two .md files."""
+    module = _module("layers-and-the-build-cache")
+    setup = module.lab.setup
+    assert "COPY . .\\nRUN pip install" in setup
+    assert setup.count("==") == 5 and setup.count(".md") == 2
+    assert "PACKAGES REINSTALLED: 5" in " ".join(m.text for m in module.comms.open)
+    assert "2 .md FILES" in " ".join(m.text for m in module.comms.lab_done)
