@@ -199,3 +199,74 @@ def test_users_carry_an_admin_flag_that_defaults_to_false(make_user):
         assert db.get(User, user.id).is_admin is False
         db.execute(text("DELETE FROM users WHERE id = :i"), {"i": made})
         db.commit()
+
+
+def _revision(name: str):
+    """A revision file as a module, so a data migration's helpers can be run on one learner's rows."""
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).parent.parent / "alembic" / "versions" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"revision_{name}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_every_remapped_question_gets_a_true_reordering():
+    """0011 (#418): each entry moves every option to a distinct position, and moves something."""
+    r = _revision("0011_remap_quiz_answers")
+    assert len(r.POSITIONS) == 38
+    for slug, items in r.POSITIONS.items():
+        for item, perm in items.items():
+            assert sorted(perm) == list(range(len(perm))), (slug, item)
+            assert perm != tuple(range(len(perm))), (slug, item)
+            assert r.inverse(r.inverse(perm)) == perm
+
+
+def test_remapping_quiz_answers_moves_picks_and_nothing_else(make_user):
+    """0011 (#418): picks follow their option; Show me, other kinds, other modules and
+    questions not in the table are untouched; the downgrade puts every row back."""
+    r = _revision("0011_remap_quiz_answers")
+    user = make_user()
+    rows = [
+        ("navigating", "quiz", 0, ["1"]),  # (0, 3, 2, 1): position 1 is now 3
+        ("navigating", "quiz", 0, ["2"]),  # position 2 stays
+        ("navigating", "quiz", 1, []),  # Show me
+        ("navigating", "terminal", 0, ["1"]),  # not a quiz
+        ("navigating", "quiz", 7, ["1"]),  # not in the table
+        ("the-filesystem", "quiz", 0, ["1"]),  # not a reordered module
+        ("following-a-connection", "quiz", 4, ["3", "0", "1", "2"]),  # every option right: never moved
+        ("names-and-dns", "quiz", 3, ["0", "2", "3"]),  # a multi
+    ]
+    with SessionLocal() as db:
+        made = [
+            ExerciseAttempt(user_id=user.id, module_slug=s, kind=k, item=i, submitted=sub, correct=True)
+            for s, k, i, sub in rows
+        ]
+        db.add_all(made)
+        db.commit()
+        ids = [a.id for a in made]
+
+    def stored():
+        with SessionLocal() as db:
+            return [db.get(ExerciseAttempt, i).submitted for i in ids]
+
+    multi = r.POSITIONS["names-and-dns"][3]
+    with SessionLocal() as db:
+        r.apply(db.connection(), r.POSITIONS, user_id=user.id)
+        db.commit()
+    assert stored() == [
+        ["3"],
+        ["2"],
+        [],
+        ["1"],
+        ["1"],
+        ["1"],
+        ["3", "0", "1", "2"],
+        sorted(str(multi[int(v)]) for v in ["0", "2", "3"]),
+    ]
+    with SessionLocal() as db:
+        r.apply(db.connection(), r.backwards(r.POSITIONS), user_id=user.id)
+        db.commit()
+    assert stored() == [sub for _, _, _, sub in rows]
