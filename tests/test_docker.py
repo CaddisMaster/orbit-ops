@@ -67,3 +67,64 @@ def test_module_01s_comms_count_what_the_lab_runs():
     said = " ".join(m.text for m in module.comms.lab_done)
     runs = module.lab.task.count("docker run ")
     assert runs == 3 and f"TEST CONTAINERS: {runs} · LEFT BEHIND: 0" in said
+
+
+# --- 02 Images, tags and digests (#448): clue 1 of Unit 2.2 -------------------------------------
+@pytest.mark.criterion(448, "Module 02 of Unit 2.2 is complete content")
+def test_module_02_is_complete():
+    _is_complete_lab(_module("images-tags-and-digests"))
+
+
+@pytest.mark.criterion(448, "Module 02's lab checks hold on any machine")
+def test_module_02s_lab_checks_hold_on_any_machine():
+    """The example is a real run on the containerd image store. The classic store's IDs, other IDs
+    and a digest written with docker.io/library/ pass; a run by tag instead of digest's output, the
+    evidence tag on the wrong image, or the old build's date pasted twice don't."""
+    module = _module("images-tags-and-digests")
+    digest, before, dates, after = (box.example for box in module.lab.boxes)
+    assert _passes(module, [digest, before, dates, after])
+
+    other_ids = [
+        "docker.io/library/" + digest,
+        before.replace("da0084b573e5", "a1b2c3d4e5f6").replace("1a63198d1a17", "0f1e2d3c4b5a"),
+        dates.replace("\n", "\r\n"),
+        "stable a1b2c3d4e5f6\nevidence a1b2c3d4e5f6\n2026-09-28 0f1e2d3c4b5a\n",  # the other order
+    ]
+    assert _passes(module, other_ids)
+
+    def fails(box, text):
+        pasted = [digest, before, dates, after]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, "alpine:3.24\n3.24.4\n")  # the name, not the digest
+    assert fails(1, after)  # pasted after the evidence tag
+    assert fails(2, "2026-09-28T07:12:00Z\n2026-09-28T07:12:00Z\n")
+    assert fails(3, "evidence 1a63198d1a17\nstable da0084b573e5\n2026-09-28 1a63198d1a17\n")  # tagged the old build
+
+
+def test_module_02s_clue_is_what_the_setup_builds():
+    """docs/story.md's clue 1: stable's created label says 2026-09-30, the 09-28 build's says 09-28, and
+    the authors label and extra layer (module 10's clue) are already depot-sync's, so module 10 finds
+    the same images. The build files are base64, so the setup on the page shows none of it."""
+    import base64
+    import re
+
+    module = _module("images-tags-and-digests")
+    setup = module.lab.setup
+    built = {
+        tag: base64.b64decode(encoded).decode()
+        for encoded, tag in re.findall(r"^echo '([A-Za-z0-9+/=]+)' \| base64 --decode \| docker build -q -t meridian/fabricator:(\S+) -$", setup, re.M)
+    }
+    assert set(built) == {"2026-09-28", "stable"}
+    assert 'org.opencontainers.image.created="2026-09-28T07:12:00Z"' in built["2026-09-28"]
+    assert 'org.opencontainers.image.authors="fabrication bay"' in built["2026-09-28"] and "sync-agent" not in built["2026-09-28"]
+    assert 'org.opencontainers.image.created="2026-09-30T03:47:00Z"' in built["stable"]
+    assert 'org.opencontainers.image.authors="depot-sync"' in built["stable"] and "/usr/local/bin/sync-agent" in built["stable"]
+    # Shown to copy, the setup gives none of it away (the reviewer's catch): the clues come from Docker.
+    for clue in ("2026-09-30", "depot-sync", "sync-agent", "fabrication bay"):
+        assert clue not in setup
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "2026-09-30T03:47Z" in said and "C-323" in said
+    assert "C-323" not in " ".join(m.text for m in module.comms.complete)  # a clue a task finds stays out of complete
+    assert "#" not in setup  # a pasted setup has no comments for zsh to trip on (#429)
