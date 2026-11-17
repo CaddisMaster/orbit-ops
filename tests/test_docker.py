@@ -174,3 +174,47 @@ def test_module_03s_comms_quote_the_labs_figures():
     assert "Exited (137)" in stopped and "job-watch: STOPPED, EXIT 137" in said
     assert retried.startswith("3 exited") and "job-retry: 3 RESTARTS, GAVE UP" in said
     assert "on-failure:3" in module.lab.task
+
+
+# --- 04 Inside a running container (#450) ------------------------------------------------------
+@pytest.mark.criterion(450, "Module 04 of Unit 2.2 is complete content")
+def test_module_04_is_complete():
+    _is_complete_lab(_module("inside-a-running-container"))
+
+
+@pytest.mark.criterion(450, "Module 04's lab checks hold on any machine")
+def test_module_04s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab on Docker Engine 29.7.2. Other PIDs, another order
+    of Env entries and CRLF pass; the slips don't."""
+    module = _module("inside-a-running-container")
+    printed, ps, env, survives = (box.example for box in module.lab.boxes)
+    assert _passes(module, [printed, ps, env, survives])
+
+    other = [
+        printed.replace("\n", "\r\n"),
+        ps.replace("    7 root", "    9 root").replace("   14 root", "   21 root"),
+        "BAY=fabrication\nSHIFT=night\nMODE=cutting\nTOLERANCE=0.2\nPATH=/usr/local/sbin:/usr/bin:/bin\n",
+        survives,
+    ]
+    assert _passes(module, other)
+
+    def fails(box, text):
+        pasted = [printed, ps, env, survives]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, "fabrication\nnight\n\n\n")  # no --env-file: printenv prints nothing for those
+    assert fails(0, 'fabrication\nnight\n"cutting"\n"0.2"\n')  # quotes in the env file are kept
+    host_ps = "  PID TTY          TIME CMD\n 2214 pts/0    00:00:00 bash\n 2301 pts/0    00:00:00 ps\n"
+    assert fails(1, host_ps)  # ps run on the machine, not with exec
+    assert fails(2, env.replace("MODE=cutting\nTOLERANCE=0.2\n", ""))
+    assert fails(3, "bay-controller\nbay-controller\ncat: can't open '/tmp/calibration': No such file or directory\n")
+    assert fails(3, "calibrated\nbay-controller\ncalibrated\n")  # the last run reused the container
+
+
+def test_module_04s_setup_is_the_settings_the_checks_expect():
+    module = _module("inside-a-running-container")
+    assert "printf 'MODE=cutting\\nTOLERANCE=0.2\\n' > bay.env" in module.lab.setup
+    assert "#" not in module.lab.setup
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "SETTINGS PASSED IN: 4" in said and module.lab.task.count("-e ") == 2

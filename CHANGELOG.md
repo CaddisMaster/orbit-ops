@@ -16,6 +16,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 03: *A container's life* (#449). Running in the background, status and exit codes,
   `docker logs`, how `docker stop` asks then kills (137), `start`, `rm -f`, `docker inspect` and
   restart policies.
+- Unit 2.2 module 04: *Inside a running container* (#450). `docker exec` and `exec -it`, settings
+  with `-e` and `--env-file`, reading them back with `docker inspect`, `top` and `stats`, and what a
+  change made inside a container survives.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
