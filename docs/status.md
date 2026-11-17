@@ -204,51 +204,27 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 
 ### 2026-11-17 (later): Unit 2.2 finished, scenery planned
 
-- **Sean's decisions:** every merge on his word ("merge it and start #N", "merge it and lets wrap when
-  the reviews are finished"). Three issues from a look at what changes in the background (#467–#469).
-  For #469, the room changes **per unit** and starts **dim**, with emergency lighting; the timing was
-  left to Claude: after Unit 2.2, before any Kubernetes content.
-- **Docker modules 06–10 written and merged** (#465, #466, #470, #471, #472), closing #452–#456 and
-  #467. Unit 2.2 is complete on `main`:
-  - *Volumes and bind mounts*. Box 3 reads `id -u`, not file owners, which Docker Desktop maps its own way.
-  - *Your first Dockerfile*. The setup writes the bay's copy of 2.1 module 09's `bay_report.py`, which
-    shows that lab's solution. Flagged to Sean; he didn't object.
-  - *Layers and the build cache*. The checks take BuildKit plain, BuildKit terminal and the older
-    builder's output.
-  - *When a container won't start*.
-  - *Capstone: ship the scanner*. Clue 2 is in `lab_done`, there's an `ai_review`, and `relay-pass`
-    plays at the unit's end.
-- Each module went through the content-reviewer and `/beginner-audit`, with the fixes in the same PR. Each
-  lab was run from its own setup on the VM, with throwaway names cleaned up and nothing pruned, and played
-  as `verify-bot`.
-- **The reviews caught:**
-  - module 08 crediting this repo with Budget Buddy's `*.md` incident (BB #333)
-  - module 10 saying the image holds no settings (`APP_VERSION`/`APP_COMMIT` are baked in)
-  - clue 2 leaking through a quiz and a box's `says`
-  - Git Bash rewriting `/dev/zero`
-  - lesson examples that were the lab's answer
-- **Found by testing, not by memory:**
-  - A restart policy resets `OOMKilled` to `false` (`docker events` keeps the `oom`).
-  - The older builder refuses `--progress` (exit 125).
-  - BuildKit clamps `COPY ../x` to the context.
-  - `history` without `--no-trunc` hides `sync-agent`.
-  - The CSP console errors seen in #465/#466 came from Playwright's screenshot, not the app (4 with, 0 without).
-- **Gotchas:**
-  - A rubric line with `: ` became a YAML mapping, so the catalog failed to load, `web` went
-    unhealthy and the suite hung until it was quoted.
-  - An unquoted `<<EOF` handed Python with backticks to bash, which ran them. All harmless, then
-    redone with `<<'PYEOF'`.
-  - MERIDIAN's lines are uppercased by CSS, so Playwright's `innerText` needs a case-insensitive match.
-- **Not exercised:** Docker Desktop on a Mac or Windows, Git Bash, amd64, and Claude's lab review (no
-  key on the dev stack).
-- **Unreleased on `main`:** `0011`, #444, #445, #457, and all of Unit 2.2 (#458–#472). The unit-hold no
-  longer blocks: v0.15.0 waits on rehearsing `0011` on a production dump in `infra/stage.sh`, then
-  Sean's go.
-- **Next:**
-  - #459 (MSYS note for module 01).
-  - The `0011` rehearsal and v0.15.0, Sean's call.
-  - #375's live hint and lab review on production, which can include the capstone's first real review.
-  - Then #468 (Track 2 emblems) and #469 (scenery), both with previews first.
+- **Sean's decisions:** every merge on his word; #467–#469 opened from a look at the background, and
+  #469's room changes **per unit**, starting **dim** (now a standing decision), built after Unit 2.2.
+- **Docker modules 06–10 merged** (#465, #466, #470–#472), closing #452–#456 and #467: volumes, a first
+  Dockerfile, the build cache, failures and exit codes, and the capstone with clue 2 in `lab_done`, an
+  `ai_review` and `relay-pass` at the unit's end. Each through the content-reviewer and
+  `/beginner-audit`, its lab run from its own setup on the VM (nothing pruned) and played as `verify-bot`.
+  Module 07's setup shows 2.1 module 09's solution: flagged, not objected to.
+- **The reviews caught:** BB's `*.md` incident credited to this repo, "the image holds no settings"
+  (`APP_VERSION`/`APP_COMMIT`), clue 2 leaking through a quiz and a `says`, Git Bash rewriting
+  `/dev/zero`, and lesson examples that were the lab's answer.
+- **Found by testing:** a restart policy resets `OOMKilled` to `false`; the older builder refuses
+  `--progress`; BuildKit clamps `COPY ../x`; `history` without `--no-trunc` hides `sync-agent`; the
+  CSP console errors came from Playwright's screenshot, not the app.
+- **Gotchas:** a rubric line with `: ` became a YAML mapping, so the catalog failed to load and the
+  suite hung; an unquoted `<<EOF` let bash run backticks (harmless, redone with `<<'PYEOF'`); this
+  file's own test caps it at 300 lines.
+- **Not exercised:** Docker Desktop, Git Bash, amd64, and Claude's lab review (no key on dev).
+- **Unreleased on `main`:** `0011`, #444, #445, #457 and all of Unit 2.2. v0.15.0 now waits only on
+  rehearsing `0011` on a production dump, then Sean's go.
+- **Next:** #459; the `0011` rehearsal and v0.15.0; #375's live hint and lab review (the capstone's
+  first real review); then #468 and #469, previews first.
 
 ### 2026-11-17: the quiz reorder, Unit 2.2 planned, Docker modules 01–05
 
