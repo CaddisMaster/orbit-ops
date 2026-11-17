@@ -286,3 +286,47 @@ def test_module_06s_comms_count_what_the_lab_runs():
     assert "2 JOBS KEPT ACROSS 3 CONTAINERS" in said
     task = module.lab.task
     assert task.count("-v fab-log:/log") == 3 and task.count('echo "job ') == 2
+
+
+# --- 07 Your first Dockerfile (#453) ------------------------------------------------------------
+@pytest.mark.criterion(453, "Module 07 of Unit 2.2 is complete content")
+def test_module_07_is_complete():
+    _is_complete_lab(_module("your-first-dockerfile"))
+
+
+@pytest.mark.criterion(453, "Module 07's lab checks hold on any machine")
+def test_module_07s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab on Docker Engine 29.7.2 with BuildKit. A lowercase
+    Dockerfile, COPY . ., python3 (the image has both names), the summary last (as with -t) and CRLF
+    pass; a moving tag, shell-form CMD,
+    options given without the command, and an image built without RUN don't."""
+    module = _module("your-first-dockerfile")
+    dockerfile, everything, deck_c, inside = (box.example for box in module.lab.boxes)
+    assert _passes(module, [dockerfile, everything, deck_c, inside])
+    lower = dockerfile.replace("FROM", "from").replace("COPY bay_report.py received.csv ./", "copy . .")
+    summary_last = everything.replace("14 crates, 306.0 kg\n", "") + "14 crates, 306.0 kg\n"
+    assert _passes(module, [lower.replace("\n", "\r\n"), summary_last, deck_c.replace("\n", "\r\n"), inside])
+    assert _passes(module, [dockerfile.replace('"python"', '"python3"').replace("RUN python ", "RUN python3 "), everything, deck_c, inside])
+
+    def fails(box, text):
+        pasted = [dockerfile, everything, deck_c, inside]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, dockerfile.replace("python:3.14.10-slim", "python:3-slim"))
+    assert fails(0, dockerfile.replace('CMD ["python", "bay_report.py", "received.csv"]', "CMD python bay_report.py received.csv"))
+    assert fails(2, 'docker: Error response from daemon: failed to create task for container: exec: "--deck": executable file not found in $PATH\n')
+    assert fails(2, everything)  # CMD ran: no command after the image
+    assert fails(3, inside.replace("__pycache__\n", ""))
+
+
+def test_module_07s_figures_are_what_the_setup_gives():
+    """MERIDIAN's lab_done line and the checks quote the report over the setup's CSV."""
+    module = _module("your-first-dockerfile")
+    rows = [line.split(",") for line in module.lab.setup.split("cat > received.csv <<'CSV'\n")[1].split("\nCSV")[0].splitlines()[1:]]
+    masses = [float(r[3]) for r in rows]
+    deck_c = [float(r[3]) for r in rows if r[2] == "C" and float(r[3]) >= 10]
+    assert f"{len(masses)} crates, {sum(masses)} kg" == "14 crates, 306.0 kg"
+    assert f"{len(deck_c)} crates, {sum(deck_c)} kg" == "3 crates, 87.75 kg"
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "14 CRATES, 306.0 KG" in said and "3 CRATES, 87.75 KG" in said
