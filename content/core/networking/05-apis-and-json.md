@@ -14,11 +14,11 @@ quiz:
       status=$(curl -s https://status.example.org/health | jq .status)
       if [ "$status" = "ok" ]; then echo up; else echo down; fi
     options:
-      - "`jq` prints strings as JSON, with quotes, so `$status` is `\"ok\"`, not `ok`. `jq -r .status` prints the plain text"
+      - "`[ ]` can't compare strings"
       - "`curl -s` hides the body, so `$status` is empty"
       - "`.status` should be `status`, without the dot"
-      - "`[ ]` can't compare strings"
-    answer: 0
+      - "`jq` prints strings as JSON, with quotes, so `$status` is `\"ok\"`, not `ok`. `jq -r .status` prints the plain text"
+    answer: 3
     explain: >-
       Without `-r`, jq prints its answer as JSON, so a string comes out wrapped in double
       quotes. `"ok"` with the quotes isn't `ok`. `-r` (raw) prints strings as plain text, which
@@ -41,11 +41,11 @@ quiz:
   - type: choice
     q: "What does `?per_page=5&page=2` at the end of an API's URL do?"
     options:
-      - "It's a query string: two parameters for the server, here five results per page, and the second page of them"
-      - "It's part of the path, a directory called `per_page=5&page=2`"
       - "It tells curl to make two requests"
+      - "It's part of the path, a directory called `per_page=5&page=2`"
+      - "It's a query string: two parameters for the server, here five results per page, and the second page of them"
       - "It's ignored unless you send it with `-X POST`"
-    answer: 0
+    answer: 2
     explain: >-
       Everything after `?` is the query string: `name=value` pairs joined with `&`, which the
       server reads to decide what to send. Quote the whole URL in the shell, because `&` on its
@@ -54,10 +54,10 @@ quiz:
     q: "Which of these are valid JSON?"
     options:
       - "`{\"deck\": \"cargo\", \"online\": false}`"
-      - "`{'deck': 'cargo'}`"
       - "`[20.9, 21.4, 19.1]`"
       - "`{\"deck\": \"cargo\",}`"
-    answer: [0, 2]
+      - "`{'deck': 'cargo'}`"
+    answer: [0, 1]
     explain: >-
       JSON strings and keys use double quotes only, so single quotes aren't JSON. A trailing
       comma isn't allowed either, and jq says so: `parse error: Expected another key-value

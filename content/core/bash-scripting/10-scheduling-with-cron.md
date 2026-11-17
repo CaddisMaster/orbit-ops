@@ -11,11 +11,11 @@ quiz:
     code: |-
       30 2 * * 1-5 /usr/local/bin/backup.sh
     options:
-      - "At 02:30, Monday to Friday"
+      - "At 02:30 on the 1st to the 5th of each month"
       - "Every 30 minutes, from 02:00 to 05:00"
       - "At 30 past every hour on the 2nd of each month"
-      - "At 02:30 on the 1st to the 5th of each month"
-    answer: 0
+      - "At 02:30, Monday to Friday"
+    answer: 3
     explain: >-
       The fields are minute, hour, day of month, month, day of week. Minute 30, hour 2, any day,
       any month, days of the week 1 to 5 (Monday to Friday; 0 and 7 are Sunday).
@@ -27,19 +27,19 @@ quiz:
       $ tail -n 1 /var/log/report.log
       /bin/sh: 1: report.sh: not found
     options:
-      - "Cron's PATH has only the system directories, so it can't find `report.sh` by name. Use its full path"
-      - "Cron can't run scripts, only commands"
       - "The job needs `sudo`"
+      - "Cron can't run scripts, only commands"
+      - "Cron's PATH has only the system directories, so it can't find `report.sh` by name. Use its full path"
       - "`>>` doesn't work in a crontab"
-    answer: 0
+    answer: 2
     explain: >-
       Cron runs jobs with a small environment: a short PATH of system directories, `sh` as the
       shell, none of your `~/.bashrc`. Your PATH found `report.sh`; cron's doesn't. Full paths fix
       it, for the script and for anything it needs.
   - type: choice
     q: "What does `*/15` mean in the minute field?"
-    options: ["Minutes 0, 15, 30 and 45", "Once, 15 minutes after cron starts", "Minute 15 only", "Every minute for 15 minutes"]
-    answer: 0
+    options: ["Once, 15 minutes after cron starts", "Minutes 0, 15, 30 and 45", "Minute 15 only", "Every minute for 15 minutes"]
+    answer: 1
     explain: >-
       `*/N` is every Nth value of the field's range, starting from its first: 0, 15, 30, 45. It's
       the same as writing the list `0,15,30,45`.
@@ -48,11 +48,11 @@ quiz:
     code: |-
       */5 * * * * /station/bin/shift-check
     options:
-      - "Cron tries to email it to the user, and on most servers nobody ever reads it"
-      - "To the terminal of whoever is logged in"
       - "To `/var/log/cron.log`"
+      - "To the terminal of whoever is logged in"
+      - "Cron tries to email it to the user, and on most servers nobody ever reads it"
       - "Nowhere: cron jobs can't print"
-    answer: 0
+    answer: 2
     explain: >-
       There's no terminal under cron. Output is mailed to the crontab's owner, which usually
       means it's lost. Append it to a log with `>> FILE 2>&1`, so errors are kept too.

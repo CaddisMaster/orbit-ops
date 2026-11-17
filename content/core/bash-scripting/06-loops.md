@@ -37,11 +37,11 @@ quiz:
   - type: choice
     q: "Which reads a file one line at a time, keeping each line exactly as written?"
     options:
-      - "`while read -r line; do …; done < crew.txt`"
+      - "`while line; do …; done < crew.txt`"
       - "`for line in $(cat crew.txt); do …; done`"
       - "`for line in crew.txt; do …; done`"
-      - "`while line; do …; done < crew.txt`"
-    answer: 0
+      - "`while read -r line; do …; done < crew.txt`"
+    answer: 3
     explain: >-
       `while read -r` takes one line per pass from the redirected file, and `-r` keeps
       backslashes as they are. `$(cat …)` splits on every space, not just the line ends, and
@@ -53,11 +53,11 @@ quiz:
         echo "found $f"
       done
     options:
-      - "`found /var/log/old/*.log`"
-      - "Nothing; the loop doesn't run"
       - "An error: no such file"
+      - "Nothing; the loop doesn't run"
+      - "`found /var/log/old/*.log`"
       - "`found` with nothing after it"
-    answer: 0
+    answer: 2
     explain: >-
       A glob that matches nothing is left as it is, so the loop runs once with the pattern
       itself. Guard it with `[ -e "$f" ] || continue`, or with bash's `shopt -s nullglob`.

@@ -10,10 +10,10 @@ quiz:
     q: Why does `sort` usually come before `uniq -c`?
     options:
       - "`uniq` only works on numbers"
-      - "`uniq` only collapses duplicate lines that are next to each other"
       - "`sort` removes duplicates itself"
+      - "`uniq` only collapses duplicate lines that are next to each other"
       - "It doesn't matter"
-    answer: 1
+    answer: 2
     explain: >-
       `uniq` compares each line with the one before it. Sorting first puts identical lines side
       by side so they're counted together.
@@ -25,15 +25,15 @@ quiz:
       match, `-n` shows line numbers, `-r` searches directories, and `-E` enables extended regex.
   - type: choice
     q: What happens to `app.conf` when you run `sed 's/debug/info/g' app.conf`?
-    options: ["Every `debug` in the file is replaced", "Nothing: the changed text is printed to stdout", "Only the first match is replaced", "sed asks for confirmation"]
-    answer: 1
+    options: ["Every `debug` in the file is replaced", "Only the first match is replaced", "Nothing: the changed text is printed to stdout", "sed asks for confirmation"]
+    answer: 2
     explain: >-
       `sed` writes the result to stdout and leaves the file alone. Use `sed -i` to edit in place,
       ideally after checking the output first.
   - type: choice
     q: "What does `awk '{print $1}' access.log` print?"
-    options: ["The first line of the file", "The first whitespace-separated field of every line", "Every line containing `$1`", "The number of lines"]
-    answer: 1
+    options: ["The first whitespace-separated field of every line", "The first line of the file", "Every line containing `$1`", "The number of lines"]
+    answer: 0
     explain: >-
       `awk` splits each line into fields on whitespace (`$1`, `$2`, … and `$0` for the whole
       line). In an Nginx access log, `$1` is the client IP.

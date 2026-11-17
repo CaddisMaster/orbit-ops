@@ -56,7 +56,7 @@ def test_a_scenario_questions_code_is_shown_before_and_after_answering(logged_in
     assert "</legend>\n    " + block in page  # under the question, outside the <legend>
     # An option is one flex item, so inline code wraps with its sentence instead of on its own.
     assert "<span>The file belongs to root. Leave with ^X (answer N), then reopen it with <code>sudo nano</code></span></label>" in page
-    answered = answer(logged_in, "reading-and-editing", 0, "0").text
+    answered = answer(logged_in, "reading-and-editing", 0, str(real_catalog().modules["reading-and-editing"].quiz[0].answer)).text
     assert block in answered
     assert "<span>The file belongs to root. Leave with ^X (answer N), then reopen it with <code>sudo nano</code> <span class=\"muted\">(your answer)</span></span>" in answered
 

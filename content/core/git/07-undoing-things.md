@@ -16,11 +16,11 @@ quiz:
       b81e0f3 Turn the galley oven off at night
       0c9a7e2 Track galley.conf
     options:
-      - "`git revert b81e0f3`: a new commit that does the opposite, which everyone can pull"
-      - "`git reset --hard 0c9a7e2`, then push"
       - "`git commit --amend`"
+      - "`git reset --hard 0c9a7e2`, then push"
+      - "`git revert b81e0f3`: a new commit that does the opposite, which everyone can pull"
       - "Delete the line from the file and pretend it never happened"
-    answer: 0
+    answer: 2
     explain: >-
       Once others have a commit, don't rewrite it: `reset` would also throw away the dinner rota,
       and everyone's copy would disagree with yours (your push is rejected, as on day 26). `revert`
@@ -29,11 +29,11 @@ quiz:
   - type: choice
     q: "After `git reset --soft HEAD~1`, where is the change the last commit made?"
     options:
-      - "Staged: the commit is gone, its change is in the index, ready to commit again"
+      - "Still in the commit: `--soft` doesn't move the branch"
       - "In the working tree only, not staged"
       - "Gone completely"
-      - "Still in the commit: `--soft` doesn't move the branch"
-    answer: 0
+      - "Staged: the commit is gone, its change is in the index, ready to commit again"
+    answer: 3
     explain: >-
       All three modes move the branch back. `--soft` leaves the change staged, `--mixed` (the
       default) leaves it in your files but unstaged, and `--hard` throws it away from both.
@@ -69,11 +69,11 @@ quiz:
   - type: choice
     q: "You had edited `galley.conf`, never added or committed it, then ran `git reset --hard`. Can the reflog bring the edit back?"
     options:
-      - "No: the reflog only remembers commits, and the edit was never in one"
       - "Yes: `git reflog` lists every change to every file"
+      - "No: the reflog only remembers commits, and the edit was never in one"
       - "Yes, with `git reset --soft`"
       - "Only if you run `git revert` first"
-    answer: 0
+    answer: 1
     explain: >-
       `reset --hard` overwrites your working tree, and an edit you never added was never anywhere
       git could find it again. That's why the rule is to commit (or at least check `git status`)

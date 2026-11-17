@@ -7,22 +7,22 @@ story: |
 quiz:
   - type: choice
     q: You type `cd` with no arguments and press Enter. Where are you now?
-    options: ["The root directory, `/`", "Your home directory", "The directory you were in before", "Nowhere: it's an error"]
-    answer: 1
+    options: ["The root directory, `/`", "Nowhere: it's an error", "The directory you were in before", "Your home directory"]
+    answer: 3
     explain: >-
       A bare `cd` takes you home (`~`). It's the quickest way back from deep inside the tree.
   - type: choice
     q: Which `ls` flag shows files whose names start with a dot?
-    options: ["`-l`", "`-a`", "`-h`", "`-R`"]
-    answer: 1
+    options: ["`-a`", "`-l`", "`-h`", "`-R`"]
+    answer: 0
     explain: >-
       `-a` shows **all** entries, including hidden dotfiles like `.bashrc` and `.env`. `-l` is
       the long format, `-h` makes sizes human-readable, and `-R` (not in this lesson) lists
       every subdirectory too.
   - type: choice
     q: What does `cd -` do?
-    options: ["Goes up one level", "Returns to the directory you were in before", "Goes to your home directory", "Lists the current directory"]
-    answer: 1
+    options: ["Returns to the directory you were in before", "Goes up one level", "Goes to your home directory", "Lists the current directory"]
+    answer: 0
     explain: >-
       `cd -` swaps back to the previous directory, which is handy for bouncing between two places
       like `/etc/nginx` and `/var/log/nginx`. Going up one level is `cd ..`.

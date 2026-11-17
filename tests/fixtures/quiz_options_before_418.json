@@ -1,0 +1,1180 @@
+{
+ "navigating": {
+  "0": {
+   "options": [
+    "The root directory, `/`",
+    "Your home directory",
+    "The directory you were in before",
+    "Nowhere: it's an error"
+   ],
+   "answer": 1
+  },
+  "1": {
+   "options": [
+    "`-l`",
+    "`-a`",
+    "`-h`",
+    "`-R`"
+   ],
+   "answer": 1
+  },
+  "2": {
+   "options": [
+    "Goes up one level",
+    "Returns to the directory you were in before",
+    "Goes to your home directory",
+    "Lists the current directory"
+   ],
+   "answer": 1
+  }
+ },
+ "text-tools": {
+  "0": {
+   "options": [
+    "`uniq` only works on numbers",
+    "`uniq` only collapses duplicate lines that are next to each other",
+    "`sort` removes duplicates itself",
+    "It doesn't matter"
+   ],
+   "answer": 1
+  },
+  "2": {
+   "options": [
+    "Every `debug` in the file is replaced",
+    "Nothing: the changed text is printed to stdout",
+    "Only the first match is replaced",
+    "sed asks for confirmation"
+   ],
+   "answer": 1
+  },
+  "3": {
+   "options": [
+    "The first line of the file",
+    "The first whitespace-separated field of every line",
+    "Every line containing `$1`",
+    "The number of lines"
+   ],
+   "answer": 1
+  }
+ },
+ "environment-and-path": {
+  "0": {
+   "options": [
+    "`eu`",
+    "Nothing: the variable wasn't exported",
+    "An error",
+    "It depends on the script's permissions"
+   ],
+   "answer": 1
+  },
+  "1": {
+   "options": [
+    "The `./` makes it executable",
+    "The current directory isn't in `$PATH`, so the shell won't look there",
+    "`./` runs it as root",
+    "It's only needed for Bash scripts"
+   ],
+   "answer": 1
+  },
+  "3": {
+   "options": [
+    "Log out and back in",
+    "`source ~/.bashrc`",
+    "`chmod +x ~/.bashrc`",
+    "`export ~/.bashrc`"
+   ],
+   "answer": 1
+  }
+ },
+ "packages": {
+  "2": {
+   "options": [
+    "To uninstall apt",
+    "To keep the downloaded package lists out of the image layer, making it smaller",
+    "To force a fresh download next time",
+    "For security: the lists contain passwords"
+   ],
+   "answer": 1
+  }
+ },
+ "reading-and-editing": {
+  "0": {
+   "options": [
+    "The file belongs to root. Leave with ^X (answer N), then reopen it with `sudo nano`",
+    "nano can't write config files: make the change with `sed -i` instead",
+    "The disk is full: free some space and press ^O again",
+    "Press ^O again: nano retries as root the second time"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Type `/error`, Enter, then `n` for each match after it",
+    "Press Ctrl-F and type `error`",
+    "Quit and run `grep error`, there's no search in less",
+    "Type `:error`"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "Press Esc, then type `:q!` and Enter",
+    "Press Ctrl-C until it stops",
+    "Press ^X, as in nano",
+    "Type `exit` and Enter"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "`tail -f app.log`",
+    "`less +F app.log`",
+    "`head -f app.log`",
+    "`cat app.log`"
+   ],
+   "answer": [
+    0,
+    1
+   ]
+  }
+ },
+ "finding-things-and-disk-space": {
+  "0": {
+   "options": [
+    "The app still has the file open, so its space isn't freed until the app closes it",
+    "`rm` moves files to a hidden trash directory first",
+    "`df` only updates once an hour",
+    "`sudo rm` doesn't really delete root's files"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "`.log` files under `/var/log` last changed more than 30 days ago",
+    "`.log` files under `/var/log` changed in the last 30 days",
+    "The 30 biggest `.log` files",
+    "`.log` files created exactly 30 days ago"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "`du -sh /var/*`",
+    "`df -h /var`",
+    "`ls -lh /var`",
+    "`free -h`"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "`ln -sf /var/log/o2/2026-10-08.log current.log`: `-f` replaces the old link",
+    "`rm 2026-10-08.log`, then try again",
+    "`cp /var/log/o2/2026-10-08.log current.log`",
+    "`mv current.log 2026-10-08.log`"
+   ],
+   "answer": 0
+  }
+ },
+ "your-first-script": {
+  "1": {
+   "options": [
+    "It tells the system which program runs the file when you run it as `./script`",
+    "It's a comment, so bash ignores it and it does nothing",
+    "It makes the file executable",
+    "It imports bash's built-in commands"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`~/bin` isn't on your PATH yet: Ubuntu adds it at login only if it existed then, so log in again (or `export PATH=\"$HOME/bin:$PATH\"`)",
+    "Scripts must end in `.sh` to be found",
+    "It needs `sudo` because it's in a bin directory",
+    "`~/bin` is a system directory, so the shell ignores it"
+   ],
+   "answer": 0
+  }
+ },
+ "variables-and-quoting": {
+  "1": {
+   "options": [
+    "`Hello $name Hello Okafor`",
+    "`Hello Okafor Hello Okafor`",
+    "`Hello $name Hello $name`",
+    "An error"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Unquoted, `$file` is split at the space into two arguments. `cat \"$file\"` keeps it whole",
+    "`cat` can't read files with spaces in their names",
+    "The file has to be renamed without spaces",
+    "`$file` should be written `${file}`"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "`eu-west`",
+    "Nothing",
+    "`REGION`",
+    "An error"
+   ],
+   "answer": 0
+  }
+ },
+ "conditionals": {
+  "0": {
+   "options": [
+    "`-lt` compares whole numbers only, so `19.2` isn't a number to it",
+    "`$o2` shouldn't be in quotes inside `[ ]`",
+    "`[ ]` can't compare numbers; it needs `[[ ]]`",
+    "The `;` before `then` should be a newline"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`compressed`",
+    "`plain log`",
+    "`plain log` then `compressed`",
+    "`something else`"
+   ],
+   "answer": 0
+  }
+ },
+ "loops": {
+  "2": {
+   "options": [
+    "`while read -r line; do …; done < crew.txt`",
+    "`for line in $(cat crew.txt); do …; done`",
+    "`for line in crew.txt; do …; done`",
+    "`while line; do …; done < crew.txt`"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`found /var/log/old/*.log`",
+    "Nothing; the loop doesn't run",
+    "An error: no such file",
+    "`found` with nothing after it"
+   ],
+   "answer": 0
+  }
+ },
+ "arguments-and-input": {
+  "0": {
+   "options": [
+    "`$2` is `Crew Logs`, `$#` is 3",
+    "`$2` is `Crew`, `$#` is 4",
+    "`$2` is `Crew Logs`, `$#` is 4",
+    "`$2` is `/srv/data`, `$#` is 3"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "`[a]` `[b]` `[c]`, one per line",
+    "`[a b]` `[c]`, one per line",
+    "`[a b c]`",
+    "Nothing"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "So it isn't mistaken for the script's real output, and so the caller can tell \"used wrong\" from other failures",
+    "Because `echo` can't write to stdout inside an `if`",
+    "Because exit status 1 is reserved for the shell",
+    "So that it only appears when the script runs from cron"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "`days=${2:-1}`",
+    "`days=$2 || 1`",
+    "`days=${1:-2}`",
+    "`days=$2:1`"
+   ],
+   "answer": 0
+  }
+ },
+ "functions": {
+  "0": {
+   "options": [
+    "`checking galley` then `back in the script: galley`",
+    "`checking galley` then `back in the script: bridge`",
+    "`checking bridge` then `back in the script: bridge`",
+    "An error: `deck` is already set"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "`echo` it, and the caller captures it with `ppm=$(last_ppm \"$f\")`",
+    "`return 5300`, and the caller reads `$?`",
+    "Assign a global variable called `return`",
+    "`exit 5300`"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "A function's status is its last command's, and `if` runs any command and checks its status",
+    "Functions always return true",
+    "`if` adds the `[ ]` itself",
+    "It doesn't: it needs `if [ over_limit 5300 ]`"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`last_ppm: command not found`: `./lib.sh` ran in a child shell, whose functions ended with it",
+    "It works: running a file loads its functions",
+    "It works, but only if `lib.sh` is executable",
+    "`lib.sh` asks whether to export its functions"
+   ],
+   "answer": 0
+  }
+ },
+ "robust-scripts": {
+  "1": {
+   "options": [
+    "No: a command tested by `if` is allowed to fail, so it prints `checked`",
+    "Yes: `grep` found nothing, so the script stops",
+    "Yes, but only if `scrubber.log` is empty",
+    "No: `set -e` only applies to `cp`, `mv` and `rm`"
+   ],
+   "answer": 0
+  }
+ },
+ "scheduling-with-cron": {
+  "0": {
+   "options": [
+    "At 02:30, Monday to Friday",
+    "Every 30 minutes, from 02:00 to 05:00",
+    "At 30 past every hour on the 2nd of each month",
+    "At 02:30 on the 1st to the 5th of each month"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "Cron's PATH has only the system directories, so it can't find `report.sh` by name. Use its full path",
+    "Cron can't run scripts, only commands",
+    "The job needs `sudo`",
+    "`>>` doesn't work in a crontab"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Minutes 0, 15, 30 and 45",
+    "Once, 15 minutes after cron starts",
+    "Minute 15 only",
+    "Every minute for 15 minutes"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "Cron tries to email it to the user, and on most servers nobody ever reads it",
+    "To the terminal of whoever is logged in",
+    "To `/var/log/cron.log`",
+    "Nowhere: cron jobs can't print"
+   ],
+   "answer": 0
+  }
+ },
+ "your-first-repository": {
+  "1": {
+   "options": [
+    "`git config --global user.name \"…\"` and `git config --global user.email \"…\"`, then commit again",
+    "Run the commit again with `sudo`",
+    "`git init` again: the repository wasn't created properly",
+    "Log in to GitHub first"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "A snapshot of every tracked file, as it was staged",
+    "Who made it, and when",
+    "The commit it came after: its parent",
+    "Every file in the directory, tracked or not"
+   ],
+   "answer": [
+    0,
+    1,
+    2
+   ]
+  },
+  "3": {
+   "options": [
+    "The hash is worked out from everything in the commit: the author and time differ, so the hash does too",
+    "Git picks a random hash for every commit",
+    "Hashes depend on the machine's hostname",
+    "They don't: the same message and the same file give the same hash"
+   ],
+   "answer": 0
+  }
+ },
+ "staging-and-diffs": {
+  "0": {
+   "options": [
+    "`airmix.conf`'s change and the staged part of `scrubber.conf`: only what's in the index",
+    "All four files, since each has changed",
+    "`airmix.conf`, `pumps.conf` and `scrubber.conf`, but not the untracked `notes.txt`",
+    "Only `airmix.conf`: a file with changes in both columns can't be committed"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "`git diff` compares the working tree with the index, and everything is staged. `git diff --staged` shows it",
+    "The change was lost when it was staged",
+    "`git diff` only works after the first commit",
+    "`git diff` needs the file's name"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "`git restore FILE`",
+    "`git restore --staged FILE`",
+    "`git diff FILE`",
+    "`git add -p FILE`, answering `n` to every hunk"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "`n`: leave it out of the index, and move on to the next hunk",
+    "`d`: delete the change from the file",
+    "`q`: stage it and quit",
+    "`s`: skip it for good"
+   ],
+   "answer": 0
+  }
+ },
+ "reading-history": {
+  "1": {
+   "options": [
+    "No: the line still contains `co2_alarm_ppm` once, so the number of times it appears didn't change",
+    "Yes: `-S` lists every commit that touched a line containing the string",
+    "Yes, but only with `-p`",
+    "No: `-S` only searches commit messages"
+   ],
+   "answer": 0
+  }
+ },
+ "branches-and-merging": {
+  "0": {
+   "options": [
+    "`main` had no commits of its own since the branch started, so git just moved `main` up to `dim-lights`' commit. There's no merge commit",
+    "Git made a merge commit with two parents",
+    "Git copied `dim-lights`' commits onto `main` as new commits",
+    "Nothing yet: a fast-forward has to be confirmed with `git commit`"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "A name that points at a commit, and moves forward when you commit on it",
+    "A copy of the project's files in another directory",
+    "A separate repository that shares a history",
+    "A list of commits, stored apart from the rest"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "`pump-test` has commits that aren't in the branch you're on, so deleting its name would lose track of them",
+    "`pump-test` is the branch you're on, so it can't be deleted",
+    "`pump-test` has uncommitted changes",
+    "Branches can only be deleted with `-D`"
+   ],
+   "answer": 0
+  }
+ },
+ "merge-conflicts": {
+  "0": {
+   "options": [
+    "`main`'s: `HEAD` is the branch you're on, the one being merged into",
+    "`quiet-fans`', since it's the branch being merged",
+    "Whichever was committed first",
+    "The version from before either branch changed it"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "`git add pumps.conf` to mark it resolved, then `git commit` to finish the merge",
+    "`git merge --continue` straight away: git can see the markers are gone",
+    "`git commit -m \"Fix it\"`: committing marks it resolved",
+    "Nothing: the merge finished when the markers were removed"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "When both branches changed the same lines, or lines right next to each other, in different ways since they split",
+    "Whenever both branches changed the same file",
+    "Whenever the two branches have different authors",
+    "Whenever one branch deleted a line"
+   ],
+   "answer": 0
+  }
+ },
+ "remotes": {
+  "0": {
+   "options": [
+    "You have two commits that `origin` doesn't have yet. `git push` sends them",
+    "`origin` has two commits you don't have. `git pull` gets them",
+    "Two files are changed but not committed",
+    "Your branch is two commits ahead of another local branch called `main`"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "Someone pushed first. `git pull` to bring their work in, then push again",
+    "You don't have permission to push: ask for access",
+    "Your commit is broken: amend it and push again",
+    "Nothing: the push will retry by itself"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "`git pull`: it fetches, then merges what it fetched into your branch",
+    "`git fetch`",
+    "`git remote -v`",
+    "`git status -sb`"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`status` compares with `origin/main` as of your last fetch. `git fetch` first, and it will say `[behind 1]`",
+    "Her push failed",
+    "`-sb` only shows your own commits",
+    "Pushes take an hour to show up"
+   ],
+   "answer": 0
+  }
+ },
+ "undoing-things": {
+  "0": {
+   "options": [
+    "`git revert b81e0f3`: a new commit that does the opposite, which everyone can pull",
+    "`git reset --hard 0c9a7e2`, then push",
+    "`git commit --amend`",
+    "Delete the line from the file and pretend it never happened"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "Staged: the commit is gone, its change is in the index, ready to commit again",
+    "In the working tree only, not staged",
+    "Gone completely",
+    "Still in the commit: `--soft` doesn't move the branch"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "No: the reflog only remembers commits, and the edit was never in one",
+    "Yes: `git reflog` lists every change to every file",
+    "Yes, with `git reset --soft`",
+    "Only if you run `git revert` first"
+   ],
+   "answer": 0
+  }
+ },
+ "working-together": {
+  "0": {
+   "options": [
+    "`Slow the night pumps to 900 rpm`, with a body: `The pumps woke the ring B crew; 900 rpm still meets the flow minimum.`",
+    "`Fixed the pumps.`",
+    "`pumps.conf: pump_speed 1200 -> 900`",
+    "`Changes requested by Okafor`"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "No: it's still in the commit from last week, in every copy. Change the secret itself",
+    "Yes: deleting the file removes it from git",
+    "Yes: `.gitignore` hides it from everyone who pulls",
+    "Only once `git status` stops listing it"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "`build/app.js` was already tracked, and `.gitignore` only affects untracked files. `git rm --cached` stops tracking it",
+    "`.gitignore` takes effect at the next commit",
+    "The pattern needs to be `build/*`",
+    "`.gitignore` only works in the repository's top directory"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "Replays your branch's commits on the end of `main`, as new commits, so the history is one straight line",
+    "Merges `main` into your branch with a merge commit",
+    "Moves `main` forward to your branch",
+    "Deletes the commits `main` already has"
+   ],
+   "answer": 0
+  }
+ },
+ "addresses-and-ports": {
+  "0": {
+   "options": [
+    "To the gateway, `10.9.3.1`: `10.9.4.17` isn't on `10.9.3.0/24`, so only the default route matches",
+    "Straight to `10.9.4.17` over `eth0`, since every `10.9` address is on the same network",
+    "Nowhere: there's no route that names `10.9.4.17`",
+    "To `10.9.3.40`, the server's own address"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "The dashboard listens on `127.0.0.1`, the loopback address, so only programs on the server itself can reach it",
+    "Port 5000 is reserved, so other machines can't use it",
+    "The dashboard isn't running: there's no `ESTAB` line for it",
+    "`sshd` is using the network, so nothing else can"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`10.0.7.200`",
+    "`10.0.8.31`",
+    "`10.0.7.1`",
+    "`10.1.7.31`"
+   ],
+   "answer": [
+    0,
+    2
+   ]
+  }
+ },
+ "names-and-dns": {
+  "0": {
+   "options": [
+    "`/etc/hosts` has an old line for `api.meridian`. `getent` and `ping` read it before DNS; `dig` only asks DNS. Remove the line, then check `getent` agrees with `dig`",
+    "DNS is wrong: `dig` gives a different address from `getent`, so the record needs changing",
+    "The DNS server's cache is stale: wait for the TTL to run out",
+    "Nothing's wrong with the name: `ping` would use `dig`'s answer if the API were up"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "The DNS server answered, and the answer is that the name doesn't exist. Check the spelling",
+    "The DNS server couldn't be reached",
+    "The name exists but the machine is down",
+    "The name exists but has no address yet; try again after the TTL"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Resolvers that looked it up before the change keep their cached answer until its TTL runs out",
+    "DNS changes only take effect at midnight",
+    "Their browsers have the old address in `/etc/resolv.conf`",
+    "A records can't be changed, only deleted and added again"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`getent hosts`",
+    "`dig`",
+    "`ping`",
+    "`curl`"
+   ],
+   "answer": [
+    0,
+    2,
+    3
+   ]
+  }
+ },
+ "is-it-reachable": {
+  "0": {
+   "options": [
+    "The database machine is up and reachable, but nothing is listening on 5432: the database isn't running, or listens on another port or address",
+    "The database machine is down",
+    "A firewall is dropping the connection",
+    "The name `db.example.internal` doesn't resolve"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "Yes: its port 443 accepts connections. It, or a firewall in front of it, just drops ping",
+    "No: 100% packet loss means it's down",
+    "Only half of it: ping and nc disagree, so its network card is failing",
+    "You can't tell without `traceroute`"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Nothing answered at all: the host is down, or something between you drops the connection, like a firewall",
+    "The host is up and SSH isn't running on it",
+    "The name doesn't resolve",
+    "SSH is running, but rejected your key"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "`Connection refused`",
+    "`succeeded!`",
+    "`64 bytes from …`",
+    "`timed out: Operation now in progress`"
+   ],
+   "answer": [
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "http-by-hand": {
+  "0": {
+   "options": [
+    "`-I` asks for the headers only, and the answer is a redirect: a browser would follow `Location` to the HTTPS address. curl only follows it with `-L`",
+    "The page doesn't exist; a browser would show an error",
+    "The server is down; a browser would retry",
+    "`-s` hides the page; without it curl would show the cart"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "401: who are you? (no or bad credentials). 403: I know who you are, and you're not allowed",
+    "401: the page is missing. 403: the server crashed",
+    "They mean the same; servers pick either",
+    "401: too many requests. 403: try again later"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "The request line and headers curl sent, on lines starting `>`",
+    "The status line and headers that came back, on lines starting `<`",
+    "The body",
+    "Only the body, quietly"
+   ],
+   "answer": [
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "apis-and-json": {
+  "0": {
+   "options": [
+    "`jq` prints strings as JSON, with quotes, so `$status` is `\"ok\"`, not `ok`. `jq -r .status` prints the plain text",
+    "`curl -s` hides the body, so `$status` is empty",
+    "`.status` should be `status`, without the dot",
+    "`[ ]` can't compare strings"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "It's a query string: two parameters for the server, here five results per page, and the second page of them",
+    "It's part of the path, a directory called `per_page=5&page=2`",
+    "It tells curl to make two requests",
+    "It's ignored unless you send it with `-X POST`"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`{\"deck\": \"cargo\", \"online\": false}`",
+    "`{'deck': 'cargo'}`",
+    "`[20.9, 21.4, 19.1]`",
+    "`{\"deck\": \"cargo\",}`"
+   ],
+   "answer": [
+    0,
+    2
+   ]
+  }
+ },
+ "tls-and-certificates": {
+  "0": {
+   "options": [
+    "The wrong one: the server sent a certificate for some other name. It may be perfectly in date",
+    "Expired: curl checks the date first",
+    "Neither: the server is down",
+    "The certificate is fine, and curl needs `-L`"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "It expired on 30 October: renewal didn't happen. The name is right",
+    "It isn't valid yet",
+    "It's for the wrong name",
+    "Nothing: it's a 90-day certificate"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "Privacy: nobody on the way can read it",
+    "Integrity: nobody on the way can change it unnoticed",
+    "Identity: you're talking to the server the certificate names",
+    "Speed: it makes the connection faster"
+   ],
+   "answer": [
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "ssh-keys": {
+  "0": {
+   "options": [
+    "Stop, and find out from whoever runs the server whether its key really changed (a rebuild, a new server). Only then remove the old line with `ssh-keygen -R` and accept the new key",
+    "Run `ssh-keygen -R archive.example.org` straight away and connect again",
+    "Delete `~/.ssh/known_hosts` so the warning goes away for good",
+    "Generate a new key pair of your own: yours has changed"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "The option is `User`, not `Username`: ssh refuses a config it can't read, and `ssh -G` says which line",
+    "`HostName` must be an IP address",
+    "The key is the wrong type",
+    "`ssh -G` only works after a successful login"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "The public key (`.pub`), as one line in `~/.ssh/authorized_keys` of the account you log in as",
+    "The private key, in `/etc/ssh/sshd_config`",
+    "The public key, in your own `~/.ssh/known_hosts`",
+    "Both halves, so the server can check them against each other"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "It writes the private key to `~/.ssh/archive_key` and the public key to `~/.ssh/archive_key.pub`",
+    "The private key file is readable by you only (600)",
+    "The passphrase it asks for protects the private key file if someone copies it",
+    "It uploads the public key to the server"
+   ],
+   "answer": [
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "copying-and-tunnels": {
+  "0": {
+   "options": [
+    "In `/srv/www/site/`: without a trailing slash on the source, rsync copies the directory itself",
+    "In `/srv/www/`, directly: `index.html` and `style.css` next to whatever was there",
+    "Nowhere: `-a` needs a trailing slash",
+    "In `/srv/www/` with everything else there deleted"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "`ssh -L 9000:localhost:9000 user@server`, then browse to `http://localhost:9000` on the laptop",
+    "Browse to `http://server:9000`",
+    "`ssh -L 9000:server:22 user@server`",
+    "Change the admin page to listen on `0.0.0.0` first"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "It copies nothing: rsync only sends what differs",
+    "It keeps permissions and times, because `-a` is archive mode",
+    "It deletes files in DEST that aren't in SRC",
+    "It lists every file again, copied or not"
+   ],
+   "answer": [
+    0,
+    1
+   ]
+  }
+ },
+ "firewalls": {
+  "0": {
+   "options": [
+    "Postgres is listening, but the firewall only lets SSH in, so it drops the rest: `sudo ufw allow from 10.6.0.8 to any port 5432 proto tcp`",
+    "Postgres listens on the wrong address: it needs `127.0.0.1`",
+    "`sudo ufw allow 5432`: that's the narrowest rule",
+    "`sudo ufw disable`: the firewall is the problem"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "ufw uses the first rule that matches, and rule 2 denies port 3000 to everyone before rule 3 is reached. Delete rule 2",
+    "`10.6.2.7` isn't in `10.6.2.0/24`",
+    "Rules only apply after `ufw reload`",
+    "A DENY rule only affects IPv6"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`timed out`: a dropped packet gets no answer at all",
+    "`Connection refused`",
+    "`Name or service not known`",
+    "`succeeded!`, because nc only checks the route"
+   ],
+   "answer": 0
+  },
+  "4": {
+   "options": [
+    "Incoming connections are denied unless a rule allows them",
+    "Outgoing connections are allowed",
+    "Replies to your own outgoing connections get back in",
+    "It closes connections that are already established"
+   ],
+   "answer": [
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "following-a-connection": {
+  "0": {
+   "options": [
+    "`ss -p` only names your own processes, so it's someone else's, probably root's: run `sudo ss -tnp`",
+    "The connection is closing, so it has no process any more",
+    "`-n` hides process names: run `ss -tp`",
+    "Nothing holds it: the kernel opened it"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "The name doesn't point back to the address, so the PTR record is only a claim, and you don't know who's at `198.51.100.23` yet",
+    "It's the backup service: the PTR record says so",
+    "DNS is broken on this machine",
+    "The connection is to `203.0.113.9`"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "Write down the process, PID, both ends of the connection and the name, before you stop anything",
+    "`sudo kill -9` it straight away",
+    "Reboot the server",
+    "Block the address with ufw, then look at what it was"
+   ],
+   "answer": 0
+  }
+ },
+ "services": {
+  "1": {
+   "options": [
+    "It isn't running, and `list-units` hides inactive units unless you add `--all`",
+    "It has failed, and failed units are hidden",
+    "`--type=service` only shows services that start at boot",
+    "Only root can see it"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Inactive isn't running and nothing went wrong; failed tried to run and its program stopped with an error",
+    "Inactive is stopped for now and will start soon; failed is stopped for good",
+    "They mean the same: neither is running",
+    "Inactive is disabled; failed is enabled"
+   ],
+   "answer": 0
+  }
+ },
+ "start-stop-enable": {
+  "0": {
+   "options": [
+    "It was started but never enabled, so nothing starts it at boot: `sudo systemctl enable --now relay`",
+    "It crashed during the night: `sudo systemctl restart relay`",
+    "Its unit file was deleted by the reboot",
+    "`start` only lasts one hour"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "`reload`: the program rereads its configuration without stopping, so nothing it's doing is cut off",
+    "`restart`: reload doesn't really read the file",
+    "`enable`: it applies the new configuration at the next boot",
+    "`daemon-reload`: it reloads every daemon's configuration"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Nothing: changing a service needs root, so it has to be `sudo systemctl stop relay`",
+    "It stopped the service, with a warning",
+    "It asked for a password and the wrong one was typed",
+    "The service refuses to be stopped"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`sudo systemctl enable --now NAME`",
+    "`sudo systemctl start NAME`, then `sudo systemctl enable NAME`",
+    "`sudo systemctl enable NAME`",
+    "`sudo systemctl restart NAME`"
+   ],
+   "answer": [
+    0,
+    1
+   ]
+  }
+ },
+ "unit-files": {
+  "0": {
+   "options": [
+    "root: there's no `User=` line, and that's the default",
+    "uplink, the service's own name",
+    "Whoever ran `systemctl start`",
+    "nobody, the unprivileged account"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "There's a copy in `/etc/systemd/system/relay.service`, and the admin's copy there wins over the package's",
+    "Upgrades never change unit files",
+    "systemd caches unit files forever",
+    "`/usr/lib` is read only at the first boot"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "It starts anyway, after the cache's attempt: `Wants` asks for the cache but doesn't depend on it",
+    "It doesn't start: it wants the cache",
+    "It starts before the cache",
+    "systemd refuses to load it"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`ExecStart=`",
+    "`User=`",
+    "`WantedBy=`",
+    "`After=`"
+   ],
+   "answer": [
+    0,
+    1
+   ]
+  }
+ },
+ "writing-a-service": {
+  "0": {
+   "options": [
+    "`sudo systemctl daemon-reload`, then `sudo systemctl enable --now uplink`",
+    "Nothing: systemd starts files in `/etc/systemd/system` by itself",
+    "`sudo systemctl restart systemd`",
+    "A reboot, and nothing else"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "Its program crashing, or exiting with a non-zero status",
+    "`sudo systemctl stop NAME`",
+    "Its program exiting with status 0",
+    "All of them"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`ExecStart=`",
+    "`WantedBy=`",
+    "`Restart=`",
+    "`Environment=`"
+   ],
+   "answer": [
+    0,
+    1
+   ]
+  }
+ },
+ "timers": {
+  "0": {
+   "options": [
+    "`OnCalendar=Fri *-*-* 22:30:00`",
+    "`OnCalendar=*-*-* 30:22:00`",
+    "`OnCalendar=Sat *-*-* 22:30:00`",
+    "`OnCalendar=30 22 * * 5`"
+   ],
+   "answer": 0
+  },
+  "1": {
+   "options": [
+    "A name with no ending means `.service`, so it enabled the service, which has no `[Install]`. Enable `tank-log.timer`",
+    "The service needs an `[Install]` section with `WantedBy=timers.target`",
+    "It needs `sudo systemctl daemon-reload` first",
+    "Timers can't be enabled: they start at boot by themselves"
+   ],
+   "answer": 0
+  },
+  "3": {
+   "options": [
+    "`tank-log` gets `>/dev/null` and `2>&1` as two arguments: there's no shell to redirect anything",
+    "Its output is thrown away, as in cron",
+    "systemd refuses to load the unit",
+    "Its output goes to a file called `/dev/null`"
+   ],
+   "answer": 0
+  }
+ },
+ "the-journal": {
+  "1": {
+   "options": [
+    "`sudo journalctl -b -1 -p warning`",
+    "`sudo journalctl -b -p warning`",
+    "`sudo journalctl -b -1 -p warning..warning`",
+    "`sudo journalctl -n 1 -p warning`"
+   ],
+   "answer": 0
+  },
+  "2": {
+   "options": [
+    "Yes: `journalctl` runs as root and can read them, and your own shell writes the file in your home directory",
+    "No: the redirect isn't done as root, so nothing is read",
+    "No: `--since` needs a time without a date",
+    "No: `journalctl` can only print to the screen"
+   ],
+   "answer": 0
+  }
+ }
+}

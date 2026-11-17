@@ -14,11 +14,11 @@ quiz:
       $ git status -sb
       ## main...origin/main [ahead 2]
     options:
-      - "You have two commits that `origin` doesn't have yet. `git push` sends them"
+      - "Your branch is two commits ahead of another local branch called `main`"
       - "`origin` has two commits you don't have. `git pull` gets them"
       - "Two files are changed but not committed"
-      - "Your branch is two commits ahead of another local branch called `main`"
-    answer: 0
+      - "You have two commits that `origin` doesn't have yet. `git push` sends them"
+    answer: 3
     explain: >-
       `main...origin/main` compares your `main` with git's record of the remote's. **Ahead** is
       what you have and they don't, so push it. **Behind** would be the other way, and needs a
@@ -32,11 +32,11 @@ quiz:
       hint: Updates were rejected because the remote contains work that you do not
       hint: have locally.
     options:
-      - "Someone pushed first. `git pull` to bring their work in, then push again"
-      - "You don't have permission to push: ask for access"
       - "Your commit is broken: amend it and push again"
+      - "You don't have permission to push: ask for access"
+      - "Someone pushed first. `git pull` to bring their work in, then push again"
       - "Nothing: the push will retry by itself"
-    answer: 0
+    answer: 2
     explain: >-
       Git won't let a push throw away commits on the remote that you've never seen. Pull first,
       which joins their work with yours, then the push goes through. Nothing is lost on either side.
@@ -44,11 +44,11 @@ quiz:
   - type: choice
     q: "Which of these changes the files in your working tree?"
     options:
-      - "`git pull`: it fetches, then merges what it fetched into your branch"
-      - "`git fetch`"
       - "`git remote -v`"
+      - "`git fetch`"
+      - "`git pull`: it fetches, then merges what it fetched into your branch"
       - "`git status -sb`"
-    answer: 0
+    answer: 2
     explain: >-
       `git fetch` only downloads the remote's commits and moves `origin/main`, your record of
       where the remote is. Your branch and files stay as they were until you merge, and `git pull`
@@ -56,11 +56,11 @@ quiz:
   - type: choice
     q: "`git status -sb` says `## main...origin/main`, nothing ahead or behind. Nakamura pushed an hour ago. Why doesn't it show?"
     options:
-      - "`status` compares with `origin/main` as of your last fetch. `git fetch` first, and it will say `[behind 1]`"
+      - "Pushes take an hour to show up"
       - "Her push failed"
       - "`-sb` only shows your own commits"
-      - "Pushes take an hour to show up"
-    answer: 0
+      - "`status` compares with `origin/main` as of your last fetch. `git fetch` first, and it will say `[behind 1]`"
+    answer: 3
     explain: >-
       Status never asks the remote anything: it compares with git's record, which only moves when
       you fetch, pull or push. Fetch before you trust ahead and behind.

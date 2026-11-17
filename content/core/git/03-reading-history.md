@@ -27,11 +27,11 @@ quiz:
   - type: choice
     q: "A commit changed `co2_alarm_ppm=2000` to `co2_alarm_ppm=5000`. Does `git log -S co2_alarm_ppm` list it?"
     options:
-      - "No: the line still contains `co2_alarm_ppm` once, so the number of times it appears didn't change"
-      - "Yes: `-S` lists every commit that touched a line containing the string"
       - "Yes, but only with `-p`"
+      - "Yes: `-S` lists every commit that touched a line containing the string"
+      - "No: the line still contains `co2_alarm_ppm` once, so the number of times it appears didn't change"
       - "No: `-S` only searches commit messages"
-    answer: 0
+    answer: 2
     explain: >-
       `-S` lists commits where the number of times the string appears **changed**: it was added
       or removed. Changing the value kept one `co2_alarm_ppm`, so that commit isn't listed. Search

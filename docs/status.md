@@ -157,8 +157,8 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 - **A clue a task finds goes in that task's beat, never in `complete`** (#422). `complete` plays when the
   quiz completes the module, and a challenge or a lab doesn't gate that. `challenge_done` follows the
   browser's verdict, as the challenge's XP does (#54).
-- **A module's right answers don't all share a position** (#417). `test_content.py` enforces it, with
-  the live modules that still do listed until #418 remaps their stored answers.
+- **A module's right answers don't all share a position** (#417). `test_content.py` enforces it with
+  no exceptions since #418, whose migration `0011` moved the stored answers with the options.
 
 ## Release ledger
 

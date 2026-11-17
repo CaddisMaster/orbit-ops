@@ -17,11 +17,11 @@ quiz:
       Filesystem      Size  Used Avail Use% Mounted on
       /dev/vda1        25G   25G     0 100% /
     options:
-      - "The app still has the file open, so its space isn't freed until the app closes it"
+      - "`sudo rm` doesn't really delete root's files"
       - "`rm` moves files to a hidden trash directory first"
       - "`df` only updates once an hour"
-      - "`sudo rm` doesn't really delete root's files"
-    answer: 0
+      - "The app still has the file open, so its space isn't freed until the app closes it"
+    answer: 3
     explain: >-
       A deleted file's space is freed when the last program holding it open lets go. The app is
       still writing to it, so the space stays used, and now you can't even see the file.
@@ -30,19 +30,19 @@ quiz:
   - type: choice
     q: "Which files does `find /var/log -name '*.log' -mtime +30` print?"
     options:
-      - "`.log` files under `/var/log` last changed more than 30 days ago"
-      - "`.log` files under `/var/log` changed in the last 30 days"
       - "The 30 biggest `.log` files"
+      - "`.log` files under `/var/log` changed in the last 30 days"
+      - "`.log` files under `/var/log` last changed more than 30 days ago"
       - "`.log` files created exactly 30 days ago"
-    answer: 0
+    answer: 2
     explain: >-
       `-mtime` counts whole days since the file was last changed: `+30` means more than 30,
       `-30` less than 30, and plain `30` exactly 30. The quotes around `'*.log'` matter, so that
       `find` gets the pattern and not the shell.
   - type: choice
     q: "`df -h` says the disk is 97% used. What's the quickest way to see which directory under `/var` is using it?"
-    options: ["`du -sh /var/*`", "`df -h /var`", "`ls -lh /var`", "`free -h`"]
-    answer: 0
+    options: ["`ls -lh /var`", "`df -h /var`", "`du -sh /var/*`", "`free -h`"]
+    answer: 2
     explain: >-
       `du` adds up the files under each path you give it, and `-s` gives one total per path. `df`
       only reports the whole filesystem. `ls -lh` shows a directory as its own small entry, not
@@ -59,11 +59,11 @@ quiz:
       $ ln -s /var/log/o2/2026-10-08.log current.log
       ln: failed to create symbolic link 'current.log': File exists
     options:
-      - "`ln -sf /var/log/o2/2026-10-08.log current.log`: `-f` replaces the old link"
+      - "`mv current.log 2026-10-08.log`"
       - "`rm 2026-10-08.log`, then try again"
       - "`cp /var/log/o2/2026-10-08.log current.log`"
-      - "`mv current.log 2026-10-08.log`"
-    answer: 0
+      - "`ln -sf /var/log/o2/2026-10-08.log current.log`: `-f` replaces the old link"
+    answer: 3
     explain: >-
       `ln -s` won't overwrite a name that exists. `-f` removes the old link first. A copy
       wouldn't follow tomorrow's change, and the other two damage the real log.

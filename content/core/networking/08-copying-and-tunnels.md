@@ -15,11 +15,11 @@ quiz:
       index.html  style.css
       $ rsync -av site /srv/www/
     options:
-      - "In `/srv/www/site/`: without a trailing slash on the source, rsync copies the directory itself"
+      - "In `/srv/www/` with everything else there deleted"
       - "In `/srv/www/`, directly: `index.html` and `style.css` next to whatever was there"
       - "Nowhere: `-a` needs a trailing slash"
-      - "In `/srv/www/` with everything else there deleted"
-    answer: 0
+      - "In `/srv/www/site/`: without a trailing slash on the source, rsync copies the directory itself"
+    answer: 3
     explain: >-
       `site` (no slash) means the directory `site`, so rsync creates `/srv/www/site/`.
       `site/` means what's inside it, so the files would land in `/srv/www/` itself. That one
@@ -48,11 +48,11 @@ quiz:
   - type: choice
     q: "A server's admin page listens on `127.0.0.1:9000`. Your laptop can SSH to the server. How do you open the page in your laptop's browser?"
     options:
-      - "`ssh -L 9000:localhost:9000 user@server`, then browse to `http://localhost:9000` on the laptop"
-      - "Browse to `http://server:9000`"
       - "`ssh -L 9000:server:22 user@server`"
+      - "Browse to `http://server:9000`"
+      - "`ssh -L 9000:localhost:9000 user@server`, then browse to `http://localhost:9000` on the laptop"
       - "Change the admin page to listen on `0.0.0.0` first"
-    answer: 0
+    answer: 2
     explain: >-
       `-L LOCAL:HOST:PORT` listens on your laptop's `LOCAL` and carries each connection through
       SSH to `HOST:PORT` as the server sees it, and `localhost` there means the server itself.
@@ -62,10 +62,10 @@ quiz:
     q: "Which are true of `rsync -av SRC/ DEST/` run a second time, when nothing has changed?"
     options:
       - "It copies nothing: rsync only sends what differs"
-      - "It keeps permissions and times, because `-a` is archive mode"
       - "It deletes files in DEST that aren't in SRC"
       - "It lists every file again, copied or not"
-    answer: [0, 1]
+      - "It keeps permissions and times, because `-a` is archive mode"
+    answer: [0, 3]
     explain: >-
       rsync compares first and sends only differences, which is why it's the tool for a sync you
       run again and again. `-a` keeps permissions, times, owners and links. Nothing is deleted

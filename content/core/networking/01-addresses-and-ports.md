@@ -13,11 +13,11 @@ quiz:
       default via 10.9.3.1 dev eth0 proto static
       10.9.3.0/24 dev eth0 proto kernel scope link src 10.9.3.40
     options:
-      - "To the gateway, `10.9.3.1`: `10.9.4.17` isn't on `10.9.3.0/24`, so only the default route matches"
       - "Straight to `10.9.4.17` over `eth0`, since every `10.9` address is on the same network"
+      - "To the gateway, `10.9.3.1`: `10.9.4.17` isn't on `10.9.3.0/24`, so only the default route matches"
       - "Nowhere: there's no route that names `10.9.4.17`"
       - "To `10.9.3.40`, the server's own address"
-    answer: 0
+    answer: 1
     explain: >-
       `/24` means the first three numbers name the network, so `10.9.3.0/24` is `10.9.3.0` to
       `10.9.3.255`. `10.9.4.17` is outside it. The default route is for everything no other
@@ -31,11 +31,11 @@ quiz:
       LISTEN 0      4096         0.0.0.0:22        0.0.0.0:*    users:(("sshd",pid=812,fd=3))
       LISTEN 0      4096       127.0.0.1:5000      0.0.0.0:*    users:(("dashboard",pid=1440,fd=6))
     options:
-      - "The dashboard listens on `127.0.0.1`, the loopback address, so only programs on the server itself can reach it"
       - "Port 5000 is reserved, so other machines can't use it"
+      - "The dashboard listens on `127.0.0.1`, the loopback address, so only programs on the server itself can reach it"
       - "The dashboard isn't running: there's no `ESTAB` line for it"
       - "`sshd` is using the network, so nothing else can"
-    answer: 0
+    answer: 1
     explain: >-
       The Local Address column is the address a program listens on. `127.0.0.1` is the machine
       talking to itself, so a connection from anywhere else never reaches it. To be reachable from
@@ -55,8 +55,8 @@ quiz:
       listening on this port?"
   - type: multi
     q: "Which of these are on the same subnet as `10.0.7.31/24`?"
-    options: ["`10.0.7.200`", "`10.0.8.31`", "`10.0.7.1`", "`10.1.7.31`"]
-    answer: [0, 2]
+    options: ["`10.0.8.31`", "`10.1.7.31`", "`10.0.7.1`", "`10.0.7.200`"]
+    answer: [2, 3]
     explain: >-
       With `/24`, the first three numbers must match: `10.0.7`. `10.0.7.200` and `10.0.7.1` do;
       `10.0.8.31` and `10.1.7.31` are on other networks, reached through the gateway.

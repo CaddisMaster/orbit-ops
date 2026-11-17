@@ -26,11 +26,11 @@ quiz:
   - type: choice
     q: "What is the first line of a script, `#!/usr/bin/env bash`, for?"
     options:
-      - "It tells the system which program runs the file when you run it as `./script`"
       - "It's a comment, so bash ignores it and it does nothing"
+      - "It tells the system which program runs the file when you run it as `./script`"
       - "It makes the file executable"
       - "It imports bash's built-in commands"
-    answer: 0
+    answer: 1
     explain: >-
       `#!` (the "shebang") names the interpreter. `env` finds `bash` on your PATH, so the
       script works wherever bash is installed. Bash does read the line as a comment, but by
@@ -51,11 +51,11 @@ quiz:
       $ shift-check
       shift-check: command not found
     options:
-      - "`~/bin` isn't on your PATH yet: Ubuntu adds it at login only if it existed then, so log in again (or `export PATH=\"$HOME/bin:$PATH\"`)"
       - "Scripts must end in `.sh` to be found"
+      - "`~/bin` isn't on your PATH yet: Ubuntu adds it at login only if it existed then, so log in again (or `export PATH=\"$HOME/bin:$PATH\"`)"
       - "It needs `sudo` because it's in a bin directory"
       - "`~/bin` is a system directory, so the shell ignores it"
-    answer: 0
+    answer: 1
     explain: >-
       The shell looks for a command only in the directories on `$PATH`. Ubuntu's `~/.profile`
       adds `~/bin` when you log in, but only if the directory already exists, so a `~/bin` made

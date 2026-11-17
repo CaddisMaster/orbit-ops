@@ -17,11 +17,11 @@ quiz:
        deck.conf | 1 +
        1 file changed, 1 insertion(+)
     options:
-      - "`main` had no commits of its own since the branch started, so git just moved `main` up to `dim-lights`' commit. There's no merge commit"
+      - "Nothing yet: a fast-forward has to be confirmed with `git commit`"
       - "Git made a merge commit with two parents"
       - "Git copied `dim-lights`' commits onto `main` as new commits"
-      - "Nothing yet: a fast-forward has to be confirmed with `git commit`"
-    answer: 0
+      - "`main` had no commits of its own since the branch started, so git just moved `main` up to `dim-lights`' commit. There's no merge commit"
+    answer: 3
     explain: >-
       When the branch you're on hasn't moved, there's nothing to join: its commit is already in
       the other branch's history, so git moves the name forward. That's a **fast-forward**. If you
@@ -29,11 +29,11 @@ quiz:
   - type: choice
     q: What is a branch, in git?
     options:
-      - "A name that points at a commit, and moves forward when you commit on it"
-      - "A copy of the project's files in another directory"
       - "A separate repository that shares a history"
+      - "A copy of the project's files in another directory"
+      - "A name that points at a commit, and moves forward when you commit on it"
       - "A list of commits, stored apart from the rest"
-    answer: 0
+    answer: 2
     explain: >-
       A branch is just a name for a commit. `git switch -c` makes a new name pointing where you
       are, and each commit moves the current branch's name on to it. That's why branches are
@@ -45,11 +45,11 @@ quiz:
       error: the branch 'pump-test' is not fully merged.
       If you are sure you want to delete it, run 'git branch -D pump-test'
     options:
-      - "`pump-test` has commits that aren't in the branch you're on, so deleting its name would lose track of them"
-      - "`pump-test` is the branch you're on, so it can't be deleted"
       - "`pump-test` has uncommitted changes"
+      - "`pump-test` is the branch you're on, so it can't be deleted"
+      - "`pump-test` has commits that aren't in the branch you're on, so deleting its name would lose track of them"
       - "Branches can only be deleted with `-D`"
-    answer: 0
+    answer: 2
     explain: >-
       `-d` only deletes a branch whose commits are already merged, so nothing is lost. Merge it
       first, or, if the work really is unwanted, `-D` deletes it anyway.

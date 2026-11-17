@@ -37,11 +37,11 @@ quiz:
 
       *** Please tell me who you are.
     options:
-      - "`git config --global user.name \"…\"` and `git config --global user.email \"…\"`, then commit again"
+      - "Log in to GitHub first"
       - "Run the commit again with `sudo`"
       - "`git init` again: the repository wasn't created properly"
-      - "Log in to GitHub first"
-    answer: 0
+      - "`git config --global user.name \"…\"` and `git config --global user.email \"…\"`, then commit again"
+    answer: 3
     explain: >-
       Every commit records an author, and git takes it from your configuration. It's set **per
       machine**, in `~/.gitconfig`, so a new laptop starts without one. It has nothing to do with
@@ -50,11 +50,11 @@ quiz:
   - type: multi
     q: Which of these does a commit record?
     options:
-      - "A snapshot of every tracked file, as it was staged"
       - "Who made it, and when"
       - "The commit it came after: its parent"
       - "Every file in the directory, tracked or not"
-    answer: [0, 1, 2]
+      - "A snapshot of every tracked file, as it was staged"
+    answer: [0, 1, 3]
     explain: >-
       A commit is a whole snapshot of the tracked files, not just the lines that changed, plus an
       author, a time, a message and a parent. Untracked files aren't in it: git keeps only what
@@ -62,11 +62,11 @@ quiz:
   - type: choice
     q: "You and Okafor each make a commit called `Track airmix.conf`, of the same file. Why do your hashes differ?"
     options:
-      - "The hash is worked out from everything in the commit: the author and time differ, so the hash does too"
       - "Git picks a random hash for every commit"
+      - "The hash is worked out from everything in the commit: the author and time differ, so the hash does too"
       - "Hashes depend on the machine's hostname"
       - "They don't: the same message and the same file give the same hash"
-    answer: 0
+    answer: 1
     explain: >-
       A commit's hash is a fingerprint of all of it: the snapshot, the author, the times, the
       message and the parent. Change any of those and the hash changes. That's what makes it a

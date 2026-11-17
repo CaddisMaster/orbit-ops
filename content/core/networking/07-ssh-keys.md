@@ -18,11 +18,11 @@ quiz:
       ...
       Host key verification failed.
     options:
-      - "Stop, and find out from whoever runs the server whether its key really changed (a rebuild, a new server). Only then remove the old line with `ssh-keygen -R` and accept the new key"
+      - "Generate a new key pair of your own: yours has changed"
       - "Run `ssh-keygen -R archive.example.org` straight away and connect again"
       - "Delete `~/.ssh/known_hosts` so the warning goes away for good"
-      - "Generate a new key pair of your own: yours has changed"
-    answer: 0
+      - "Stop, and find out from whoever runs the server whether its key really changed (a rebuild, a new server). Only then remove the old line with `ssh-keygen -R` and accept the new key"
+    answer: 3
     explain: >-
       The server sent a different host key from the one `known_hosts` remembers. Either the
       server was rebuilt, or something between you is pretending to be it. ssh can't tell
@@ -41,11 +41,11 @@ quiz:
       /home/cadet/.ssh/config: line 3: Bad configuration option: username
       /home/cadet/.ssh/config: terminating, 1 bad configuration options
     options:
-      - "The option is `User`, not `Username`: ssh refuses a config it can't read, and `ssh -G` says which line"
       - "`HostName` must be an IP address"
+      - "The option is `User`, not `Username`: ssh refuses a config it can't read, and `ssh -G` says which line"
       - "The key is the wrong type"
       - "`ssh -G` only works after a successful login"
-    answer: 0
+    answer: 1
     explain: >-
       ssh's option is `User`. `ssh -G HOST` prints the settings ssh would use for HOST without
       connecting, and it fails loudly on a mistake like this one, which makes it the quickest
@@ -53,11 +53,11 @@ quiz:
   - type: choice
     q: "Which half of a key pair goes to the server, and where does it go?"
     options:
-      - "The public key (`.pub`), as one line in `~/.ssh/authorized_keys` of the account you log in as"
       - "The private key, in `/etc/ssh/sshd_config`"
+      - "The public key (`.pub`), as one line in `~/.ssh/authorized_keys` of the account you log in as"
       - "The public key, in your own `~/.ssh/known_hosts`"
       - "Both halves, so the server can check them against each other"
-    answer: 0
+    answer: 1
     explain: >-
       The private key never leaves your machine. The server keeps your public key in the
       account's `authorized_keys`, and at login you prove you hold the matching private key.
@@ -65,11 +65,11 @@ quiz:
   - type: multi
     q: "Which are true of `ssh-keygen -t ed25519 -f ~/.ssh/archive_key`?"
     options:
-      - "It writes the private key to `~/.ssh/archive_key` and the public key to `~/.ssh/archive_key.pub`"
-      - "The private key file is readable by you only (600)"
       - "The passphrase it asks for protects the private key file if someone copies it"
       - "It uploads the public key to the server"
-    answer: [0, 1, 2]
+      - "The private key file is readable by you only (600)"
+      - "It writes the private key to `~/.ssh/archive_key` and the public key to `~/.ssh/archive_key.pub`"
+    answer: [0, 2, 3]
     explain: >-
       ssh-keygen only makes the pair, on this machine. Getting the public key to a server is a
       separate step (`ssh-copy-id`, or adding the line to `authorized_keys`). The passphrase

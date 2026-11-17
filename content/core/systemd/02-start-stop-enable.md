@@ -14,11 +14,11 @@ quiz:
       $ systemctl is-enabled relay
       disabled
     options:
-      - "It was started but never enabled, so nothing starts it at boot: `sudo systemctl enable --now relay`"
+      - "`start` only lasts one hour"
       - "It crashed during the night: `sudo systemctl restart relay`"
       - "Its unit file was deleted by the reboot"
-      - "`start` only lasts one hour"
-    answer: 0
+      - "It was started but never enabled, so nothing starts it at boot: `sudo systemctl enable --now relay`"
+    answer: 3
     explain: >-
       `start` runs it now, and that's all: a reboot forgets it. `disabled` says nothing starts it at
       boot. `enable` makes the link that does, and `--now` starts it in the same command. A crash
@@ -26,11 +26,11 @@ quiz:
   - type: choice
     q: "You've changed a service's configuration file. It supports `reload`. Which is better, and why?"
     options:
-      - "`reload`: the program rereads its configuration without stopping, so nothing it's doing is cut off"
       - "`restart`: reload doesn't really read the file"
+      - "`reload`: the program rereads its configuration without stopping, so nothing it's doing is cut off"
       - "`enable`: it applies the new configuration at the next boot"
       - "`daemon-reload`: it reloads every daemon's configuration"
-    answer: 0
+    answer: 1
     explain: >-
       `reload` asks the running program to reread its configuration, so its connections and work
       carry on. `restart` stops it and starts it again, which also works but drops whatever it was
@@ -43,11 +43,11 @@ quiz:
       Failed to stop relay.service: Interactive authentication required.
       See system logs and 'systemctl status relay.service' for details.
     options:
-      - "Nothing: changing a service needs root, so it has to be `sudo systemctl stop relay`"
       - "It stopped the service, with a warning"
+      - "Nothing: changing a service needs root, so it has to be `sudo systemctl stop relay`"
       - "It asked for a password and the wrong one was typed"
       - "The service refuses to be stopped"
-    answer: 0
+    answer: 1
     explain: >-
       Reading a service's state is open to everyone; starting, stopping and enabling are root's.
       Without `sudo`, systemctl had no way to ask for a password here, so it refused, and the
@@ -55,11 +55,11 @@ quiz:
   - type: multi
     q: "A service is stopped and disabled. Which of these leave it running now **and** starting at every boot?"
     options:
+      - "`sudo systemctl restart NAME`"
       - "`sudo systemctl enable --now NAME`"
       - "`sudo systemctl start NAME`, then `sudo systemctl enable NAME`"
       - "`sudo systemctl enable NAME`"
-      - "`sudo systemctl restart NAME`"
-    answer: [0, 1]
+    answer: [1, 2]
     explain: >-
       `enable --now` does both in one go, and `start` then `enable` does them one at a time.
       `enable` on its own only takes effect at the next boot, and `restart` runs it now without

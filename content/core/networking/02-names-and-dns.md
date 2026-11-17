@@ -16,11 +16,11 @@ quiz:
       $ ping -c 1 api.meridian
       PING api.meridian (10.4.6.9) 56(84) bytes of data.
     options:
-      - "`/etc/hosts` has an old line for `api.meridian`. `getent` and `ping` read it before DNS; `dig` only asks DNS. Remove the line, then check `getent` agrees with `dig`"
+      - "Nothing's wrong with the name: `ping` would use `dig`'s answer if the API were up"
       - "DNS is wrong: `dig` gives a different address from `getent`, so the record needs changing"
       - "The DNS server's cache is stale: wait for the TTL to run out"
-      - "Nothing's wrong with the name: `ping` would use `dig`'s answer if the API were up"
-    answer: 0
+      - "`/etc/hosts` has an old line for `api.meridian`. `getent` and `ping` read it before DNS; `dig` only asks DNS. Remove the line, then check `getent` agrees with `dig`"
+    answer: 3
     explain: >-
       `getent hosts` answers the way programs do, `/etc/hosts` first and then DNS, and `ping`
       agrees with it: `10.4.6.9`. `dig` skips `/etc/hosts` and shows what DNS says:
@@ -35,11 +35,11 @@ quiz:
       ...
       ;; SERVER: 10.4.6.1#53(10.4.6.1) (UDP)
     options:
-      - "The DNS server answered, and the answer is that the name doesn't exist. Check the spelling"
       - "The DNS server couldn't be reached"
+      - "The DNS server answered, and the answer is that the name doesn't exist. Check the spelling"
       - "The name exists but the machine is down"
       - "The name exists but has no address yet; try again after the TTL"
-    answer: 0
+    answer: 1
     explain: >-
       `status: NXDOMAIN` means "no such name", and the `SERVER` line says who said so: the
       server was reached and answered. An unreachable server looks different, `no servers could
@@ -48,19 +48,19 @@ quiz:
   - type: choice
     q: "You change `shop.example.org`'s A record to a new server. An hour later, some people still reach the old one. Why?"
     options:
-      - "Resolvers that looked it up before the change keep their cached answer until its TTL runs out"
       - "DNS changes only take effect at midnight"
+      - "Resolvers that looked it up before the change keep their cached answer until its TTL runs out"
       - "Their browsers have the old address in `/etc/resolv.conf`"
       - "A records can't be changed, only deleted and added again"
-    answer: 0
+    answer: 1
     explain: >-
       Every answer carries a TTL, in seconds, and anything that asked keeps the answer that long
       without asking again. With a TTL of 3600, an answer fetched just before the change can be
       used for up to an hour after it. Lowering the TTL a day before a move makes the switch quick.
   - type: multi
     q: "Which of these read `/etc/hosts` before asking DNS?"
-    options: ["`getent hosts`", "`dig`", "`ping`", "`curl`"]
-    answer: [0, 2, 3]
+    options: ["`getent hosts`", "`curl`", "`ping`", "`dig`"]
+    answer: [0, 1, 2]
     explain: >-
       Almost every program looks names up through the system's resolver library, which follows
       `/etc/nsswitch.conf`'s `hosts: files dns`: the file first. `dig` (and `host`) are DNS

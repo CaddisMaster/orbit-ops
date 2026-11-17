@@ -8,8 +8,8 @@ story: |
 quiz:
   - type: choice
     q: In a fresh shell you run `REGION=eu`, then start a script. What does the script see in `$REGION`?
-    options: ["`eu`", "Nothing: the variable wasn't exported", "An error", "It depends on the script's permissions"]
-    answer: 1
+    options: ["`eu`", "It depends on the script's permissions", "An error", "Nothing: the variable wasn't exported"]
+    answer: 3
     explain: >-
       A plain assignment creates a **shell** variable, visible only to the current shell. `export
       REGION=eu` makes it an **environment** variable, which child processes inherit. You can also
@@ -18,10 +18,10 @@ quiz:
     q: Why must you type `./deploy.sh` rather than just `deploy.sh`?
     options:
       - "The `./` makes it executable"
-      - "The current directory isn't in `$PATH`, so the shell won't look there"
       - "`./` runs it as root"
+      - "The current directory isn't in `$PATH`, so the shell won't look there"
       - "It's only needed for Bash scripts"
-    answer: 1
+    answer: 2
     explain: >-
       The shell only searches the directories listed in `$PATH`. Leaving `.` out of `PATH` is
       deliberate: otherwise a malicious file named `ls` in a shared directory could run instead
@@ -34,8 +34,8 @@ quiz:
       PATH in order, and the first one wins.
   - type: choice
     q: You added an `export PATH=…` line to `~/.bashrc`. How do you use it in the shell you already have open?
-    options: ["Log out and back in", "`source ~/.bashrc`", "`chmod +x ~/.bashrc`", "`export ~/.bashrc`"]
-    answer: 1
+    options: ["Log out and back in", "`chmod +x ~/.bashrc`", "`source ~/.bashrc`", "`export ~/.bashrc`"]
+    answer: 2
     explain: >-
       `source` (or `.`) runs the file inside your current shell, so its changes take effect
       there. Running it as `bash ~/.bashrc` would apply them to a child shell that exits

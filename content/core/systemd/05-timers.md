@@ -13,11 +13,11 @@ quiz:
       $ cat /etc/cron.d/purge-logs
       30 22 * * 5 root /usr/local/sbin/purge-logs >/dev/null 2>&1
     options:
-      - "`OnCalendar=Fri *-*-* 22:30:00`"
-      - "`OnCalendar=*-*-* 30:22:00`"
       - "`OnCalendar=Sat *-*-* 22:30:00`"
+      - "`OnCalendar=*-*-* 30:22:00`"
+      - "`OnCalendar=Fri *-*-* 22:30:00`"
       - "`OnCalendar=30 22 * * 5`"
-    answer: 0
+    answer: 2
     explain: >-
       Cron's fields are minute, hour, day of month, month, day of week: `30 22` is 22:30, and day
       `5` is Friday (Monday is `1`, Sunday `0` or `7`). `OnCalendar=` writes the time the usual
@@ -31,11 +31,11 @@ quiz:
       template units). This means they are not meant to be enabled or disabled using systemctl.
       ...
     options:
-      - "A name with no ending means `.service`, so it enabled the service, which has no `[Install]`. Enable `tank-log.timer`"
       - "The service needs an `[Install]` section with `WantedBy=timers.target`"
+      - "A name with no ending means `.service`, so it enabled the service, which has no `[Install]`. Enable `tank-log.timer`"
       - "It needs `sudo systemctl daemon-reload` first"
       - "Timers can't be enabled: they start at boot by themselves"
-    answer: 0
+    answer: 1
     explain: >-
       `systemctl` reads a bare name as a service. The service is meant to have no `[Install]`:
       the timer starts it. Enable the timer, written in full: `sudo systemctl enable --now
@@ -57,11 +57,11 @@ quiz:
     code: |-
       ExecStart=/usr/local/sbin/tank-log >/dev/null 2>&1
     options:
-      - "`tank-log` gets `>/dev/null` and `2>&1` as two arguments: there's no shell to redirect anything"
       - "Its output is thrown away, as in cron"
+      - "`tank-log` gets `>/dev/null` and `2>&1` as two arguments: there's no shell to redirect anything"
       - "systemd refuses to load the unit"
       - "Its output goes to a file called `/dev/null`"
-    answer: 0
+    answer: 1
     explain: >-
       `ExecStart=` runs the program directly, not through a shell, so redirections aren't
       redirections: they're just more words passed to the program. Leave them out, and what the

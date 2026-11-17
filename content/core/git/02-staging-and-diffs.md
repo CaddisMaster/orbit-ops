@@ -17,11 +17,11 @@ quiz:
       MM scrubber.conf
       ?? notes.txt
     options:
-      - "`airmix.conf`'s change and the staged part of `scrubber.conf`: only what's in the index"
-      - "All four files, since each has changed"
       - "`airmix.conf`, `pumps.conf` and `scrubber.conf`, but not the untracked `notes.txt`"
+      - "All four files, since each has changed"
+      - "`airmix.conf`'s change and the staged part of `scrubber.conf`: only what's in the index"
       - "Only `airmix.conf`: a file with changes in both columns can't be committed"
-    answer: 0
+    answer: 2
     explain: >-
       A commit takes the **index**, the left column. `M ` is staged, ` M` is changed but not
       staged, and `MM` is both: part of `scrubber.conf` is staged and a later edit isn't, so only
@@ -29,11 +29,11 @@ quiz:
   - type: choice
     q: "`git status` lists a file under \"Changes to be committed\", but `git diff` prints nothing. Why?"
     options:
-      - "`git diff` compares the working tree with the index, and everything is staged. `git diff --staged` shows it"
+      - "`git diff` needs the file's name"
       - "The change was lost when it was staged"
       - "`git diff` only works after the first commit"
-      - "`git diff` needs the file's name"
-    answer: 0
+      - "`git diff` compares the working tree with the index, and everything is staged. `git diff --staged` shows it"
+    answer: 3
     explain: >-
       Plain `git diff` shows what you **haven't** staged yet. Once every change is staged, there's
       nothing left between the working tree and the index. `git diff --staged` compares the
@@ -41,11 +41,11 @@ quiz:
   - type: choice
     q: "Which command throws away an edit for good?"
     options:
-      - "`git restore FILE`"
-      - "`git restore --staged FILE`"
       - "`git diff FILE`"
+      - "`git restore --staged FILE`"
+      - "`git restore FILE`"
       - "`git add -p FILE`, answering `n` to every hunk"
-    answer: 0
+    answer: 2
     explain: >-
       `git restore FILE` puts the file back as the index has it, and the edit was never in any
       commit, so there's nothing to get it back from. `--staged` only takes the change out of the
@@ -59,11 +59,11 @@ quiz:
   - type: choice
     q: "`git add -p` shows a hunk you're not ready to commit and asks `(1/2) Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]?`. What do you answer?"
     options:
-      - "`n`: leave it out of the index, and move on to the next hunk"
       - "`d`: delete the change from the file"
+      - "`n`: leave it out of the index, and move on to the next hunk"
       - "`q`: stage it and quit"
       - "`s`: skip it for good"
-    answer: 0
+    answer: 1
     explain: >-
       `y` stages the hunk and `n` leaves it unstaged; the edit stays in your file either way. `q`
       quits without staging this hunk or any after it, `d` leaves this hunk and every later one

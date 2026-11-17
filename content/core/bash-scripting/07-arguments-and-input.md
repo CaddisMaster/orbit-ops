@@ -9,11 +9,11 @@ quiz:
   - type: choice
     q: "`./backup.sh /srv/data \"Crew Logs\" 7` is run. What are `$2` and `$#`?"
     options:
-      - "`$2` is `Crew Logs`, `$#` is 3"
+      - "`$2` is `/srv/data`, `$#` is 3"
       - "`$2` is `Crew`, `$#` is 4"
       - "`$2` is `Crew Logs`, `$#` is 4"
-      - "`$2` is `/srv/data`, `$#` is 3"
-    answer: 0
+      - "`$2` is `Crew Logs`, `$#` is 3"
+    answer: 3
     explain: >-
       The shell splits the command line before the script ever sees it, and the quotes keep
       `Crew Logs` one argument. `$1` is the first after the script's name (`$0`), and `$#`
@@ -26,11 +26,11 @@ quiz:
         echo "[$arg]"
       done
     options:
-      - "`[a]` `[b]` `[c]`, one per line"
+      - "Nothing"
       - "`[a b]` `[c]`, one per line"
       - "`[a b c]`"
-      - "Nothing"
-    answer: 0
+      - "`[a]` `[b]` `[c]`, one per line"
+    answer: 3
     explain: >-
       Unquoted, `$*` (and `$@`) are split again at every space, so `a b` falls apart. `"$@"`
       gives back exactly the arguments the script was given: `[a b]` then `[c]`.
@@ -42,11 +42,11 @@ quiz:
         exit 2
       fi
     options:
-      - "So it isn't mistaken for the script's real output, and so the caller can tell \"used wrong\" from other failures"
-      - "Because `echo` can't write to stdout inside an `if`"
       - "Because exit status 1 is reserved for the shell"
+      - "Because `echo` can't write to stdout inside an `if`"
+      - "So it isn't mistaken for the script's real output, and so the caller can tell \"used wrong\" from other failures"
       - "So that it only appears when the script runs from cron"
-    answer: 0
+    answer: 2
     explain: >-
       Anything reading the script's output, like a pipe or a `> file`, shouldn't get an error
       message mixed in. Status 2 is the common convention for "wrong usage": bash's own
@@ -59,8 +59,8 @@ quiz:
       and `$#` goes down by one.
   - type: choice
     q: "Which line takes an optional second argument, defaulting to 1?"
-    options: ["`days=${2:-1}`", "`days=$2 || 1`", "`days=${1:-2}`", "`days=$2:1`"]
-    answer: 0
+    options: ["`days=$2 || 1`", "`days=${2:-1}`", "`days=${1:-2}`", "`days=$2:1`"]
+    answer: 1
     explain: >-
       `${VAR:-default}` works on arguments too (day 14). When `$2` is missing or empty, `days`
       is 1.
