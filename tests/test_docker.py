@@ -128,3 +128,49 @@ def test_module_02s_clue_is_what_the_setup_builds():
     assert "2026-09-30T03:47Z" in said and "C-323" in said
     assert "C-323" not in " ".join(m.text for m in module.comms.complete)  # a clue a task finds stays out of complete
     assert "#" not in setup  # a pasted setup has no comments for zsh to trip on (#429)
+
+
+# --- 03 A container's life (#449) -------------------------------------------------------------
+@pytest.mark.criterion(449, "Module 03 of Unit 2.2 is complete content")
+def test_module_03_is_complete():
+    _is_complete_lab(_module("a-containers-life"))
+
+
+@pytest.mark.criterion(449, "Module 03's lab checks hold on any machine")
+def test_module_03s_lab_checks_hold_on_any_machine():
+    """The example is a real run on Docker Engine 29.7.2. Other times and tick numbers, CRLF and a
+    slower machine pass; the shortcuts and slips don't."""
+    module = _module("a-containers-life")
+    listing, logs, stopped, retried = (box.example for box in module.lab.boxes)
+    assert _passes(module, [listing, logs, stopped, retried])
+
+    later = [
+        listing.replace("4 seconds", "12 seconds"),
+        logs.replace("tick 3\ntick 4\ntick 5", "tick 11\ntick 12\ntick 13").replace("\n", "\r\n"),
+        stopped.replace("Less than a second ago", "3 seconds ago"),
+        retried,
+    ]
+    assert _passes(module, later)
+
+    def fails(box, text):
+        pasted = [listing, logs, stopped, retried]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, "job-watch Up 4 seconds\njob-watch Up 4 seconds\n")  # never ran -a
+    assert fails(1, "cutting panel 7\ntick 5\n")  # not --tail 3
+    assert fails(1, "cutting panel 7\ntick 1\ntick 2\ntick 3\ntick 4\ntick 5\n")  # every tick: no --tail
+    assert fails(2, "job-watch\njob-watch Exited (0) Less than a second ago\n")  # not what stop leaves
+    assert fails(3, "0 exited\nattempt\n")  # no restart policy
+    assert fails(3, "2 restarting\nattempt\nattempt\nattempt\n")  # inspected too soon
+
+
+def test_module_03s_comms_quote_the_labs_figures():
+    """MERIDIAN's lab_done line is what the examples show: exit 3, 137 and three restarts."""
+    module = _module("a-containers-life")
+    listing, _, stopped, retried = (box.example for box in module.lab.boxes)
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "Exited (3)" in listing and "job-fail: EXIT 3" in said
+    assert "Exited (137)" in stopped and "job-watch: STOPPED, EXIT 137" in said
+    assert retried.startswith("3 exited") and "job-retry: 3 RESTARTS, GAVE UP" in said
+    assert "on-failure:3" in module.lab.task
