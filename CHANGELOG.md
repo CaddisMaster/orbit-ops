@@ -7,6 +7,8 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Changed
+- Python for operations now requires Git as well as Bash scripting and Networking (#441). Its
+  module 08 lab drives `git` from Python, and modules 10 and 12 send Windows learners to Git Bash.
 - The 42 Try it sections whose commands carry `# notes` now start by telling a Mac user to run
   `setopt interactive_comments`. Without it, a Mac's zsh passes each note to its command as more
   words, and some commands fail (#429).
