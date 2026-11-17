@@ -159,6 +159,17 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   browser's verdict, as the challenge's XP does (#54).
 - **A module's right answers don't all share a position** (#417). `test_content.py` enforces it with
   no exceptions since #418, whose migration `0011` moved the stored answers with the options.
+- **No `# notes` on a Try it's command lines** (#429, Sean's option 3, 2026-11-17). A Mac's zsh passes
+  them to the command. The 42 Try its written before carry a `setopt interactive_comments` line above
+  their first block, and `test_content.py` freezes that list, so a new module's Try it has none.
+- **Prerequisites follow what the labs use** (2026-11-17): `python-ops` requires Git (#441), and `docker`
+  requires `python-ops` (#446), whose scripts its modules 07 and 10 containerise.
+- **Docker labs run on any working `docker` CLI** (#446). Images are pinned by tag and multi-arch, and
+  checks read only what every engine prints (`--format` output, labels), never IDs, digests, dates or
+  sizes. Each module's lab and Try it are run for real on the VM's Docker Engine with throwaway names;
+  Ubuntu's own `docker.io` was also tried once (#448). Docker Desktop and Git Bash aren't exercised.
+- **A lab setup shown on the page mustn't give away a clue** (#448). The bay's fabricator images are
+  built from base64-encoded build files, so their dates and authors come out of Docker, not the setup.
 
 ## Release ledger
 
@@ -186,6 +197,43 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-11-17: the quiz reorder, Unit 2.2 planned, Docker modules 01–05
+
+- **Sean's decisions:** #429 option 3 (the note now, no `#` notes from here on), `python-ops` requires Git
+  (#441), and for Unit 2.2: `docker` requires `python-ops`, a tags-vs-digests clue thread, any working
+  `docker` CLI, and the 10-module list as planned. Every merge on his word ("merge #442 then #443 and
+  start #429", "merge it and start #N", "merge it and wrap there").
+- **#418 (#442, #443): the right answer moves in the 38 older modules.** 117 questions reordered (a choice
+  question swaps its right option with one other; "All of them" stays last). Migration `0011` remaps
+  `exercise_attempts.submitted` by a position table written into the revision, alone in its PR. A frozen
+  fixture of the old options holds content, table and page together. The dev database is at `0011`.
+- **#429 (#444)** and **#441 (#445):** above. The scanner for `#` notes matched the issue's count, 268
+  lines in 42 modules, and real zsh 5.9 confirmed both the failure and the fix. The 2026-11-16 production
+  dump showed no account had completed a module, so the new prerequisite locked nobody out.
+- **Unit 2.2 planned:** milestone v0.15.0 (v0.14.0's closed), #446 set up the prerequisite and the clue
+  plan (#457), and #447–#456 are the ten modules. **Modules 01–05 written and merged** (#458, #460–#463):
+  *What a container is*, *Images, tags and digests* (clue 1: `stable`'s created label says 2026-09-30),
+  *A container's life*, *Inside a running container*, *Ports and networks*. Each went through the
+  content-reviewer and `/beginner-audit`, every fix in the same PR, its lab followed from scratch on the
+  VM and played in the app as `verify-bot`.
+- **What the reviews caught:** the setup showing module 10's clue (now base64), Git Bash rewriting
+  `/paths` (`MSYS_NO_PATHCONV`, and #459 for module 01), a quiz answer that marked `always` wrong, a check
+  that didn't test `--tail`, `docker run --env-file` keeping quotes where Compose strips them, a taken
+  port leaving a `Created` container, and in each module the beginner gaps.
+- **Not exercised:** Docker Desktop on a Mac or Windows, Git Bash, macOS's `base64 --decode`, amd64.
+- Gotchas: a YAML plain value is cut at ` #`, so a lab prompt with `/ #` needs quotes (playing it caught
+  it). "closes #N" mid-sentence in a PR body links the issue (hit again on #442). The VM's Docker uses the
+  containerd image store: an image ID is the start of its digest there, and a local build has a
+  RepoDigests entry, unlike the classic store. Ubuntu's `docker.io` has no buildx. Nested Docker in a
+  container needs `-v /var/lib/docker` (overlay on overlay fails). Examples must be pasted from the run,
+  never retyped: two hand-written values (a PID, a hostname) were caught and replaced.
+- **Unreleased on `main`:** `0011` with the reorder, #444, #445, #457 and Docker modules 01–05. Since the
+  hold (2026-11-06) keeps a half-written unit out of a release, all of it now waits for v0.15.0, unless
+  Sean decides otherwise. Rehearse `0011` on a production dump in `infra/stage.sh` before that release.
+- **Next:**
+  - #452–#456, Docker modules 06–10 (#456 is the capstone with clue 2 and Claude's review), and #459.
+  - #375: Sean's live hint and lab review on production.
 
 ### 2026-11-16: Unit 2.1 finished, v0.14.0 in production
 
@@ -251,41 +299,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
     first, and keep `requests==2.34.2`.
   - #418 after the unit. Sean's calls (#429, Git as a prerequisite), #375 after v0.14.0, and the two
     Dependabot PRs (#431, #432).
-
-### 2026-11-06: Unit 2.1 modules 04–09, a challenge beat, quiz answers that move
-
-- **Sean's decisions:** hold v0.14.0 until Unit 2.1 is finished (now a standing decision), reorder
-  modules 01 and 02's quiz options, and "merge them and then keep going". He merged modules 04–07 on
-  that word without playing them first, and 08–09 on "merge #427 and #428".
-- **#417 (#420): the right answer isn't always first.** In 38 of 47 modules every choice answer sat in
-  one position (34 always the first, Unit 1.1's four always the second). Modules 01 and 02 are
-  reordered, and a test fails any new module that does it, with the 38 live ones listed as known.
-  **#418** remaps their stored answers (`exercise_attempts.submitted` holds option positions) before
-  they can move.
-- **#422 (#424): `challenge_done`,** a comms beat for a challenge's first pass. The content-reviewer
-  caught module 05's clue in `complete`, which plays whether or not the bonus challenge was done, so a
-  learner who skipped it was simply told. A clue a task finds goes in that task's beat (standing
-  decisions).
-- **Modules 04–09 written and merged** (#421, #423, #425–#428). 04 *Parsing text*, 05 *Files and
-  paths* (clue 1: crate C-323 in the 2026-09-30 shipment, in no stores record), 06 *Errors and exit
-  codes* (the main guard, from #400), 07 *JSON and CSV* (clue 2: the depot's manifest for run 33
-  doesn't list C-323, and a test holds 07's CSV to 05's files crate for crate), 08 *Running
-  commands*, the unit's first lab, and 09 *A proper CLI*. Each went through the content-reviewer and
-  `/beginner-audit`, its Try it in `ubuntu:24.04`, and a play in Chromium as `verify-bot`.
-- **#394 became #419** (six updates, `anthropic` 2.4 and `ansible-core` 2.22 among them), approved by
-  Sean. No LXD run has proved `ansible-core` 2.22 yet.
-- **Open for Sean:** #429 (a Mac's zsh passes a Try it's `# comment` to the command: 268 lines in 42
-  modules; recommended, a `setopt interactive_comments` note), and whether `python-ops` should require
-  Git, which 08's lab needs (the lab says how to get it meanwhile).
-- **Not caught by any check (said in the PRs):** an unsorted `glob` in module 05 (`tojson` sorts the
-  files, so Pyodide writes them in name order), and a hard-coded `sys.exit(1)` in module 06.
-- Gotchas: interactive zsh passes `#` to the command (#429). A YAML `|` block drops trailing blank lines
-  (`|+` keeps them). A set's order follows the hash seed, so sort-order checks need many values. The
-  classifier refuses a force push and an unapproved merge: merge `main` into a branch instead, and
-  rebuild `NEEDS` and `test_python_ops.py` from `main` plus the branch's section, since "keep both"
-  broke them four times. argparse 3.9, a Mac's own, says `optional arguments:`, and off a terminal a
-  stderr line can print first, so capture lab examples through `script`.
-- **Unreleased on `main`:** #424's app change and modules 01–09, on top of 11-05's.
-- **Next:**
-  - #407, module 10 (*venv, pip and pinned dependencies*), then #408 and #409. #409 lifts the hold.
-  - Sean's calls (#429, Git as a prerequisite), and #375: the first real `anthropic` 2.4 call waits for v0.14.0.

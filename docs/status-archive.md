@@ -4,6 +4,44 @@ Sessions moved out of [`status.md`](status.md) once they were more than three se
 (#259). Moved unchanged, newest first. The standing decisions and the release ledger stay in
 `status.md`, so read that first.
 
+### 2026-11-06: Unit 2.1 modules 04–09, a challenge beat, quiz answers that move
+
+- **Sean's decisions:** hold v0.14.0 until Unit 2.1 is finished (now a standing decision), reorder
+  modules 01 and 02's quiz options, and "merge them and then keep going". He merged modules 04–07 on
+  that word without playing them first, and 08–09 on "merge #427 and #428".
+- **#417 (#420): the right answer isn't always first.** In 38 of 47 modules every choice answer sat in
+  one position (34 always the first, Unit 1.1's four always the second). Modules 01 and 02 are
+  reordered, and a test fails any new module that does it, with the 38 live ones listed as known.
+  **#418** remaps their stored answers (`exercise_attempts.submitted` holds option positions) before
+  they can move.
+- **#422 (#424): `challenge_done`,** a comms beat for a challenge's first pass. The content-reviewer
+  caught module 05's clue in `complete`, which plays whether or not the bonus challenge was done, so a
+  learner who skipped it was simply told. A clue a task finds goes in that task's beat (standing
+  decisions).
+- **Modules 04–09 written and merged** (#421, #423, #425–#428). 04 *Parsing text*, 05 *Files and
+  paths* (clue 1: crate C-323 in the 2026-09-30 shipment, in no stores record), 06 *Errors and exit
+  codes* (the main guard, from #400), 07 *JSON and CSV* (clue 2: the depot's manifest for run 33
+  doesn't list C-323, and a test holds 07's CSV to 05's files crate for crate), 08 *Running
+  commands*, the unit's first lab, and 09 *A proper CLI*. Each went through the content-reviewer and
+  `/beginner-audit`, its Try it in `ubuntu:24.04`, and a play in Chromium as `verify-bot`.
+- **#394 became #419** (six updates, `anthropic` 2.4 and `ansible-core` 2.22 among them), approved by
+  Sean. No LXD run has proved `ansible-core` 2.22 yet.
+- **Open for Sean:** #429 (a Mac's zsh passes a Try it's `# comment` to the command: 268 lines in 42
+  modules; recommended, a `setopt interactive_comments` note), and whether `python-ops` should require
+  Git, which 08's lab needs (the lab says how to get it meanwhile).
+- **Not caught by any check (said in the PRs):** an unsorted `glob` in module 05 (`tojson` sorts the
+  files, so Pyodide writes them in name order), and a hard-coded `sys.exit(1)` in module 06.
+- Gotchas: interactive zsh passes `#` to the command (#429). A YAML `|` block drops trailing blank lines
+  (`|+` keeps them). A set's order follows the hash seed, so sort-order checks need many values. The
+  classifier refuses a force push and an unapproved merge: merge `main` into a branch instead, and
+  rebuild `NEEDS` and `test_python_ops.py` from `main` plus the branch's section, since "keep both"
+  broke them four times. argparse 3.9, a Mac's own, says `optional arguments:`, and off a terminal a
+  stderr line can print first, so capture lab examples through `script`.
+- **Unreleased on `main`:** #424's app change and modules 01–09, on top of 11-05's.
+- **Next:**
+  - #407, module 10 (*venv, pip and pinned dependencies*), then #408 and #409. #409 lifts the hold.
+  - Sean's calls (#429, Git as a prerequisite), and #375: the first real `anthropic` 2.4 call waits for v0.14.0.
+
 ### 2026-11-05: Unit 2.1 planned and begun, a real challenge runner, Python stays on 3.14
 
 - **#389 (#390): pytest 9.2.0 stays.** It ignores `--dist loadgroup` with xdist 3.8.0 (BB #588). Nothing

@@ -97,12 +97,13 @@ all inside the dev container. Real Postgres, no SQL mocks. Details: `docs/testin
 
 ## Current status
 
-See `docs/status.md`. **v0.14.0** is in production (2026-11-16): Unit 2.1 (*Python for operations*) is
-complete in 12 modules (01–07 browser challenges, 08–12 labs, the capstone with Claude's review), with
-the manifest thread's three clues. A unit's release waits until the unit is finished (Sean's decision,
-2026-11-06). The unit's labs pin `requests==2.34.2` and need Python 3.10. Sean edits in VS Code, and
-droplet steps run from a Mac terminal only (#365). Next: #375 (a live hint and lab review on
-production), #418, Sean's calls on #429 and on making Git a prerequisite, then planning the next unit.
+See `docs/status.md`. **v0.14.0** is in production (2026-11-16). Unreleased on `main`: migration `0011` with
+the 38 modules' reordered quiz options (#418), the Mac zsh note (#429), Git before Python (#441), and Unit
+2.2 (*Docker fundamentals*) modules 01–05, labs on the learner's own Docker with the first Cargo clue. A
+unit's release waits until the unit is finished (Sean's decision, 2026-11-06), so all of it waits for
+v0.15.0, after `0011` is rehearsed on a production dump. Sean edits in VS Code, and droplet steps run
+from a Mac terminal only (#365). Next: #452–#456 (Docker modules 06–10, the capstone with clue 2), #459,
+and #375 (a live hint and lab review on production).
 
 ## Maintainer notes (local only)
 
