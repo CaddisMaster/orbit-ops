@@ -10,6 +10,9 @@ and why it matters, not what the diff says.
 - Unit 2.2, *Docker fundamentals*, module 01: *What a container is* (#447). Installing Docker on a
   Mac, Windows or Linux, images and containers, a container as a process on the machine's kernel, and
   a lab run on the learner's own Docker.
+- Unit 2.2 module 02: *Images, tags and digests* (#448). Registries, tags that move, digests that
+  don't, `docker tag`, `image inspect` and labels, and the first Docker clue: the fabricator's
+  `stable` tag moved to a new image on 2026-09-30.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
