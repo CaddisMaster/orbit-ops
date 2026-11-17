@@ -248,7 +248,7 @@ first:**
 **An anonymous volume is one Docker makes itself, named with a long ID, when `-v /path` gives no
 source or an image asks for storage.** They pile up unseen, which is what plain `prune` is for.
 (`docker system prune` clears other leftovers, images and build cache among them; module 08 comes
-back to it.)
+back to the build cache.)
 
 **A volume counts as used while any container uses it, even a stopped one. "Unused" means no
 container at all, running or stopped, uses it.** So once the containers using a volume are removed,
