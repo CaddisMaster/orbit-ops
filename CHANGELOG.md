@@ -6,6 +6,11 @@ and why it matters, not what the diff says.
 
 ## [Unreleased]
 
+### Changed
+- Past quiz answers in 38 modules are moved to follow their options, which move in the same
+  release so the right answer no longer always sits in one place (#418). A finished module still
+  shows the option you picked as "your answer"; scores and XP are unchanged.
+
 ## [0.14.0] — 2026-11-16
 
 Unit 2.1 *Python for operations*, the first unit of the Cargo & Fabrication deck, complete in 12
