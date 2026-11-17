@@ -7,6 +7,8 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Changed
+- Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
+  containerise (#446). Python for operations brings Linux, Bash scripting, Networking and Git with it.
 - Python for operations now requires Git as well as Bash scripting and Networking (#441). Its
   module 08 lab drives `git` from Python, and modules 10 and 12 send Windows learners to Git Bash.
 - The 42 Try it sections whose commands carry `# notes` now start by telling a Mac user to run

@@ -61,8 +61,9 @@ Who sent `FLUSH`, and how a poisoned update got through the depot, is left open.
 
 # Cargo & Fabrication: the manifest discrepancies
 
-The thread for Unit 2.1 (#395), planned on 2026-11-05 and written in modules 05, 07 and 12. The Life Support rule
-holds: the learner finds each clue with the unit's own tools, and the crew only react.
+The thread for Unit 2.1 (#395), planned on 2026-11-05 and written in modules 05, 07 and 12, and Unit
+2.2 (#446), planned on 2026-11-17 for modules 02 and 10. The Life Support rule holds: the learner finds
+each clue with the unit's own tools, and the crew only react.
 
 ## What happened (kept open past this unit)
 
@@ -70,9 +71,20 @@ The depot shipment of **2026-09-30**, the day the poisoned update came aboard, a
 crate its manifest doesn't list**. The bay logged it, nobody asked why, and it has sat in the hold
 since. Okafor keeps it sealed: "If it's what I think it is, it's evidence."
 
-Unit 2.1 shows that the depot's records and what arrived disagree, and only for that shipment. It
-doesn't say what's in the crate, who sent `FLUSH`, or how the update got through. Those stay open
-for **Unit 4.5 (DevSecOps: supply chain)**.
+Unit 2.1 shows that the depot's records and what arrived disagree, and only for that shipment.
+Unit 2.2 shows the same day touched the fabrication bay's software: the fabricator image the bay
+runs as `meridian/fabricator:stable` was **replaced on 2026-09-30**, under the same tag, by an image
+whose author is **`depot-sync`**, the account that consigned C-323 and committed `scrubber-maint`.
+Neither unit says what's in the crate or the image, who sent `FLUSH`, or how the update got through.
+Those stay open for **Unit 4.5 (DevSecOps: supply chain)**, where pinning by digest is the answer.
+
+**How Unit 2.2's clues reach a learner's own Docker.** A real registry can't hold the bay's images,
+so module 02's lab setup builds them locally from fixed Dockerfiles (on `alpine`, by tag): the bay's
+known-good build tagged `meridian/fabricator:2026-09-28`, and the replacement tagged
+`meridian/fabricator:stable`. The bay's runbook says `stable` *is* the 09-28 build. Checks never read
+the IDs or digests, which differ per machine; they read the labels and what the learner concludes.
+Module 10's setup rebuilds the same two images if they're gone, so the capstone doesn't depend on 02's
+leftovers.
 
 ## The clues
 
@@ -81,6 +93,8 @@ for **Unit 4.5 (DevSecOps: supply chain)**.
 | 2.1 Python | 05 Files and paths | The 2026-09-30 receiving file has a crate no other record mentions | `pathlib`'s `glob`, reading each file in a loop, `not in` against `stores.txt`: crate **C-323** (deck C, 61.0 kg). The crew react in `challenge_done` (#422) | written (#402) |
 | 2.1 Python | 07 JSON and CSV | Comparing the depot's manifest (JSON) with what the bay received (CSV), only the 2026-09-30 shipment disagrees | `json`, `csv.DictReader`, comparing sets by key: run 33's manifest lists C-321, C-322 and C-324, and the bay received C-323 as well. The crew react in `challenge_done` | written (#404) |
 | 2.1 Python | 12 Capstone: retries and logging | The hold scanner's record for C-323 says it was **consigned by `depot-sync`**, while run 33's other crates say `depot stores`: the crate came in on the depot's feed, not off its shelves. The records go to Mission Control's inquiry, and C-323 stays sealed | The learner's own CLI, `scan_crate.py`: `argparse`, `requests` with retries and backoff, `logging`. The crew react in `lab_done` (#422) | written (#409) |
+| 2.2 Docker | 02 Images, tags and digests | The bay's runbook says `meridian/fabricator:stable` is the 2026-09-28 build, but `docker images` shows `stable` and `2026-09-28` as two different images, and `stable`'s `org.opencontainers.image.created` label says **2026-09-30**: the tag was moved to a new image that day. The crew react in `lab_done` | `docker images meridian/fabricator` (two IMAGE IDs for what should be one), `docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.created"}}'` on each tag | planned (#448) |
+| 2.2 Docker | 10 Capstone: ship the scanner | The replacement `stable` image's `org.opencontainers.image.authors` label is **`depot-sync`** (the 09-28 build's is `fabrication bay`), and `docker history` shows one layer the 09-28 build doesn't have, adding `/usr/local/bin/sync-agent`. What it does stays sealed. The records go to Mission Control's inquiry with C-323's. The crew react in `lab_done` | `docker image inspect --format` on the labels, `docker history` on both tags | planned (#456) |
 
 The modules between them stay ordinary fabrication-bay jobs, with a line or two of comms at most.
 Use only the dates and names in the Life Support section above, and put any new outside address in

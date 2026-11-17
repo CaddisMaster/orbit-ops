@@ -24,7 +24,7 @@ def test_story_md_names_the_cause_and_every_clue():
     clues = _clues()
     life_support = [c["unit"].split()[0] for c in clues if c["unit"].startswith("1.")]
     assert life_support == ["1.1", "1.1", "1.2", "1.3", "1.4", "1.5"]
-    assert [c["unit"].split()[0] for c in clues if c["unit"].startswith("2.")] == ["2.1", "2.1", "2.1"]
+    assert [c["unit"].split()[0] for c in clues if c["unit"].startswith("2.")] == ["2.1", "2.1", "2.1", "2.2", "2.2"]
     for clue in clues:
         assert clue["module"] and clue["clue"], clue
         assert "`" in clue["finds"], f"{clue['unit']}: name the command that finds it"
@@ -50,3 +50,14 @@ def test_unit_13s_clue_is_marked_written():
     git = next(c for c in _clues() if c["unit"].startswith("1.3"))
     assert git["status"].startswith("written") and git["module"] == "03 Reading history"
     assert "git log -S scrubber-flush" in git["finds"] and "git show" in git["finds"]
+
+
+@pytest.mark.criterion(446, "Unit 2.2's clues are planned before its modules are written")
+def test_unit_22s_clues_are_planned_and_leave_45_open():
+    docker = [c for c in _clues() if c["unit"].startswith("2.2")]
+    assert [c["module"] for c in docker] == ["02 Images, tags and digests", "10 Capstone: ship the scanner"]
+    assert "2026-09-30" in docker[0]["clue"] and "depot-sync" in docker[1]["clue"]
+    assert "docker image inspect" in docker[0]["finds"] and "docker history" in docker[1]["finds"]
+    # The thread stays open: what's in the crate and the image, and who sent FLUSH, is Unit 4.5's.
+    cargo = STORY.split("# Cargo & Fabrication", 1)[1]
+    assert "Unit 4.5" in cargo and "stays sealed" in docker[1]["clue"]
