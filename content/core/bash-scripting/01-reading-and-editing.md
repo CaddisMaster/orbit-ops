@@ -13,11 +13,11 @@ quiz:
         … you make the change, press ^O, then Enter …
       [ Error writing /etc/nginx/sites-available/orbit-ops: Permission denied ]
     options:
-      - "The file belongs to root. Leave with ^X (answer N), then reopen it with `sudo nano`"
       - "nano can't write config files: make the change with `sed -i` instead"
+      - "The file belongs to root. Leave with ^X (answer N), then reopen it with `sudo nano`"
       - "The disk is full: free some space and press ^O again"
       - "Press ^O again: nano retries as root the second time"
-    answer: 0
+    answer: 1
     explain: >-
       Files under `/etc` belong to root, and nano runs as you, so it can show the file but not
       write it. `sudo nano` runs the editor as root. `sed -i` would fail the same way without
@@ -31,8 +31,8 @@ quiz:
       it finds.
   - type: choice
     q: "You're in `less /var/log/syslog` (or in `git log`, which pages through less). How do you jump to the next line containing `error`?"
-    options: ["Type `/error`, Enter, then `n` for each match after it", "Press Ctrl-F and type `error`", "Quit and run `grep error`, there's no search in less", "Type `:error`"]
-    answer: 0
+    options: ["Quit and run `grep error`, there's no search in less", "Press Ctrl-F and type `error`", "Type `/error`, Enter, then `n` for each match after it", "Type `:error`"]
+    answer: 2
     explain: >-
       `/pattern` searches forward, `n` repeats it and `N` goes back. The same keys work in `man`,
       because man shows its pages in less. `grep` is fine too, but it loses the lines around the
@@ -41,16 +41,16 @@ quiz:
     q: |-
       You ran `git commit` without `-m`. The screen fills with `~` down the left edge, and
       typing does strange things. How do you get out without making the commit?
-    options: ["Press Esc, then type `:q!` and Enter", "Press Ctrl-C until it stops", "Press ^X, as in nano", "Type `exit` and Enter"]
-    answer: 0
+    options: ["Press Ctrl-C until it stops", "Press Esc, then type `:q!` and Enter", "Press ^X, as in nano", "Type `exit` and Enter"]
+    answer: 1
     explain: >-
       That's vim. Esc gets you out of whatever mode you're in, and `:q!` quits without saving.
       Git sees a message with nothing but comments and aborts the commit. `:wq` would save and
       commit instead. Ctrl-C and `exit` do nothing useful in vim, and ^X is nano's.
   - type: multi
     q: "Which of these show a log and keep showing new lines as they're written?"
-    options: ["`tail -f app.log`", "`less +F app.log`", "`head -f app.log`", "`cat app.log`"]
-    answer: [0, 1]
+    options: ["`cat app.log`", "`head -f app.log`", "`tail -f app.log`", "`less +F app.log`"]
+    answer: [2, 3]
     explain: >-
       `tail -f` follows the end of the file until Ctrl-C. `less +F` does the same, but Ctrl-C
       drops you back into less, so you can scroll and search, and `F` follows again. `head` has

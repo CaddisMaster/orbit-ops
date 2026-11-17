@@ -21,11 +21,11 @@ quiz:
       [Install]
       WantedBy=multi-user.target
     options:
-      - "root: there's no `User=` line, and that's the default"
-      - "uplink, the service's own name"
       - "Whoever ran `systemctl start`"
+      - "uplink, the service's own name"
+      - "root: there's no `User=` line, and that's the default"
       - "nobody, the unprivileged account"
-    answer: 0
+    answer: 2
     explain: >-
       Without `User=`, systemd runs the program as root, whoever started it. A service that
       doesn't need root should say `User=` with an account of its own, so a bug in it can't
@@ -33,11 +33,11 @@ quiz:
   - type: choice
     q: "A package upgrade replaced `/usr/lib/systemd/system/relay.service`, but the service still runs your changed settings. Why?"
     options:
-      - "There's a copy in `/etc/systemd/system/relay.service`, and the admin's copy there wins over the package's"
-      - "Upgrades never change unit files"
       - "systemd caches unit files forever"
+      - "Upgrades never change unit files"
+      - "There's a copy in `/etc/systemd/system/relay.service`, and the admin's copy there wins over the package's"
       - "`/usr/lib` is read only at the first boot"
-    answer: 0
+    answer: 2
     explain: >-
       `/usr/lib/systemd/system` is the package's, and upgrades overwrite it. `/etc/systemd/system`
       is the administrator's, and a file there with the same name is used instead. That's why
@@ -45,19 +45,19 @@ quiz:
   - type: choice
     q: "`web.service` has `Wants=cache.service` and `After=cache.service`. The cache fails to start. What happens to `web`?"
     options:
-      - "It starts anyway, after the cache's attempt: `Wants` asks for the cache but doesn't depend on it"
+      - "systemd refuses to load it"
       - "It doesn't start: it wants the cache"
       - "It starts before the cache"
-      - "systemd refuses to load it"
-    answer: 0
+      - "It starts anyway, after the cache's attempt: `Wants` asks for the cache but doesn't depend on it"
+    answer: 3
     explain: >-
       `Wants=` starts the other unit too, and carries on whatever happens to it. `After=` only
       sets the order: wait for the cache's start to finish first. With `Requires=` instead, the
       web service wouldn't start if the cache failed.
   - type: multi
     q: "Which lines belong in the `[Service]` section?"
-    options: ["`ExecStart=`", "`User=`", "`WantedBy=`", "`After=`"]
-    answer: [0, 1]
+    options: ["`After=`", "`WantedBy=`", "`User=`", "`ExecStart=`"]
+    answer: [2, 3]
     explain: >-
       `[Service]` says how to run it: the program (`ExecStart=`) and who as (`User=`). `After=`
       is about relations to other units, so it's in `[Unit]`, and `WantedBy=` is about enabling,

@@ -30,11 +30,11 @@ quiz:
   - type: choice
     q: "You know `backup.service` is installed, but `systemctl list-units --type=service` doesn't list it. Why?"
     options:
-      - "It isn't running, and `list-units` hides inactive units unless you add `--all`"
+      - "Only root can see it"
       - "It has failed, and failed units are hidden"
       - "`--type=service` only shows services that start at boot"
-      - "Only root can see it"
-    answer: 0
+      - "It isn't running, and `list-units` hides inactive units unless you add `--all`"
+    answer: 3
     explain: >-
       Without `--all`, `list-units` shows what's running and what's failed, and leaves out the
       inactive ones. `--all` brings back the ones systemd has loaded. If it still isn't there,
@@ -42,11 +42,11 @@ quiz:
   - type: choice
     q: "One service says `inactive (dead)`, another says `failed (Result: exit-code)`. What's the difference?"
     options:
-      - "Inactive isn't running and nothing went wrong; failed tried to run and its program stopped with an error"
+      - "Inactive is disabled; failed is enabled"
       - "Inactive is stopped for now and will start soon; failed is stopped for good"
       - "They mean the same: neither is running"
-      - "Inactive is disabled; failed is enabled"
-    answer: 0
+      - "Inactive isn't running and nothing went wrong; failed tried to run and its program stopped with an error"
+    answer: 3
     explain: >-
       Neither is running, but only `failed` says something went wrong. `inactive` is a service
       that was stopped cleanly or never started, and nothing complains about it, which is how a

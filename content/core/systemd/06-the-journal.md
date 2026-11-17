@@ -27,11 +27,11 @@ quiz:
   - type: choice
     q: "Which shows only the warnings, and anything worse, from the boot before this one?"
     options:
-      - "`sudo journalctl -b -1 -p warning`"
+      - "`sudo journalctl -n 1 -p warning`"
       - "`sudo journalctl -b -p warning`"
       - "`sudo journalctl -b -1 -p warning..warning`"
-      - "`sudo journalctl -n 1 -p warning`"
-    answer: 0
+      - "`sudo journalctl -b -1 -p warning`"
+    answer: 3
     explain: >-
       `-b -1` is the previous boot (`-b` alone is this one). `-p warning` shows warnings and
       everything more serious, so `err` and `crit` too. `warning..warning` is a range of one
@@ -41,11 +41,11 @@ quiz:
     code: |-
       $ sudo journalctl -u water-pump --since "2026-10-07 22:00" --until "2026-10-07 23:00" > ~/pump.log
     options:
-      - "Yes: `journalctl` runs as root and can read them, and your own shell writes the file in your home directory"
+      - "No: `journalctl` can only print to the screen"
       - "No: the redirect isn't done as root, so nothing is read"
       - "No: `--since` needs a time without a date"
-      - "No: `journalctl` can only print to the screen"
-    answer: 0
+      - "Yes: `journalctl` runs as root and can read them, and your own shell writes the file in your home directory"
+    answer: 3
     explain: >-
       `sudo` covers the command, and the `>` is your shell's, done as you. That's fine here: the
       reading needs root, and the file is yours. It's the other way round from module 04's

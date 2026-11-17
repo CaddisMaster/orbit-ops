@@ -34,10 +34,10 @@ quiz:
     q: "In a Dockerfile, why does `apt-get install …` end with `&& rm -rf /var/lib/apt/lists/*`?"
     options:
       - "To uninstall apt"
-      - "To keep the downloaded package lists out of the image layer, making it smaller"
-      - "To force a fresh download next time"
       - "For security: the lists contain passwords"
-    answer: 1
+      - "To force a fresh download next time"
+      - "To keep the downloaded package lists out of the image layer, making it smaller"
+    answer: 3
     explain: >-
       The package lists are only needed while installing. Deleting them **in the same `RUN`**
       keeps them out of that layer. Deleting them in a later `RUN` wouldn't shrink the image.

@@ -18,22 +18,22 @@ quiz:
       check galley
       echo "back in the script: $deck"
     options:
-      - "`checking galley` then `back in the script: galley`"
+      - "An error: `deck` is already set"
       - "`checking galley` then `back in the script: bridge`"
       - "`checking bridge` then `back in the script: bridge`"
-      - "An error: `deck` is already set"
-    answer: 0
+      - "`checking galley` then `back in the script: galley`"
+    answer: 3
     explain: >-
       Variables in a function are the script's own unless they're declared `local`, so the
       function overwrote `deck`. `local deck=$1` would have left the script's `bridge` alone.
   - type: choice
     q: "A function has to give back a reading like `5300`. How?"
     options:
-      - "`echo` it, and the caller captures it with `ppm=$(last_ppm \"$f\")`"
+      - "`exit 5300`"
       - "`return 5300`, and the caller reads `$?`"
       - "Assign a global variable called `return`"
-      - "`exit 5300`"
-    answer: 0
+      - "`echo` it, and the caller captures it with `ppm=$(last_ppm \"$f\")`"
+    answer: 3
     explain: >-
       `return` only sets a status, 0 to 255, and that's for success or failure. Data is printed
       and captured with `$( )`. `exit` would end the whole script, and 5300 doesn't fit in a
@@ -45,11 +45,11 @@ quiz:
         [ "$1" -gt 5000 ]
       }
     options:
-      - "A function's status is its last command's, and `if` runs any command and checks its status"
-      - "Functions always return true"
       - "`if` adds the `[ ]` itself"
+      - "Functions always return true"
+      - "A function's status is its last command's, and `if` runs any command and checks its status"
       - "It doesn't: it needs `if [ over_limit 5300 ]`"
-    answer: 0
+    answer: 2
     explain: >-
       With no `return`, a function ends with the status of its last command: here, the test.
       `if` doesn't care whether it runs a command, a test or a function (day 15). `[ over_limit
@@ -57,11 +57,11 @@ quiz:
   - type: choice
     q: "`lib.sh` defines `last_ppm`. A script runs `./lib.sh` and then calls `last_ppm`. What happens?"
     options:
-      - "`last_ppm: command not found`: `./lib.sh` ran in a child shell, whose functions ended with it"
       - "It works: running a file loads its functions"
+      - "`last_ppm: command not found`: `./lib.sh` ran in a child shell, whose functions ended with it"
       - "It works, but only if `lib.sh` is executable"
       - "`lib.sh` asks whether to export its functions"
-    answer: 0
+    answer: 1
     explain: >-
       Running a script starts a new shell, and everything it defines goes when it ends.
       `source lib.sh` (or `. lib.sh`) runs it in the current shell, so its functions stay.

@@ -12,11 +12,11 @@ quiz:
       $ nc -zv -w 3 db.example.internal 5432
       nc: connect to db.example.internal (10.20.0.8) port 5432 (tcp) failed: Connection refused
     options:
-      - "The database machine is up and reachable, but nothing is listening on 5432: the database isn't running, or listens on another port or address"
       - "The database machine is down"
+      - "The database machine is up and reachable, but nothing is listening on 5432: the database isn't running, or listens on another port or address"
       - "A firewall is dropping the connection"
       - "The name `db.example.internal` doesn't resolve"
-    answer: 0
+    answer: 1
     explain: >-
       A refusal is an answer: a machine at `10.20.0.8` got the connection and said no, because
       nothing was listening on that port. So the name resolved (nc printed the address), the
@@ -33,11 +33,11 @@ quiz:
       $ nc -zv -w 3 vault.example.internal 443
       Connection to vault.example.internal (10.20.4.9) 443 port [tcp/https] succeeded!
     options:
-      - "Yes: its port 443 accepts connections. It, or a firewall in front of it, just drops ping"
-      - "No: 100% packet loss means it's down"
       - "Only half of it: ping and nc disagree, so its network card is failing"
+      - "No: 100% packet loss means it's down"
+      - "Yes: its port 443 accepts connections. It, or a firewall in front of it, just drops ping"
       - "You can't tell without `traceroute`"
-    answer: 0
+    answer: 2
     explain: >-
       A connection that succeeds is proof the machine is up. Ping is a separate kind of packet
       (ICMP) that many firewalls and cloud networks drop on purpose, so no reply to ping proves
@@ -45,11 +45,11 @@ quiz:
   - type: choice
     q: "`nc -zv -w 3 HOST 22` says `timed out`. What do you know?"
     options:
-      - "Nothing answered at all: the host is down, or something between you drops the connection, like a firewall"
       - "The host is up and SSH isn't running on it"
+      - "Nothing answered at all: the host is down, or something between you drops the connection, like a firewall"
       - "The name doesn't resolve"
       - "SSH is running, but rejected your key"
-    answer: 0
+    answer: 1
     explain: >-
       A timeout means silence: no "yes", no "no". A host that's up and has nothing on the port
       would have refused at once. So either nothing is at that address, or something drops the
@@ -69,11 +69,11 @@ quiz:
   - type: multi
     q: "Which of these prove the host is up?"
     options:
-      - "`Connection refused`"
-      - "`succeeded!`"
       - "`64 bytes from …`"
+      - "`Connection refused`"
       - "`timed out: Operation now in progress`"
-    answer: [0, 1, 2]
+      - "`succeeded!`"
+    answer: [0, 1, 3]
     explain: >-
       A refusal, a successful connection and a ping reply all came from the machine itself. A
       timeout is the absence of any answer, so it can't tell you the host is up.

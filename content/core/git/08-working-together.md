@@ -16,11 +16,11 @@ quiz:
       7c03d5f fix
       2b8e6a1 update pumps.conf
     options:
-      - "`Slow the night pumps to 900 rpm`, with a body: `The pumps woke the ring B crew; 900 rpm still meets the flow minimum.`"
-      - "`Fixed the pumps.`"
       - "`pumps.conf: pump_speed 1200 -> 900`"
+      - "`Fixed the pumps.`"
+      - "`Slow the night pumps to 900 rpm`, with a body: `The pumps woke the ring B crew; 900 rpm still meets the flow minimum.`"
       - "`Changes requested by Okafor`"
-    answer: 0
+    answer: 2
     explain: >-
       The subject says what the commit does, in the imperative ("Slow", as in "this commit will…"),
       and the body says **why**, which the diff can't. The third option repeats the diff, and the
@@ -28,11 +28,11 @@ quiz:
   - type: choice
     q: "Last week `secrets.env` was committed and pushed. Today it's deleted and added to `.gitignore`. Is the secret safe?"
     options:
-      - "No: it's still in the commit from last week, in every copy. Change the secret itself"
-      - "Yes: deleting the file removes it from git"
       - "Yes: `.gitignore` hides it from everyone who pulls"
+      - "Yes: deleting the file removes it from git"
+      - "No: it's still in the commit from last week, in every copy. Change the secret itself"
       - "Only once `git status` stops listing it"
-    answer: 0
+    answer: 2
     explain: >-
       Every commit is a snapshot, so the one with the secret still has it, and anyone with the
       repository can `git show` it. Ignoring and deleting only stop the *next* commit including
@@ -44,11 +44,11 @@ quiz:
       $ git status --short
        M build/app.js
     options:
-      - "`build/app.js` was already tracked, and `.gitignore` only affects untracked files. `git rm --cached` stops tracking it"
       - "`.gitignore` takes effect at the next commit"
+      - "`build/app.js` was already tracked, and `.gitignore` only affects untracked files. `git rm --cached` stops tracking it"
       - "The pattern needs to be `build/*`"
       - "`.gitignore` only works in the repository's top directory"
-    answer: 0
+    answer: 1
     explain: >-
       `.gitignore` tells git which **untracked** files to leave alone. A file git already tracks
       keeps being tracked. `git rm --cached FILE` removes it from the index (not from your disk),
@@ -56,11 +56,11 @@ quiz:
   - type: choice
     q: "What does `git rebase main` do, on your branch?"
     options:
-      - "Replays your branch's commits on the end of `main`, as new commits, so the history is one straight line"
+      - "Deletes the commits `main` already has"
       - "Merges `main` into your branch with a merge commit"
       - "Moves `main` forward to your branch"
-      - "Deletes the commits `main` already has"
-    answer: 0
+      - "Replays your branch's commits on the end of `main`, as new commits, so the history is one straight line"
+    answer: 3
     explain: >-
       Rebase takes each of your commits and makes it again on top of where `main` is now, so they
       get new hashes. That's why it's only for commits nobody else has yet, the same rule as

@@ -17,11 +17,11 @@ quiz:
       Content-Type: text/html
       Location: https://shop.example.org/cart
     options:
-      - "`-I` asks for the headers only, and the answer is a redirect: a browser would follow `Location` to the HTTPS address. curl only follows it with `-L`"
-      - "The page doesn't exist; a browser would show an error"
       - "The server is down; a browser would retry"
+      - "The page doesn't exist; a browser would show an error"
+      - "`-I` asks for the headers only, and the answer is a redirect: a browser would follow `Location` to the HTTPS address. curl only follows it with `-L`"
       - "`-s` hides the page; without it curl would show the cart"
-    answer: 0
+    answer: 2
     explain: >-
       `301 Moved Permanently` says the thing is somewhere else, and the `Location` header says
       where. A browser follows it without asking. curl shows you each answer as it is and only
@@ -49,11 +49,11 @@ quiz:
   - type: choice
     q: "You fetch a page you're not logged in for, and get `401`. Logged in as a normal user, you get `403`. What's the difference?"
     options:
-      - "401: who are you? (no or bad credentials). 403: I know who you are, and you're not allowed"
+      - "401: too many requests. 403: try again later"
       - "401: the page is missing. 403: the server crashed"
       - "They mean the same; servers pick either"
-      - "401: too many requests. 403: try again later"
-    answer: 0
+      - "401: who are you? (no or bad credentials). 403: I know who you are, and you're not allowed"
+    answer: 3
     explain: >-
       Both are 4xx, the request's problem. `401 Unauthorized` means it needs credentials and
       didn't get good ones. `403 Forbidden` means the credentials are fine and the answer is
@@ -61,11 +61,11 @@ quiz:
   - type: multi
     q: "Which of these does `curl -v` show?"
     options:
-      - "The request line and headers curl sent, on lines starting `>`"
-      - "The status line and headers that came back, on lines starting `<`"
-      - "The body"
       - "Only the body, quietly"
-    answer: [0, 1, 2]
+      - "The request line and headers curl sent, on lines starting `>`"
+      - "The body"
+      - "The status line and headers that came back, on lines starting `<`"
+    answer: [1, 2, 3]
     explain: >-
       `-v` shows the whole conversation: `>` for what was sent, `<` for what came back, `*` for
       curl's own notes (the address, the TLS handshake), and then the body. Plain `curl URL`

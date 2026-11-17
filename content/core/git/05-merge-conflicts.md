@@ -17,11 +17,11 @@ quiz:
       fan_rpm = 1200
       >>>>>>> quiet-fans
     options:
-      - "`main`'s: `HEAD` is the branch you're on, the one being merged into"
-      - "`quiet-fans`', since it's the branch being merged"
       - "Whichever was committed first"
+      - "`quiet-fans`', since it's the branch being merged"
+      - "`main`'s: `HEAD` is the branch you're on, the one being merged into"
       - "The version from before either branch changed it"
-    answer: 0
+    answer: 2
     explain: >-
       The top half, after `<<<<<<< HEAD`, is the branch you're on. The bottom half, down to
       `>>>>>>> quiet-fans`, is the branch you're merging in. Neither half is the original: that's
@@ -39,11 +39,11 @@ quiz:
         (use "git add <file>..." to mark resolution)
       	both modified:   pumps.conf
     options:
-      - "`git add pumps.conf` to mark it resolved, then `git commit` to finish the merge"
       - "`git merge --continue` straight away: git can see the markers are gone"
+      - "`git add pumps.conf` to mark it resolved, then `git commit` to finish the merge"
       - "`git commit -m \"Fix it\"`: committing marks it resolved"
       - "Nothing: the merge finished when the markers were removed"
-    answer: 0
+    answer: 1
     explain: >-
       Git doesn't read the file to decide you're done: **`git add` is how you tell it**. Until
       then, `git commit` refuses with "Committing is not possible because you have unmerged
@@ -64,11 +64,11 @@ quiz:
   - type: choice
     q: "When does a merge stop with a conflict?"
     options:
-      - "When both branches changed the same lines, or lines right next to each other, in different ways since they split"
       - "Whenever both branches changed the same file"
+      - "When both branches changed the same lines, or lines right next to each other, in different ways since they split"
       - "Whenever the two branches have different authors"
       - "Whenever one branch deleted a line"
-    answer: 0
+    answer: 1
     explain: >-
       Git merges changes to different parts of a file by itself, even in the same file. It only
       stops when the same lines (or neighbouring ones) were changed differently on each side,

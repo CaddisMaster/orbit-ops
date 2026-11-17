@@ -22,11 +22,11 @@ quiz:
       [Install]
       WantedBy=multi-user.target
     options:
-      - "`sudo systemctl daemon-reload`, then `sudo systemctl enable --now uplink`"
+      - "A reboot, and nothing else"
       - "Nothing: systemd starts files in `/etc/systemd/system` by itself"
       - "`sudo systemctl restart systemd`"
-      - "A reboot, and nothing else"
-    answer: 0
+      - "`sudo systemctl daemon-reload`, then `sudo systemctl enable --now uplink`"
+    answer: 3
     explain: >-
       A saved file does nothing on its own. `daemon-reload` makes systemd read the unit files
       again, and `enable --now` makes the boot link and starts it. (Rebooting would load the
@@ -34,11 +34,11 @@ quiz:
   - type: choice
     q: "A service has `Restart=on-failure`. Which of these does systemd restart it after?"
     options:
-      - "Its program crashing, or exiting with a non-zero status"
-      - "`sudo systemctl stop NAME`"
       - "Its program exiting with status 0"
+      - "`sudo systemctl stop NAME`"
+      - "Its program crashing, or exiting with a non-zero status"
       - "All of them"
-    answer: 0
+    answer: 2
     explain: >-
       `on-failure` restarts it when it fails: a non-zero exit, or a crash (a kill by a signal
       it didn't ask for). A clean exit (status 0) and a `systemctl stop` aren't failures, so it stays down.
@@ -63,8 +63,8 @@ quiz:
       can't run. Fix the file, `daemon-reload`, and start it again.
   - type: multi
     q: "Which lines does a minimal service that should start at boot need?"
-    options: ["`ExecStart=`", "`WantedBy=`", "`Restart=`", "`Environment=`"]
-    answer: [0, 1]
+    options: ["`WantedBy=`", "`Restart=`", "`ExecStart=`", "`Environment=`"]
+    answer: [0, 2]
     explain: >-
       `ExecStart=` is the program, so without it there's no service (systemd refuses the unit).
       `WantedBy=` in `[Install]` is what `enable` needs. `Restart=` and `Environment=` are

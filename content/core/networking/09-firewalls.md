@@ -19,11 +19,11 @@ quiz:
       22/tcp                     ALLOW       Anywhere
       22/tcp (v6)                ALLOW       Anywhere (v6)
     options:
-      - "Postgres is listening, but the firewall only lets SSH in, so it drops the rest: `sudo ufw allow from 10.6.0.8 to any port 5432 proto tcp`"
       - "Postgres listens on the wrong address: it needs `127.0.0.1`"
+      - "Postgres is listening, but the firewall only lets SSH in, so it drops the rest: `sudo ufw allow from 10.6.0.8 to any port 5432 proto tcp`"
       - "`sudo ufw allow 5432`: that's the narrowest rule"
       - "`sudo ufw disable`: the firewall is the problem"
-    answer: 0
+    answer: 1
     explain: >-
       `0.0.0.0:5432` means it's listening on every address, so it's the firewall: incoming is
       denied unless a rule allows it, and only 22/tcp does. Allowing the one host that needs it,
@@ -41,11 +41,11 @@ quiz:
       [ 2] 3000                       DENY IN     Anywhere
       [ 3] 3000/tcp                   ALLOW IN    10.6.2.0/24
     options:
-      - "ufw uses the first rule that matches, and rule 2 denies port 3000 to everyone before rule 3 is reached. Delete rule 2"
-      - "`10.6.2.7` isn't in `10.6.2.0/24`"
       - "Rules only apply after `ufw reload`"
+      - "`10.6.2.7` isn't in `10.6.2.0/24`"
+      - "ufw uses the first rule that matches, and rule 2 denies port 3000 to everyone before rule 3 is reached. Delete rule 2"
       - "A DENY rule only affects IPv6"
-    answer: 0
+    answer: 2
     explain: >-
       Rules are checked top to bottom and the first match decides. Rule 2 matches every
       connection to 3000, so rule 3 never gets a look. Remove the blanket deny (`sudo ufw delete
@@ -65,11 +65,11 @@ quiz:
   - type: choice
     q: "With ufw's defaults, a connection to a port it doesn't allow is dropped. What does `nc -zv -w 3` on another machine say?"
     options:
-      - "`timed out`: a dropped packet gets no answer at all"
+      - "`succeeded!`, because nc only checks the route"
       - "`Connection refused`"
       - "`Name or service not known`"
-      - "`succeeded!`, because nc only checks the route"
-    answer: 0
+      - "`timed out`: a dropped packet gets no answer at all"
+    answer: 3
     explain: >-
       Drop means silence, so the other end waits and times out, the same as a machine that's
       down. A refusal comes from a machine that's reachable and has nothing on the port. That
@@ -77,11 +77,11 @@ quiz:
   - type: multi
     q: "Which are true of ufw's default policy once it's enabled?"
     options:
+      - "It closes connections that are already established"
       - "Incoming connections are denied unless a rule allows them"
       - "Outgoing connections are allowed"
       - "Replies to your own outgoing connections get back in"
-      - "It closes connections that are already established"
-    answer: [0, 1, 2]
+    answer: [1, 2, 3]
     explain: >-
       `Default: deny (incoming), allow (outgoing)`, as `ufw status verbose` says, and a firewall
       that tracks connections lets the replies to yours back in. Connections already open when

@@ -31,11 +31,11 @@ quiz:
       fi
       echo "checked"
     options:
-      - "No: a command tested by `if` is allowed to fail, so it prints `checked`"
       - "Yes: `grep` found nothing, so the script stops"
+      - "No: a command tested by `if` is allowed to fail, so it prints `checked`"
       - "Yes, but only if `scrubber.log` is empty"
       - "No: `set -e` only applies to `cp`, `mv` and `rm`"
-    answer: 0
+    answer: 1
     explain: >-
       `set -e` doesn't stop a script for a command in an `if` or `while` test, one on the left
       of `&&` or `||`, or one after `!`. Those failures are being checked already.

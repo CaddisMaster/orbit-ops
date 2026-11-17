@@ -15,11 +15,11 @@ quiz:
       ESTAB 0      0          10.6.0.8:22         10.6.0.2:50114
       ESTAB 0      0          10.6.0.8:41872 198.51.100.23:443
     options:
-      - "`ss -p` only names your own processes, so it's someone else's, probably root's: run `sudo ss -tnp`"
+      - "Nothing holds it: the kernel opened it"
       - "The connection is closing, so it has no process any more"
       - "`-n` hides process names: run `ss -tp`"
-      - "Nothing holds it: the kernel opened it"
-    answer: 0
+      - "`ss -p` only names your own processes, so it's someone else's, probably root's: run `sudo ss -tnp`"
+    answer: 3
     explain: >-
       As a normal user, `ss -p` names only your own processes. Services and cron jobs usually
       run as other accounts or root, so their rows come back without a name. `sudo ss -tnp`
@@ -32,11 +32,11 @@ quiz:
       $ dig backup.example-cloud.net +short
       203.0.113.9
     options:
-      - "The name doesn't point back to the address, so the PTR record is only a claim, and you don't know who's at `198.51.100.23` yet"
       - "It's the backup service: the PTR record says so"
+      - "The name doesn't point back to the address, so the PTR record is only a claim, and you don't know who's at `198.51.100.23` yet"
       - "DNS is broken on this machine"
       - "The connection is to `203.0.113.9`"
-    answer: 0
+    answer: 1
     explain: >-
       A PTR record is written by whoever controls the address, and they can put any name in it.
       A forward lookup that comes back to the same address confirms it. This one doesn't, so
@@ -57,11 +57,11 @@ quiz:
   - type: choice
     q: "You've found an unknown root process with a connection to an address outside your network. What first?"
     options:
-      - "Write down the process, PID, both ends of the connection and the name, before you stop anything"
       - "`sudo kill -9` it straight away"
+      - "Write down the process, PID, both ends of the connection and the name, before you stop anything"
       - "Reboot the server"
       - "Block the address with ufw, then look at what it was"
-    answer: 0
+    answer: 1
     explain: >-
       Killing it closes the connection, and the peer address, the PID and the command line go
       with it. Record what you can see first. Then deciding what to stop, and how, is a choice

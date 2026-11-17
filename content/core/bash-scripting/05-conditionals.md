@@ -13,11 +13,11 @@ quiz:
       $ if [ "$o2" -lt 19.5 ]; then echo ALERT; fi
       bash: [: 19.2: integer expression expected
     options:
-      - "`-lt` compares whole numbers only, so `19.2` isn't a number to it"
-      - "`$o2` shouldn't be in quotes inside `[ ]`"
       - "`[ ]` can't compare numbers; it needs `[[ ]]`"
+      - "`$o2` shouldn't be in quotes inside `[ ]`"
+      - "`-lt` compares whole numbers only, so `19.2` isn't a number to it"
       - "The `;` before `then` should be a newline"
-    answer: 0
+    answer: 2
     explain: >-
       Bash's arithmetic, `-lt` and `$(( ))` alike, is whole numbers only. Count in smaller
       units instead (19.2% is 192 tenths) and compare those. `[[ ]]` has the same limit, and the
@@ -58,8 +58,8 @@ quiz:
         *.gz)  echo "compressed" ;;
         *)     echo "something else" ;;
       esac
-    options: ["`compressed`", "`plain log`", "`plain log` then `compressed`", "`something else`"]
-    answer: 0
+    options: ["`something else`", "`plain log`", "`plain log` then `compressed`", "`compressed`"]
+    answer: 3
     explain: >-
       A `case` pattern has to match the whole value, like a glob. `*.log` doesn't, because the
       name ends in `.gz`. Only the first matching pattern's commands run, and `*)` catches

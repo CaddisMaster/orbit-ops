@@ -14,11 +14,11 @@ quiz:
       $ curl -sS https://api.example.org/
       curl: (60) SSL: no alternative certificate subject name matches target host name 'api.example.org'
     options:
-      - "The wrong one: the server sent a certificate for some other name. It may be perfectly in date"
       - "Expired: curl checks the date first"
+      - "The wrong one: the server sent a certificate for some other name. It may be perfectly in date"
       - "Neither: the server is down"
       - "The certificate is fine, and curl needs `-L`"
-    answer: 0
+    answer: 1
     explain: >-
       "No alternative certificate subject name matches" means none of the names on the
       certificate is `api.example.org`. An expired one says `certificate has expired`. The usual
@@ -32,11 +32,11 @@ quiz:
       notBefore=Aug  1 04:12:09 2026 GMT
       notAfter=Oct 30 04:12:08 2026 GMT
     options:
-      - "It expired on 30 October: renewal didn't happen. The name is right"
       - "It isn't valid yet"
+      - "It expired on 30 October: renewal didn't happen. The name is right"
       - "It's for the wrong name"
       - "Nothing: it's a 90-day certificate"
-    answer: 0
+    answer: 1
     explain: >-
       `notAfter` has passed, so every client refuses it. The subject is the right name, so this
       is an expiry problem: look at why renewal didn't run (with Certbot, `sudo certbot renew
@@ -58,10 +58,10 @@ quiz:
     q: "What does TLS give a connection?"
     options:
       - "Privacy: nobody on the way can read it"
+      - "Speed: it makes the connection faster"
       - "Integrity: nobody on the way can change it unnoticed"
       - "Identity: you're talking to the server the certificate names"
-      - "Speed: it makes the connection faster"
-    answer: [0, 1, 2]
+    answer: [0, 2, 3]
     explain: >-
       Encryption keeps it private, a check on every message keeps it intact, and the
       certificate, signed by an authority your machine trusts, proves who's on the other end.

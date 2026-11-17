@@ -25,8 +25,8 @@ quiz:
     code: |-
       $ name=Okafor
       $ echo 'Hello $name' "Hello $name"
-    options: ["`Hello $name Hello Okafor`", "`Hello Okafor Hello Okafor`", "`Hello $name Hello $name`", "An error"]
-    answer: 0
+    options: ["An error", "`Hello Okafor Hello Okafor`", "`Hello $name Hello $name`", "`Hello $name Hello Okafor`"]
+    answer: 3
     explain: >-
       Single quotes keep everything literally, `$` included. Double quotes still expand `$name`
       (and `$(…)`), but keep the result as one word.
@@ -37,11 +37,11 @@ quiz:
       cat: Crew: No such file or directory
       cat: Roster.txt: No such file or directory
     options:
-      - "Unquoted, `$file` is split at the space into two arguments. `cat \"$file\"` keeps it whole"
       - "`cat` can't read files with spaces in their names"
+      - "Unquoted, `$file` is split at the space into two arguments. `cat \"$file\"` keeps it whole"
       - "The file has to be renamed without spaces"
       - "`$file` should be written `${file}`"
-    answer: 0
+    answer: 1
     explain: >-
       After expanding an unquoted variable, the shell splits it at spaces and expands any glob
       characters in it. Double quotes stop both. `${file}` only marks where the name ends, so it
@@ -54,8 +54,8 @@ quiz:
       precedence applies: 7 × 5 + 1.
   - type: choice
     q: "What does `echo \"${REGION:-eu-west}\"` print if `REGION` was never set?"
-    options: ["`eu-west`", "Nothing", "`REGION`", "An error"]
-    answer: 0
+    options: ["`REGION`", "Nothing", "`eu-west`", "An error"]
+    answer: 2
     explain: >-
       `${VAR:-default}` uses the default when VAR is unset or empty, without changing VAR. It's
       how a script takes a setting from the environment but still works without it.
