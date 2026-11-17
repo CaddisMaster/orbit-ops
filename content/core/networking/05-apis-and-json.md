@@ -258,6 +258,9 @@ use in the lab: `gh api repos/CaddisMaster/orbit-ops --jq .full_name` asks it th
 On your own machine. A container needs the tools first: `sudo apt-get update && sudo apt-get
 install -y curl jq`.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cat > telemetry.json <<'EOF'
 {"station": "meridian", "decks": [

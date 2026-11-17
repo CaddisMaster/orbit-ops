@@ -294,6 +294,9 @@ the mode, and refuses a mode it doesn't know with exit 2.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)"
 printf '#!/usr/bin/env bash\necho "$# args, first: $1"\nfor a in "$@"; do echo "[$a]"; done\n' > args.sh

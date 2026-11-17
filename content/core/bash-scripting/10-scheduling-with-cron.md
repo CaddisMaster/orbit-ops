@@ -317,6 +317,9 @@ Timers that start whole services are systemd's job, in Unit 1.5.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 crontab -l > ~/crontab.saved 2>/dev/null     # keep yours: the next line replaces it
 printf '*/15 * * * * /bin/date >> /tmp/when.log 2>&1\n' | crontab -

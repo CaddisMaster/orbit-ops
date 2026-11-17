@@ -279,6 +279,9 @@ docker-compose.yml`), so nothing on the droplet has to be a git checkout.
 On your own machine. A container needs the tools first: `sudo apt-get update && sudo apt-get
 install -y rsync openssh-client`. Everything happens in `/tmp/try-sync`.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 mkdir -p /tmp/try-sync/src/site /tmp/try-sync/a /tmp/try-sync/b && cd /tmp/try-sync
 echo hello > src/site/index.html; echo old > b/stale.txt

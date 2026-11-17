@@ -320,6 +320,9 @@ On your own machine. A container needs the tools first: `sudo apt-get update && 
 install -y openssh-client`. These make a throwaway key in `/tmp` and touch nothing in your
 `~/.ssh`.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 ssh-keygen -t ed25519 -C try-it -f /tmp/try_key -N ''   # -N '': no passphrase, for a throwaway
 ls -l /tmp/try_key /tmp/try_key.pub                     # -rw------- private, -rw-r--r-- public

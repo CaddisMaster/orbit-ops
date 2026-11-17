@@ -7,6 +7,9 @@ and why it matters, not what the diff says.
 ## [Unreleased]
 
 ### Changed
+- The 42 Try it sections whose commands carry `# notes` now start by telling a Mac user to run
+  `setopt interactive_comments`. Without it, a Mac's zsh passes each note to its command as more
+  words, and some commands fail (#429).
 - Past quiz answers in 38 modules are moved to follow their options, which move in the same
   release so the right answer no longer always sits in one place (#418). A finished module still
   shows the option you picked as "your answer"; scores and XP are unchanged.

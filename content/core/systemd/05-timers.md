@@ -354,6 +354,9 @@ script as `User=deploy`. Whether last night's dump worked is in its journal, not
 On a real Ubuntu machine with systemd (a plain Docker container doesn't run it). This timer
 runs `date` once a minute, so the journal has something to show.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 sudo nano /etc/systemd/system/stamp.service   # type the three lines, without the #
 #   [Service]

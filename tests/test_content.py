@@ -1049,6 +1049,7 @@ def test_module_07_says_what_greater_than_does_to_a_file():
 @pytest.mark.criterion(239, "Everything the quiz and cards test is typed somewhere")
 def test_module_07s_try_it_types_append_and_dev_null():
     _, _, _, try_it = _pipes_plain()
+    try_it = try_it.split("can make the command fail. ", 1)[-1]  # past #429's zsh note
     assert try_it.startswith("Run these one at a time, on a Linux machine or in the station console")
     assert "echo second >> notes.txt" in try_it and "ls /etc/hosts /nope > /dev/null" in try_it
 
@@ -1364,3 +1365,107 @@ def test_every_import_of_the_schema_resolves():
 @pytest.mark.criterion(395, "Python for operations waits for Networking")
 def test_python_for_operations_waits_for_networking():
     assert set(real_catalog().units["python-ops"].prerequisites) == {"bash-scripting", "networking"}
+
+
+# --- #429: a Try it's `# notes` and a Mac's zsh ---------------------------------------------
+# Interactive zsh, a Mac's shell, doesn't read `#` as a comment unless `interactive_comments`
+# is set: it passes `#` and the words after it to the command. Bash does. So a Try it whose
+# command lines carry notes tells a Mac user to set it, and new modules leave the notes out.
+ZSH_NOTE = "setopt interactive_comments"
+# The modules whose Try its had notes when #429 was decided (Sean, 2026-11-17). Any other
+# module's Try it puts what a note would say in the prose instead.
+TRY_IT_NOTES_BEFORE_429 = {
+    # Unit 1.1
+    "processes-and-signals", "pipes-and-redirection",
+    # Unit 1.2
+    "reading-and-editing", "finding-things-and-disk-space", "your-first-script", "variables-and-quoting",
+    "conditionals", "loops", "arguments-and-input", "functions", "robust-scripts", "scheduling-with-cron",
+    # Unit 1.3
+    "your-first-repository", "staging-and-diffs", "reading-history", "branches-and-merging",
+    "merge-conflicts", "remotes", "undoing-things", "working-together",
+    # Networking
+    "addresses-and-ports", "names-and-dns", "is-it-reachable", "http-by-hand", "apis-and-json",
+    "tls-and-certificates", "ssh-keys", "copying-and-tunnels", "firewalls", "following-a-connection",
+    # Unit 1.5
+    "services", "start-stop-enable", "unit-files", "writing-a-service", "timers", "the-journal",
+    # Unit 2.1
+    "from-bash-to-python", "lists-dicts-and-loops", "conditions-functions-and-imports", "parsing-text",
+    "errors-and-exit-codes", "json-and-csv",
+}
+
+
+def _try_it(path: Path) -> str:
+    body = path.read_text().split("\n---\n", 1)[1]
+    found = re.search(r"^## Try it\n(.*)", body, re.S | re.M)  # Try it is always the last section
+    return found.group(1) if found else ""
+
+
+def _commented_lines(try_it: str) -> list[str]:
+    """Command lines in the Try it's bash blocks with a `#` comment: a `#` that starts a word,
+    outside quotes (which can span lines) and outside heredocs (whose lines are data)."""
+    found = []
+    for block in re.findall(r"^```bash\n(.*?)^```", try_it, re.S | re.M):
+        quote, heredoc = None, None
+        for line in block.split("\n"):
+            if heredoc:
+                if line.strip() == heredoc:
+                    heredoc = None
+                continue
+            code, i, word_start = "", 0, True
+            while i < len(line):
+                ch = line[i]
+                if ch == "\\" and quote != "'":
+                    code += line[i : i + 2]
+                    i, word_start = i + 2, False
+                    continue
+                if quote:
+                    quote = None if ch == quote else quote
+                elif ch in "'\"":
+                    quote = ch
+                elif ch == "#" and word_start:
+                    found.append(line)
+                    break
+                word_start = quote is None and ch in " \t"
+                code += ch
+                i += 1
+            start = re.search(r"<<-?\s*['\"]?(\w+)['\"]?", code) if quote is None else None
+            if start:
+                heredoc = start.group(1)
+    return found
+
+
+def _module_files():
+    return {re.sub(r"^\d+-", "", p.stem): p for p in CONTENT_DIR.rglob("*.md")}
+
+
+def test_the_comment_finder_reads_quotes_heredocs_and_words():
+    try_it = textwrap.dedent(
+        """\
+        ```bash
+        ls -a                 # a note
+        # a line of its own
+        echo "not # a note" 'nor # this' ${#x} $# a\\ #b
+        python3 -c 'print(1)
+        # still the string'
+        cat > f <<'EOF'
+        # data, not a note
+        EOF
+        ```
+        """
+    )
+    assert _commented_lines(try_it) == ["ls -a                 # a note", "# a line of its own"]
+
+
+@pytest.mark.criterion(429, "No Try it breaks in a Mac's zsh because of a comment")
+def test_a_try_it_with_notes_tells_a_mac_user_to_set_interactive_comments():
+    for slug, path in _module_files().items():
+        try_it = _try_it(path)
+        if _commented_lines(try_it):
+            prose = re.sub(r"^```.*?^```", "", try_it, flags=re.S | re.M)
+            assert ZSH_NOTE in prose, f"{slug}: say `{ZSH_NOTE}` before its first block, or drop the notes"
+
+
+def test_new_try_its_leave_notes_off_their_command_lines():
+    """Sean's call on #429: new modules put a note's words in prose, so no Mac user needs the setopt."""
+    noted = {slug for slug, path in _module_files().items() if _commented_lines(_try_it(path))}
+    assert noted - TRY_IT_NOTES_BEFORE_429 == set(), "move these `# notes` into the prose (#429)"

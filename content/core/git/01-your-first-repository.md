@@ -231,6 +231,9 @@ says which.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 git --version                        # git version 2.43.0, or similar
 git config user.name                 # your name, or nothing if it isn't set

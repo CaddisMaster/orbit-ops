@@ -352,6 +352,9 @@ needed in this unit, means the digits must end where the word does.
 
 On your own machine, if you have one to hand. Python is the only thing it needs (module 01).
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)"
 cat > pumps.py <<'EOF'

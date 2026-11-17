@@ -311,6 +311,9 @@ deploy user. Anything on that list you can't name is worth following this way.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 On a real Ubuntu machine (a container needs `sudo apt-get update && sudo apt-get install -y
 iproute2 dnsutils curl`). Bash can hold a connection open itself, which gives you one to follow:
 

@@ -261,6 +261,9 @@ deploy's own commands run under `set -e`. They dump the database first and check
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)"
 printf 'cp /nope here/\necho "done"\n' > loose.sh

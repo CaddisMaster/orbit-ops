@@ -225,6 +225,9 @@ it, the execute bit doesn't matter. That's `bash script.sh` at a distance.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 mkdir -p ~/scratch && cd ~/scratch
 printf '#!/usr/bin/env bash\n# my first script\necho "Shift check on $(hostname)"\nexit 3\n' > check.sh

@@ -788,3 +788,9 @@ module's PR, in this order:
   wrong options are wrong when that's useful.
 - **Fact-check every draft like code.** A drafted module is a starting point, not a source.
   Run every command in "Try it" yourself before merging (see "Before Sean plays it").
+- **No `# notes` on a Try it's command lines** (#429). A Mac's zsh doesn't read `#` as a comment
+  at its prompt unless `interactive_comments` is set, so a pasted `cd "$(mktemp -d)"  # scratch`
+  hands `#` and `scratch` to `cd`, which fails. Say what a line does, or what it should print, in
+  the prose or a table around the block. A comment inside a heredoc is data and fine. The 42 Try its
+  written before this keep their notes, under a `setopt interactive_comments` line above their
+  first block; `test_content.py` holds both rules.

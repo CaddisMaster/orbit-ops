@@ -251,6 +251,9 @@ your session belongs to systemd, which *Unit 1.5, systemd & services* covers.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 Run these one at a time, on a Linux machine or in the station console:
 
 ```bash

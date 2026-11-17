@@ -352,6 +352,9 @@ builds a throwaway one if not.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)"
 printf 'greet() { echo "Good shift, $1"; }\nis_even() { [ $(( $1 %% 2 )) -eq 0 ]; }\n' > lib.sh

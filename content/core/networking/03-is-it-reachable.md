@@ -294,6 +294,9 @@ On a real Ubuntu machine. A container needs the tools first: `sudo apt-get updat
 apt-get install -y netcat-openbsd iputils-ping iproute2 python3`. `10.255.255.1` is a private
 address that's almost certainly not in use on your network.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 ip route get 10.255.255.1                # via your gateway: there is a route
 python3 -m http.server 8080 --bind 127.0.0.1 > /dev/null 2>&1 &
