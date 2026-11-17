@@ -244,3 +244,45 @@ def test_module_05s_lab_checks_hold_on_any_machine():
     assert fails(0, "80/tcp -> 127.0.0.1:8088\n80/tcp -> 0.0.0.0:8089\n")  # a second, open binding
     assert fails(2, "wget: bad address 'scanner'\n")  # the asking container wasn't on bay-net
     assert fails(3, "<title>Welcome to nginx!</title>\n")  # step 5 run with --network bay-net
+
+
+# --- 06 Volumes and bind mounts (#452) ---------------------------------------------------------
+@pytest.mark.criterion(452, "Module 06 of Unit 2.2 is complete content")
+def test_module_06_is_complete():
+    _is_complete_lab(_module("volumes-and-bind-mounts"))
+
+
+@pytest.mark.criterion(452, "Module 06's lab checks hold on any machine")
+def test_module_06s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab on Docker Engine 29.7.2 on Linux. A Mac's uid 501,
+    Git Bash's large uids and CRLF pass; a > that replaced job 1, a mount without ./ (an empty
+    volume), one without :ro, a --user that didn't take, runs pasted out of order, and a volume left
+    behind don't. Box 3 reads id -u, not file owners, which Docker Desktop maps its own way."""
+    module = _module("volumes-and-bind-mounts")
+    log, spec, uids, after = (box.example for box in module.lab.boxes)
+    assert _passes(module, [log, spec, uids, after])
+    assert _passes(module, [log.replace("\n", "\r\n"), spec, uids.replace("1000", "501").replace("\n", "\r\n"), after])
+    assert _passes(module, [log, spec, uids.replace("1000", "197609"), after])
+
+    def fails(box, text):
+        pasted = [log, spec, uids, after]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, "job 2: bracket\n")  # the second job used >
+    assert fails(0, "job 2: bracket\njob 1: hull plate\n")
+    assert fails(1, "sh: can't create /specs/spec.txt: Read-only file system\n")  # -v bay-specs:/specs
+    assert fails(1, "tolerance 0.1 mm\n")  # no :ro, so the write worked
+    assert fails(2, uids.replace("1000", "0"))  # --user didn't take, or Docker run as root
+    assert fails(2, "1000\n0\nmade-as-me\nmade-inside\nspec.txt\n")  # pasted in the wrong order
+    assert fails(2, "0\n1000\nmade-as-me\nspec.txt\n")  # the first run's file isn't there
+    assert fails(3, "DRIVER    VOLUME NAME\nlocal     fab-log\n")
+
+
+def test_module_06s_comms_count_what_the_lab_runs():
+    """MERIDIAN's lab_done line counts the jobs and the containers that touch fab-log."""
+    module = _module("volumes-and-bind-mounts")
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "2 JOBS KEPT ACROSS 3 CONTAINERS" in said
+    task = module.lab.task
+    assert task.count("-v fab-log:/log") == 3 and task.count('echo "job ') == 2

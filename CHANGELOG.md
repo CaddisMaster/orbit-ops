@@ -22,6 +22,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 05: *Ports and networks* (#451). Publishing with `-p`, why `127.0.0.1:` in front
   matters (Docker's forwarding goes around `ufw`), `docker port`, and containers reaching each other
   by name on a network you create.
+- Unit 2.2 module 06: *Volumes and bind mounts* (#452). Named volumes that outlive their containers,
+  bind mounts and `:ro`, the `-v` trap with no `./`, whose uid a container writes as and `--user`, and
+  what `docker volume prune` and `prune -a` take.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
