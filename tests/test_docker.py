@@ -403,3 +403,41 @@ def test_module_08s_setup_is_what_the_lab_and_comms_say():
     assert setup.count("==") == 5 and setup.count(".md") == 2
     assert "PACKAGES REINSTALLED: 5" in " ".join(m.text for m in module.comms.open)
     assert "2 .md FILES" in " ".join(m.text for m in module.comms.lab_done)
+
+
+# --- 09 When a container won't start (#455) -----------------------------------------------------
+@pytest.mark.criterion(455, "Module 09 of Unit 2.2 is complete content")
+def test_module_09_is_complete():
+    _is_complete_lab(_module("when-a-container-wont-start"))
+
+
+@pytest.mark.criterion(455, "Module 09's lab checks hold on any machine")
+def test_module_09s_lab_checks_hold_on_any_machine():
+    """The examples are a real run of the lab on Docker Engine 29.7.2 (runc). Another container ID,
+    file date and CRLF pass; a cutter that ran, a stop in place of an OOM kill, a script made
+    executable before step 2, and a fix pasted without the name clash don't."""
+    module = _module("when-a-container-wont-start")
+    cutter, sorter, press, fixed = (box.example for box in module.lab.boxes)
+    assert _passes(module, [cutter, sorter, press, fixed])
+    other = fixed.replace(fixed.split('by container "')[1].split('"')[0], "0" * 64)
+    assert _passes(module, [cutter.replace("Nov 17 20:27", "Dec  2 08:05").replace("\n", "\r\n"), sorter, press, other])
+
+    def fails(box, text):
+        pasted = [cutter, sorter, press, fixed]
+        pasted[box] = text
+        return not _passes(module, pasted)
+
+    assert fails(0, "cutter: 3 hull plates cut\nexit 0\nexited 0 false\n-rwxr-xr-x    1 root     root   43 Nov 17 20:27 cut.sh\n")
+    assert fails(2, "exit 137\n137 false\n")  # docker stop, not the memory limit
+    assert fails(2, "exit 0\n0 false\n")  # no limit: tail was stopped some other way
+    assert fails(3, "cutter: 3 hull plates cut\nexit 0\n")  # removed first: no clash shown
+    assert fails(3, fixed.replace("cutter: 3 hull plates cut\nexit 0", "docker: Error response from daemon: … permission denied\nexit 126"))
+
+
+def test_module_09s_setup_breaks_the_cutter_and_comms_say_how():
+    """The setup's Dockerfile takes the script's x bit away itself, so the 126 is the same on any
+    machine; MERIDIAN's lab_done names the three codes the boxes check."""
+    module = _module("when-a-container-wont-start")
+    assert "RUN chmod 644 /app/cut.sh" in module.lab.setup
+    said = " ".join(m.text for m in module.comms.lab_done)
+    assert "126" in said and "127" in said and "137, OOMKilled" in said
