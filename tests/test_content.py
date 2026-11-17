@@ -1364,7 +1364,51 @@ def test_every_import_of_the_schema_resolves():
 
 @pytest.mark.criterion(395, "Python for operations waits for Networking")
 def test_python_for_operations_waits_for_networking():
-    assert set(real_catalog().units["python-ops"].prerequisites) == {"bash-scripting", "networking"}
+    assert set(real_catalog().units["python-ops"].prerequisites) == {"bash-scripting", "networking", "git"}
+
+
+def _finished(user_id, *units):
+    from datetime import UTC, datetime
+
+    from app.db import SessionLocal
+    from app.models import ModuleProgress
+
+    catalog = real_catalog()
+    with SessionLocal() as db:
+        db.add_all(
+            ModuleProgress(user_id=user_id, module_slug=m.slug, status="complete", score=100, completed_at=datetime.now(UTC))
+            for unit in units
+            for m in catalog.unit_modules(unit)
+        )
+        db.commit()
+
+
+@pytest.mark.criterion(441, "Python for operations waits for Git")
+def test_python_for_operations_waits_for_git(logged_in, user):
+    # Module 08's lab drives git through subprocess, and 10 and 12 send Windows learners to Git Bash.
+    _finished(user.id, "linux-shell", "bash-scripting", "networking")
+    first = real_catalog().unit_modules("python-ops")[0].slug
+    response = logged_in.get(f"/modules/{first}", follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == "/"
+    assert "Finish the unit “Git” first." in logged_in.get("/").text
+
+
+@pytest.mark.criterion(441, "A learner who has finished Git keeps their access")
+def test_a_learner_who_has_finished_git_keeps_python_for_operations(logged_in, user):
+    from datetime import UTC, datetime
+
+    from app.db import SessionLocal
+    from app.models import ModuleProgress
+
+    _finished(user.id, "linux-shell", "bash-scripting", "networking", "git")
+    done, nxt = real_catalog().unit_modules("python-ops")[:2]
+    with SessionLocal() as db:
+        db.add(ModuleProgress(user_id=user.id, module_slug=done.slug, status="complete", score=100, completed_at=datetime.now(UTC)))
+        db.commit()
+    syllabus = logged_in.get("/syllabus").text
+    assert f'<span class="status" aria-label="Complete">✓</span> <a href="/modules/{done.slug}">' in syllabus
+    assert f'<span class="status" aria-label="Available">●</span> <a href="/modules/{nxt.slug}">' in syllabus
+    assert logged_in.get(f"/modules/{nxt.slug}", follow_redirects=False).status_code == 200
 
 
 # --- #429: a Try it's `# notes` and a Mac's zsh ---------------------------------------------

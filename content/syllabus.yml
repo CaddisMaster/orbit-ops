@@ -112,7 +112,7 @@ tracks:
     units:
       - slug: python-ops
         title: Python for operations
-        prerequisites: [bash-scripting, networking]
+        prerequisites: [bash-scripting, networking, git]
         briefing: >-
           Some jobs outgrow Bash: parsing JSON from the cargo manifest API,
           retrying flaky sensors, building a proper CLI. The fabrication bay
