@@ -31,6 +31,9 @@ and why it matters, not what the diff says.
 - Unit 2.2 module 08: *Layers and the build cache* (#454). Layers and `docker history`, what the
   cache reuses and what breaks it, copying `requirements.txt` and installing before the code,
   reading BuildKit's and the older builder's output, and `.dockerignore`, with `*` against `**`.
+- Unit 2.2 module 09: *When a container won't start* (#455). Exit codes 125, 126, 127 and 137,
+  `docker kill`, an empty log, `inspect`'s `.State`, an out-of-memory kill with `--memory`, and
+  `--entrypoint sh` to look inside an image that won't run.
 
 ### Changed
 - Docker fundamentals now requires Python for operations, whose scripts its modules 07 and 10
