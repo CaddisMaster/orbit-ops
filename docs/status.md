@@ -217,17 +217,13 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   *A container's life*, *Inside a running container*, *Ports and networks*. Each went through the
   content-reviewer and `/beginner-audit`, every fix in the same PR, its lab followed from scratch on the
   VM and played in the app as `verify-bot`.
-- **What the reviews caught:** the setup showing module 10's clue (now base64), Git Bash rewriting
-  `/paths` (`MSYS_NO_PATHCONV`, and #459 for module 01), a quiz answer that marked `always` wrong, a check
-  that didn't test `--tail`, `docker run --env-file` keeping quotes where Compose strips them, a taken
-  port leaving a `Created` container, and in each module the beginner gaps.
+- **The reviews caught:** module 10's clue in a setup (now base64), Git Bash rewriting `/paths` (#459 for
+  module 01), a quiz marking `always` wrong, `--env-file` quotes versus Compose's, a taken port's trap.
 - **Not exercised:** Docker Desktop on a Mac or Windows, Git Bash, macOS's `base64 --decode`, amd64.
-- Gotchas: a YAML plain value is cut at ` #`, so a lab prompt with `/ #` needs quotes (playing it caught
-  it). "closes #N" mid-sentence in a PR body links the issue (hit again on #442). The VM's Docker uses the
-  containerd image store: an image ID is the start of its digest there, and a local build has a
-  RepoDigests entry, unlike the classic store. Ubuntu's `docker.io` has no buildx. Nested Docker in a
-  container needs `-v /var/lib/docker` (overlay on overlay fails). Examples must be pasted from the run,
-  never retyped: two hand-written values (a PID, a hostname) were caught and replaced.
+- Gotchas: a YAML plain value is cut at ` #`, so a prompt with `/ #` needs quotes. "closes #N" mid-sentence
+  links the issue (#442 again). The VM's Docker uses the containerd image store (IDs start like digests;
+  local builds get RepoDigests). Ubuntu's `docker.io` has no buildx. Nested Docker needs
+  `-v /var/lib/docker`. Paste examples from the run: a retyped PID and hostname were caught.
 - **Unreleased on `main`:** `0011` with the reorder, #444, #445, #457 and Docker modules 01–05. Since the
   hold (2026-11-06) keeps a half-written unit out of a release, all of it now waits for v0.15.0, unless
   Sean decides otherwise. Rehearse `0011` on a production dump in `infra/stage.sh` before that release.
