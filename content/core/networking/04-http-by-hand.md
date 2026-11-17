@@ -343,6 +343,9 @@ app to answer them like `GET`, without the body.
 On your own machine, Ubuntu or a Mac. A container needs curl first: `sudo apt-get update &&
 sudo apt-get install -y curl`.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 curl -sI https://example.com                      # HTTP/2 200 and its headers: no body
 curl -s -o /dev/null -w '%{http_code}\n' https://example.com/no-such-page   # 404

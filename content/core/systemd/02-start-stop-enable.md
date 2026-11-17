@@ -322,6 +322,9 @@ Nginx.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 On a real Ubuntu machine with systemd (not a plain Docker container) and the `cron` package,
 which Ubuntu Server has:
 

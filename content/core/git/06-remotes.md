@@ -209,6 +209,9 @@ however finished it is.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)" && git init -q --bare -b main hub.git
 git clone -q hub.git alice && git clone -q hub.git bob       # warning: You appear to have cloned an empty repository.

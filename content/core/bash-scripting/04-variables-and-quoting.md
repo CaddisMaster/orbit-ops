@@ -291,6 +291,9 @@ someone set it.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 name="Crew Roster.txt"
 cd "$(mktemp -d)"

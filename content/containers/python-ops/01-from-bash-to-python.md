@@ -313,6 +313,9 @@ On your own machine, if you have one to hand. A Mac may offer to install its dev
 first time you run `python3`. On Ubuntu, Python is usually there already. A bare `ubuntu:24.04`
 container needs it installed first, as the first line here does: skip that line otherwise.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 sudo apt-get update && sudo apt-get install -y python3
 cd "$(mktemp -d)"                               # a scratch directory

@@ -248,6 +248,9 @@ On your own machine. A container needs the tools first: `sudo apt-get update && 
 install -y openssl curl ca-certificates`. badssl.com keeps broken certificates on purpose, for
 testing.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 H=learn.seandesmet.com
 openssl s_client -connect $H:443 -servername $H </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates

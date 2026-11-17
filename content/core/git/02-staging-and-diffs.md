@@ -284,6 +284,9 @@ so you can see exactly what it does.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)" && git init -q
 git config user.name "Cadet Test" && git config user.email "cadet@meridian.example"

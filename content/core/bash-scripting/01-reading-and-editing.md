@@ -317,6 +317,9 @@ tools use whatever `EDITOR` names (unless `VISUAL` is set: it wins).
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 On a server or a VM (a Docker container leaves the manual out, so `man` finds nothing there):
 
 ```bash

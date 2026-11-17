@@ -294,6 +294,9 @@ beyond `127.0.0.1`: `"5002:8000"` would put plain HTTP on the droplet's public a
 On a real Ubuntu machine (a container may need `sudo apt-get update && sudo apt-get install -y
 iproute2 python3`). Your addresses will differ.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 ip -br addr                               # lo and your network card, with their addresses
 ip route                                  # the default line names your gateway

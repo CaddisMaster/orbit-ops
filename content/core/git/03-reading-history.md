@@ -278,6 +278,9 @@ That's how any line in this repository can be traced to the change that made it.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)" && git init -q
 git config user.name "Cadet Test" && git config user.email "cadet@meridian.example"

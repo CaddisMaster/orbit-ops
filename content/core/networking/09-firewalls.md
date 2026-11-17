@@ -304,6 +304,9 @@ On an Ubuntu VM, or a container started with `--privileged` (ufw talks to the ke
 firewall, which an ordinary container isn't allowed to touch): `sudo apt-get update && sudo
 apt-get install -y ufw`. None of this turns the firewall on.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 sudo ufw status                       # Status: inactive, on a fresh install
 sudo ufw allow 22/tcp                 # Rules updated: written, applied once enabled

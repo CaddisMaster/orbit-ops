@@ -291,6 +291,9 @@ On a real Ubuntu machine with systemd (a VM or a server: a plain Docker containe
 systemd). This service crashes on purpose: `sh -c` runs a command line in a small shell, as
 `bash -c` does, and this one waits 5 seconds and exits with status 1.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 sudo nano /etc/systemd/system/flaky.service    # type the four lines below, without the #, then Ctrl-O, Enter, Ctrl-X
 #   [Service]

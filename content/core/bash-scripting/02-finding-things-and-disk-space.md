@@ -270,6 +270,9 @@ would fill the droplet's disk.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 df -h /
 du -sh /var/* 2>/dev/null | sort -h | tail -n 3   # the three biggest in /var

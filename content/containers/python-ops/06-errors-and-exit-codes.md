@@ -357,6 +357,9 @@ saved, and the file ends with exactly those two lines.
 
 On your own machine, if you have one to hand. Python is the only thing it needs (module 01).
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cd "$(mktemp -d)"
 cat > tanks.py <<'EOF'

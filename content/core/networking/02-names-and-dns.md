@@ -330,6 +330,9 @@ answers with the address of the Compose service called `db`.
 On a real Ubuntu machine. A container needs the tools first: `sudo apt-get update && sudo
 apt-get install -y dnsutils iputils-ping`. Your addresses will differ.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 cat /etc/resolv.conf | grep nameserver   # the DNS server this machine asks
 grep hosts /etc/nsswitch.conf            # hosts: files dns: the file, then DNS

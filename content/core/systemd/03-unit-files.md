@@ -323,6 +323,9 @@ two accounts can, which is exactly the point of `User=`.
 
 ## Try it
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 On a real Ubuntu machine with systemd and the `cron` package (Ubuntu Server has both):
 
 ```bash

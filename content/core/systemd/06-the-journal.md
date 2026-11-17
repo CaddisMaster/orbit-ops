@@ -319,6 +319,9 @@ to the journal instead of nowhere.
 On a real Ubuntu machine with systemd. **`logger "TEXT"`** sends the journal a line of your own
 (`-p` sets its priority); the station console doesn't have it.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 logger -p warning "try it: a warning"
 logger "try it: plain info"

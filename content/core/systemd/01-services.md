@@ -396,6 +396,9 @@ crashes, and when Docker itself starts at boot. That's a service manager's job, 
 On a real Ubuntu machine. A plain Docker container doesn't run systemd: use a VM, a server,
 or WSL with systemd turned on. Your list will be longer and different.
 
+On a Mac, run `setopt interactive_comments` first. A Mac's shell is zsh, and without that
+it hands each `# note` below to its command as more words, which can make the command fail.
+
 ```bash
 ps aux | head -n 2                # PID 1: /sbin/init, which is systemd
 systemctl status cron             # Loaded, Active and Main PID; q to quit if it pages
