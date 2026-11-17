@@ -119,7 +119,7 @@ tracks:
           runs on Python.
       - slug: docker
         title: Docker fundamentals
-        prerequisites: [linux-shell, networking]
+        prerequisites: [python-ops]
         briefing: >-
           "It worked on my console" is how the last fabricator caught fire.
           Containers ship the software together with everything it needs.

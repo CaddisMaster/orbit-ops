@@ -1411,6 +1411,13 @@ def test_a_learner_who_has_finished_git_keeps_python_for_operations(logged_in, u
     assert logged_in.get(f"/modules/{nxt.slug}", follow_redirects=False).status_code == 200
 
 
+@pytest.mark.criterion(446, "Docker fundamentals waits for Python for operations")
+def test_docker_fundamentals_waits_for_python_for_operations():
+    # Modules 07 and 10 containerise Unit 2.1's scripts. python-ops brings Linux, Bash,
+    # Networking and Git with it.
+    assert tuple(real_catalog().units["docker"].prerequisites) == ("python-ops",)
+
+
 # --- #429: a Try it's `# notes` and a Mac's zsh ---------------------------------------------
 # Interactive zsh, a Mac's shell, doesn't read `#` as a comment unless `interactive_comments`
 # is set: it passes `#` and the words after it to the command. Bash does. So a Try it whose
