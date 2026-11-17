@@ -170,6 +170,10 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   Ubuntu's own `docker.io` was also tried once (#448). Docker Desktop and Git Bash aren't exercised.
 - **A lab setup shown on the page mustn't give away a clue** (#448). The bay's fabricator images are
   built from base64-encoded build files, so their dates and authors come out of Docker, not the setup.
+- **The room will change per unit, starting dim** (#469, Sean, 2026-11-17): emergency lighting at
+  the start, and each completed unit changes the view or the room, with a bigger change at each deck's
+  end (the fleet outside for Kubernetes). Derived from progress, never stored, and previews first. Built
+  after Unit 2.2 and before any Kubernetes content.
 
 ## Release ledger
 
@@ -197,6 +201,54 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
 | 0.1.0 | 2026-10-08 | Skeleton live at learn.seandesmet.com; pipeline proven end to end; app on `orbit_app` |
 
 ## Sessions
+
+### 2026-11-17 (later): Unit 2.2 finished, scenery planned
+
+- **Sean's decisions:** every merge on his word ("merge it and start #N", "merge it and lets wrap when
+  the reviews are finished"). Three issues from a look at what changes in the background (#467–#469).
+  For #469, the room changes **per unit** and starts **dim**, with emergency lighting; the timing was
+  left to Claude: after Unit 2.2, before any Kubernetes content.
+- **Docker modules 06–10 written and merged** (#465, #466, #470, #471, #472), closing #452–#456 and
+  #467. Unit 2.2 is complete on `main`:
+  - *Volumes and bind mounts*. Box 3 reads `id -u`, not file owners, which Docker Desktop maps its own way.
+  - *Your first Dockerfile*. The setup writes the bay's copy of 2.1 module 09's `bay_report.py`, which
+    shows that lab's solution. Flagged to Sean; he didn't object.
+  - *Layers and the build cache*. The checks take BuildKit plain, BuildKit terminal and the older
+    builder's output.
+  - *When a container won't start*.
+  - *Capstone: ship the scanner*. Clue 2 is in `lab_done`, there's an `ai_review`, and `relay-pass`
+    plays at the unit's end.
+- Each module went through the content-reviewer and `/beginner-audit`, with the fixes in the same PR. Each
+  lab was run from its own setup on the VM, with throwaway names cleaned up and nothing pruned, and played
+  as `verify-bot`.
+- **The reviews caught:**
+  - module 08 crediting this repo with Budget Buddy's `*.md` incident (BB #333)
+  - module 10 saying the image holds no settings (`APP_VERSION`/`APP_COMMIT` are baked in)
+  - clue 2 leaking through a quiz and a box's `says`
+  - Git Bash rewriting `/dev/zero`
+  - lesson examples that were the lab's answer
+- **Found by testing, not by memory:**
+  - A restart policy resets `OOMKilled` to `false` (`docker events` keeps the `oom`).
+  - The older builder refuses `--progress` (exit 125).
+  - BuildKit clamps `COPY ../x` to the context.
+  - `history` without `--no-trunc` hides `sync-agent`.
+  - The CSP console errors seen in #465/#466 came from Playwright's screenshot, not the app (4 with, 0 without).
+- **Gotchas:**
+  - A rubric line with `: ` became a YAML mapping, so the catalog failed to load, `web` went
+    unhealthy and the suite hung until it was quoted.
+  - An unquoted `<<EOF` handed Python with backticks to bash, which ran them. All harmless, then
+    redone with `<<'PYEOF'`.
+  - MERIDIAN's lines are uppercased by CSS, so Playwright's `innerText` needs a case-insensitive match.
+- **Not exercised:** Docker Desktop on a Mac or Windows, Git Bash, amd64, and Claude's lab review (no
+  key on the dev stack).
+- **Unreleased on `main`:** `0011`, #444, #445, #457, and all of Unit 2.2 (#458–#472). The unit-hold no
+  longer blocks: v0.15.0 waits on rehearsing `0011` on a production dump in `infra/stage.sh`, then
+  Sean's go.
+- **Next:**
+  - #459 (MSYS note for module 01).
+  - The `0011` rehearsal and v0.15.0, Sean's call.
+  - #375's live hint and lab review on production, which can include the capstone's first real review.
+  - Then #468 (Track 2 emblems) and #469 (scenery), both with previews first.
 
 ### 2026-11-17: the quiz reorder, Unit 2.2 planned, Docker modules 01–05
 
@@ -265,33 +317,3 @@ sessions are in [`status-archive.md`](status-archive.md), moved there unchanged 
   - #375: Sean's live hint and lab review on production, now on `anthropic` 2.8 (the capstone's lab).
   - #418 (remap the 38 live modules' stored quiz answers), Sean's calls on #429 and on Git as a
     prerequisite (Windows learners are sent to Git Bash in 08–12), and planning the next unit.
-
-### 2026-11-15: Unit 2.1 module 10, the first session on Fable 5.2
-
-- **Sean's decisions:** spend Fable 5.2 on the curriculum, in the order #407, #408, #409, then #418 if
-  time allows (from a handoff file written in a Budget Buddy session, read once and deleted), and
-  "merge and wrap there" after module 10.
-- **#407 (#433): module 10, *venv, pip and pinned dependencies*,** the unit's third lab. A venv,
-  `requests` at an exact version, `pip freeze` into `requirements.txt`, the venv deleted and rebuilt
-  from the file, and `where.py` run by the machine's own Python and by the venv's Python by its path.
-  Try it and the lab were run in `ubuntu:24.04`, and it was played in Chromium as `verify-bot`.
-- **The lab needs Python 3.10 or newer.** It pins `requests` 2.34.2, the newest on PyPI that day with no
-  advisory. 2.32.5, the newest that runs on a Mac's own 3.9, has one (GHSA-gc5v-m9x4-r6x2), so step 1
-  has the learner install a current Python. A comment at the top of the module says to move the pin
-  when 2.34.2 gains an advisory. #408 and #409 use `requests` too and should keep the same pin.
-- **What the reviews caught:** the content-reviewer, a wrong claim about older systems (on
-  `ubuntu:22.04` a plain `pip install` goes to the user's own folder, and only `sudo` reaches the
-  system) and `>=` never explained. `/beginner-audit`, that apt's `python3-requests` sits under its
-  Python's `sys.prefix`, `/usr`, so "the path starts with `sys.prefix`" said `True` outside any venv:
-  `where.py`'s third line now asks for both facts. The gotcha-auditor, a lesson at 1,084 words of
-  prose against 640–700 in modules 08 and 09: trimmed to 889.
-- **Not exercised:** nothing was run on a Mac or on Windows (step 1's Mac advice, `.venv/Scripts`).
-- Gotchas: a Try it criterion is claimed by a `Verified by hand: #N "title" — why` line in the PR
-  body. A test holds the lesson's `Jinja2==3.1.6` and `MarkupSafe==3.0.4` to `requirements.txt`, so a
-  Dependabot bump of either fails until the lesson moves too.
-- **Unreleased on `main`:** module 10, on top of 11-06's.
-- **Next:**
-  - #408, module 11 (*Talking to an API*), then #409, which lifts the release hold. Read modules 01–10
-    first, and keep `requests==2.34.2`.
-  - #418 after the unit. Sean's calls (#429, Git as a prerequisite), #375 after v0.14.0, and the two
-    Dependabot PRs (#431, #432).
